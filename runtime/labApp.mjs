@@ -6,13 +6,12 @@ import {
   ApprovalStore,
   AuditLog,
   IdempotencyStore,
-  createInternalTransfer,
   generateSyntheticDataset,
   loginMockUser,
   maskAccount,
-  maskCustomer,
-  projectBalances
+  maskCustomer
 } from "../packages/banking-domain/src/index.mjs";
+import { LedgerCore } from "../services/core-banking/src/index.mjs";
 import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -69,7 +68,12 @@ export async function createLabState() {
   const auditLog = new AuditLog();
   const approvalStore = new ApprovalStore({ auditLog });
   const idempotencyStore = new IdempotencyStore();
-  const ledgerTransactions = createSeededLedger(dataset);
+  const ledgerCore = new LedgerCore({
+    customers: dataset.customers,
+    accounts: dataset.accounts,
+    transactions: createSeededLedger(dataset)
+  });
+  const ledgerTransactions = ledgerCore.transactions;
   const manifests = await loadManifests(join(repoRoot, "screen-manifests"));
   const complaints = [
     {
@@ -99,6 +103,7 @@ export async function createLabState() {
     auditLog,
     approvalStore,
     idempotencyStore,
+    ledgerCore,
     ledgerTransactions,
     manifests,
     complaints,
@@ -218,7 +223,7 @@ export async function createLabHandler(state) {
 
       if (pathname === "/api/customer/accounts" && request.method === "GET") {
         const customerId = url.searchParams.get("customerId") || "SYN-CUS-001";
-        const balances = projectBalances(state.ledgerTransactions, state.dataset.accounts);
+        const balances = state.ledgerCore.getBalances();
         const items = state.dataset.accounts
           .filter((account) => account.customerId === customerId)
           .map((account) => ({
@@ -231,8 +236,9 @@ export async function createLabHandler(state) {
 
       if (pathname === "/api/customer/transfers" && request.method === "POST") {
         const payload = await bodyJson(request);
-        const result = state.idempotencyStore.run(payload.idempotencyKey, () => {
-          if (payload.amountMinor >= 5000000) {
+        let result;
+        if (payload.amountMinor >= 5000000) {
+          result = state.idempotencyStore.run(payload.idempotencyKey, () => {
             const caseRecord = {
               caseId: `FDS-${String(state.fdsCases.length + 1).padStart(8, "0")}`,
               status: "HELD",
@@ -243,9 +249,9 @@ export async function createLabHandler(state) {
             };
             state.fdsCases.push(caseRecord);
             return caseRecord;
-          }
-          const transaction = createInternalTransfer({
-            id: `TX-WEB-${String(state.ledgerTransactions.length + 1).padStart(8, "0")}`,
+          });
+        } else {
+          result = await state.ledgerCore.transfer({
             fromAccountId: payload.fromAccountId,
             toAccountId: payload.toAccountId,
             amountMinor: payload.amountMinor,
@@ -253,7 +259,7 @@ export async function createLabHandler(state) {
             requestedBy: payload.requestedBy || "customer01",
             requestedChannel: "CUSTOMER_WEB"
           });
-          state.ledgerTransactions.push(transaction);
+          const transaction = result.value;
           state.auditLog.append({
             eventType: "COMMAND_EXECUTED",
             actorType: "CUSTOMER",
@@ -267,8 +273,7 @@ export async function createLabHandler(state) {
               amountMinor: payload.amountMinor
             }
           });
-          return transaction;
-        });
+        }
         json(response, result.replayed ? 200 : 201, {
           replayed: result.replayed,
           item: result.value
@@ -307,8 +312,94 @@ export async function createLabHandler(state) {
 
       if (pathname === "/api/ledger/balances" && request.method === "GET") {
         json(response, 200, {
-          items: projectBalances(state.ledgerTransactions, state.dataset.accounts)
+          items: state.ledgerCore.getBalances()
         });
+        return;
+      }
+
+      if (pathname === "/api/ledger/transactions" && request.method === "GET") {
+        json(response, 200, {
+          items: state.ledgerCore.listTransactions(url.searchParams.get("accountId"))
+        });
+        return;
+      }
+
+      if (pathname === "/api/ledger/deposits" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const result = await state.ledgerCore.deposit(payload);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "branch01",
+          actorRole: "BRANCH_STAFF",
+          businessReferenceId: result.value.id,
+          accountId: payload.accountId,
+          reason: payload.reason || "Synthetic ledger deposit",
+          payload: {
+            idempotencyKey: payload.idempotencyKey,
+            amountMinor: payload.amountMinor
+          }
+        });
+        json(response, result.replayed ? 200 : 201, result);
+        return;
+      }
+
+      if (pathname === "/api/ledger/withdrawals" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const result = await state.ledgerCore.withdraw(payload);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "branch01",
+          actorRole: "BRANCH_STAFF",
+          businessReferenceId: result.value.id,
+          accountId: payload.accountId,
+          reason: payload.reason || "Synthetic ledger withdrawal",
+          payload: {
+            idempotencyKey: payload.idempotencyKey,
+            amountMinor: payload.amountMinor
+          }
+        });
+        json(response, result.replayed ? 200 : 201, result);
+        return;
+      }
+
+      if (pathname === "/api/ledger/transfers" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const result = await state.ledgerCore.transfer(payload);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "branch01",
+          actorRole: "BRANCH_STAFF",
+          businessReferenceId: result.value.id,
+          accountId: payload.fromAccountId,
+          reason: payload.reason || "Synthetic ledger transfer",
+          payload: {
+            idempotencyKey: payload.idempotencyKey,
+            amountMinor: payload.amountMinor
+          }
+        });
+        json(response, result.replayed ? 200 : 201, result);
+        return;
+      }
+
+      if (pathname === "/api/ledger/reversals" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const result = await state.ledgerCore.reverseTransaction(payload);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "branch01",
+          actorRole: "BRANCH_STAFF",
+          businessReferenceId: result.value.id,
+          reason: payload.reason || "Synthetic ledger reversal",
+          payload: {
+            idempotencyKey: payload.idempotencyKey,
+            originalTransactionId: payload.originalTransactionId
+          }
+        });
+        json(response, result.replayed ? 200 : 201, result);
         return;
       }
 

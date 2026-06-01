@@ -70,3 +70,39 @@ test("customer transfer endpoint is idempotent", async () => {
     assert.equal(state.ledgerTransactions.length, beforeCount + 1);
   });
 });
+
+test("ledger withdrawal and reversal endpoints preserve invariants", async () => {
+  await withServer(async ({ baseUrl, state }) => {
+    const withdrawal = await fetch(`${baseUrl}/api/ledger/withdrawals`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        accountId: "ACC-SYN-001-001",
+        amountMinor: 3000,
+        idempotencyKey: "RUNTIME-WDR-001",
+        requestedBy: "branch01",
+        requestedChannel: "STAFF_TERMINAL",
+        reason: "Runtime ledger withdrawal test"
+      })
+    });
+    const withdrawalPayload = await withdrawal.json();
+
+    const reversal = await fetch(`${baseUrl}/api/ledger/reversals`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        originalTransactionId: withdrawalPayload.value.id,
+        idempotencyKey: "RUNTIME-REV-001",
+        requestedBy: "branch01",
+        requestedChannel: "STAFF_TERMINAL",
+        reason: "Runtime ledger reversal test"
+      })
+    });
+    const reversalPayload = await reversal.json();
+
+    assert.equal(withdrawal.status, 201);
+    assert.equal(reversal.status, 201);
+    assert.equal(reversalPayload.value.originalTransactionId, withdrawalPayload.value.id);
+    assert.equal(state.ledgerCore.validateInvariants(), true);
+  });
+});

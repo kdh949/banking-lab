@@ -56,6 +56,7 @@ export function createLedgerTransaction(input) {
     status: input.status || "POSTED",
     requestedBy: input.requestedBy || "SYSTEM",
     requestedChannel: input.requestedChannel || "SYSTEM",
+    businessDate: input.businessDate || nowIso().slice(0, 10),
     createdAt: input.createdAt || nowIso(),
     postedAt: input.postedAt || nowIso(),
     originalTransactionId: input.originalTransactionId || null,
@@ -84,7 +85,9 @@ export function createInternalTransfer(input) {
     idempotencyKey: input.idempotencyKey,
     requestedBy: input.requestedBy,
     requestedChannel: input.requestedChannel,
+    businessDate: input.businessDate,
     metadata: {
+      businessDate: input.businessDate,
       description: input.description || "Synthetic internal transfer"
     },
     postings: [
@@ -118,9 +121,11 @@ export function createReversalTransaction(originalTransaction, input) {
     idempotencyKey: input.idempotencyKey,
     requestedBy: input.requestedBy,
     requestedChannel: input.requestedChannel,
+    businessDate: input.businessDate,
     originalTransactionId: originalTransaction.id,
     metadata: {
       reverses: originalTransaction.id,
+      businessDate: input.businessDate,
       reason: input.reason
     },
     postings: originalTransaction.postings.map((posting) => ({
