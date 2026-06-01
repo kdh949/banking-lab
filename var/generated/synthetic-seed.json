@@ -1,0 +1,201 @@
+{
+  "generatedAt": "2026-06-01T20:30:39.240Z",
+  "notice": "Synthetic data only. Do not use real customer PII or real payment rails.",
+  "customers": [
+    {
+      "customerId": "SYN-CUS-001",
+      "name": "Lab Customer Alpha",
+      "phone": "010-0000-1001",
+      "address": "Seoul Synthetic District",
+      "customerGrade": "STANDARD",
+      "riskGrade": "LOW"
+    },
+    {
+      "customerId": "SYN-CUS-002",
+      "name": "Lab Customer Beta",
+      "phone": "010-0000-1002",
+      "address": "Busan Synthetic Harbor",
+      "customerGrade": "PREMIER",
+      "riskGrade": "MEDIUM"
+    },
+    {
+      "customerId": "SYN-CUS-003",
+      "name": "Lab Customer Gamma",
+      "phone": "010-0000-1003",
+      "address": "Daegu Synthetic Valley",
+      "customerGrade": "STANDARD",
+      "riskGrade": "HIGH"
+    }
+  ],
+  "accounts": [
+    {
+      "accountId": "BANK-SUSPENSE",
+      "customerId": "BANK",
+      "accountNo": "LAB-000-000000",
+      "status": "ACTIVE",
+      "currency": "KRW"
+    },
+    {
+      "accountId": "ACC-SYN-001-001",
+      "customerId": "SYN-CUS-001",
+      "accountNo": "LAB-001-000001",
+      "status": "ACTIVE",
+      "currency": "KRW"
+    },
+    {
+      "accountId": "ACC-SYN-002-001",
+      "customerId": "SYN-CUS-002",
+      "accountNo": "LAB-002-000001",
+      "status": "ACTIVE",
+      "currency": "KRW"
+    },
+    {
+      "accountId": "ACC-SYN-003-001",
+      "customerId": "SYN-CUS-003",
+      "accountNo": "LAB-003-000001",
+      "status": "ACTIVE",
+      "currency": "KRW"
+    }
+  ],
+  "ledgerTransactions": [
+    {
+      "id": "TX-OPEN-001",
+      "transactionType": "SYNTHETIC_OPENING_BALANCE",
+      "businessReferenceId": "TX-OPEN-001",
+      "idempotencyKey": "SEED-TX-OPEN-001",
+      "status": "POSTED",
+      "requestedBy": "SEED",
+      "requestedChannel": "SYNTHETIC_DATA_GENERATOR",
+      "createdAt": "2026-06-01T20:30:39.239Z",
+      "postedAt": "2026-06-01T20:30:39.240Z",
+      "originalTransactionId": null,
+      "metadata": {},
+      "postings": [
+        {
+          "id": "TX-OPEN-001-P001",
+          "ledgerTransactionId": "TX-OPEN-001",
+          "accountId": "BANK-SUSPENSE",
+          "currency": "KRW",
+          "direction": "DEBIT",
+          "amountMinor": 100000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        },
+        {
+          "id": "TX-OPEN-001-P002",
+          "ledgerTransactionId": "TX-OPEN-001",
+          "accountId": "ACC-SYN-001-001",
+          "currency": "KRW",
+          "direction": "CREDIT",
+          "amountMinor": 100000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        }
+      ]
+    },
+    {
+      "id": "TX-OPEN-002",
+      "transactionType": "SYNTHETIC_OPENING_BALANCE",
+      "businessReferenceId": "TX-OPEN-002",
+      "idempotencyKey": "SEED-TX-OPEN-002",
+      "status": "POSTED",
+      "requestedBy": "SEED",
+      "requestedChannel": "SYNTHETIC_DATA_GENERATOR",
+      "createdAt": "2026-06-01T20:30:39.240Z",
+      "postedAt": "2026-06-01T20:30:39.240Z",
+      "originalTransactionId": null,
+      "metadata": {},
+      "postings": [
+        {
+          "id": "TX-OPEN-002-P001",
+          "ledgerTransactionId": "TX-OPEN-002",
+          "accountId": "BANK-SUSPENSE",
+          "currency": "KRW",
+          "direction": "DEBIT",
+          "amountMinor": 50000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        },
+        {
+          "id": "TX-OPEN-002-P002",
+          "ledgerTransactionId": "TX-OPEN-002",
+          "accountId": "ACC-SYN-002-001",
+          "currency": "KRW",
+          "direction": "CREDIT",
+          "amountMinor": 50000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        }
+      ]
+    },
+    {
+      "id": "TX-OPEN-003",
+      "transactionType": "SYNTHETIC_OPENING_BALANCE",
+      "businessReferenceId": "TX-OPEN-003",
+      "idempotencyKey": "SEED-TX-OPEN-003",
+      "status": "POSTED",
+      "requestedBy": "SEED",
+      "requestedChannel": "SYNTHETIC_DATA_GENERATOR",
+      "createdAt": "2026-06-01T20:30:39.240Z",
+      "postedAt": "2026-06-01T20:30:39.240Z",
+      "originalTransactionId": null,
+      "metadata": {},
+      "postings": [
+        {
+          "id": "TX-OPEN-003-P001",
+          "ledgerTransactionId": "TX-OPEN-003",
+          "accountId": "BANK-SUSPENSE",
+          "currency": "KRW",
+          "direction": "DEBIT",
+          "amountMinor": 25000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        },
+        {
+          "id": "TX-OPEN-003-P002",
+          "ledgerTransactionId": "TX-OPEN-003",
+          "accountId": "ACC-SYN-003-001",
+          "currency": "KRW",
+          "direction": "CREDIT",
+          "amountMinor": 25000000,
+          "postingType": "OPENING",
+          "createdAt": "2026-06-01T20:30:39.240Z"
+        }
+      ]
+    }
+  ],
+  "balances": [
+    {
+      "accountId": "BANK-SUSPENSE",
+      "currency": "KRW",
+      "ledgerBalanceMinor": -175000000,
+      "availableBalanceMinor": -175000000,
+      "holdAmountMinor": 0,
+      "lastPostingId": "TX-OPEN-003-P001"
+    },
+    {
+      "accountId": "ACC-SYN-001-001",
+      "currency": "KRW",
+      "ledgerBalanceMinor": 100000000,
+      "availableBalanceMinor": 100000000,
+      "holdAmountMinor": 0,
+      "lastPostingId": "TX-OPEN-001-P002"
+    },
+    {
+      "accountId": "ACC-SYN-002-001",
+      "currency": "KRW",
+      "ledgerBalanceMinor": 50000000,
+      "availableBalanceMinor": 50000000,
+      "holdAmountMinor": 0,
+      "lastPostingId": "TX-OPEN-002-P002"
+    },
+    {
+      "accountId": "ACC-SYN-003-001",
+      "currency": "KRW",
+      "ledgerBalanceMinor": 25000000,
+      "availableBalanceMinor": 25000000,
+      "holdAmountMinor": 0,
+      "lastPostingId": "TX-OPEN-003-P002"
+    }
+  ]
+}

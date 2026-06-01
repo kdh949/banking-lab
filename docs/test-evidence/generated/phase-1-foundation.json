@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-06-01T20:30:28.930Z",
+  "scope": "Phase 1 Foundation",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "manifest-validation",
+      "status": "pass",
+      "detail": "11 manifests validate with required audit metadata"
+    },
+    {
+      "id": "ledger-balanced-seed",
+      "status": "pass",
+      "detail": "3 seed transactions are double-entry balanced"
+    },
+    {
+      "id": "balance-projection",
+      "status": "pass",
+      "detail": "4 balances projected from postings"
+    },
+    {
+      "id": "audit-hash-chain",
+      "status": "pass",
+      "detail": "1 audit events hash-chain verified"
+    },
+    {
+      "id": "migration-audit-tables",
+      "status": "pass",
+      "detail": "Foundation migration includes audit_events and operator_approvals"
+    }
+  ]
+}
