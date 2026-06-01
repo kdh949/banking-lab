@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-06-01T21:06:11.888Z",
+  "scope": "Phase 5 Complaint Workflow",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "shared-case-source",
+      "status": "pass",
+      "detail": "Customer portal and staff terminal read the same complaint case"
+    },
+    {
+      "id": "workflow-transitions",
+      "status": "pass",
+      "detail": "Complaint moved through classify, assign, review, and waiting approval"
+    },
+    {
+      "id": "approval-before-answer",
+      "status": "pass",
+      "detail": "Answer draft and internal approval fields were not visible until maker-checker approval executed"
+    },
+    {
+      "id": "customer-confirmation",
+      "status": "pass",
+      "detail": "Customer confirmed answer and closed the case"
+    },
+    {
+      "id": "sla-and-timeline",
+      "status": "pass",
+      "detail": "Case includes SLA due date and workflow timeline"
+    },
+    {
+      "id": "manifest-coverage",
+      "status": "pass",
+      "detail": "Complaint workflow manifests cover intake, status, and staff detail"
+    },
+    {
+      "id": "audit-coverage",
+      "status": "pass",
+      "detail": "Complaint workflow produced customer, staff, approval, and execution audit events"
+    }
+  ]
+}

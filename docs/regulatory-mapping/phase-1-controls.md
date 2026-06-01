@@ -44,6 +44,17 @@
 | Failed transfer without unsafe posting | Failed transfer test |
 | Complaint entry | `CWB-301` manifest and portal shell test |
 
+## Phase 5 Additions
+
+| Control area | Phase 5 evidence |
+| --- | --- |
+| Shared complaint case source | Customer/staff complaint list test |
+| Complaint SLA and timeline | `receiveComplaint`, workflow evidence |
+| Ordered complaint state transitions | `services/complaint-service`, workflow tests |
+| Answer approval before send | `COMPLAINT_ANSWER_SEND` approval test |
+| Customer answer confirmation | Customer confirmation close test |
+| Complaint workflow manifests | `CMP-101`, `CMP-102`, `CMP-201` manifest validation |
+
 ## Explicit Non-Production Boundary
 
 No real banking network, real KYC, real payment processor, real customer PII, or real funds are connected. External providers remain simulators.

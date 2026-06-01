@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T20:53:30.243Z",
+  "generatedAt": "2026-06-01T21:00:36.728Z",
   "scope": "Phase 3 Staff Terminal MVP",
   "syntheticOnly": true,
   "checks": [
@@ -26,7 +26,7 @@
     {
       "id": "staff-manifest-coverage",
       "status": "pass",
-      "detail": "8 staff manifests available"
+      "detail": "9 staff manifests available"
     },
     {
       "id": "audit-event-coverage",

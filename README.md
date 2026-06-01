@@ -55,6 +55,17 @@ Implemented customer web scope:
 - FDS-held transfer representation without unsafe ledger postings.
 - Complaint entry manifest and navigation to the complaint portal.
 
+## Phase 5 Complaint Workflow
+
+Implemented complaint workflow scope:
+
+- Customer complaint intake with SLA due date and timeline.
+- Shared complaint case source for customer portal and staff terminal.
+- Staff classify, assign, start review, and answer draft actions.
+- Complaint answer approval through maker-checker before customer response is sent.
+- Customer answer confirmation and case closure.
+- Complaint workflow manifests for customer intake/status and staff detail.
+
 ## Run Locally
 
 ```bash
@@ -65,6 +76,7 @@ npm run evidence:phase1
 npm run evidence:phase2
 npm run evidence:phase3
 npm run evidence:phase4
+npm run evidence:phase5
 npm start
 ```
 
@@ -96,6 +108,7 @@ docker compose up --build
 - PII unmasking is timeboxed, role-gated, reason-required, and audited.
 - High-risk staff commands require maker-checker approval, and maker and checker must differ.
 - Customer transfer result states are explicit and idempotent.
+- Complaint answers require approval before customer-visible response.
 - Screen manifests must declare roles, template, audit, masking, and approval metadata.
 
 ## Repository Map
