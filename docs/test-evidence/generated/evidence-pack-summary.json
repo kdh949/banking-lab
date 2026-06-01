@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-06-01T21:31:57.683Z",
+  "scope": "Bank-grade Core Banking Lab Evidence Pack",
+  "syntheticOnly": true,
+  "totalChecks": 38,
+  "passedChecks": 38,
+  "failedChecks": [],
+  "phases": [
+    {
+      "phase": "Phase 1",
+      "scope": "Phase 1 Foundation",
+      "generatedAt": "2026-06-01T21:00:36.727Z",
+      "totalChecks": 5,
+      "passedChecks": 5,
+      "failedChecks": [],
+      "report": "docs/test-evidence/phase-1-foundation.md"
+    },
+    {
+      "phase": "Phase 2",
+      "scope": "Phase 2 Ledger Core",
+      "generatedAt": "2026-06-01T21:00:36.700Z",
+      "totalChecks": 5,
+      "passedChecks": 5,
+      "failedChecks": [],
+      "report": "docs/test-evidence/phase-2-ledger-core.md"
+    },
+    {
+      "phase": "Phase 3",
+      "scope": "Phase 3 Staff Terminal MVP",
+      "generatedAt": "2026-06-01T21:00:36.728Z",
+      "totalChecks": 6,
+      "passedChecks": 6,
+      "failedChecks": [],
+      "report": "docs/test-evidence/phase-3-staff-terminal.md"
+    },
+    {
+      "phase": "Phase 4",
+      "scope": "Phase 4 Customer Web MVP",
+      "generatedAt": "2026-06-01T21:00:36.728Z",
+      "totalChecks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "report": "docs/test-evidence/phase-4-customer-web.md"
+    },
+    {
+      "phase": "Phase 5",
+      "scope": "Phase 5 Complaint Workflow",
+      "generatedAt": "2026-06-01T21:06:11.888Z",
+      "totalChecks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "report": "docs/test-evidence/phase-5-complaint-workflow.md"
+    },
+    {
+      "phase": "Phase 6",
+      "scope": "Phase 6 FDS AML Reconciliation",
+      "generatedAt": "2026-06-01T21:26:45.521Z",
+      "totalChecks": 8,
+      "passedChecks": 8,
+      "failedChecks": [],
+      "report": "docs/test-evidence/fds-aml-reconciliation.md"
+    }
+  ],
+  "evidenceArtifacts": [
+    "docs/adr",
+    "docs/architecture",
+    "docs/regulatory-mapping",
+    "docs/threat-model",
+    "docs/test-evidence",
+    "docs/failure-drills",
+    "docs/reconciliation-reports",
+    "docs/demo-scenarios"
+  ]
+}

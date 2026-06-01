@@ -1,99 +1,186 @@
 # Bank-grade Core Banking Lab
 
-Synthetic core banking lab focused on ledger integrity, auditability, maker-checker control, and screen-manifest based operations.
+Synthetic core banking lab focused on ledger integrity, auditability, maker-checker control, manifest-driven operations, complaint workflow, AML/FDS simulation, reconciliation, and evidence.
 
 This project does not handle real customer money, real personal data, or real payment networks. All data is synthetic and all external providers are simulators.
 
-## Phase 1 Foundation
+## 1. Project Overview
 
-Implemented foundation scope:
+The lab models a simulated digital bank with:
 
-- Monorepo structure for apps, services, packages, screen manifests, infra, and evidence docs.
-- Mock auth users for customer, branch staff, manager, complaint, audit, and FDS/AML roles.
-- Static app shells for customer web, staff terminal, complaint portal, ops console, audit console, and FDS/AML console.
-- Staff terminal shell with transaction-code input, tabbed manifest screens, customer context, masked PII, reason-required lookup, audit panel, and approval inbox.
-- Common UI assets under `packages/ui`.
-- Screen manifest loader and validator under `packages/screen-engine`.
-- Form validation helpers under `packages/form-engine`.
-- Core banking domain primitives for double-entry postings, projection balances, idempotency, reversal, audit hash chain, masking, maker-checker, workflow, and synthetic data.
-- PostgreSQL foundation migration under `infra/db/migrations/001_foundation.sql`.
-- Node runtime serving the app shells and mock APIs.
-- Test and evidence generation scripts.
+- customer web banking
+- staff integrated terminal
+- electronic complaint portal
+- FDS/AML review console
+- operations and reconciliation console
+- audit console
+- core banking ledger service
+- workflow and maker-checker control
+- evidence documents and generated test reports
 
-## Phase 2 Ledger Core
+## 2. Why This Is Not a Simple Bank Clone
 
-Implemented ledger core scope:
+The implementation prioritizes bank-grade controls over UI breadth:
 
-- Customer/account/ledger/posting/balance command service in `services/core-banking`.
-- Deposit, withdrawal, internal transfer, and reversal commands.
-- Idempotency replay for ledger commands.
-- Serialized command execution to prevent concurrent withdrawal overdraw in the in-memory runtime.
-- Closed business day guard for direct posting commands.
-- Ledger invariant validation for balanced postings, duplicate idempotency keys, reversal references, partial finalization, and balance projection.
-- Runtime APIs under `/api/ledger/deposits`, `/api/ledger/withdrawals`, `/api/ledger/transfers`, `/api/ledger/reversals`, `/api/ledger/transactions`, and `/api/ledger/balances`.
+- every financial movement is represented as balanced double-entry postings
+- balances are projections, not source-of-truth fields
+- externally retried commands are idempotent
+- finalized ledger transactions are reversed or adjusted, not mutated
+- staff sensitive access is reason-required and audited
+- high-risk operations require maker-checker approval
+- screens scale through manifests and reusable templates
+- every phase has tests and evidence
 
-## Phase 3 Staff Terminal MVP
+## 3. Overall Architecture
 
-Implemented staff terminal scope:
+```text
+apps/*                  static app shells
+packages/banking-domain ledger, audit, masking, auth, maker-checker
+packages/screen-engine  screen manifest loader and validator
+packages/form-engine    reusable validation helpers
+services/core-banking   ledger command service
+services/complaint-*    complaint workflow
+services/fds-service    FDS rule and case lifecycle
+services/aml-service    AML case simulation
+services/reconciliation EOD and unmatched item workflow
+runtime                 local Node HTTP runtime
+docs                    ADRs, evidence, mappings, drills, demo scripts
+```
 
-- Transaction-code work area for `CST-001`, `CST-002`, `ACC-101`, `LED-101`, `CST-103`, `APR-001`, and `AUD-001`.
-- Customer context panel, approval inbox, and audit log panel.
-- Reason-required customer detail, account inquiry, and transaction inquiry APIs.
-- Masked PII by default and privileged, reasoned unmask request with audit trail.
-- Customer information change request with maker-checker approval before mutation.
-- Staff terminal manifests for customer detail, customer info change, and transaction history.
+## 4. Core Ledger Design
 
-## Phase 4 Customer Web MVP
+Implemented controls:
 
-Implemented customer web scope:
+- `DEPOSIT`, `WITHDRAWAL`, `INTERNAL_TRANSFER`, `REVERSAL`, and `ADJUSTMENT` commands
+- balanced postings enforced by `assertTransactionBalanced`
+- projected balances from `projectBalances`
+- serialized command execution for concurrent withdrawals
+- idempotency store for retried commands
+- reversal references to original transaction
+- closed business date guard
+- reconciliation adjustments as balanced ledger transactions
 
-- Mock customer login through `/api/customer/login`.
-- Customer account list and account detail backed by projected ledger balances.
-- Customer transaction history from the same ledger source used by staff transaction inquiry.
-- Transfer submission with idempotent result records.
-- Transfer results for `POSTED`, `HELD`, and `FAILED` states.
-- FDS-held transfer representation without unsafe ledger postings.
-- Complaint entry manifest and navigation to the complaint portal.
+## 5. Staff Integrated Terminal
 
-## Phase 5 Complaint Workflow
+The staff terminal includes:
 
-Implemented complaint workflow scope:
+- transaction code input
+- tabbed manifest screens
+- customer context panel
+- masked PII by default
+- reason-required customer/account/transaction lookup
+- approval inbox
+- audit log panel
+- customer information change through maker-checker approval
 
-- Customer complaint intake with SLA due date and timeline.
-- Shared complaint case source for customer portal and staff terminal.
-- Staff classify, assign, start review, and answer draft actions.
-- Complaint answer approval through maker-checker before customer response is sent.
-- Customer answer confirmation and case closure.
-- Complaint workflow manifests for customer intake/status and staff detail.
+## 6. Customer Web Banking
 
-## Phase 6 AML/FDS + Reconciliation
+The customer web includes:
 
-Implemented risk and operations scope:
+- mock customer login
+- account list and detail from projected ledger balances
+- transaction history from the same ledger source used by staff inquiry
+- idempotent transfer submission
+- transfer results for `POSTED`, `HELD`, `FAILED`, and `BLOCKED`
+- complaint entry navigation
 
-- FDS rule engine for high amount, new device, first-time beneficiary, and velocity signals.
-- Customer transfer hold with no ledger posting until reviewer release is approved.
-- FDS release and block decisions through maker-checker approval.
-- AML case simulation for high-risk customer and suspicious transfer candidates.
-- AML reviewer assignment, comments, STR simulation, and approval-controlled closure.
-- Daily closing with ledger invariant validation and synthetic external file reconciliation.
-- Owned reconciliation mismatch items and approval-controlled balanced adjustment transactions.
+## 7. Electronic Complaint Workflow
 
-## Run Locally
+The complaint workflow includes:
+
+- customer complaint intake
+- shared customer/staff complaint case source
+- SLA due date and timeline
+- staff classify, assign, review, and answer draft
+- answer approval before customer-visible response
+- customer confirmation and case closure
+
+## 8. AML/FDS Simulation
+
+FDS controls:
+
+- high amount rule
+- new device and high amount rule
+- first-time beneficiary rule
+- velocity rule
+- transaction hold without ledger posting
+- release/block review through maker-checker approval
+
+AML controls:
+
+- customer risk grade evaluation
+- suspicious transfer candidate generation
+- STR simulation case
+- reviewer assignment
+- comments
+- approval-controlled closure
+
+## 9. Reconciliation
+
+Operations controls:
+
+- EOD daily closing
+- ledger invariant validation
+- synthetic external institution file
+- unmatched reconciliation item creation
+- owner-required mismatch cases
+- closed-day direct posting rejection
+- maker-checker adjustment request
+- balanced `ADJUSTMENT` transaction on an open business date
+
+## 10. Security, Audit, and Internal Control
+
+Implemented controls:
+
+- append-only audit hash chain
+- role-shaped mock users
+- PII masking and privileged unmask path
+- reason-required sensitive staff access
+- high-risk approval business types
+- manifest-declared roles, audit, masking, workflow, and approval metadata
+- synthetic-only external simulator boundary
+
+## 11. Test Strategy
+
+Run:
 
 ```bash
 npm test
 npm run validate:manifests
-npm run generate:synthetic-data
 npm run evidence:phase1
 npm run evidence:phase2
 npm run evidence:phase3
 npm run evidence:phase4
 npm run evidence:phase5
 npm run evidence:phase6
+npm run evidence:pack
+docker compose config
+```
+
+Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
+
+## 12. Failure Drills
+
+Failure drill documents live under `docs/failure-drills`.
+
+Covered drills include:
+
+- duplicate idempotent transfer
+- concurrent withdrawal
+- staff lookup without reason
+- maker self-approval
+- complaint answer before approval
+- FDS release/block
+- closed-day posting attempt
+- reconciliation adjustment
+
+## 13. Run Locally
+
+```bash
 npm start
 ```
 
-Then open:
+Open:
 
 - `http://127.0.0.1:8080/staff-terminal`
 - `http://127.0.0.1:8080/customer-web`
@@ -102,43 +189,49 @@ Then open:
 - `http://127.0.0.1:8080/audit-console`
 - `http://127.0.0.1:8080/fds-aml-console`
 
-Docker Compose entrypoint:
+Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-## Key Invariants
+## 14. Demo Scenario
 
-- Every ledger transaction has two or more postings and must sum to zero by currency.
-- Balances are derived through `projectBalances`; source-of-truth balances are not directly mutated.
-- External commands require idempotency keys.
-- Reversal transactions reference the original transaction.
-- Closed business days reject direct posting commands.
-- Concurrent withdrawals serialize through the ledger command service and cannot overdraw available balance.
-- Staff customer/account-sensitive access requires a business reason and audit event.
-- Audit events are append-only and hash chained.
-- PII unmasking is timeboxed, role-gated, reason-required, and audited.
-- High-risk staff commands require maker-checker approval, and maker and checker must differ.
-- Customer transfer result states are explicit and idempotent.
-- Complaint answers require approval before customer-visible response.
-- FDS-held transfers do not post until checker-approved release.
-- Reconciliation adjustments use balanced ledger transactions on open business dates.
-- Screen manifests must declare roles, template, audit, masking, and approval metadata.
+Primary walkthrough:
 
-## Repository Map
+1. Run `npm test` and `npm run evidence:pack`.
+2. Show ledger code and invariant tests.
+3. Open staff terminal and perform reason-required lookup.
+4. Open customer web and submit idempotent transfer.
+5. Open complaint portal and staff workflow.
+6. Open FDS/AML console and release a held transfer.
+7. Open ops console and run EOD reconciliation.
+8. Show `docs/test-evidence/evidence-pack-summary.md`.
 
-- `apps/*`: app shells.
-- `runtime`: local Node runtime and mock API.
-- `packages/banking-domain`: ledger, audit, auth, masking, maker-checker, workflow, synthetic data.
-- `packages/screen-engine`: manifest loading and validation.
-- `packages/form-engine`: reusable form validation.
-- `screen-manifests/*`: manifest-driven business screens.
-- `services/*`: initial service boundary exports.
-- `infra/db/migrations`: PostgreSQL schema foundation.
-- `docs/*`: ADRs, mappings, evidence, drills, reports, demo scenarios.
-- `tests/*`: foundation invariant and runtime tests.
+Detailed script: `docs/demo-scenarios/demo-video-script.md`.
 
-## Current Boundary
+## 15. Limits and Legal Boundary
 
-Phase 1 is a local runnable scaffold, not a production banking system. Persistence is in-memory at runtime while the database migration captures the intended PostgreSQL schema. Keycloak is represented by mock auth until a later infrastructure phase.
+This is a local simulation:
+
+- no real deposits
+- no real transfers
+- no real payment networks
+- no real KYC provider
+- no real customer PII
+- no public complaint service
+
+Runtime persistence is in-memory. The SQL migration captures the intended relational contract, but durable storage is not yet wired to the runtime.
+
+## 16. Future Improvements
+
+Next engineering slices:
+
+- PostgreSQL persistence for ledger, approvals, audit, and cases
+- real OAuth2/OIDC simulator such as Keycloak
+- crash recovery for approval execution
+- outbox/inbox event processing
+- observability with OpenTelemetry, Prometheus, Grafana, and Loki
+- formal ledger model with TLA+ or Alloy
+- Playwright browser E2E once a browser target is available
+- SAST/SCA/SBOM automation
