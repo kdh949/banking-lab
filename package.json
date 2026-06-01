@@ -14,7 +14,8 @@
     "test": "node --test tests/*.test.mjs",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
-    "evidence:phase1": "node scripts/generate-phase1-evidence.mjs"
+    "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
+    "evidence:phase2": "node scripts/generate-phase2-evidence.mjs"
   },
   "engines": {
     "node": ">=20"

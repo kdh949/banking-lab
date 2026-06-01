@@ -20,6 +20,18 @@ Implemented foundation scope:
 - Node runtime serving the app shells and mock APIs.
 - Test and evidence generation scripts.
 
+## Phase 2 Ledger Core
+
+Implemented ledger core scope:
+
+- Customer/account/ledger/posting/balance command service in `services/core-banking`.
+- Deposit, withdrawal, internal transfer, and reversal commands.
+- Idempotency replay for ledger commands.
+- Serialized command execution to prevent concurrent withdrawal overdraw in the in-memory runtime.
+- Closed business day guard for direct posting commands.
+- Ledger invariant validation for balanced postings, duplicate idempotency keys, reversal references, partial finalization, and balance projection.
+- Runtime APIs under `/api/ledger/deposits`, `/api/ledger/withdrawals`, `/api/ledger/transfers`, `/api/ledger/reversals`, `/api/ledger/transactions`, and `/api/ledger/balances`.
+
 ## Run Locally
 
 ```bash
@@ -27,6 +39,7 @@ npm test
 npm run validate:manifests
 npm run generate:synthetic-data
 npm run evidence:phase1
+npm run evidence:phase2
 npm start
 ```
 
@@ -51,6 +64,8 @@ docker compose up --build
 - Balances are derived through `projectBalances`; source-of-truth balances are not directly mutated.
 - External commands require idempotency keys.
 - Reversal transactions reference the original transaction.
+- Closed business days reject direct posting commands.
+- Concurrent withdrawals serialize through the ledger command service and cannot overdraw available balance.
 - Staff customer/account-sensitive access requires a business reason and audit event.
 - Audit events are append-only and hash chained.
 - High-risk staff commands require maker-checker approval, and maker and checker must differ.

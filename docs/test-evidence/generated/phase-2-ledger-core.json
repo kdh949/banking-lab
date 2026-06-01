@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-06-01T20:37:32.645Z",
+  "scope": "Phase 2 Ledger Core",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "posting-sum-zero",
+      "status": "pass",
+      "detail": "5 ledger transactions validated as balanced"
+    },
+    {
+      "id": "idempotency-retry",
+      "status": "pass",
+      "detail": "Retry with same idempotency key returned the original transfer"
+    },
+    {
+      "id": "reversal-reference",
+      "status": "pass",
+      "detail": "Reversal TX-REV-00000005 references TX-TRF-00000004"
+    },
+    {
+      "id": "concurrent-withdrawal",
+      "status": "pass",
+      "detail": "120 concurrent withdrawals against 100 units allowed 100 successes and 20 rejections"
+    },
+    {
+      "id": "closed-day-mutation-guard",
+      "status": "pass",
+      "detail": "Direct deposit command on closed business day was rejected"
+    }
+  ]
+}
