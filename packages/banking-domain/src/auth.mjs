@@ -40,6 +40,20 @@ export const MOCK_USERS = [
     actorType: "STAFF",
     roles: ["FDS_REVIEWER", "AML_REVIEWER"],
     branchId: "LAB-RISK"
+  },
+  {
+    userId: "ops01",
+    displayName: "Operations Operator 01",
+    actorType: "STAFF",
+    roles: ["OPS_OPERATOR"],
+    branchId: "LAB-OPS"
+  },
+  {
+    userId: "compliance01",
+    displayName: "Compliance Manager 01",
+    actorType: "STAFF",
+    roles: ["COMPLIANCE_MANAGER", "OPS_MANAGER"],
+    branchId: "LAB-COMPLIANCE"
   }
 ];
 

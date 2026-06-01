@@ -29,7 +29,7 @@
       "id": "requestRelease",
       "label": "Request Release",
       "type": "command",
-      "target": "POST /api/fds/cases/{caseId}/release-request"
+      "target": "POST /api/staff/fds-cases/{caseId}/release-requests"
     }
   ]
 }

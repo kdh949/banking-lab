@@ -1,0 +1,36 @@
+{
+  "screenId": "OPS-201",
+  "title": "Reconciliation Unmatched Item Review",
+  "app": "ops-console",
+  "type": "CASE",
+  "domain": "reconciliation",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": false
+  },
+  "workflow": {
+    "name": "reconciliationItemWorkflow",
+    "states": ["OPEN", "INVESTIGATING", "MATCHED", "ADJUSTMENT_REQUESTED", "ADJUSTED", "WAIVED", "CLOSED"]
+  },
+  "approval": {
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["RECONCILIATION_ADJUSTMENT"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "sections": ["itemSummary", "internalLedger", "externalFile", "owner", "adjustmentRequest", "approvalTimeline", "timeline"],
+  "actions": [
+    {
+      "id": "requestAdjustment",
+      "label": "Request Adjustment",
+      "type": "command",
+      "target": "POST /api/ops/reconciliation-items/{itemId}/adjustment-requests"
+    }
+  ]
+}

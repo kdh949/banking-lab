@@ -1,0 +1,52 @@
+{
+  "screenId": "AML-201",
+  "title": "AML STR Simulation Review",
+  "app": "fds-aml-console",
+  "type": "CASE",
+  "domain": "aml",
+  "requiredRoles": ["AML_REVIEWER", "COMPLIANCE_MANAGER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "amlCaseWorkflow",
+    "states": ["OPEN", "INVESTIGATING", "CLOSURE_REQUESTED", "CLOSED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 24
+  },
+  "approval": {
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["AML_CASE_CLOSE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "sections": ["caseSummary", "riskAlerts", "customerContext", "comments", "strSimulation", "approvalTimeline", "timeline"],
+  "actions": [
+    {
+      "id": "assign",
+      "label": "Assign",
+      "type": "command",
+      "target": "POST /api/staff/aml-cases/{caseId}/assign"
+    },
+    {
+      "id": "comment",
+      "label": "Add Comment",
+      "type": "command",
+      "target": "POST /api/staff/aml-cases/{caseId}/comments"
+    },
+    {
+      "id": "requestClosure",
+      "label": "Request Closure",
+      "type": "command",
+      "target": "POST /api/staff/aml-cases/{caseId}/closure-requests"
+    }
+  ]
+}

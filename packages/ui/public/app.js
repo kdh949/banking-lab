@@ -644,6 +644,255 @@
     await loadComplaints();
   }
 
+  async function renderFdsAmlConsole() {
+    shell(() => `
+      <section class="workspace portal">
+        ${nav(["FDS", "AML", "Approvals", "Audit"], "FDS")}
+        <section class="panel">
+          <div class="panel-header">
+            <h1>FDS AML Review</h1>
+            <span class="badge warn">Case controlled</span>
+          </div>
+          <div class="panel-body business-screen">
+            <div class="toolbar">
+              <button id="risk-create-held">Create FDS hold</button>
+              <button class="secondary" id="risk-release">Release first hold</button>
+              <button class="secondary" id="risk-close-aml">Close first AML case</button>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>FDS Case</th><th>Status</th><th>Owner</th><th>Amount</th><th>Rules</th></tr></thead>
+              <tbody id="fds-case-list"><tr><td colspan="5">Loading FDS cases...</td></tr></tbody>
+            </table>
+            <table class="data-table">
+              <thead><tr><th>AML Case</th><th>Status</th><th>Customer</th><th>Risk</th><th>STR</th></tr></thead>
+              <tbody id="aml-case-list"><tr><td colspan="5">Loading AML cases...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    `);
+
+    async function refreshRiskCases() {
+      const summary = await api("/api/risk/summary");
+      document.getElementById("fds-case-list").innerHTML = summary.fdsCases.map((item) => `
+        <tr>
+          <td>${item.caseId}</td>
+          <td><span class="badge warn">${item.status}</span></td>
+          <td>${item.owner || ""}</td>
+          <td>${money(item.amountMinor)}</td>
+          <td>${(item.alerts || []).map((alert) => alert.ruleId).join(", ")}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5">No FDS cases</td></tr>`;
+      document.getElementById("aml-case-list").innerHTML = summary.amlCases.map((item) => `
+        <tr>
+          <td>${item.caseId}</td>
+          <td><span class="badge warn">${item.status}</span></td>
+          <td>${item.customerId}</td>
+          <td>${item.riskDecision}</td>
+          <td>${item.strSimulation?.reported ? item.strSimulation.reportReferenceId : "Pending"}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5">No AML cases</td></tr>`;
+      return summary;
+    }
+
+    document.getElementById("risk-create-held").addEventListener("click", async () => {
+      await api("/api/customer/transfers", {
+        method: "POST",
+        body: JSON.stringify({
+          fromAccountId: "ACC-SYN-003-001",
+          toAccountId: "ACC-SYN-002-001",
+          amountMinor: 5000000,
+          idempotencyKey: `RISK-UI-${Date.now()}`,
+          requestedBy: "SYN-CUS-003",
+          newDevice: true
+        })
+      });
+      await refreshRiskCases();
+    });
+
+    document.getElementById("risk-release").addEventListener("click", async () => {
+      const summary = await refreshRiskCases();
+      const target = summary.fdsCases.find((item) => ["HELD", "INVESTIGATING"].includes(item.status));
+      if (!target) {
+        return;
+      }
+      await api(`/api/staff/fds-cases/${target.caseId}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ actorId: "fds01", owner: "fds01" })
+      });
+      const release = await api(`/api/staff/fds-cases/${target.caseId}/release-requests`, {
+        method: "POST",
+        body: JSON.stringify({
+          actorId: "fds01",
+          reason: "FDS console release"
+        })
+      });
+      await api(`/api/staff/approvals/${release.approval.approvalId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER"
+        })
+      });
+      await refreshRiskCases();
+    });
+
+    document.getElementById("risk-close-aml").addEventListener("click", async () => {
+      const summary = await refreshRiskCases();
+      const target = summary.amlCases.find((item) => ["OPEN", "INVESTIGATING"].includes(item.status));
+      if (!target) {
+        return;
+      }
+      await api(`/api/staff/aml-cases/${target.caseId}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ actorId: "fds01", owner: "fds01" })
+      });
+      await api(`/api/staff/aml-cases/${target.caseId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({
+          actorId: "fds01",
+          body: "Console review note"
+        })
+      });
+      const closure = await api(`/api/staff/aml-cases/${target.caseId}/closure-requests`, {
+        method: "POST",
+        body: JSON.stringify({
+          actorId: "fds01",
+          reason: "AML console closure",
+          disposition: "STR_SIMULATED",
+          reportReferenceId: `STR-SIM-${target.caseId}`
+        })
+      });
+      await api(`/api/staff/approvals/${closure.approval.approvalId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER"
+        })
+      });
+      await refreshRiskCases();
+    });
+
+    await refreshRiskCases();
+  }
+
+  async function renderOpsConsole() {
+    shell(() => `
+      <section class="workspace portal">
+        ${nav(["Closing", "Reconciliation", "Adjustments", "Incidents"], "Closing")}
+        <section class="panel">
+          <div class="panel-header">
+            <h1>Operations Console</h1>
+            <span class="badge audit">EOD controlled</span>
+          </div>
+          <div class="panel-body business-screen">
+            <div class="toolbar">
+              <button id="ops-seed-transfer">Seed transfer</button>
+              <button class="secondary" id="ops-run-eod">Run EOD</button>
+              <button class="secondary" id="ops-adjust">Adjust first item</button>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Closing</th><th>Date</th><th>Status</th><th>Internal</th><th>External</th></tr></thead>
+              <tbody id="closing-list"><tr><td colspan="5">Loading closings...</td></tr></tbody>
+            </table>
+            <table class="data-table">
+              <thead><tr><th>Item</th><th>Status</th><th>Owner</th><th>Type</th><th>Amount</th></tr></thead>
+              <tbody id="recon-list"><tr><td colspan="5">Loading reconciliation items...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    `);
+
+    const businessDate = new Date().toISOString().slice(0, 10);
+    const nextDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    async function refreshOps() {
+      const [closings, items] = await Promise.all([
+        api("/api/ops/daily-closings"),
+        api("/api/ops/reconciliation-items")
+      ]);
+      document.getElementById("closing-list").innerHTML = closings.items.map((item) => `
+        <tr>
+          <td>${item.closingId}</td>
+          <td>${item.businessDate}</td>
+          <td><span class="badge warn">${item.status}</span></td>
+          <td>${money(item.internalTotalMinor)}</td>
+          <td>${money(item.externalTotalMinor)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5">No closings</td></tr>`;
+      document.getElementById("recon-list").innerHTML = items.items.map((item) => `
+        <tr>
+          <td>${item.itemId}</td>
+          <td><span class="badge warn">${item.status}</span></td>
+          <td>${item.owner || ""}</td>
+          <td>${item.mismatchType}</td>
+          <td>${money(Math.abs((item.externalAmountMinor || 0) - (item.internalAmountMinor || 0)))}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5">No reconciliation items</td></tr>`;
+      return { closings, items };
+    }
+
+    document.getElementById("ops-seed-transfer").addEventListener("click", async () => {
+      await api("/api/ledger/transfers", {
+        method: "POST",
+        body: JSON.stringify({
+          fromAccountId: "ACC-SYN-001-001",
+          toAccountId: "ACC-SYN-002-001",
+          amountMinor: 4321,
+          idempotencyKey: `OPS-UI-TRF-${Date.now()}`,
+          businessDate,
+          requestedBy: "ops01",
+          requestedChannel: "OPS_CONSOLE",
+          reason: "Operations console seed transfer"
+        })
+      });
+      await refreshOps();
+    });
+
+    document.getElementById("ops-run-eod").addEventListener("click", async () => {
+      await api("/api/ops/daily-closings", {
+        method: "POST",
+        body: JSON.stringify({
+          businessDate,
+          requestedBy: "ops01",
+          externalMode: "MISMATCH"
+        })
+      });
+      await refreshOps();
+    });
+
+    document.getElementById("ops-adjust").addEventListener("click", async () => {
+      const { items } = await refreshOps();
+      const target = items.items.find((item) => item.status === "OPEN");
+      if (!target) {
+        return;
+      }
+      const adjustment = await api(`/api/ops/reconciliation-items/${target.itemId}/adjustment-requests`, {
+        method: "POST",
+        body: JSON.stringify({
+          requestedBy: "ops01",
+          reason: "Operations console adjustment",
+          accountId: "ACC-SYN-001-001",
+          direction: "CREDIT",
+          amountMinor: Math.abs((target.externalAmountMinor || 0) - (target.internalAmountMinor || 0)) || 1000,
+          businessDate: nextDate,
+          idempotencyKey: `OPS-UI-ADJ-${target.itemId}`
+        })
+      });
+      await api(`/api/staff/approvals/${adjustment.approval.approvalId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER"
+        })
+      });
+      await refreshOps();
+    });
+
+    await refreshOps();
+  }
+
   async function renderConsole() {
     const screens = await api(`/api/screens?app=${appName}`);
     shell(() => `
@@ -668,9 +917,9 @@
     "customer-web": renderCustomerWeb,
     "staff-terminal": renderStaffTerminal,
     "complaint-portal": renderComplaintPortal,
-    "ops-console": renderConsole,
+    "ops-console": renderOpsConsole,
     "audit-console": renderConsole,
-    "fds-aml-console": renderConsole
+    "fds-aml-console": renderFdsAmlConsole
   };
 
   renderers[appName]().catch((error) => {

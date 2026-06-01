@@ -1,0 +1,52 @@
+{
+  "screenId": "FDS-201",
+  "title": "FDS Held Transfer Review",
+  "app": "fds-aml-console",
+  "type": "CASE",
+  "domain": "fds",
+  "requiredRoles": ["FDS_REVIEWER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "fdsReviewWorkflow",
+    "states": ["HELD", "INVESTIGATING", "RELEASE_REQUESTED", "BLOCK_REQUESTED", "RELEASED", "BLOCKED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 4
+  },
+  "approval": {
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["FDS_RELEASE", "FDS_BLOCK"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "sections": ["caseSummary", "ruleHits", "customerContext", "transferResult", "approvalTimeline", "timeline"],
+  "actions": [
+    {
+      "id": "assign",
+      "label": "Assign",
+      "type": "command",
+      "target": "POST /api/staff/fds-cases/{caseId}/assign"
+    },
+    {
+      "id": "requestRelease",
+      "label": "Request Release",
+      "type": "command",
+      "target": "POST /api/staff/fds-cases/{caseId}/release-requests"
+    },
+    {
+      "id": "requestBlock",
+      "label": "Request Block",
+      "type": "command",
+      "target": "POST /api/staff/fds-cases/{caseId}/block-requests"
+    }
+  ]
+}

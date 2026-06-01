@@ -21,6 +21,29 @@ import {
   receiveComplaint,
   startComplaintReview
 } from "../services/complaint-service/src/index.mjs";
+import {
+  assignFdsCase,
+  createFdsCase,
+  evaluateFdsRules,
+  markFdsBlocked,
+  markFdsReleased,
+  requestFdsDecision
+} from "../services/fds-service/src/index.mjs";
+import {
+  addAmlComment,
+  assignAmlCase,
+  closeAmlCase,
+  createAmlCase,
+  deriveAmlRisk,
+  evaluateAmlRules,
+  requestAmlClosure
+} from "../services/aml-service/src/index.mjs";
+import {
+  markReconciliationAdjusted,
+  requestReconciliationAdjustment,
+  runDailyReconciliation
+} from "../services/reconciliation-service/src/index.mjs";
+import { simulateExternalInstitutionFile } from "../services/external-simulators/src/index.mjs";
 import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -151,6 +174,15 @@ function appendTransferResult(state, input) {
   return item;
 }
 
+function replaceTransferResult(state, updated) {
+  const index = state.transferResults.findIndex((item) => item.resultId === updated.resultId);
+  if (index === -1) {
+    throw new Error(`transfer result not found: ${updated.resultId}`);
+  }
+  state.transferResults[index] = updated;
+  return updated;
+}
+
 function findComplaint(state, caseId) {
   return state.complaints.find((complaint) => complaint.caseId === caseId);
 }
@@ -184,6 +216,90 @@ function replaceComplaint(state, updated) {
   }
   state.complaints[index] = updated;
   return updated;
+}
+
+function findFdsCase(state, caseId) {
+  return state.fdsCases.find((caseRecord) => caseRecord.caseId === caseId);
+}
+
+function replaceFdsCase(state, updated) {
+  const index = state.fdsCases.findIndex((caseRecord) => caseRecord.caseId === updated.caseId);
+  if (index === -1) {
+    throw new Error(`FDS case not found: ${updated.caseId}`);
+  }
+  state.fdsCases[index] = updated;
+  return updated;
+}
+
+function findAmlCase(state, caseId) {
+  return state.amlCases.find((caseRecord) => caseRecord.caseId === caseId);
+}
+
+function replaceAmlCase(state, updated) {
+  const index = state.amlCases.findIndex((caseRecord) => caseRecord.caseId === updated.caseId);
+  if (index === -1) {
+    throw new Error(`AML case not found: ${updated.caseId}`);
+  }
+  state.amlCases[index] = updated;
+  return updated;
+}
+
+function findReconciliationItem(state, itemId) {
+  return state.reconciliationItems.find((item) => item.itemId === itemId);
+}
+
+function replaceReconciliationItem(state, updated) {
+  const index = state.reconciliationItems.findIndex((item) => item.itemId === updated.itemId);
+  if (index === -1) {
+    throw new Error(`reconciliation item not found: ${updated.itemId}`);
+  }
+  state.reconciliationItems[index] = updated;
+  return updated;
+}
+
+function nextBusinessDate(businessDate) {
+  const date = new Date(`${businessDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function maybeCreateAmlCaseForTransfer(state, input) {
+  const customer = findCustomer(state, input.customerId);
+  const alerts = evaluateAmlRules(customer, {
+    amountMinor: input.amountMinor
+  }, {
+    transactionVelocity24h: input.transactionVelocity24h || 0
+  });
+  if (alerts.length === 0) {
+    return null;
+  }
+  const amlCase = createAmlCase({
+    caseId: `AML-${String(state.amlCases.length + 1).padStart(8, "0")}`,
+    customerId: input.customerId,
+    riskDecision: deriveAmlRisk(customer, input.transactionVelocity24h || 0),
+    source: "FDS_HELD_TRANSFER",
+    relatedTransferResultId: input.transferResultId,
+    relatedFdsCaseId: input.fdsCaseId,
+    amountMinor: input.amountMinor,
+    alerts
+  });
+  state.amlCases.push(amlCase);
+  state.auditLog.append({
+    eventType: "COMMAND_REQUESTED",
+    actorType: "SYSTEM",
+    actorId: "AML_ENGINE",
+    actorRole: "AML_ENGINE",
+    screenId: "AML-201",
+    businessReferenceId: amlCase.caseId,
+    customerId: input.customerId,
+    reason: "Synthetic AML case candidate generated",
+    payload: {
+      fdsCaseId: input.fdsCaseId,
+      alertCount: alerts.length,
+      riskDecision: amlCase.riskDecision
+    }
+  });
+  return amlCase;
 }
 
 function applyCustomerInfoChange(state, approval, actor) {
@@ -257,6 +373,198 @@ function applyComplaintAnswerApproval(state, approval, actor) {
   return true;
 }
 
+async function applyFdsReleaseApproval(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "FDS_RELEASE") {
+    return null;
+  }
+  const caseRecord = findFdsCase(state, approval.businessReferenceId);
+  if (!caseRecord) {
+    throw new Error(`FDS case not found: ${approval.businessReferenceId}`);
+  }
+  if (caseRecord.status !== "RELEASE_REQUESTED") {
+    throw new Error(`FDS case is not waiting release approval: ${caseRecord.caseId}`);
+  }
+  const result = await state.ledgerCore.transfer({
+    fromAccountId: caseRecord.fromAccountId,
+    toAccountId: caseRecord.toAccountId,
+    amountMinor: caseRecord.amountMinor,
+    idempotencyKey: approval.afterSnapshot?.releaseIdempotencyKey || `FDS-RELEASE-${caseRecord.caseId}`,
+    businessReferenceId: caseRecord.caseId,
+    requestedBy: actor.actorId,
+    requestedChannel: "FDS_REVIEW",
+    description: "FDS released held customer transfer"
+  });
+  const transaction = result.value;
+  const updatedCase = replaceFdsCase(state, markFdsReleased(caseRecord, {
+    actorId: actor.actorId,
+    approvalId: approval.approvalId,
+    transactionId: transaction.id
+  }));
+  const transfer = state.transferResults.find((item) => item.resultId === caseRecord.transferResultId);
+  if (transfer) {
+    replaceTransferResult(state, {
+      ...transfer,
+      status: "POSTED",
+      transactionId: transaction.id,
+      message: "FDS reviewer released transfer to ledger"
+    });
+  }
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "FDS-201",
+    businessReferenceId: approval.approvalId,
+    customerId: caseRecord.customerId,
+    accountId: caseRecord.fromAccountId,
+    reason: approval.requestReason,
+    payload: {
+      caseId: caseRecord.caseId,
+      transactionId: transaction.id,
+      businessType: approval.businessType
+    }
+  });
+  return {
+    caseRecord: updatedCase,
+    transaction
+  };
+}
+
+function applyFdsBlockApproval(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "FDS_BLOCK") {
+    return null;
+  }
+  const caseRecord = findFdsCase(state, approval.businessReferenceId);
+  if (!caseRecord) {
+    throw new Error(`FDS case not found: ${approval.businessReferenceId}`);
+  }
+  if (caseRecord.status !== "BLOCK_REQUESTED") {
+    throw new Error(`FDS case is not waiting block approval: ${caseRecord.caseId}`);
+  }
+  const updatedCase = replaceFdsCase(state, markFdsBlocked(caseRecord, {
+    actorId: actor.actorId,
+    approvalId: approval.approvalId
+  }));
+  const transfer = state.transferResults.find((item) => item.resultId === caseRecord.transferResultId);
+  if (transfer) {
+    replaceTransferResult(state, {
+      ...transfer,
+      status: "BLOCKED",
+      failureCode: "FDS_BLOCKED",
+      message: "FDS reviewer blocked transfer"
+    });
+  }
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "FDS-201",
+    businessReferenceId: approval.approvalId,
+    customerId: caseRecord.customerId,
+    accountId: caseRecord.fromAccountId,
+    reason: approval.requestReason,
+    payload: {
+      caseId: caseRecord.caseId,
+      businessType: approval.businessType
+    }
+  });
+  return {
+    caseRecord: updatedCase
+  };
+}
+
+function applyAmlClosureApproval(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "AML_CASE_CLOSE") {
+    return null;
+  }
+  const caseRecord = findAmlCase(state, approval.businessReferenceId);
+  if (!caseRecord) {
+    throw new Error(`AML case not found: ${approval.businessReferenceId}`);
+  }
+  if (caseRecord.status !== "CLOSURE_REQUESTED") {
+    throw new Error(`AML case is not waiting closure approval: ${caseRecord.caseId}`);
+  }
+  const updatedCase = replaceAmlCase(state, closeAmlCase(caseRecord, {
+    actorId: actor.actorId,
+    approvalId: approval.approvalId,
+    disposition: approval.afterSnapshot?.disposition,
+    reportReferenceId: approval.afterSnapshot?.reportReferenceId
+  }));
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "AML-201",
+    businessReferenceId: approval.approvalId,
+    customerId: caseRecord.customerId,
+    reason: approval.requestReason,
+    payload: {
+      caseId: caseRecord.caseId,
+      businessType: approval.businessType,
+      disposition: approval.afterSnapshot?.disposition
+    }
+  });
+  return {
+    caseRecord: updatedCase
+  };
+}
+
+async function applyReconciliationAdjustmentApproval(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "RECONCILIATION_ADJUSTMENT") {
+    return null;
+  }
+  const item = findReconciliationItem(state, approval.businessReferenceId);
+  if (!item) {
+    throw new Error(`reconciliation item not found: ${approval.businessReferenceId}`);
+  }
+  if (item.status !== "ADJUSTMENT_REQUESTED") {
+    throw new Error(`reconciliation item is not waiting adjustment approval: ${item.itemId}`);
+  }
+  const after = approval.afterSnapshot || {};
+  const result = await state.ledgerCore.adjustment({
+    accountId: after.accountId,
+    direction: after.direction,
+    amountMinor: after.amountMinor,
+    idempotencyKey: after.idempotencyKey || `REC-ADJ-${item.itemId}`,
+    businessReferenceId: item.itemId,
+    businessDate: after.businessDate || nextBusinessDate(item.businessDate),
+    requestedBy: actor.actorId,
+    requestedChannel: "OPS_RECONCILIATION",
+    reason: approval.requestReason
+  });
+  const transaction = result.value;
+  const updatedItem = replaceReconciliationItem(state, markReconciliationAdjusted(item, {
+    actorId: actor.actorId,
+    transactionId: transaction.id
+  }));
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "OPS-201",
+    businessReferenceId: approval.approvalId,
+    accountId: after.accountId,
+    reason: approval.requestReason,
+    payload: {
+      itemId: item.itemId,
+      businessType: approval.businessType,
+      transactionId: transaction.id
+    }
+  });
+  return {
+    item: updatedItem,
+    transaction
+  };
+}
+
 function createSeededLedger(dataset) {
   return [...dataset.ledgerTransactions];
 }
@@ -282,7 +590,11 @@ export async function createLabState() {
     })
   ];
   const fdsCases = [];
+  const amlCases = [];
   const transferResults = [];
+  const dailyClosings = [];
+  const reconciliationItems = [];
+  const externalFiles = [];
   const executedApprovalIds = new Set();
 
   approvalStore.submit({
@@ -305,7 +617,11 @@ export async function createLabState() {
     manifests,
     complaints,
     fdsCases,
+    amlCases,
     transferResults,
+    dailyClosings,
+    reconciliationItems,
+    externalFiles,
     executedApprovalIds
   };
 }
@@ -350,7 +666,9 @@ export async function createLabHandler(state) {
             "manager01",
             "complaint01",
             "auditor01",
-            "fds01"
+            "fds01",
+            "ops01",
+            "compliance01"
           ]
         });
         return;
@@ -608,15 +926,337 @@ export async function createLabHandler(state) {
         };
         const customerExecuted = applyCustomerInfoChange(state, approval, actor);
         const complaintExecuted = applyComplaintAnswerApproval(state, approval, actor);
+        const fdsReleaseExecution = await applyFdsReleaseApproval(state, approval, actor);
+        const fdsBlockExecution = applyFdsBlockApproval(state, approval, actor);
+        const amlClosureExecution = applyAmlClosureApproval(state, approval, actor);
+        const reconciliationExecution = await applyReconciliationAdjustmentApproval(state, approval, actor);
         json(response, 200, {
           item: approval,
-          executed: customerExecuted || complaintExecuted,
+          executed: Boolean(customerExecuted || complaintExecuted || fdsReleaseExecution || fdsBlockExecution || amlClosureExecution || reconciliationExecution),
           customer: approval.businessType === "CUSTOMER_INFO_CHANGE"
             ? publicCustomerDetail(findCustomer(state, approval.businessReferenceId))
             : null,
           complaint: approval.businessType === "COMPLAINT_ANSWER_SEND"
             ? findComplaint(state, approval.businessReferenceId)
-            : null
+            : null,
+          fdsCase: approval.businessType === "FDS_RELEASE" || approval.businessType === "FDS_BLOCK"
+            ? findFdsCase(state, approval.businessReferenceId)
+            : null,
+          amlCase: approval.businessType === "AML_CASE_CLOSE"
+            ? findAmlCase(state, approval.businessReferenceId)
+            : null,
+          reconciliationItem: approval.businessType === "RECONCILIATION_ADJUSTMENT"
+            ? findReconciliationItem(state, approval.businessReferenceId)
+            : null,
+          ledgerTransaction: fdsReleaseExecution?.transaction || reconciliationExecution?.transaction || null
+        });
+        return;
+      }
+
+      const approvalRejectMatch = pathname.match(/^\/api\/staff\/approvals\/([^/]+)\/reject$/);
+      if (approvalRejectMatch && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const approval = state.approvalStore.reject(approvalRejectMatch[1], payload);
+        json(response, 200, {
+          item: approval
+        });
+        return;
+      }
+
+      if (pathname === "/api/staff/fds-cases" && request.method === "GET") {
+        json(response, 200, { items: state.fdsCases });
+        return;
+      }
+
+      const fdsCaseActionMatch = pathname.match(/^\/api\/staff\/fds-cases\/([^/]+)\/([^/]+)$/);
+      if (fdsCaseActionMatch && request.method === "POST") {
+        const caseId = decodeURIComponent(fdsCaseActionMatch[1]);
+        const action = decodeURIComponent(fdsCaseActionMatch[2]);
+        const payload = await bodyJson(request);
+        const caseRecord = findFdsCase(state, caseId);
+        if (!caseRecord) {
+          json(response, 404, { error: "FDS case not found" });
+          return;
+        }
+        const actorId = payload.actorId || payload.requestedBy || "fds01";
+        let updated;
+        let approval = null;
+        if (action === "assign") {
+          updated = assignFdsCase(caseRecord, {
+            actorId,
+            owner: payload.owner || actorId
+          });
+        } else if (action === "release-requests" || action === "block-requests") {
+          if (!payload.reason) {
+            json(response, 400, { error: "FDS decision requires a business reason" });
+            return;
+          }
+          const decision = action === "release-requests" ? "RELEASE" : "BLOCK";
+          approval = state.approvalStore.submit({
+            businessType: decision === "RELEASE" ? "FDS_RELEASE" : "FDS_BLOCK",
+            businessReferenceId: caseId,
+            requestedBy: actorId,
+            requestedByRole: payload.requestedByRole || "FDS_REVIEWER",
+            requestReason: payload.reason,
+            beforeSnapshot: {
+              status: caseRecord.status,
+              transferResultId: caseRecord.transferResultId
+            },
+            afterSnapshot: {
+              decision,
+              releaseIdempotencyKey: `FDS-RELEASE-${caseId}`,
+              blockReferenceId: `FDS-BLOCK-${caseId}`
+            },
+            screenId: "FDS-201"
+          });
+          updated = requestFdsDecision(caseRecord, {
+            actorId,
+            action: decision,
+            approvalId: approval.approvalId,
+            reason: payload.reason
+          });
+        } else {
+          json(response, 404, { error: "unsupported FDS action" });
+          return;
+        }
+        replaceFdsCase(state, updated);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId,
+          actorRole: payload.actorRole || payload.requestedByRole || "FDS_REVIEWER",
+          screenId: "FDS-201",
+          businessReferenceId: caseId,
+          customerId: updated.customerId,
+          accountId: updated.fromAccountId,
+          reason: payload.reason || `FDS ${action}`,
+          payload: {
+            action,
+            status: updated.status,
+            approvalId: approval?.approvalId || null
+          }
+        });
+        json(response, 200, {
+          item: updated,
+          approval
+        });
+        return;
+      }
+
+      if (pathname === "/api/staff/aml-cases" && request.method === "GET") {
+        json(response, 200, { items: state.amlCases });
+        return;
+      }
+
+      const amlCaseActionMatch = pathname.match(/^\/api\/staff\/aml-cases\/([^/]+)\/([^/]+)$/);
+      if (amlCaseActionMatch && request.method === "POST") {
+        const caseId = decodeURIComponent(amlCaseActionMatch[1]);
+        const action = decodeURIComponent(amlCaseActionMatch[2]);
+        const payload = await bodyJson(request);
+        const caseRecord = findAmlCase(state, caseId);
+        if (!caseRecord) {
+          json(response, 404, { error: "AML case not found" });
+          return;
+        }
+        const actorId = payload.actorId || payload.requestedBy || "fds01";
+        let updated;
+        let approval = null;
+        if (action === "assign") {
+          updated = assignAmlCase(caseRecord, {
+            actorId,
+            owner: payload.owner || actorId
+          });
+        } else if (action === "comments") {
+          updated = addAmlComment(caseRecord, {
+            actorId,
+            body: payload.body
+          });
+        } else if (action === "closure-requests") {
+          if (!payload.reason) {
+            json(response, 400, { error: "AML closure requires a business reason" });
+            return;
+          }
+          approval = state.approvalStore.submit({
+            businessType: "AML_CASE_CLOSE",
+            businessReferenceId: caseId,
+            requestedBy: actorId,
+            requestedByRole: payload.requestedByRole || "AML_REVIEWER",
+            requestReason: payload.reason,
+            beforeSnapshot: {
+              status: caseRecord.status,
+              strSimulation: caseRecord.strSimulation
+            },
+            afterSnapshot: {
+              disposition: payload.disposition || "FALSE_POSITIVE",
+              reportReferenceId: payload.reportReferenceId || null
+            },
+            screenId: "AML-201"
+          });
+          updated = requestAmlClosure(caseRecord, {
+            actorId,
+            approvalId: approval.approvalId,
+            disposition: payload.disposition || "FALSE_POSITIVE",
+            reason: payload.reason
+          });
+        } else {
+          json(response, 404, { error: "unsupported AML action" });
+          return;
+        }
+        replaceAmlCase(state, updated);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId,
+          actorRole: payload.actorRole || payload.requestedByRole || "AML_REVIEWER",
+          screenId: "AML-201",
+          businessReferenceId: caseId,
+          customerId: updated.customerId,
+          reason: payload.reason || `AML ${action}`,
+          payload: {
+            action,
+            status: updated.status,
+            approvalId: approval?.approvalId || null
+          }
+        });
+        json(response, 200, {
+          item: updated,
+          approval
+        });
+        return;
+      }
+
+      if (pathname === "/api/ops/daily-closings" && request.method === "GET") {
+        json(response, 200, { items: state.dailyClosings });
+        return;
+      }
+
+      if (pathname === "/api/ops/daily-closings" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const businessDate = payload.businessDate || new Date().toISOString().slice(0, 10);
+        const externalFile = payload.externalEntries
+          ? {
+            fileId: payload.fileId || `EXT-FILE-${String(state.externalFiles.length + 1).padStart(8, "0")}`,
+            businessDate,
+            entries: payload.externalEntries
+          }
+          : simulateExternalInstitutionFile({
+            businessDate,
+            transactions: state.ledgerCore.transactions,
+            mode: payload.externalMode || "MISMATCH"
+          });
+        const report = runDailyReconciliation({
+          closingId: `EOD-${String(state.dailyClosings.length + 1).padStart(8, "0")}`,
+          businessDate,
+          transactions: state.ledgerCore.transactions,
+          accounts: state.ledgerCore.accounts,
+          externalEntries: externalFile.entries,
+          itemSeed: state.reconciliationItems.length + 1
+        });
+        state.ledgerCore.closeBusinessDay(businessDate);
+        state.externalFiles.push(externalFile);
+        state.dailyClosings.push(report.closing);
+        state.reconciliationItems.push(...report.items);
+        state.auditLog.append({
+          eventType: "BATCH_STARTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "ops01",
+          actorRole: payload.actorRole || "OPS_OPERATOR",
+          screenId: "OPS-101",
+          businessReferenceId: report.closing.closingId,
+          payload: {
+            businessDate,
+            status: report.closing.status,
+            unmatchedItemCount: report.closing.unmatchedItemCount
+          }
+        });
+        json(response, 201, {
+          item: report.closing,
+          externalFile,
+          reconciliationItems: report.items
+        });
+        return;
+      }
+
+      if (pathname === "/api/ops/reconciliation-items" && request.method === "GET") {
+        json(response, 200, { items: state.reconciliationItems });
+        return;
+      }
+
+      const reconciliationAdjustmentMatch = pathname.match(/^\/api\/ops\/reconciliation-items\/([^/]+)\/adjustment-requests$/);
+      if (reconciliationAdjustmentMatch && request.method === "POST") {
+        const itemId = decodeURIComponent(reconciliationAdjustmentMatch[1]);
+        const payload = await bodyJson(request);
+        const item = findReconciliationItem(state, itemId);
+        if (!item) {
+          json(response, 404, { error: "reconciliation item not found" });
+          return;
+        }
+        if (!payload.reason) {
+          json(response, 400, { error: "RECONCILIATION_ADJUSTMENT requires a business reason" });
+          return;
+        }
+        const amountMinor = payload.amountMinor || Math.abs((item.externalAmountMinor || 0) - (item.internalAmountMinor || 0));
+        const approval = state.approvalStore.submit({
+          businessType: "RECONCILIATION_ADJUSTMENT",
+          businessReferenceId: itemId,
+          requestedBy: payload.requestedBy || "ops01",
+          requestedByRole: payload.requestedByRole || "OPS_OPERATOR",
+          requestReason: payload.reason,
+          beforeSnapshot: {
+            status: item.status,
+            internalAmountMinor: item.internalAmountMinor,
+            externalAmountMinor: item.externalAmountMinor
+          },
+          afterSnapshot: {
+            accountId: payload.accountId || "ACC-SYN-001-001",
+            direction: payload.direction || "CREDIT",
+            amountMinor,
+            businessDate: payload.businessDate || nextBusinessDate(item.businessDate),
+            idempotencyKey: payload.idempotencyKey || `REC-ADJ-${itemId}`
+          },
+          screenId: "OPS-201"
+        });
+        const updated = requestReconciliationAdjustment(item, {
+          actorId: payload.requestedBy || "ops01",
+          approvalId: approval.approvalId,
+          accountId: payload.accountId || "ACC-SYN-001-001",
+          direction: payload.direction || "CREDIT",
+          amountMinor,
+          reason: payload.reason
+        });
+        replaceReconciliationItem(state, updated);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "ops01",
+          actorRole: payload.requestedByRole || "OPS_OPERATOR",
+          screenId: "OPS-201",
+          businessReferenceId: itemId,
+          accountId: payload.accountId || "ACC-SYN-001-001",
+          reason: payload.reason,
+          payload: {
+            status: updated.status,
+            approvalId: approval.approvalId
+          }
+        });
+        json(response, 201, {
+          item: updated,
+          approval
+        });
+        return;
+      }
+
+      if (pathname === "/api/ops/external-files" && request.method === "GET") {
+        json(response, 200, { items: state.externalFiles });
+        return;
+      }
+
+      if (pathname === "/api/risk/summary" && request.method === "GET") {
+        json(response, 200, {
+          fdsCases: state.fdsCases,
+          amlCases: state.amlCases,
+          reconciliationItems: state.reconciliationItems,
+          dailyClosings: state.dailyClosings
         });
         return;
       }
@@ -738,17 +1378,12 @@ export async function createLabHandler(state) {
           });
           return;
         }
-        if (payload.amountMinor >= 5000000) {
-          const caseRecord = {
-            caseId: `FDS-${String(state.fdsCases.length + 1).padStart(8, "0")}`,
-            status: "HELD",
-            rule: "UNUSUAL_AMOUNT",
-            customerId,
-            fromAccountId: payload.fromAccountId,
-            toAccountId: payload.toAccountId,
-            amountMinor: payload.amountMinor
-          };
-          state.fdsCases.push(caseRecord);
+        const fdsAlerts = evaluateFdsRules(payload, {
+          newDevice: payload.newDevice === true,
+          firstTimeBeneficiary: payload.firstTimeBeneficiary === true,
+          transferVelocity10m: payload.transferVelocity10m || 0
+        });
+        if (fdsAlerts.length > 0) {
           const held = appendTransferResult(state, {
             idempotencyKey: payload.idempotencyKey,
             customerId,
@@ -756,26 +1391,51 @@ export async function createLabHandler(state) {
             toAccountId: payload.toAccountId,
             amountMinor: payload.amountMinor,
             status: "HELD",
-            caseId: caseRecord.caseId,
+            caseId: `FDS-${String(state.fdsCases.length + 1).padStart(8, "0")}`,
             message: "Transfer held for FDS review"
+          });
+          const caseRecord = createFdsCase({
+            caseId: held.caseId,
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor,
+            idempotencyKey: payload.idempotencyKey,
+            transferResultId: held.resultId,
+            deviceFingerprint: payload.deviceFingerprint || "LAB-DEVICE",
+            firstTimeBeneficiary: payload.firstTimeBeneficiary === true,
+            transferVelocity10m: payload.transferVelocity10m || 0,
+            alerts: fdsAlerts
+          });
+          state.fdsCases.push(caseRecord);
+          maybeCreateAmlCaseForTransfer(state, {
+            customerId,
+            fdsCaseId: caseRecord.caseId,
+            transferResultId: held.resultId,
+            amountMinor: payload.amountMinor,
+            transactionVelocity24h: payload.transactionVelocity24h || 0
           });
           state.auditLog.append({
             eventType: "COMMAND_REQUESTED",
             actorType: "CUSTOMER",
             actorId: customerId,
             actorRole: "CUSTOMER",
+            screenId: "CWB-201",
             businessReferenceId: held.resultId,
             accountId: payload.fromAccountId,
+            customerId,
             reason: "Customer transfer held for FDS review",
             payload: {
               idempotencyKey: payload.idempotencyKey,
               amountMinor: payload.amountMinor,
-              caseId: caseRecord.caseId
+              caseId: caseRecord.caseId,
+              alertCount: fdsAlerts.length
             }
           });
           json(response, 202, {
             replayed: false,
-            item: held
+            item: held,
+            fdsCase: caseRecord
           });
           return;
         }
@@ -799,6 +1459,12 @@ export async function createLabHandler(state) {
             transactionId: transaction.id,
             message: "Transfer posted to ledger"
           });
+          maybeCreateAmlCaseForTransfer(state, {
+            customerId,
+            transferResultId: posted.resultId,
+            amountMinor: payload.amountMinor,
+            transactionVelocity24h: payload.transactionVelocity24h || 0
+          });
           state.auditLog.append({
             eventType: "COMMAND_EXECUTED",
             actorType: "CUSTOMER",
@@ -806,6 +1472,7 @@ export async function createLabHandler(state) {
             actorRole: "CUSTOMER",
             businessReferenceId: transaction.id,
             accountId: payload.fromAccountId,
+            customerId,
             reason: "Customer initiated synthetic transfer",
             payload: {
               idempotencyKey: payload.idempotencyKey,
@@ -835,6 +1502,7 @@ export async function createLabHandler(state) {
             actorRole: "CUSTOMER",
             businessReferenceId: failed.resultId,
             accountId: payload.fromAccountId,
+            customerId,
             payload: {
               idempotencyKey: payload.idempotencyKey,
               amountMinor: payload.amountMinor,
@@ -1115,6 +1783,27 @@ export async function createLabHandler(state) {
           payload: {
             idempotencyKey: payload.idempotencyKey,
             originalTransactionId: payload.originalTransactionId
+          }
+        });
+        json(response, result.replayed ? 200 : 201, result);
+        return;
+      }
+
+      if (pathname === "/api/ledger/adjustments" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const result = await state.ledgerCore.adjustment(payload);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "ops01",
+          actorRole: "OPS_OPERATOR",
+          businessReferenceId: result.value.id,
+          accountId: payload.accountId,
+          reason: payload.reason || "Synthetic ledger adjustment",
+          payload: {
+            idempotencyKey: payload.idempotencyKey,
+            amountMinor: payload.amountMinor,
+            direction: payload.direction
           }
         });
         json(response, result.replayed ? 200 : 201, result);

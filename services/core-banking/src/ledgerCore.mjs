@@ -282,6 +282,56 @@ export class LedgerCore {
     });
   }
 
+  async adjustment(input) {
+    return this.commandLock.run(async () => {
+      const businessDate = input.businessDate || today();
+      this.assertBusinessDateOpen(businessDate);
+      assertPositiveAmount(input.amountMinor);
+      this.requireAccount(input.accountId);
+      const direction = input.direction || "CREDIT";
+      if (!["DEBIT", "CREDIT"].includes(direction)) {
+        throw new Error("adjustment direction must be DEBIT or CREDIT");
+      }
+      const accountPosting = {
+        accountId: input.accountId,
+        direction,
+        amountMinor: input.amountMinor,
+        currency: input.currency || "KRW",
+        postingType: "ADJUSTMENT"
+      };
+      const suspensePosting = {
+        accountId: BANK_SUSPENSE_ACCOUNT_ID,
+        direction: direction === "CREDIT" ? "DEBIT" : "CREDIT",
+        amountMinor: input.amountMinor,
+        currency: input.currency || "KRW",
+        postingType: "ADJUSTMENT"
+      };
+      const result = this.idempotencyStore.run(input.idempotencyKey, () => {
+        const transaction = createLedgerTransaction({
+          id: input.id || this.nextTransactionId("TX-ADJ"),
+          transactionType: "ADJUSTMENT",
+          businessReferenceId: input.businessReferenceId,
+          idempotencyKey: input.idempotencyKey,
+          requestedBy: input.requestedBy || "SYSTEM",
+          requestedChannel: input.requestedChannel || "CORE_BANKING",
+          businessDate,
+          metadata: {
+            businessDate,
+            reason: input.reason,
+            description: input.description || "Synthetic reconciliation adjustment"
+          },
+          postings: direction === "CREDIT"
+            ? [suspensePosting, accountPosting]
+            : [accountPosting, suspensePosting]
+        });
+        this.transactions.push(transaction);
+        return transaction;
+      });
+      this.validateInvariants();
+      return result;
+    });
+  }
+
   validateInvariants() {
     const idempotencyKeys = new Set();
     const transactionIds = new Set();
