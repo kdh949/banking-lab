@@ -95,6 +95,7 @@
               <button class="secondary" data-code="ACC-101">ACC-101</button>
               <button class="secondary" data-code="LED-101">LED-101</button>
               <button class="secondary" data-code="CST-103">CST-103</button>
+              <button class="secondary" data-code="CMP-201">CMP-201</button>
               <button class="secondary" data-code="APR-001">APR-001</button>
               <button class="secondary" data-code="AUD-001">AUD-001</button>
             </div>
@@ -118,6 +119,10 @@
             <table class="data-table">
               <thead><tr><th>Transaction</th><th>Type</th><th>Status</th><th>Posting</th><th>Audit</th></tr></thead>
               <tbody id="transaction-results"><tr><td colspan="5">No transaction result</td></tr></tbody>
+            </table>
+            <table class="data-table">
+              <thead><tr><th>Case</th><th>Status</th><th>Owner</th><th>SLA</th><th>Answer</th></tr></thead>
+              <tbody id="complaint-results"><tr><td colspan="5">No complaint result</td></tr></tbody>
             </table>
           </div>
         </section>
@@ -202,6 +207,82 @@
       }).join("") || `<tr><td colspan="5">No transaction result</td></tr>`;
     }
 
+    function renderComplaintRows(items) {
+      document.getElementById("complaint-results").innerHTML = items.map((item) => `
+        <tr>
+          <td>${item.caseId}</td>
+          <td><span class="badge warn">${item.status}</span></td>
+          <td>${item.owner || ""}</td>
+          <td>${item.slaDueAt || `${item.slaHours}h`}</td>
+          <td>${item.answer?.body || item.answerDraft?.body || ""}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5">No complaint result</td></tr>`;
+    }
+
+    async function runComplaintWorkflow() {
+      const list = await api("/api/staff/complaints");
+      let target = list.items.find((item) => item.status !== "CLOSED") || list.items[0];
+      if (!target) {
+        setStatus("No complaint case");
+        return;
+      }
+      if (target.status === "RECEIVED") {
+        const result = await api(`/api/staff/complaints/${target.caseId}/classify`, {
+          method: "POST",
+          body: JSON.stringify({
+            actorId: "complaint01",
+            category: target.category,
+            classification: target.category,
+            note: "Staff terminal classification"
+          })
+        });
+        target = result.item;
+      }
+      if (target.status === "CLASSIFIED") {
+        const result = await api(`/api/staff/complaints/${target.caseId}/assign`, {
+          method: "POST",
+          body: JSON.stringify({
+            actorId: "complaint01",
+            owner: "complaint01"
+          })
+        });
+        target = result.item;
+      }
+      if (target.status === "ASSIGNED") {
+        const result = await api(`/api/staff/complaints/${target.caseId}/start-review`, {
+          method: "POST",
+          body: JSON.stringify({
+            actorId: "complaint01",
+            note: "Staff terminal review"
+          })
+        });
+        target = result.item;
+      }
+      if (target.status === "IN_REVIEW") {
+        const result = await api(`/api/staff/complaints/${target.caseId}/answer-drafts`, {
+          method: "POST",
+          body: JSON.stringify({
+            actorId: "complaint01",
+            requestedByRole: "COMPLAINT_HANDLER",
+            reason: "Draft complaint answer for customer response",
+            body: "Synthetic answer draft approved for customer response."
+          })
+        });
+        target = result.item;
+      }
+      if (target.status === "WAITING_APPROVAL" && target.approvalId) {
+        const result = await api(`/api/staff/approvals/${target.approvalId}/approve`, {
+          method: "POST",
+          body: JSON.stringify({
+            approvedBy: "manager01",
+            approvedByRole: "BRANCH_MANAGER"
+          })
+        });
+        target = result.complaint || target;
+      }
+      renderComplaintRows([target]);
+    }
+
     async function runCode() {
       const code = value("tx-code").toUpperCase();
       const reason = encodeURIComponent(value("lookup-reason"));
@@ -256,6 +337,8 @@
             renderCustomerRows([result.customer], result.item.auditEventId);
           }
         }
+      } else if (code === "CMP-201") {
+        await runComplaintWorkflow();
       } else if (code === "AUD-001") {
         await refreshSidePanels();
       }
@@ -487,25 +570,47 @@
               <textarea id="complaint-text" rows="5">Synthetic complaint for workflow verification.</textarea>
             </label>
             <button id="complaint-submit">Submit complaint</button>
+            <button class="secondary" id="complaint-confirm">Confirm answered case</button>
             <table class="data-table">
-              <thead><tr><th>Case ID</th><th>Category</th><th>Status</th><th>SLA</th></tr></thead>
-              <tbody id="complaint-list"><tr><td colspan="4">Loading complaints...</td></tr></tbody>
+              <thead><tr><th>Case ID</th><th>Category</th><th>Status</th><th>Owner</th><th>SLA</th></tr></thead>
+              <tbody id="complaint-list"><tr><td colspan="5">Loading complaints...</td></tr></tbody>
             </table>
+            <div class="mini-card">
+              <h3>Case Timeline</h3>
+              <div class="stack" id="complaint-timeline">No selected case</div>
+            </div>
+            <div class="mini-card">
+              <h3>Customer Answer</h3>
+              <div class="stack" id="complaint-answer">No answer yet</div>
+            </div>
           </div>
         </section>
       </section>
     `);
 
+    function renderComplaintDetail(item) {
+      document.getElementById("complaint-timeline").innerHTML = (item.timeline || []).slice(-8).map((entry) => `
+        <div class="kv"><span>${entry.to || entry.type}</span><span>${entry.actorId || ""} ${entry.at || ""}</span></div>
+      `).join("") || "No timeline";
+      document.getElementById("complaint-answer").innerHTML = item.answer
+        ? `<div class="kv"><span>Answered</span><span>${item.answer.body}</span></div>`
+        : `<div class="kv"><span>Status</span><span>${item.status}</span></div>`;
+    }
+
     async function loadComplaints() {
-      const complaints = await api("/api/complaints");
+      const complaints = await api("/api/complaints?customerId=SYN-CUS-001");
       document.getElementById("complaint-list").innerHTML = complaints.items.map((item) => `
         <tr>
           <td>${item.caseId}</td>
           <td>${item.category}</td>
           <td><span class="badge warn">${item.status}</span></td>
-          <td>${item.slaHours}h</td>
+          <td>${item.owner || ""}</td>
+          <td>${item.slaDueAt || `${item.slaHours}h`}</td>
         </tr>
       `).join("");
+      if (complaints.items[0]) {
+        renderComplaintDetail(complaints.items[0]);
+      }
     }
 
     document.getElementById("complaint-submit").addEventListener("click", async () => {
@@ -517,6 +622,22 @@
           description: document.getElementById("complaint-text").value
         })
       });
+      await loadComplaints();
+    });
+
+    document.getElementById("complaint-confirm").addEventListener("click", async () => {
+      const complaints = await api("/api/complaints?customerId=SYN-CUS-001");
+      const answered = complaints.items.find((item) => item.status === "ANSWERED");
+      if (answered) {
+        const result = await api(`/api/customer/complaints/${answered.caseId}/confirm`, {
+          method: "POST",
+          body: JSON.stringify({
+            customerId: "SYN-CUS-001",
+            note: "Customer confirmed answer"
+          })
+        });
+        renderComplaintDetail(result.item);
+      }
       await loadComplaints();
     });
 

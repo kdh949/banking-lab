@@ -12,6 +12,15 @@ import {
   maskCustomer
 } from "../packages/banking-domain/src/index.mjs";
 import { LedgerCore } from "../services/core-banking/src/index.mjs";
+import {
+  assignComplaint,
+  classifyComplaint,
+  closeComplaint,
+  draftComplaintAnswer,
+  markComplaintAnswered,
+  receiveComplaint,
+  startComplaintReview
+} from "../services/complaint-service/src/index.mjs";
 import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -142,6 +151,41 @@ function appendTransferResult(state, input) {
   return item;
 }
 
+function findComplaint(state, caseId) {
+  return state.complaints.find((complaint) => complaint.caseId === caseId);
+}
+
+function publicComplaint(complaint) {
+  return {
+    caseId: complaint.caseId,
+    customerId: complaint.customerId,
+    category: complaint.category,
+    description: complaint.description,
+    status: complaint.status,
+    owner: complaint.owner ? "Assigned" : null,
+    slaHours: complaint.slaHours,
+    slaDueAt: complaint.slaDueAt,
+    createdAt: complaint.createdAt,
+    answer: complaint.answer,
+    customerConfirmedAt: complaint.customerConfirmedAt,
+    timeline: (complaint.timeline || []).map((entry) => ({
+      from: entry.from,
+      to: entry.to,
+      type: entry.type,
+      at: entry.at
+    }))
+  };
+}
+
+function replaceComplaint(state, updated) {
+  const index = state.complaints.findIndex((complaint) => complaint.caseId === updated.caseId);
+  if (index === -1) {
+    throw new Error(`complaint not found: ${updated.caseId}`);
+  }
+  state.complaints[index] = updated;
+  return updated;
+}
+
 function applyCustomerInfoChange(state, approval, actor) {
   if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "CUSTOMER_INFO_CHANGE") {
     return false;
@@ -178,6 +222,41 @@ function applyCustomerInfoChange(state, approval, actor) {
   return true;
 }
 
+function applyComplaintAnswerApproval(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "COMPLAINT_ANSWER_SEND") {
+    return false;
+  }
+  const complaint = findComplaint(state, approval.businessReferenceId);
+  if (!complaint) {
+    throw new Error(`complaint not found: ${approval.businessReferenceId}`);
+  }
+  if (complaint.status !== "WAITING_APPROVAL") {
+    throw new Error(`complaint answer is not waiting approval: ${complaint.caseId}`);
+  }
+  const answered = markComplaintAnswered(complaint, {
+    actorId: actor.actorId,
+    approvalId: approval.approvalId,
+    body: approval.afterSnapshot?.answerBody || complaint.answerDraft?.body
+  });
+  replaceComplaint(state, answered);
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "CMP-201",
+    businessReferenceId: approval.approvalId,
+    customerId: complaint.customerId,
+    reason: approval.requestReason,
+    payload: {
+      caseId: complaint.caseId,
+      businessType: approval.businessType
+    }
+  });
+  return true;
+}
+
 function createSeededLedger(dataset) {
   return [...dataset.ledgerTransactions];
 }
@@ -195,15 +274,12 @@ export async function createLabState() {
   const ledgerTransactions = ledgerCore.transactions;
   const manifests = await loadManifests(join(repoRoot, "screen-manifests"));
   const complaints = [
-    {
+    receiveComplaint({
       caseId: "CMP-SYN-0001",
       customerId: "SYN-CUS-001",
       category: "TRANSFER_DISPUTE",
-      status: "RECEIVED",
-      owner: "complaint01",
-      slaHours: 72,
-      timeline: []
-    }
+      description: "Synthetic seeded complaint for workflow review"
+    })
   ];
   const fdsCases = [];
   const transferResults = [];
@@ -526,15 +602,20 @@ export async function createLabHandler(state) {
       if (approvalMatch && request.method === "POST") {
         const payload = await bodyJson(request);
         const approval = state.approvalStore.approve(approvalMatch[1], payload);
-        const executed = applyCustomerInfoChange(state, approval, {
+        const actor = {
           actorId: payload.approvedBy,
           actorRole: payload.approvedByRole || "BRANCH_MANAGER"
-        });
+        };
+        const customerExecuted = applyCustomerInfoChange(state, approval, actor);
+        const complaintExecuted = applyComplaintAnswerApproval(state, approval, actor);
         json(response, 200, {
           item: approval,
-          executed,
+          executed: customerExecuted || complaintExecuted,
           customer: approval.businessType === "CUSTOMER_INFO_CHANGE"
             ? publicCustomerDetail(findCustomer(state, approval.businessReferenceId))
+            : null,
+          complaint: approval.businessType === "COMPLAINT_ANSWER_SEND"
+            ? findComplaint(state, approval.businessReferenceId)
             : null
         });
         return;
@@ -769,31 +850,181 @@ export async function createLabHandler(state) {
       }
 
       if (pathname === "/api/complaints" && request.method === "GET") {
-        json(response, 200, { items: state.complaints });
+        const customerId = url.searchParams.get("customerId");
+        json(response, 200, {
+          items: state.complaints
+            .filter((complaint) => !customerId || complaint.customerId === customerId)
+            .map(publicComplaint)
+        });
         return;
       }
 
       if (pathname === "/api/complaints" && request.method === "POST") {
         const payload = await bodyJson(request);
-        const complaint = {
+        const complaint = receiveComplaint({
           caseId: `CMP-SYN-${String(state.complaints.length + 1).padStart(4, "0")}`,
           customerId: payload.customerId,
           category: payload.category,
           description: payload.description,
-          status: "RECEIVED",
-          owner: null,
-          slaHours: 72,
-          timeline: [
-            {
-              from: "SUBMITTED",
-              to: "RECEIVED",
-              actorId: payload.customerId,
-              at: new Date().toISOString()
-            }
-          ]
-        };
+          attachments: payload.attachments || []
+        });
         state.complaints.push(complaint);
-        json(response, 201, { item: complaint });
+        state.auditLog.append({
+          eventType: "COMMAND_REQUESTED",
+          actorType: "CUSTOMER",
+          actorId: payload.customerId,
+          actorRole: "CUSTOMER",
+          screenId: "CMP-101",
+          businessReferenceId: complaint.caseId,
+          customerId: payload.customerId,
+          reason: "Customer submitted complaint",
+          payload: {
+            category: payload.category,
+            status: complaint.status
+          }
+        });
+        json(response, 201, { item: publicComplaint(complaint) });
+        return;
+      }
+
+      const complaintDetailMatch = pathname.match(/^\/api\/complaints\/([^/]+)$/);
+      if (complaintDetailMatch && request.method === "GET") {
+        const complaint = findComplaint(state, decodeURIComponent(complaintDetailMatch[1]));
+        if (!complaint) {
+          json(response, 404, { error: "complaint not found" });
+          return;
+        }
+        json(response, 200, { item: publicComplaint(complaint) });
+        return;
+      }
+
+      if (pathname === "/api/staff/complaints" && request.method === "GET") {
+        json(response, 200, { items: state.complaints });
+        return;
+      }
+
+      const staffComplaintActionMatch = pathname.match(/^\/api\/staff\/complaints\/([^/]+)\/([^/]+)$/);
+      if (staffComplaintActionMatch && request.method === "POST") {
+        const caseId = decodeURIComponent(staffComplaintActionMatch[1]);
+        const action = decodeURIComponent(staffComplaintActionMatch[2]);
+        const payload = await bodyJson(request);
+        const complaint = findComplaint(state, caseId);
+        if (!complaint) {
+          json(response, 404, { error: "complaint not found" });
+          return;
+        }
+        const actorId = payload.actorId || payload.requestedBy || "complaint01";
+        let updated;
+        let approval = null;
+        if (action === "classify") {
+          updated = classifyComplaint(complaint, {
+            actorId,
+            category: payload.category,
+            classification: payload.classification,
+            note: payload.note
+          });
+        } else if (action === "assign") {
+          updated = assignComplaint(complaint, {
+            actorId,
+            owner: payload.owner || "complaint01"
+          });
+        } else if (action === "start-review") {
+          updated = startComplaintReview(complaint, {
+            actorId,
+            note: payload.note
+          });
+        } else if (action === "answer-drafts") {
+          if (!payload.body) {
+            json(response, 400, { error: "answer draft body is required" });
+            return;
+          }
+          if (!payload.reason) {
+            json(response, 400, { error: "COMPLAINT_ANSWER_SEND requires a business reason" });
+            return;
+          }
+          updated = draftComplaintAnswer(complaint, {
+            actorId,
+            body: payload.body
+          });
+          approval = state.approvalStore.submit({
+            businessType: "COMPLAINT_ANSWER_SEND",
+            businessReferenceId: caseId,
+            requestedBy: actorId,
+            requestedByRole: payload.requestedByRole || "COMPLAINT_HANDLER",
+            requestReason: payload.reason,
+            beforeSnapshot: {
+              status: complaint.status,
+              answer: complaint.answer
+            },
+            afterSnapshot: {
+              answerBody: payload.body
+            },
+            screenId: "CMP-201"
+          });
+          updated = {
+            ...updated,
+            approvalId: approval.approvalId
+          };
+        } else {
+          json(response, 404, { error: "unsupported complaint action" });
+          return;
+        }
+        replaceComplaint(state, updated);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "STAFF",
+          actorId,
+          actorRole: payload.actorRole || payload.requestedByRole || "COMPLAINT_HANDLER",
+          screenId: "CMP-201",
+          businessReferenceId: caseId,
+          customerId: updated.customerId,
+          reason: payload.reason || `Complaint ${action}`,
+          payload: {
+            action,
+            status: updated.status,
+            approvalId: approval?.approvalId || null
+          }
+        });
+        json(response, 200, {
+          item: updated,
+          approval
+        });
+        return;
+      }
+
+      const customerComplaintConfirmMatch = pathname.match(/^\/api\/customer\/complaints\/([^/]+)\/confirm$/);
+      if (customerComplaintConfirmMatch && request.method === "POST") {
+        const caseId = decodeURIComponent(customerComplaintConfirmMatch[1]);
+        const payload = await bodyJson(request);
+        const complaint = findComplaint(state, caseId);
+        if (!complaint) {
+          json(response, 404, { error: "complaint not found" });
+          return;
+        }
+        const customerId = payload.customerId || complaint.customerId;
+        if (complaint.customerId !== customerId) {
+          json(response, 403, { error: "complaint does not belong to customer" });
+          return;
+        }
+        const closed = closeComplaint(complaint, {
+          actorId: customerId,
+          note: payload.note
+        });
+        replaceComplaint(state, closed);
+        state.auditLog.append({
+          eventType: "COMMAND_EXECUTED",
+          actorType: "CUSTOMER",
+          actorId: customerId,
+          actorRole: "CUSTOMER",
+          screenId: "CMP-101",
+          businessReferenceId: caseId,
+          customerId,
+          reason: "Customer confirmed complaint answer",
+          payload: {
+            status: closed.status
+          }
+        });
+        json(response, 200, { item: publicComplaint(closed) });
         return;
       }
 

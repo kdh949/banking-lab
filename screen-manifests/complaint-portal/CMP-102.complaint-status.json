@@ -1,0 +1,36 @@
+{
+  "screenId": "CMP-102",
+  "title": "Complaint Status and Answer",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["RECEIVED", "CLASSIFIED", "ASSIGNED", "IN_REVIEW", "WAITING_APPROVAL", "ANSWERED", "CLOSED", "REOPENED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["complaintSummary", "statusTimeline", "answer", "customerConfirmation"],
+  "actions": [
+    {
+      "id": "confirmAnswer",
+      "label": "Confirm Answer",
+      "type": "command",
+      "target": "POST /api/customer/complaints/{caseId}/confirm"
+    }
+  ]
+}
