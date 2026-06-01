@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-06-01T20:53:39.023Z",
+  "scope": "Phase 4 Customer Web MVP",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "customer-login-account-detail",
+      "status": "pass",
+      "detail": "Customer login and account detail are available"
+    },
+    {
+      "id": "posted-transfer-ledger-source",
+      "status": "pass",
+      "detail": "Posted customer transfer appears in customer and staff history from one ledger source"
+    },
+    {
+      "id": "idempotent-transfer-result",
+      "status": "pass",
+      "detail": "Retry returned the original transfer result"
+    },
+    {
+      "id": "held-and-failed-status",
+      "status": "pass",
+      "detail": "Held and failed transfers are represented without extra ledger postings"
+    },
+    {
+      "id": "transfer-result-history",
+      "status": "pass",
+      "detail": "Customer transfer result list includes posted, held, and failed states"
+    },
+    {
+      "id": "complaint-entry",
+      "status": "pass",
+      "detail": "Customer web has complaint entry manifest and complaint portal shell"
+    },
+    {
+      "id": "customer-audit-coverage",
+      "status": "pass",
+      "detail": "Customer self-service actions generated expected audit event types"
+    }
+  ]
+}

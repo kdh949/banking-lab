@@ -16,7 +16,8 @@
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
     "evidence:phase2": "node scripts/generate-phase2-evidence.mjs",
-    "evidence:phase3": "node scripts/generate-phase3-evidence.mjs"
+    "evidence:phase3": "node scripts/generate-phase3-evidence.mjs",
+    "evidence:phase4": "node scripts/generate-phase4-evidence.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -33,6 +33,17 @@
 | Customer info maker-checker | `CUSTOMER_INFO_CHANGE` approval flow tests |
 | Staff manifest coverage | `screen-manifests/staff-terminal/*`, `validate:manifests` |
 
+## Phase 4 Additions
+
+| Control area | Phase 4 evidence |
+| --- | --- |
+| Customer account self-service audit | `/api/customer/accounts/{accountId}/detail`, `tests/customerWeb.test.mjs` |
+| Shared ledger source by channel | Customer/staff transaction history comparison test |
+| Customer transfer idempotency | Transfer retry test and `transferResults` records |
+| Held transfer without unsafe posting | FDS-held transfer test |
+| Failed transfer without unsafe posting | Failed transfer test |
+| Complaint entry | `CWB-301` manifest and portal shell test |
+
 ## Explicit Non-Production Boundary
 
 No real banking network, real KYC, real payment processor, real customer PII, or real funds are connected. External providers remain simulators.

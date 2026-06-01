@@ -43,6 +43,18 @@ Implemented staff terminal scope:
 - Customer information change request with maker-checker approval before mutation.
 - Staff terminal manifests for customer detail, customer info change, and transaction history.
 
+## Phase 4 Customer Web MVP
+
+Implemented customer web scope:
+
+- Mock customer login through `/api/customer/login`.
+- Customer account list and account detail backed by projected ledger balances.
+- Customer transaction history from the same ledger source used by staff transaction inquiry.
+- Transfer submission with idempotent result records.
+- Transfer results for `POSTED`, `HELD`, and `FAILED` states.
+- FDS-held transfer representation without unsafe ledger postings.
+- Complaint entry manifest and navigation to the complaint portal.
+
 ## Run Locally
 
 ```bash
@@ -52,6 +64,7 @@ npm run generate:synthetic-data
 npm run evidence:phase1
 npm run evidence:phase2
 npm run evidence:phase3
+npm run evidence:phase4
 npm start
 ```
 
@@ -82,6 +95,7 @@ docker compose up --build
 - Audit events are append-only and hash chained.
 - PII unmasking is timeboxed, role-gated, reason-required, and audited.
 - High-risk staff commands require maker-checker approval, and maker and checker must differ.
+- Customer transfer result states are explicit and idempotent.
 - Screen manifests must declare roles, template, audit, masking, and approval metadata.
 
 ## Repository Map
