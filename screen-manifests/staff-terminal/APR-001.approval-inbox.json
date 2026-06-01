@@ -1,0 +1,42 @@
+{
+  "screenId": "APR-001",
+  "transactionCode": "APR001",
+  "title": "Maker Checker Approval Inbox",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "approval",
+  "requiredRoles": ["BRANCH_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/approvals",
+    "fields": [
+      {
+        "name": "status",
+        "label": "Status",
+        "type": "select",
+        "options": ["PENDING", "APPROVED", "REJECTED"]
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["approvalId", "businessType", "requestedBy", "status", "requestedAt"]
+  },
+  "actions": [
+    {
+      "id": "approve",
+      "label": "Approve",
+      "type": "command",
+      "target": "POST /api/staff/approvals/{approvalId}/approve"
+    }
+  ]
+}

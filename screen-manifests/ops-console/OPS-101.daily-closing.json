@@ -1,0 +1,19 @@
+{
+  "screenId": "OPS-101",
+  "title": "Daily Closing Monitor",
+  "app": "ops-console",
+  "type": "DASHBOARD",
+  "domain": "reconciliation",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "widgets": ["ledgerInvariantStatus", "closingStatus", "unmatchedItems"]
+}

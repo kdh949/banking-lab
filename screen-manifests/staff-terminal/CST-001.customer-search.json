@@ -1,0 +1,53 @@
+{
+  "screenId": "CST-001",
+  "transactionCode": "CST001",
+  "title": "Customer Integrated Search",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "customer",
+  "requiredRoles": ["BRANCH_STAFF", "CALL_CENTER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/customers/search",
+    "fields": [
+      {
+        "name": "customerName",
+        "label": "Customer Name",
+        "type": "text",
+        "mask": "name"
+      },
+      {
+        "name": "phone",
+        "label": "Phone",
+        "type": "text",
+        "mask": "phone"
+      },
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "text"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["customerId", "maskedName", "customerGrade", "riskGrade"]
+  },
+  "actions": [
+    {
+      "id": "openCustomer360",
+      "label": "Open Customer 360",
+      "type": "navigate",
+      "target": "CST-002"
+    }
+  ]
+}

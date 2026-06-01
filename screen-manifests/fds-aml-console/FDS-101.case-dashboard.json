@@ -1,0 +1,35 @@
+{
+  "screenId": "FDS-101",
+  "title": "FDS Case Dashboard",
+  "app": "fds-aml-console",
+  "type": "CASE",
+  "domain": "fds",
+  "requiredRoles": ["FDS_REVIEWER", "AML_REVIEWER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "fdsCaseWorkflow",
+    "states": ["HELD", "INVESTIGATING", "RELEASE_REQUESTED", "BLOCKED", "RELEASED", "CLOSED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 4
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "sections": ["caseSummary", "customerContext", "transactionTimeline", "approvalTimeline"],
+  "actions": [
+    {
+      "id": "requestRelease",
+      "label": "Request Release",
+      "type": "command",
+      "target": "POST /api/fds/cases/{caseId}/release-request"
+    }
+  ]
+}

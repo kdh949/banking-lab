@@ -1,0 +1,53 @@
+{
+  "screenId": "CWB-201",
+  "title": "Internal Transfer Simulation",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "transfer",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "fromAccountId",
+      "label": "From Account",
+      "type": "account-select",
+      "required": true
+    },
+    {
+      "name": "toAccountId",
+      "label": "To Account",
+      "type": "account-select",
+      "required": true
+    },
+    {
+      "name": "amountMinor",
+      "label": "Amount",
+      "type": "money",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/customer/transfers"
+  },
+  "postActions": ["createAuditEvent", "showTransferResult"]
+}

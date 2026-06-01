@@ -1,0 +1,32 @@
+{
+  "screenId": "AUD-101",
+  "title": "Audit Hash Chain Review",
+  "app": "audit-console",
+  "type": "INQUIRY",
+  "domain": "audit",
+  "requiredRoles": ["AUDITOR"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/audit-events",
+    "fields": [
+      {
+        "name": "createdDate",
+        "label": "Created Date",
+        "type": "date"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["auditEventId", "previousEventHash", "payloadHash", "createdAt"]
+  },
+  "actions": []
+}

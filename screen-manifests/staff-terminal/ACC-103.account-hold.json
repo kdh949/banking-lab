@@ -1,0 +1,52 @@
+{
+  "screenId": "ACC-103",
+  "transactionCode": "ACC103",
+  "title": "Account Hold Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "account",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_MANAGER", "CALL_CENTER_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "fields": [
+    {
+      "name": "accountNo",
+      "label": "Account Number",
+      "type": "account-search",
+      "required": true,
+      "mask": "accountNo"
+    },
+    {
+      "name": "reasonCode",
+      "label": "Hold Reason",
+      "type": "select",
+      "required": true,
+      "options": ["LOST", "FRAUD", "COURT_ORDER", "CUSTOMER_REQUEST"]
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/accounts/{accountNo}/holds"
+  },
+  "postActions": ["createAuditEvent", "notifyCustomer"]
+}

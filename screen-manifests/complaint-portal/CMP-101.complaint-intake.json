@@ -1,0 +1,49 @@
+{
+  "screenId": "CMP-101",
+  "title": "Complaint Intake",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": [
+      "DRAFT",
+      "SUBMITTED",
+      "RECEIVED",
+      "CLASSIFIED",
+      "ASSIGNED",
+      "IN_REVIEW",
+      "WAITING_CUSTOMER",
+      "WAITING_APPROVAL",
+      "ANSWERED",
+      "CLOSED",
+      "REOPENED",
+      "TRANSFERRED_TO_AUTHORITY_SIM"
+    ]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["complaintSummary", "relatedTransactions", "attachments", "timeline"],
+  "actions": [
+    {
+      "id": "submitComplaint",
+      "label": "Submit Complaint",
+      "type": "command",
+      "target": "POST /api/complaints"
+    }
+  ]
+}

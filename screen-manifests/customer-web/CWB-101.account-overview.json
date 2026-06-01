@@ -1,0 +1,40 @@
+{
+  "screenId": "CWB-101",
+  "title": "Customer Account Overview",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "account",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/accounts",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "hidden",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["maskedAccountNo", "status", "ledgerBalanceMinor", "availableBalanceMinor"]
+  },
+  "actions": [
+    {
+      "id": "openTransfer",
+      "label": "Open Transfer",
+      "type": "navigate",
+      "target": "CWB-201"
+    }
+  ]
+}
