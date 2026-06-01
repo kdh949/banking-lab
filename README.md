@@ -66,6 +66,18 @@ Implemented complaint workflow scope:
 - Customer answer confirmation and case closure.
 - Complaint workflow manifests for customer intake/status and staff detail.
 
+## Phase 6 AML/FDS + Reconciliation
+
+Implemented risk and operations scope:
+
+- FDS rule engine for high amount, new device, first-time beneficiary, and velocity signals.
+- Customer transfer hold with no ledger posting until reviewer release is approved.
+- FDS release and block decisions through maker-checker approval.
+- AML case simulation for high-risk customer and suspicious transfer candidates.
+- AML reviewer assignment, comments, STR simulation, and approval-controlled closure.
+- Daily closing with ledger invariant validation and synthetic external file reconciliation.
+- Owned reconciliation mismatch items and approval-controlled balanced adjustment transactions.
+
 ## Run Locally
 
 ```bash
@@ -77,6 +89,7 @@ npm run evidence:phase2
 npm run evidence:phase3
 npm run evidence:phase4
 npm run evidence:phase5
+npm run evidence:phase6
 npm start
 ```
 
@@ -109,6 +122,8 @@ docker compose up --build
 - High-risk staff commands require maker-checker approval, and maker and checker must differ.
 - Customer transfer result states are explicit and idempotent.
 - Complaint answers require approval before customer-visible response.
+- FDS-held transfers do not post until checker-approved release.
+- Reconciliation adjustments use balanced ledger transactions on open business dates.
 - Screen manifests must declare roles, template, audit, masking, and approval metadata.
 
 ## Repository Map

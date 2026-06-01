@@ -55,6 +55,19 @@
 | Customer answer confirmation | Customer confirmation close test |
 | Complaint workflow manifests | `CMP-101`, `CMP-102`, `CMP-201` manifest validation |
 
+## Phase 6 Additions
+
+| Control area | Phase 6 evidence |
+| --- | --- |
+| FDS high-risk transfer hold | FDS hold/release test and generated evidence |
+| FDS release/block maker-checker | `FDS_RELEASE`, `FDS_BLOCK` approval tests |
+| AML STR simulation | AML case lifecycle test |
+| EOD ledger invariant validation | Daily closing evidence |
+| External file reconciliation | Synthetic external file mismatch test |
+| Closed day mutation rejection | Closed-day posting rejection test |
+| Reconciliation adjustment control | `RECONCILIATION_ADJUSTMENT` approval test |
+| Risk and operations manifests | `FDS-201`, `AML-201`, `OPS-201` validation |
+
 ## Explicit Non-Production Boundary
 
 No real banking network, real KYC, real payment processor, real customer PII, or real funds are connected. External providers remain simulators.

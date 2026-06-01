@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-06-01T21:26:45.521Z",
+  "scope": "Phase 6 FDS AML Reconciliation",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "fds-hold-no-posting-before-approval",
+      "status": "pass",
+      "detail": "High-risk transfer created an FDS hold without posting to the ledger"
+    },
+    {
+      "id": "fds-release-maker-checker",
+      "status": "pass",
+      "detail": "FDS release posted the transfer only after checker approval"
+    },
+    {
+      "id": "fds-block-no-posting",
+      "status": "pass",
+      "detail": "FDS block updated case and transfer result without adding a ledger posting"
+    },
+    {
+      "id": "aml-case-lifecycle",
+      "status": "pass",
+      "detail": "High-risk customer transfer generated an AML case and closed through approval"
+    },
+    {
+      "id": "eod-reconciliation-unmatched-item",
+      "status": "pass",
+      "detail": "Daily closing validated ledger totals and created an owned unmatched item"
+    },
+    {
+      "id": "closed-day-and-adjustment-control",
+      "status": "pass",
+      "detail": "Closed business day rejected direct mutation and adjustment posted on the next open day"
+    },
+    {
+      "id": "manifest-coverage",
+      "status": "pass",
+      "detail": "FDS, AML, and reconciliation case screens are manifest-declared"
+    },
+    {
+      "id": "audit-coverage",
+      "status": "pass",
+      "detail": "Risk and reconciliation workflows produced approval, execution, and batch audit events"
+    }
+  ]
+}
