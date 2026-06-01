@@ -1,0 +1,40 @@
+{
+  "screenId": "CWB-103",
+  "title": "Customer Transaction History",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "ledger",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/transactions",
+    "fields": [
+      {
+        "name": "accountId",
+        "label": "Account ID",
+        "type": "text",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["transactionId", "transactionType", "businessDate", "status", "posting"]
+  },
+  "actions": [
+    {
+      "id": "openTransfer",
+      "label": "Open Transfer",
+      "type": "navigate",
+      "target": "CWB-201"
+    }
+  ]
+}

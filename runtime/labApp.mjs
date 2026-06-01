@@ -84,6 +84,64 @@ function publicCustomerDetail(customer, unmasked = false) {
   };
 }
 
+function publicTransactionForAccount(transaction, accountId) {
+  return {
+    transactionId: transaction.id,
+    transactionType: transaction.transactionType,
+    businessDate: transaction.businessDate,
+    status: transaction.status,
+    requestedChannel: transaction.requestedChannel,
+    postings: transaction.postings
+      .filter((posting) => posting.accountId === accountId)
+      .map((posting) => ({
+        postingId: posting.id,
+        direction: posting.direction,
+        amountMinor: posting.amountMinor,
+        currency: posting.currency,
+        postingType: posting.postingType
+      }))
+  };
+}
+
+function findAccount(state, accountId) {
+  return state.dataset.accounts.find((account) => account.accountId === accountId);
+}
+
+function requireCustomerAccount(state, customerId, accountId) {
+  const account = findAccount(state, accountId);
+  if (!account || account.customerId !== customerId) {
+    throw new Error(`customer account not found: ${accountId}`);
+  }
+  return account;
+}
+
+function transferResult(state, idempotencyKey) {
+  return state.transferResults.find((item) => item.idempotencyKey === idempotencyKey);
+}
+
+function appendTransferResult(state, input) {
+  const existing = transferResult(state, input.idempotencyKey);
+  if (existing) {
+    return existing;
+  }
+  const item = {
+    resultId: input.resultId || `TRR-${String(state.transferResults.length + 1).padStart(8, "0")}`,
+    idempotencyKey: input.idempotencyKey,
+    customerId: input.customerId,
+    fromAccountId: input.fromAccountId,
+    toAccountId: input.toAccountId,
+    amountMinor: input.amountMinor,
+    status: input.status,
+    transactionId: input.transactionId || null,
+    caseId: input.caseId || null,
+    failureCode: input.failureCode || null,
+    message: input.message,
+    createdAt: input.createdAt || new Date().toISOString()
+  };
+  state.transferResults.push(item);
+  return item;
+}
+
 function applyCustomerInfoChange(state, approval, actor) {
   if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "CUSTOMER_INFO_CHANGE") {
     return false;
@@ -148,6 +206,7 @@ export async function createLabState() {
     }
   ];
   const fdsCases = [];
+  const transferResults = [];
   const executedApprovalIds = new Set();
 
   approvalStore.submit({
@@ -170,6 +229,7 @@ export async function createLabState() {
     manifests,
     complaints,
     fdsCases,
+    transferResults,
     executedApprovalIds
   };
 }
@@ -223,6 +283,17 @@ export async function createLabHandler(state) {
       if (pathname === "/api/auth/mock-login" && request.method === "POST") {
         const payload = await bodyJson(request);
         const session = loginMockUser({ userId: payload.userId, auditLog: state.auditLog });
+        json(response, 200, { session });
+        return;
+      }
+
+      if (pathname === "/api/customer/login" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const session = loginMockUser({ userId: payload.userId || "customer01", auditLog: state.auditLog });
+        if (session.actorType !== "CUSTOMER") {
+          json(response, 403, { error: "mock user is not a customer" });
+          return;
+        }
         json(response, 200, { session });
         return;
       }
@@ -371,22 +442,8 @@ export async function createLabHandler(state) {
           json(response, 400, { error: "accountId is required" });
           return;
         }
-        const transactions = state.ledgerCore.listTransactions(accountId).map((transaction) => ({
-          transactionId: transaction.id,
-          transactionType: transaction.transactionType,
-          businessDate: transaction.businessDate,
-          status: transaction.status,
-          requestedChannel: transaction.requestedChannel,
-          postings: transaction.postings
-            .filter((posting) => posting.accountId === accountId)
-            .map((posting) => ({
-              postingId: posting.id,
-              direction: posting.direction,
-              amountMinor: posting.amountMinor,
-              currency: posting.currency,
-              postingType: posting.postingType
-            }))
-        }));
+        const transactions = state.ledgerCore.listTransactions(accountId)
+          .map((transaction) => publicTransactionForAccount(transaction, accountId));
         const event = state.auditLog.append({
           eventType: "TRANSACTION_VIEW",
           actorType: "STAFF",
@@ -496,36 +553,175 @@ export async function createLabHandler(state) {
         return;
       }
 
+      const customerAccountDetailMatch = pathname.match(/^\/api\/customer\/accounts\/([^/]+)\/detail$/);
+      if (customerAccountDetailMatch && request.method === "GET") {
+        const accountId = decodeURIComponent(customerAccountDetailMatch[1]);
+        const customerId = url.searchParams.get("customerId") || "SYN-CUS-001";
+        let account;
+        try {
+          account = requireCustomerAccount(state, customerId, accountId);
+        } catch (error) {
+          json(response, 404, { error: error.message });
+          return;
+        }
+        const balance = state.ledgerCore.getAccountBalance(accountId);
+        const event = state.auditLog.append({
+          eventType: "ACCOUNT_VIEW",
+          actorType: "CUSTOMER",
+          actorId: customerId,
+          actorRole: "CUSTOMER",
+          businessReferenceId: accountId,
+          customerId,
+          accountId,
+          reason: "Customer self-service account detail",
+          payload: { channel: "CUSTOMER_WEB" }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          item: {
+            customerId,
+            ...maskAccount(account),
+            ...balance
+          }
+        });
+        return;
+      }
+
+      if (pathname === "/api/customer/transactions" && request.method === "GET") {
+        const customerId = url.searchParams.get("customerId") || "SYN-CUS-001";
+        const accountId = url.searchParams.get("accountId");
+        if (!accountId) {
+          json(response, 400, { error: "accountId is required" });
+          return;
+        }
+        try {
+          requireCustomerAccount(state, customerId, accountId);
+        } catch (error) {
+          json(response, 404, { error: error.message });
+          return;
+        }
+        const transactions = state.ledgerCore.listTransactions(accountId)
+          .map((transaction) => publicTransactionForAccount(transaction, accountId));
+        const event = state.auditLog.append({
+          eventType: "TRANSACTION_VIEW",
+          actorType: "CUSTOMER",
+          actorId: customerId,
+          actorRole: "CUSTOMER",
+          customerId,
+          accountId,
+          reason: "Customer self-service transaction history",
+          payload: { resultCount: transactions.length }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          items: transactions
+        });
+        return;
+      }
+
+      if (pathname === "/api/customer/transfers" && request.method === "GET") {
+        const customerId = url.searchParams.get("customerId") || "SYN-CUS-001";
+        json(response, 200, {
+          items: state.transferResults.filter((item) => item.customerId === customerId)
+        });
+        return;
+      }
+
       if (pathname === "/api/customer/transfers" && request.method === "POST") {
         const payload = await bodyJson(request);
-        let result;
-        if (payload.amountMinor >= 5000000) {
-          result = state.idempotencyStore.run(payload.idempotencyKey, () => {
-            const caseRecord = {
-              caseId: `FDS-${String(state.fdsCases.length + 1).padStart(8, "0")}`,
-              status: "HELD",
-              rule: "UNUSUAL_AMOUNT",
-              fromAccountId: payload.fromAccountId,
-              toAccountId: payload.toAccountId,
-              amountMinor: payload.amountMinor
-            };
-            state.fdsCases.push(caseRecord);
-            return caseRecord;
+        const customerId = payload.requestedBy || "SYN-CUS-001";
+        const existingResult = transferResult(state, payload.idempotencyKey);
+        if (existingResult) {
+          json(response, 200, {
+            replayed: true,
+            item: existingResult
           });
-        } else {
-          result = await state.ledgerCore.transfer({
+          return;
+        }
+        try {
+          requireCustomerAccount(state, customerId, payload.fromAccountId);
+        } catch (error) {
+          const failed = appendTransferResult(state, {
+            idempotencyKey: payload.idempotencyKey,
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor,
+            status: "FAILED",
+            failureCode: "ACCOUNT_NOT_FOUND",
+            message: error.message
+          });
+          json(response, 404, {
+            replayed: false,
+            item: failed
+          });
+          return;
+        }
+        if (payload.amountMinor >= 5000000) {
+          const caseRecord = {
+            caseId: `FDS-${String(state.fdsCases.length + 1).padStart(8, "0")}`,
+            status: "HELD",
+            rule: "UNUSUAL_AMOUNT",
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor
+          };
+          state.fdsCases.push(caseRecord);
+          const held = appendTransferResult(state, {
+            idempotencyKey: payload.idempotencyKey,
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor,
+            status: "HELD",
+            caseId: caseRecord.caseId,
+            message: "Transfer held for FDS review"
+          });
+          state.auditLog.append({
+            eventType: "COMMAND_REQUESTED",
+            actorType: "CUSTOMER",
+            actorId: customerId,
+            actorRole: "CUSTOMER",
+            businessReferenceId: held.resultId,
+            accountId: payload.fromAccountId,
+            reason: "Customer transfer held for FDS review",
+            payload: {
+              idempotencyKey: payload.idempotencyKey,
+              amountMinor: payload.amountMinor,
+              caseId: caseRecord.caseId
+            }
+          });
+          json(response, 202, {
+            replayed: false,
+            item: held
+          });
+          return;
+        }
+        try {
+          const result = await state.ledgerCore.transfer({
             fromAccountId: payload.fromAccountId,
             toAccountId: payload.toAccountId,
             amountMinor: payload.amountMinor,
             idempotencyKey: payload.idempotencyKey,
-            requestedBy: payload.requestedBy || "customer01",
+            requestedBy: customerId,
             requestedChannel: "CUSTOMER_WEB"
           });
           const transaction = result.value;
+          const posted = appendTransferResult(state, {
+            idempotencyKey: payload.idempotencyKey,
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor,
+            status: "POSTED",
+            transactionId: transaction.id,
+            message: "Transfer posted to ledger"
+          });
           state.auditLog.append({
             eventType: "COMMAND_EXECUTED",
             actorType: "CUSTOMER",
-            actorId: payload.requestedBy || "customer01",
+            actorId: customerId,
             actorRole: "CUSTOMER",
             businessReferenceId: transaction.id,
             accountId: payload.fromAccountId,
@@ -535,12 +731,41 @@ export async function createLabHandler(state) {
               amountMinor: payload.amountMinor
             }
           });
+          json(response, result.replayed ? 200 : 201, {
+            replayed: result.replayed,
+            item: posted
+          });
+          return;
+        } catch (error) {
+          const failed = appendTransferResult(state, {
+            idempotencyKey: payload.idempotencyKey,
+            customerId,
+            fromAccountId: payload.fromAccountId,
+            toAccountId: payload.toAccountId,
+            amountMinor: payload.amountMinor,
+            status: "FAILED",
+            failureCode: "LEDGER_REJECTED",
+            message: error.message
+          });
+          state.auditLog.append({
+            eventType: "COMMAND_REJECTED",
+            actorType: "CUSTOMER",
+            actorId: customerId,
+            actorRole: "CUSTOMER",
+            businessReferenceId: failed.resultId,
+            accountId: payload.fromAccountId,
+            payload: {
+              idempotencyKey: payload.idempotencyKey,
+              amountMinor: payload.amountMinor,
+              error: error.message
+            }
+          });
+          json(response, 200, {
+            replayed: false,
+            item: failed
+          });
+          return;
         }
-        json(response, result.replayed ? 200 : 201, {
-          replayed: result.replayed,
-          item: result.value
-        });
-        return;
       }
 
       if (pathname === "/api/complaints" && request.method === "GET") {

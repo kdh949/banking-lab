@@ -1,0 +1,40 @@
+{
+  "screenId": "CWB-102",
+  "title": "Customer Account Detail",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "account",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/accounts/{accountId}/detail",
+    "fields": [
+      {
+        "name": "accountId",
+        "label": "Account ID",
+        "type": "text",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["maskedAccountNo", "status", "ledgerBalanceMinor", "availableBalanceMinor"]
+  },
+  "actions": [
+    {
+      "id": "openTransactions",
+      "label": "Open Transactions",
+      "type": "navigate",
+      "target": "CWB-103"
+    }
+  ]
+}

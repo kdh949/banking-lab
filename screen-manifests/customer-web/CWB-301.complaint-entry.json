@@ -1,0 +1,36 @@
+{
+  "screenId": "CWB-301",
+  "title": "Complaint Entry",
+  "app": "customer-web",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["DRAFT", "SUBMITTED", "RECEIVED", "CLASSIFIED", "ASSIGNED", "IN_REVIEW", "WAITING_CUSTOMER", "WAITING_APPROVAL", "ANSWERED", "CLOSED", "REOPENED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["complaintSummary", "relatedAccounts", "relatedTransactions", "attachments", "timeline"],
+  "actions": [
+    {
+      "id": "openComplaintPortal",
+      "label": "Open Complaint Portal",
+      "type": "navigate",
+      "target": "/complaint-portal"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "screenId": "CWB-202",
+  "title": "Transfer Result",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "transfer",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/transfers",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "hidden",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["resultId", "status", "transactionId", "caseId", "failureCode", "message"]
+  },
+  "actions": [
+    {
+      "id": "openComplaintEntry",
+      "label": "Open Complaint Entry",
+      "type": "navigate",
+      "target": "CWB-301"
+    }
+  ]
+}

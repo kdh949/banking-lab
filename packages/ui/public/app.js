@@ -308,17 +308,40 @@
         ${nav(["Accounts", "Transfers", "Limits", "Complaints", "Security"], "Accounts")}
         <section class="panel">
           <div class="panel-header">
-            <h1>Account Overview</h1>
-            <span class="badge ok">Ledger projection</span>
+            <h1>Customer Banking Workspace</h1>
+            <span class="badge ok" id="customer-session">Not signed in</span>
           </div>
           <div class="panel-body business-screen">
+            <div class="form-grid">
+              <label>Mock customer
+                <select id="customer-user">
+                  <option value="customer01">customer01</option>
+                </select>
+              </label>
+              <button id="customer-login">Sign in</button>
+              <button class="secondary" id="complaint-entry">Complaint entry</button>
+            </div>
             <table class="data-table">
               <thead><tr><th>Account</th><th>Status</th><th>Ledger</th><th>Available</th></tr></thead>
               <tbody id="account-list"><tr><td colspan="4">Loading accounts...</td></tr></tbody>
             </table>
             <div class="mini-card">
+              <h3>Account Detail</h3>
+              <div class="stack" id="account-detail">No account selected</div>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Transaction</th><th>Type</th><th>Status</th><th>Posting</th></tr></thead>
+              <tbody id="customer-transactions"><tr><td colspan="4">No transaction history</td></tr></tbody>
+            </table>
+            <div class="mini-card">
               <h3>Transfer Simulation</h3>
               <div class="form-grid">
+                <label>From account
+                  <input id="transfer-from" value="ACC-SYN-001-001">
+                </label>
+                <label>To account
+                  <input id="transfer-to" value="ACC-SYN-002-001">
+                </label>
                 <label>Amount
                   <input id="transfer-amount" value="10000">
                 </label>
@@ -327,14 +350,21 @@
                 </label>
                 <button id="transfer-submit">Submit</button>
               </div>
+              <div class="stack" id="transfer-result" style="margin-top:10px">No transfer result</div>
             </div>
+            <table class="data-table">
+              <thead><tr><th>Result</th><th>Status</th><th>Reference</th><th>Message</th></tr></thead>
+              <tbody id="transfer-results"><tr><td colspan="4">No transfer results</td></tr></tbody>
+            </table>
           </div>
         </section>
       </section>
     `);
 
+    const customerId = "SYN-CUS-001";
+
     async function loadAccounts() {
-      const accounts = await api("/api/customer/accounts?customerId=SYN-CUS-001");
+      const accounts = await api(`/api/customer/accounts?customerId=${customerId}`);
       document.getElementById("account-list").innerHTML = accounts.items.map((account) => `
         <tr>
           <td>${account.maskedAccountNo}</td>
@@ -343,25 +373,92 @@
           <td>${money(account.availableBalanceMinor)}</td>
         </tr>
       `).join("");
+      if (accounts.items[0]) {
+        document.getElementById("transfer-from").value = accounts.items[0].accountId;
+        await loadAccountDetail(accounts.items[0].accountId);
+        await loadTransactions(accounts.items[0].accountId);
+      }
     }
+
+    async function loadAccountDetail(accountId) {
+      const detail = await api(`/api/customer/accounts/${accountId}/detail?customerId=${customerId}`);
+      document.getElementById("account-detail").innerHTML = `
+        <div class="kv"><span>Account</span><strong>${detail.item.maskedAccountNo}</strong></div>
+        <div class="kv"><span>Ledger</span><span>${money(detail.item.ledgerBalanceMinor)}</span></div>
+        <div class="kv"><span>Available</span><span>${money(detail.item.availableBalanceMinor)}</span></div>
+        <div class="kv"><span>Audit</span><span>${detail.auditEventId}</span></div>
+      `;
+    }
+
+    async function loadTransactions(accountId) {
+      const history = await api(`/api/customer/transactions?customerId=${customerId}&accountId=${accountId}`);
+      document.getElementById("customer-transactions").innerHTML = history.items.map((transaction) => {
+        const posting = transaction.postings[0] || {};
+        return `
+          <tr>
+            <td>${transaction.transactionId}</td>
+            <td>${transaction.transactionType}</td>
+            <td><span class="badge ok">${transaction.status}</span></td>
+            <td>${posting.direction || ""} ${money(posting.amountMinor || 0)}</td>
+          </tr>
+        `;
+      }).join("") || `<tr><td colspan="4">No transaction history</td></tr>`;
+    }
+
+    async function loadTransferResults() {
+      const results = await api(`/api/customer/transfers?customerId=${customerId}`);
+      document.getElementById("transfer-results").innerHTML = results.items.slice(-8).reverse().map((item) => `
+        <tr>
+          <td>${item.resultId}</td>
+          <td><span class="badge ${item.status === "POSTED" ? "ok" : "warn"}">${item.status}</span></td>
+          <td>${item.transactionId || item.caseId || item.failureCode || ""}</td>
+          <td>${item.message}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="4">No transfer results</td></tr>`;
+    }
+
+    document.getElementById("customer-login").addEventListener("click", async () => {
+      const result = await api("/api/customer/login", {
+        method: "POST",
+        body: JSON.stringify({ userId: document.getElementById("customer-user").value })
+      });
+      document.getElementById("customer-session").textContent = result.session.userId;
+    });
+
+    document.getElementById("complaint-entry").addEventListener("click", () => {
+      window.location.href = "/complaint-portal";
+    });
 
     document.getElementById("transfer-submit").addEventListener("click", async () => {
       const amountMinor = Number(document.getElementById("transfer-amount").value);
       const idempotencyKey = document.getElementById("transfer-key").value;
-      await api("/api/customer/transfers", {
+      const result = await api("/api/customer/transfers", {
         method: "POST",
         body: JSON.stringify({
-          fromAccountId: "ACC-SYN-001-001",
-          toAccountId: "ACC-SYN-002-001",
+          fromAccountId: document.getElementById("transfer-from").value,
+          toAccountId: document.getElementById("transfer-to").value,
           amountMinor,
           idempotencyKey,
-          requestedBy: "SYN-CUS-001"
+          requestedBy: customerId
         })
       });
+      document.getElementById("transfer-result").innerHTML = `
+        <div class="kv"><span>Status</span><strong>${result.item.status}</strong></div>
+        <div class="kv"><span>Reference</span><span>${result.item.transactionId || result.item.caseId || result.item.failureCode || ""}</span></div>
+        <div class="kv"><span>Message</span><span>${result.item.message}</span></div>
+      `;
       await loadAccounts();
+      await loadTransferResults();
     });
 
+    await api("/api/customer/login", {
+      method: "POST",
+      body: JSON.stringify({ userId: "customer01" })
+    }).then((result) => {
+      document.getElementById("customer-session").textContent = result.session.userId;
+    });
     await loadAccounts();
+    await loadTransferResults();
   }
 
   async function renderComplaintPortal() {
