@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-06-01T20:46:14.987Z",
+  "scope": "Phase 3 Staff Terminal MVP",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "reason-required-customer-detail",
+      "status": "pass",
+      "detail": "Customer detail rejects missing reason and returns masked data with reason"
+    },
+    {
+      "id": "unmask-policy",
+      "status": "pass",
+      "detail": "Unmask is denied for branch staff and allowed for manager with reason"
+    },
+    {
+      "id": "account-transaction-audit",
+      "status": "pass",
+      "detail": "Account and transaction inquiry return staff results"
+    },
+    {
+      "id": "maker-checker-customer-change",
+      "status": "pass",
+      "detail": "Customer phone changes only after manager approval"
+    },
+    {
+      "id": "staff-manifest-coverage",
+      "status": "pass",
+      "detail": "8 staff manifests available"
+    },
+    {
+      "id": "audit-event-coverage",
+      "status": "pass",
+      "detail": "Phase 3 staff actions produced required audit event types"
+    }
+  ]
+}

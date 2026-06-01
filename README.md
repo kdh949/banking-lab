@@ -32,6 +32,17 @@ Implemented ledger core scope:
 - Ledger invariant validation for balanced postings, duplicate idempotency keys, reversal references, partial finalization, and balance projection.
 - Runtime APIs under `/api/ledger/deposits`, `/api/ledger/withdrawals`, `/api/ledger/transfers`, `/api/ledger/reversals`, `/api/ledger/transactions`, and `/api/ledger/balances`.
 
+## Phase 3 Staff Terminal MVP
+
+Implemented staff terminal scope:
+
+- Transaction-code work area for `CST-001`, `CST-002`, `ACC-101`, `LED-101`, `CST-103`, `APR-001`, and `AUD-001`.
+- Customer context panel, approval inbox, and audit log panel.
+- Reason-required customer detail, account inquiry, and transaction inquiry APIs.
+- Masked PII by default and privileged, reasoned unmask request with audit trail.
+- Customer information change request with maker-checker approval before mutation.
+- Staff terminal manifests for customer detail, customer info change, and transaction history.
+
 ## Run Locally
 
 ```bash
@@ -40,6 +51,7 @@ npm run validate:manifests
 npm run generate:synthetic-data
 npm run evidence:phase1
 npm run evidence:phase2
+npm run evidence:phase3
 npm start
 ```
 
@@ -68,6 +80,7 @@ docker compose up --build
 - Concurrent withdrawals serialize through the ledger command service and cannot overdraw available balance.
 - Staff customer/account-sensitive access requires a business reason and audit event.
 - Audit events are append-only and hash chained.
+- PII unmasking is timeboxed, role-gated, reason-required, and audited.
 - High-risk staff commands require maker-checker approval, and maker and checker must differ.
 - Screen manifests must declare roles, template, audit, masking, and approval metadata.
 

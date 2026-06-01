@@ -23,6 +23,16 @@
 | Reversal duplicate prevention | `reverseTransaction`, reversal tests |
 | Runtime ledger API evidence | `tests/runtime.test.mjs`, `scripts/generate-phase2-evidence.mjs` |
 
+## Phase 3 Additions
+
+| Control area | Phase 3 evidence |
+| --- | --- |
+| Reason-required staff inquiry | `runtime/labApp.mjs`, `tests/staffTerminal.test.mjs` |
+| Masked PII default | `publicCustomerDetail`, staff detail tests |
+| Privileged unmask audit | `/api/staff/pii/unmask`, `PII_UNMASK_REQUESTED` tests |
+| Customer info maker-checker | `CUSTOMER_INFO_CHANGE` approval flow tests |
+| Staff manifest coverage | `screen-manifests/staff-terminal/*`, `validate:manifests` |
+
 ## Explicit Non-Production Boundary
 
 No real banking network, real KYC, real payment processor, real customer PII, or real funds are connected. External providers remain simulators.
