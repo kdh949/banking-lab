@@ -1,0 +1,48 @@
+{
+  "screenId": "CST-002",
+  "transactionCode": "CST002",
+  "title": "Customer Detail",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "customer",
+  "requiredRoles": ["BRANCH_STAFF", "CALL_CENTER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/customers/{customerId}/detail",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["customerId", "maskedName", "maskedPhone", "customerGrade", "riskGrade"]
+  },
+  "actions": [
+    {
+      "id": "requestUnmask",
+      "label": "Request Unmask",
+      "type": "command",
+      "target": "POST /api/staff/pii/unmask"
+    }
+  ]
+}

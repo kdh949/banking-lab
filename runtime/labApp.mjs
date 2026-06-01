@@ -59,6 +59,67 @@ function routeAppPath(pathname) {
   return routes.get(pathname);
 }
 
+function findCustomer(state, customerId) {
+  return state.dataset.customers.find((customer) => customer.customerId === customerId);
+}
+
+function publicCustomerDetail(customer, unmasked = false) {
+  if (!customer) {
+    return null;
+  }
+  if (unmasked) {
+    return {
+      customerId: customer.customerId,
+      name: customer.name,
+      phone: customer.phone,
+      address: customer.address,
+      customerGrade: customer.customerGrade,
+      riskGrade: customer.riskGrade,
+      piiExposure: "UNMASKED_TIMEBOXED"
+    };
+  }
+  return {
+    ...maskCustomer(customer),
+    piiExposure: "MASKED"
+  };
+}
+
+function applyCustomerInfoChange(state, approval, actor) {
+  if (state.executedApprovalIds.has(approval.approvalId) || approval.businessType !== "CUSTOMER_INFO_CHANGE") {
+    return false;
+  }
+  const customer = findCustomer(state, approval.businessReferenceId);
+  if (!customer) {
+    throw new Error(`customer not found: ${approval.businessReferenceId}`);
+  }
+  const after = approval.afterSnapshot || {};
+  for (const field of ["phone", "address", "customerGrade"]) {
+    if (after[field] !== undefined) {
+      customer[field] = after[field];
+    }
+  }
+  const ledgerCustomer = state.ledgerCore.customers.find((item) => item.customerId === customer.customerId);
+  if (ledgerCustomer) {
+    Object.assign(ledgerCustomer, customer);
+  }
+  state.executedApprovalIds.add(approval.approvalId);
+  state.auditLog.append({
+    eventType: "COMMAND_EXECUTED",
+    actorType: "STAFF",
+    actorId: actor.actorId,
+    actorRole: actor.actorRole,
+    screenId: "CST-103",
+    businessReferenceId: approval.approvalId,
+    customerId: customer.customerId,
+    reason: approval.requestReason,
+    payload: {
+      businessType: approval.businessType,
+      changedFields: Object.keys(after)
+    }
+  });
+  return true;
+}
+
 function createSeededLedger(dataset) {
   return [...dataset.ledgerTransactions];
 }
@@ -87,6 +148,7 @@ export async function createLabState() {
     }
   ];
   const fdsCases = [];
+  const executedApprovalIds = new Set();
 
   approvalStore.submit({
     businessType: "ACCOUNT_HOLD",
@@ -107,7 +169,8 @@ export async function createLabState() {
     ledgerTransactions,
     manifests,
     complaints,
-    fdsCases
+    fdsCases,
+    executedApprovalIds
   };
 }
 
@@ -196,6 +259,195 @@ export async function createLabHandler(state) {
         return;
       }
 
+      const customerDetailMatch = pathname.match(/^\/api\/staff\/customers\/([^/]+)\/detail$/);
+      if (customerDetailMatch && request.method === "GET") {
+        const customerId = decodeURIComponent(customerDetailMatch[1]);
+        const reason = url.searchParams.get("reason");
+        const customer = findCustomer(state, customerId);
+        if (!customer) {
+          json(response, 404, { error: "customer not found" });
+          return;
+        }
+        if (!reason) {
+          json(response, 400, { error: "CUSTOMER_DETAIL_VIEW requires a business reason" });
+          return;
+        }
+        const event = state.auditLog.append({
+          eventType: "CUSTOMER_DETAIL_VIEW",
+          actorType: "STAFF",
+          actorId: "branch01",
+          actorRole: "BRANCH_STAFF",
+          screenId: "CST-002",
+          customerId,
+          reason,
+          payload: { piiExposure: "MASKED" }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          item: publicCustomerDetail(customer)
+        });
+        return;
+      }
+
+      if (pathname === "/api/staff/pii/unmask" && request.method === "POST") {
+        const payload = await bodyJson(request);
+        const customer = findCustomer(state, payload.customerId);
+        if (!customer) {
+          json(response, 404, { error: "customer not found" });
+          return;
+        }
+        if (!payload.reason) {
+          json(response, 400, { error: "PII_UNMASK_REQUESTED requires a business reason" });
+          return;
+        }
+        const actorRole = payload.actorRole || "BRANCH_MANAGER";
+        if (!["BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER"].includes(actorRole)) {
+          json(response, 403, { error: "actor role cannot unmask PII" });
+          return;
+        }
+        const event = state.auditLog.append({
+          eventType: "PII_UNMASK_REQUESTED",
+          actorType: "STAFF",
+          actorId: payload.requestedBy || "manager01",
+          actorRole,
+          screenId: payload.screenId || "CST-002",
+          customerId: payload.customerId,
+          reason: payload.reason,
+          payload: {
+            ttlSeconds: 300,
+            scope: "SINGLE_CUSTOMER"
+          }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          expiresInSeconds: 300,
+          item: publicCustomerDetail(customer, true)
+        });
+        return;
+      }
+
+      if (pathname === "/api/staff/accounts/search" && request.method === "GET") {
+        const reason = url.searchParams.get("reason");
+        if (!reason) {
+          json(response, 400, { error: "ACCOUNT_VIEW requires a business reason" });
+          return;
+        }
+        const customerId = url.searchParams.get("customerId");
+        const accountId = url.searchParams.get("accountId");
+        const balances = state.ledgerCore.getBalances();
+        const accounts = state.ledgerCore.listAccounts(customerId)
+          .filter((account) => !accountId || account.accountId === accountId)
+          .map((account) => ({
+            customerId: account.customerId,
+            ...maskAccount(account),
+            ...balances.find((balance) => balance.accountId === account.accountId)
+          }));
+        const event = state.auditLog.append({
+          eventType: "ACCOUNT_VIEW",
+          actorType: "STAFF",
+          actorId: "branch01",
+          actorRole: "BRANCH_STAFF",
+          screenId: "ACC-101",
+          customerId,
+          accountId,
+          reason,
+          payload: { resultCount: accounts.length }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          items: accounts
+        });
+        return;
+      }
+
+      if (pathname === "/api/staff/transactions/search" && request.method === "GET") {
+        const reason = url.searchParams.get("reason");
+        const accountId = url.searchParams.get("accountId");
+        if (!reason) {
+          json(response, 400, { error: "TRANSACTION_VIEW requires a business reason" });
+          return;
+        }
+        if (!accountId) {
+          json(response, 400, { error: "accountId is required" });
+          return;
+        }
+        const transactions = state.ledgerCore.listTransactions(accountId).map((transaction) => ({
+          transactionId: transaction.id,
+          transactionType: transaction.transactionType,
+          businessDate: transaction.businessDate,
+          status: transaction.status,
+          requestedChannel: transaction.requestedChannel,
+          postings: transaction.postings
+            .filter((posting) => posting.accountId === accountId)
+            .map((posting) => ({
+              postingId: posting.id,
+              direction: posting.direction,
+              amountMinor: posting.amountMinor,
+              currency: posting.currency,
+              postingType: posting.postingType
+            }))
+        }));
+        const event = state.auditLog.append({
+          eventType: "TRANSACTION_VIEW",
+          actorType: "STAFF",
+          actorId: "branch01",
+          actorRole: "BRANCH_STAFF",
+          screenId: "LED-101",
+          accountId,
+          reason,
+          payload: { resultCount: transactions.length }
+        });
+        json(response, 200, {
+          auditEventId: event.auditEventId,
+          items: transactions
+        });
+        return;
+      }
+
+      const customerChangeMatch = pathname.match(/^\/api\/staff\/customers\/([^/]+)\/change-requests$/);
+      if (customerChangeMatch && request.method === "POST") {
+        const customerId = decodeURIComponent(customerChangeMatch[1]);
+        const payload = await bodyJson(request);
+        const customer = findCustomer(state, customerId);
+        if (!customer) {
+          json(response, 404, { error: "customer not found" });
+          return;
+        }
+        if (!payload.reason) {
+          json(response, 400, { error: "CUSTOMER_INFO_CHANGE requires a business reason" });
+          return;
+        }
+        const allowed = {};
+        for (const field of ["phone", "address", "customerGrade"]) {
+          if (payload.afterSnapshot?.[field] !== undefined) {
+            allowed[field] = payload.afterSnapshot[field];
+          }
+        }
+        if (Object.keys(allowed).length === 0) {
+          json(response, 400, { error: "afterSnapshot must include a supported customer field" });
+          return;
+        }
+        const approval = state.approvalStore.submit({
+          businessType: "CUSTOMER_INFO_CHANGE",
+          businessReferenceId: customerId,
+          requestedBy: payload.requestedBy || "branch01",
+          requestedByRole: payload.requestedByRole || "BRANCH_STAFF",
+          requestReason: payload.reason,
+          beforeSnapshot: {
+            phone: customer.phone,
+            address: customer.address,
+            customerGrade: customer.customerGrade
+          },
+          afterSnapshot: allowed,
+          screenId: "CST-103"
+        });
+        json(response, 201, {
+          item: approval,
+          customer: publicCustomerDetail(customer)
+        });
+        return;
+      }
+
       if (pathname === "/api/staff/audit-events" && request.method === "GET") {
         json(response, 200, { items: state.auditLog.all() });
         return;
@@ -217,7 +469,17 @@ export async function createLabHandler(state) {
       if (approvalMatch && request.method === "POST") {
         const payload = await bodyJson(request);
         const approval = state.approvalStore.approve(approvalMatch[1], payload);
-        json(response, 200, { item: approval });
+        const executed = applyCustomerInfoChange(state, approval, {
+          actorId: payload.approvedBy,
+          actorRole: payload.approvedByRole || "BRANCH_MANAGER"
+        });
+        json(response, 200, {
+          item: approval,
+          executed,
+          customer: approval.businessType === "CUSTOMER_INFO_CHANGE"
+            ? publicCustomerDetail(findCustomer(state, approval.businessReferenceId))
+            : null
+        });
         return;
       }
 

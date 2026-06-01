@@ -175,6 +175,17 @@ label {
   padding: 10px 12px 0;
 }
 
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.toolbar button {
+  min-width: 72px;
+}
+
 .tab {
   border: 1px solid var(--line);
   border-bottom-color: var(--line);
