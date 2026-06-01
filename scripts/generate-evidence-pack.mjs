@@ -53,9 +53,13 @@ const phaseEvidence = [];
 for (const phase of phases) {
   phaseEvidence.push(await readEvidence(phase));
 }
+const generatedAt = phaseEvidence
+  .map((phase) => phase.generatedAt)
+  .sort()
+  .at(-1);
 
 const summary = {
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   scope: "Bank-grade Core Banking Lab Evidence Pack",
   syntheticOnly: phaseEvidence.every((phase) => phase.syntheticOnly),
   totalChecks: phaseEvidence.reduce((sum, phase) => sum + phase.totalChecks, 0),
