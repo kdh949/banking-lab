@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T21:31:57.683Z",
+  "generatedAt": "2026-06-01T21:32:46.018Z",
   "scope": "Bank-grade Core Banking Lab Evidence Pack",
   "syntheticOnly": true,
   "totalChecks": 38,
@@ -9,7 +9,7 @@
     {
       "phase": "Phase 1",
       "scope": "Phase 1 Foundation",
-      "generatedAt": "2026-06-01T21:00:36.727Z",
+      "generatedAt": "2026-06-01T21:32:41.376Z",
       "totalChecks": 5,
       "passedChecks": 5,
       "failedChecks": [],
@@ -18,7 +18,7 @@
     {
       "phase": "Phase 2",
       "scope": "Phase 2 Ledger Core",
-      "generatedAt": "2026-06-01T21:00:36.700Z",
+      "generatedAt": "2026-06-01T21:32:41.346Z",
       "totalChecks": 5,
       "passedChecks": 5,
       "failedChecks": [],
@@ -27,7 +27,7 @@
     {
       "phase": "Phase 3",
       "scope": "Phase 3 Staff Terminal MVP",
-      "generatedAt": "2026-06-01T21:00:36.728Z",
+      "generatedAt": "2026-06-01T21:32:41.377Z",
       "totalChecks": 6,
       "passedChecks": 6,
       "failedChecks": [],
@@ -36,7 +36,7 @@
     {
       "phase": "Phase 4",
       "scope": "Phase 4 Customer Web MVP",
-      "generatedAt": "2026-06-01T21:00:36.728Z",
+      "generatedAt": "2026-06-01T21:32:41.378Z",
       "totalChecks": 7,
       "passedChecks": 7,
       "failedChecks": [],
@@ -45,7 +45,7 @@
     {
       "phase": "Phase 5",
       "scope": "Phase 5 Complaint Workflow",
-      "generatedAt": "2026-06-01T21:06:11.888Z",
+      "generatedAt": "2026-06-01T21:32:41.378Z",
       "totalChecks": 7,
       "passedChecks": 7,
       "failedChecks": [],
@@ -54,7 +54,7 @@
     {
       "phase": "Phase 6",
       "scope": "Phase 6 FDS AML Reconciliation",
-      "generatedAt": "2026-06-01T21:26:45.521Z",
+      "generatedAt": "2026-06-01T21:32:41.380Z",
       "totalChecks": 8,
       "passedChecks": 8,
       "failedChecks": [],

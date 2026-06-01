@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-06-01T21:00:36.727Z",
+  "generatedAt": "2026-06-01T21:32:41.376Z",
   "scope": "Phase 1 Foundation",
   "syntheticOnly": true,
   "checks": [
     {
       "id": "manifest-validation",
       "status": "pass",
-      "detail": "20 manifests validate with required audit metadata"
+      "detail": "23 manifests validate with required audit metadata"
     },
     {
       "id": "ledger-balanced-seed",
