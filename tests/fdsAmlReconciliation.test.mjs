@@ -77,7 +77,9 @@ test("high-risk transfer creates FDS case and release posts only after checker a
     assert.equal(assigned.payload.item.status, "INVESTIGATING");
     assert.equal(releaseRequest.payload.item.status, "RELEASE_REQUESTED");
     assert.equal(beforeApprovalResults.items.find((item) => item.caseId === caseId).status, "HELD");
-    assert.equal(selfApproval.response.status, 500);
+    assert.equal(selfApproval.response.status, 409);
+    assert.equal(selfApproval.payload.error.code, "MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+    assert.equal(selfApproval.payload.error.policy, "MAKER_CHECKER_SEPARATION_OF_DUTIES");
     assert.equal(managerApproval.response.status, 200);
     assert.equal(managerApproval.payload.executed, true);
     assert.equal(managerApproval.payload.fdsCase.status, "RELEASED");
@@ -212,8 +214,9 @@ test("EOD reconciliation creates owned mismatch item and adjustment posts on ope
     assert.equal(closing.payload.item.status, "UNMATCHED");
     assert.equal(item.status, "OPEN");
     assert.equal(item.owner, "ops01");
-    assert.equal(closedDayMutation.response.status, 500);
-    assert.match(closedDayMutation.payload.error, /business day is closed/);
+    assert.equal(closedDayMutation.response.status, 409);
+    assert.equal(closedDayMutation.payload.error.code, "LEDGER_CLOSED_DAY_IMMUTABLE");
+    assert.match(closedDayMutation.payload.error.invariant, /closed day/);
     assert.equal(adjustmentRequest.payload.item.status, "ADJUSTMENT_REQUESTED");
     assert.equal(approved.payload.reconciliationItem.status, "ADJUSTED");
     assert.equal(approved.payload.ledgerTransaction.transactionType, "ADJUSTMENT");

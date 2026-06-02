@@ -6,6 +6,8 @@ import {
   ApprovalStore,
   AuditLog,
   IdempotencyStore,
+  inferApiError,
+  isApiError,
   generateSyntheticDataset,
   loginMockUser,
   maskAccount,
@@ -56,9 +58,33 @@ const MIME_TYPES = new Map([
   [".json", "application/json; charset=utf-8"]
 ]);
 
+let requestSequence = 0;
+
+function nextRequestId() {
+  requestSequence += 1;
+  return `REQ-${String(requestSequence).padStart(8, "0")}`;
+}
+
 function json(response, statusCode, payload) {
-  response.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
-  response.end(JSON.stringify(payload, null, 2));
+  const headers = { "content-type": "application/json; charset=utf-8" };
+  if (response.__requestId) {
+    headers["x-request-id"] = response.__requestId;
+  }
+  let body = payload;
+  if (statusCode >= 400 && payload?.error) {
+    body = {
+      ...payload,
+      error: isApiError(payload.error)
+        ? payload.error
+        : inferApiError(payload.error, {
+          statusCode,
+          requestId: response.__requestId,
+          route: response.__routePath
+        })
+    };
+  }
+  response.writeHead(statusCode, headers);
+  response.end(JSON.stringify(body, null, 2));
 }
 
 async function bodyJson(request) {
@@ -629,9 +655,11 @@ export async function createLabState() {
 export async function createLabHandler(state) {
   state = state || await createLabState();
   return async function handler(request, response) {
+    response.__requestId = request.headers["x-request-id"] || nextRequestId();
     try {
       const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
       const pathname = url.pathname;
+      response.__routePath = pathname;
 
       if (pathname === "/health") {
         json(response, 200, {
@@ -1812,7 +1840,11 @@ export async function createLabHandler(state) {
 
       json(response, 404, { error: "not found" });
     } catch (error) {
-      json(response, 500, { error: error.message });
+      const apiError = inferApiError(error, {
+        requestId: response.__requestId,
+        route: response.__routePath
+      });
+      json(response, apiError.statusCode, { error: apiError });
     }
   };
 }

@@ -1,4 +1,5 @@
 export * from "./audit.mjs";
+export * from "./apiErrors.mjs";
 export * from "./auth.mjs";
 export * from "./ledger.mjs";
 export * from "./makerChecker.mjs";
