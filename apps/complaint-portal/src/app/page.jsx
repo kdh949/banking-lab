@@ -6,6 +6,7 @@ function list(value) {
 
 export default async function ComplaintPortalPage() {
   const manifests = await loadChannelManifests();
+  const reasonRequired = manifests.filter((manifest) => manifest.audit.reasonRequired).length;
 
   return (
     <main>
@@ -18,6 +19,25 @@ export default async function ComplaintPortalPage() {
           <span className="status">Synthetic complaints only</span>
         </header>
 
+        <section className="case-grid" aria-label="Complaint portal control summary">
+          <article className="case-card">
+            <div className="case-heading">
+              <span>Control summary</span>
+              <h2>Default PII masking</h2>
+            </div>
+            <dl>
+              <div>
+                <dt>Masking</dt>
+                <dd>CUSTOMER_SELF</dd>
+              </div>
+              <div>
+                <dt>Reason-required manifests</dt>
+                <dd>{reasonRequired}</dd>
+              </div>
+            </dl>
+          </article>
+        </section>
+
         <section className="case-grid" aria-label="Complaint portal manifests">
           {manifests.map((manifest) => (
             <article className="case-card" key={manifest.screenId}>
@@ -26,6 +46,7 @@ export default async function ComplaintPortalPage() {
                 <h2>{manifest.title}</h2>
               </div>
               <div className="workflow">
+                <span>workflow timeline</span>
                 {(manifest.workflow?.states || []).map((state) => (
                   <span key={state}>{state}</span>
                 ))}

@@ -2,6 +2,9 @@ import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
 export default async function CustomerWebPage() {
   const manifests = await loadCustomerWebManifests();
+  const reasonRequired = manifests.filter((manifest) => manifest.audit.reasonRequired).length;
+  const makerChecker = manifests.filter((manifest) => manifest.approval?.required).length;
+  const workflowManifests = manifests.filter((manifest) => "workflow" in manifest);
 
   return (
     <main>
@@ -10,6 +13,24 @@ export default async function CustomerWebPage() {
           <h1>Customer Web Banking</h1>
           <span className="status">Synthetic only · Node reference retained</span>
         </header>
+
+        <section className="panel" aria-label="Customer channel control summary">
+          <h2>Control Summary</h2>
+          <dl>
+            <div>
+              <dt>Default PII masking</dt>
+              <dd>CUSTOMER_SELF</dd>
+            </div>
+            <div>
+              <dt>Reason-required manifests</dt>
+              <dd>{reasonRequired}</dd>
+            </div>
+            <div>
+              <dt>Maker-checker manifests</dt>
+              <dd>{makerChecker}</dd>
+            </div>
+          </dl>
+        </section>
 
         <section className="grid" aria-label="Customer web manifest workbench">
           <aside className="panel">
@@ -21,6 +42,7 @@ export default async function CustomerWebPage() {
                   <span className="screen-meta">
                     {manifest.type} · {manifest.domain}
                   </span>
+                  <span>{manifest.title}</span>
                 </article>
               ))}
             </div>
@@ -62,6 +84,19 @@ export default async function CustomerWebPage() {
             </table>
           </section>
         </section>
+
+        {workflowManifests.length > 0 ? (
+          <section className="panel" aria-label="Customer workflow manifests">
+            <h2>Workflow Metadata</h2>
+            {workflowManifests.map((manifest) => (
+              <article className="screen-row" key={manifest.screenId}>
+                <span>{manifest.screenId}</span>
+                <span>workflow timeline</span>
+                <span>{manifest.workflow?.states?.join(", ")}</span>
+              </article>
+            ))}
+          </section>
+        ) : null}
       </div>
     </main>
   );

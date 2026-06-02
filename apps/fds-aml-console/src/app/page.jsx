@@ -44,6 +44,7 @@ export default async function FdsAmlConsolePage() {
                 <p>{manifest.domain} · {manifest.layout.template}</p>
               </div>
               <div className="workflow">
+                <span>workflow timeline</span>
                 {(manifest.workflow?.states || []).map((state) => (
                   <span key={state}>{state}</span>
                 ))}

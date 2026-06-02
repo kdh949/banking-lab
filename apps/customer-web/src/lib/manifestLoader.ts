@@ -3,6 +3,7 @@ import path from "node:path";
 
 export type CustomerWebManifest = {
   screenId: string;
+  title: string;
   app: "customer-web";
   type: string;
   domain: string;
@@ -14,6 +15,10 @@ export type CustomerWebManifest = {
   approval?: {
     required: boolean;
     makerChecker?: boolean;
+  };
+  workflow?: {
+    name: string;
+    states: string[];
   };
 };
 

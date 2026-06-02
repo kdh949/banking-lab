@@ -38,6 +38,7 @@
     "next:fds-aml-console": "npm --workspace @banking-lab/fds-aml-console run dev",
     "next:fds-aml-console:build": "npm --workspace @banking-lab/fds-aml-console run build",
     "next:fds-aml-console:typecheck": "npm --workspace @banking-lab/fds-aml-console run typecheck",
+    "test:e2e": "playwright test",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
@@ -47,6 +48,9 @@
     "evidence:phase5": "node scripts/generate-phase5-evidence.mjs",
     "evidence:phase6": "node scripts/generate-phase6-evidence.mjs",
     "evidence:pack": "node scripts/generate-evidence-pack.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1"
   },
   "engines": {
     "node": ">=20"

@@ -54,6 +54,23 @@ export default async function OpsConsolePage() {
                     <dt>Approval</dt>
                     <dd>{manifest.approval?.required ? list(manifest.approval.businessTypes) : "not required"}</dd>
                   </div>
+                  <div>
+                    <dt>Audit</dt>
+                    <dd>{manifest.audit.reasonRequired ? "reason required" : "standard"}</dd>
+                  </div>
+                  <div>
+                    <dt>Workflow</dt>
+                    <dd>
+                      {manifest.workflow?.states?.length ? (
+                        <>
+                          <span>workflow timeline</span>
+                          <span>{manifest.workflow.states.join(", ")}</span>
+                        </>
+                      ) : (
+                        "none"
+                      )}
+                    </dd>
+                  </div>
                 </dl>
               </article>
             ))}

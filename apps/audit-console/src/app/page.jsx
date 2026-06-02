@@ -40,8 +40,16 @@ export default async function AuditConsolePage() {
                     <td>{list(manifest.resultTable?.columns)}</td>
                   </tr>
                   <tr>
+                    <th>Approval</th>
+                    <td>{manifest.approval?.required ? "maker-checker" : "not required"}</td>
+                  </tr>
+                  <tr>
+                    <th>Approval Types</th>
+                    <td>{manifest.approval?.required ? list(manifest.approval.businessTypes) : "none"}</td>
+                  </tr>
+                  <tr>
                     <th>Audit</th>
-                    <td>{manifest.audit.enabled ? "enabled" : "disabled"}</td>
+                    <td>{manifest.audit.reasonRequired ? "reason required" : manifest.audit.enabled ? "enabled" : "disabled"}</td>
                   </tr>
                 </tbody>
               </table>
