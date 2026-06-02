@@ -35,6 +35,23 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
 }
 
+val integrationTest by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output + configurations.testRuntimeClasspath.get()
+    runtimeClasspath += output + compileClasspath
+}
+
+configurations[integrationTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[integrationTest.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+
 tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+tasks.register<Test>("integrationTest") {
+    description = "Runs PostgreSQL/Testcontainers integration tests."
+    group = "verification"
+    testClassesDirs = integrationTest.output.classesDirs
+    classpath = integrationTest.runtimeClasspath
+    shouldRunAfter(tasks.test)
     useJUnitPlatform()
 }
