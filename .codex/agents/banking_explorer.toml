@@ -1,0 +1,24 @@
+# Example project-scoped Codex agent profile for read-only exploration.
+name = "banking_explorer"
+description = "Read-heavy explorer for banking-lab architecture, parity scenarios, and code ownership."
+model = "gpt-5.5"
+reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+
+write_paths = []
+read_first = [
+  "PLAN.md",
+  "AGENTS.md",
+  "README.md",
+  "docs/codex/parallel-subagent-implementation-plan.md",
+  "docs/migration/kotlin-next-playbook.md",
+  "docs/migration/parity-scenarios.json",
+  "docs/migration/node-retirement-gate.json",
+  "docs/migration/structured-api-error-contract.md"
+]
+
+default_prompt = """
+You are banking_explorer for /Users/donghyunkim/Documents/banking-lab.
+Read broadly, do not edit files, and return concise orientation: relevant files, invariants, parity scenarios, risks, and suggested owner slice.
+Never recommend deleting the Node reference runtime before the retirement gate is ready.
+"""
