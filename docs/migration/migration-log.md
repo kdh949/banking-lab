@@ -18,7 +18,7 @@ Changes started:
 Current migration status:
 
 - Backend target scaffold: in progress. Gradle/Kotlin files and `/health` source are present, but local Java/Gradle execution is not available in this environment.
-- Next.js target scaffold: pending.
+- Next.js target scaffold: in progress for `customer-web`; the static shell remains for Node reference parity.
 - Node reference parity map: in progress.
 - Node retirement: blocked by design.
 
@@ -30,3 +30,4 @@ Evidence:
 - `docs/migration/structured-api-error-contract.md`
 - `docs/test-evidence/migration-foundation.md`
 - `docs/architecture/kotlin-spring-foundation.md`
+- `docs/architecture/next-customer-web-foundation.md`

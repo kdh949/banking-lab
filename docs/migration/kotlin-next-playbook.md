@@ -89,6 +89,14 @@ After a Gradle wrapper is committed, replace the raw `gradle` commands with:
 ./gradlew :services:core-banking:bootRun
 ```
 
+Customer-web Next scaffold commands:
+
+```bash
+npm run next:customer-web:typecheck
+npm run next:customer-web:build
+npm audit --omit=dev
+```
+
 ## Migration Sequence
 
 1. Keep `runtime`, `packages/*/*.mjs`, static app shells, and current Node tests intact.
@@ -114,6 +122,7 @@ Frontend:
 
 - One Next.js shell renders manifest metadata for `customer-web`.
 - No one-off business screen logic is introduced before the shared manifest renderer exists.
+- Keep `apps/customer-web/public/index.html` until Node reference retirement is approved.
 
 Parity:
 

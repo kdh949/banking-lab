@@ -9,11 +9,20 @@
     "packages/*",
     "services/*"
   ],
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    },
+    "postcss": "8.5.10"
+  },
   "scripts": {
     "start": "node runtime/server.mjs",
     "test": "node --test tests/*.test.mjs",
     "parity": "node scripts/run-parity-checks.mjs",
     "node:retirement-gate": "node scripts/check-node-retirement-gate.mjs",
+    "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",
+    "next:customer-web:build": "npm --workspace @banking-lab/customer-web run build",
+    "next:customer-web:typecheck": "npm --workspace @banking-lab/customer-web run typecheck",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",

@@ -49,9 +49,14 @@
     },
     {
       "id": "next-manifest-renderer",
-      "status": "pending",
+      "status": "in-progress",
       "description": "Next.js app shells render customer, staff, complaint, ops, audit, and FDS/AML screens from manifests.",
-      "evidence": []
+      "evidence": [
+        "apps/customer-web/src/app/page.tsx",
+        "apps/customer-web/src/lib/manifestLoader.ts",
+        "tests/nextScaffold.test.mjs",
+        "docs/architecture/next-customer-web-foundation.md"
+      ]
     },
     {
       "id": "evidence-refresh",

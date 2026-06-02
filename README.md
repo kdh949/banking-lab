@@ -181,6 +181,14 @@ gradle :services:core-banking:test
 gradle :services:core-banking:bootRun
 ```
 
+Initial Next.js scaffold files live under `apps/customer-web/src`. The static `apps/customer-web/public/index.html` shell remains for the Node reference runtime. Verify the target frontend with:
+
+```bash
+npm run next:customer-web:typecheck
+npm run next:customer-web:build
+npm audit --omit=dev
+```
+
 ## 12. Failure Drills
 
 Failure drill documents live under `docs/failure-drills`.
