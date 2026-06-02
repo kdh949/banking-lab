@@ -1,0 +1,23 @@
+{
+  "name": "@banking-lab/fds-aml-console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3006",
+    "build": "next build",
+    "start": "next start --port 3006",
+    "typecheck": "tsc --noEmit --allowJs --checkJs --jsx react-jsx --module esnext --moduleResolution bundler --target es2022 --lib dom,dom.iterable,es2022 src/**/*.js src/**/*.jsx"
+  },
+  "dependencies": {
+    "next": "^16.2.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0"
+  }
+}
