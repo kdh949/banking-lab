@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "statusReason": "Kotlin/Spring Boot backend and TypeScript/Next.js frontend parity has not been proven yet.",
+  "nodeReferenceRuntime": {
+    "requiredUntil": "KOTLIN_NEXT_PARITY_GREEN",
+    "paths": [
+      "runtime/server.mjs",
+      "runtime/labApp.mjs",
+      "packages/banking-domain/src",
+      "packages/screen-engine/src",
+      "packages/form-engine/src",
+      "packages/ui/public",
+      "apps/customer-web/public/index.html",
+      "apps/staff-terminal/public/index.html",
+      "tests"
+    ]
+  },
+  "requiredGates": [
+    {
+      "id": "kotlin-spring-health",
+      "status": "in-progress",
+      "description": "Spring Boot core-banking service starts, applies Flyway migrations, and returns /health with syntheticOnly=true.",
+      "evidence": [
+        "services/core-banking/build.gradle.kts",
+        "services/core-banking/src/main/kotlin/lab/banking/core/api/HealthController.kt",
+        "services/core-banking/src/main/resources/application.yml",
+        "tests/springScaffold.test.mjs",
+        "docs/architecture/kotlin-spring-foundation.md"
+      ]
+    },
+    {
+      "id": "node-reference-parity",
+      "status": "pending",
+      "description": "All 42 current Node reference scenarios are mapped and pass against Kotlin/Spring or Next/Playwright parity tests.",
+      "evidence": [
+        "docs/migration/parity-scenarios.json"
+      ]
+    },
+    {
+      "id": "structured-error-contract",
+      "status": "in-progress",
+      "description": "Reference API failures and target API failures use code/message/domain/invariant-or-policy/cause/fix/requestId/docs fields.",
+      "evidence": [
+        "docs/migration/structured-api-error-contract.md",
+        "packages/banking-domain/src/apiErrors.mjs",
+        "tests/apiErrorContract.test.mjs"
+      ]
+    },
+    {
+      "id": "next-manifest-renderer",
+      "status": "in-progress",
+      "description": "Next.js app shells render customer, staff, complaint, ops, audit, and FDS/AML screens from manifests.",
+      "evidence": [
+        "apps/customer-web/src/app/page.tsx",
+        "apps/customer-web/src/lib/manifestLoader.ts",
+        "tests/nextScaffold.test.mjs",
+        "docs/architecture/next-customer-web-foundation.md"
+      ]
+    },
+    {
+      "id": "evidence-refresh",
+      "status": "pending",
+      "description": "Docs, ADRs, threat/control mappings, test evidence, reconciliation evidence, and demo notes are updated for the Kotlin/Next implementation.",
+      "evidence": [
+        "docs/test-evidence/migration-foundation.md"
+      ]
+    },
+    {
+      "id": "retirement-review",
+      "status": "pending",
+      "description": "A final review confirms no ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, or evidence behavior depends on Node-only code.",
+      "evidence": []
+    }
+  ]
+}

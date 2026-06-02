@@ -145,6 +145,7 @@ Implemented controls:
 Run:
 
 ```bash
+npm run parity
 npm test
 npm run validate:manifests
 npm run evidence:phase1
@@ -158,6 +159,35 @@ docker compose config
 ```
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
+
+## 11.1 Kotlin + Next.js Migration
+
+The current Node.js `.mjs` runtime is the executable reference for the intended Kotlin/Spring Boot backend and TypeScript/Next.js frontend migration. Do not delete the Node reference until the retirement gate is ready.
+
+Migration entrypoints:
+
+```bash
+npm run parity
+npm run node:retirement-gate
+```
+
+Read `docs/migration/kotlin-next-playbook.md` before adding target-stack code. The migration must preserve the 42 mapped Node reference scenarios in `docs/migration/parity-scenarios.json`, use the structured error contract in `docs/migration/structured-api-error-contract.md`, and keep `docs/migration/node-retirement-gate.json` blocked until Spring Boot, Next.js, evidence, and review gates pass.
+
+Initial Spring Boot scaffold files live under `services/core-banking/src/main/kotlin`. Once JDK 21 and Gradle are available, verify the target backend with:
+
+```bash
+docker compose --profile migration up -d postgres
+gradle :services:core-banking:test
+gradle :services:core-banking:bootRun
+```
+
+Initial Next.js scaffold files live under `apps/customer-web/src`. The static `apps/customer-web/public/index.html` shell remains for the Node reference runtime. Verify the target frontend with:
+
+```bash
+npm run next:customer-web:typecheck
+npm run next:customer-web:build
+npm audit --omit=dev
+```
 
 ## 12. Failure Drills
 

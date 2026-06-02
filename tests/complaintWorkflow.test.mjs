@@ -93,7 +93,9 @@ test("complaint answer is sent only after maker-checker approval", async () => {
     assert.equal("answerDraft" in beforeApproval.item, false);
     assert.equal("approvalId" in beforeApproval.item, false);
     assert.equal(beforeApproval.item.timeline.some((entry) => "actorId" in entry), false);
-    assert.equal(selfApproval.response.status, 500);
+    assert.equal(selfApproval.response.status, 409);
+    assert.equal(selfApproval.payload.error.code, "MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+    assert.equal(selfApproval.payload.error.policy, "MAKER_CHECKER_SEPARATION_OF_DUTIES");
     assert.equal(managerApproval.response.status, 200);
     assert.equal(managerApproval.payload.executed, true);
     assert.equal(managerApproval.payload.complaint.status, "ANSWERED");

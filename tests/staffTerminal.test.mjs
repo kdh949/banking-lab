@@ -121,7 +121,10 @@ test("customer information change applies only after maker-checker approval", as
 
     assert.equal(request.status, 201);
     assert.equal(stillBefore, before);
-    assert.equal(selfApprove.status, 500);
+    assert.equal(selfApprove.status, 409);
+    const selfApprovePayload = await selfApprove.json();
+    assert.equal(selfApprovePayload.error.code, "MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+    assert.equal(selfApprovePayload.error.policy, "MAKER_CHECKER_SEPARATION_OF_DUTIES");
     assert.equal(managerApprove.status, 200);
     assert.equal(approvePayload.executed, true);
     assert.equal(after, "010-0000-1999");

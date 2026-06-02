@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": [
+    "/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-eng-review-plan-20260602-114300.md",
+    "/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-eng-review-test-plan-20260602-114300.md",
+    "/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-devex-review-plan-20260602-115809.md"
+  ],
+  "nodeReferenceTestCount": 42,
+  "requiredControls": [
+    "ledger",
+    "idempotency",
+    "audit",
+    "masking",
+    "maker-checker",
+    "workflow",
+    "complaint",
+    "fds-aml",
+    "reconciliation",
+    "manifest",
+    "evidence",
+    "structured-errors"
+  ],
+  "currentReferenceCommands": [
+    "node --test tests/*.test.mjs",
+    "node scripts/validate-manifests.mjs",
+    "node scripts/generate-evidence-pack.mjs"
+  ],
+  "targetCommands": [
+    "./gradlew :services:core-banking:test",
+    "./gradlew :services:core-banking:integrationTest",
+    "npm run typecheck",
+    "npm run test:e2e"
+  ],
+  "suites": [
+    {
+      "nodeSuite": "tests/ledger.test.mjs",
+      "scenarioCount": 5,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../LedgerDomainParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "ledger",
+        "idempotency"
+      ]
+    },
+    {
+      "nodeSuite": "tests/ledgerCore.test.mjs",
+      "scenarioCount": 7,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../LedgerCommandServiceParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "ledger",
+        "idempotency",
+        "reconciliation"
+      ]
+    },
+    {
+      "nodeSuite": "tests/audit.test.mjs",
+      "scenarioCount": 3,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../AuditMaskingParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "audit",
+        "masking"
+      ]
+    },
+    {
+      "nodeSuite": "tests/makerChecker.test.mjs",
+      "scenarioCount": 2,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../MakerCheckerParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "maker-checker",
+        "audit"
+      ]
+    },
+    {
+      "nodeSuite": "tests/manifest.test.mjs",
+      "scenarioCount": 4,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../ScreenManifestContractTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "manifest",
+        "maker-checker",
+        "masking"
+      ]
+    },
+    {
+      "nodeSuite": "tests/runtime.test.mjs",
+      "scenarioCount": 4,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../RuntimeApiParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "ledger",
+        "idempotency",
+        "audit",
+        "structured-errors"
+      ]
+    },
+    {
+      "nodeSuite": "tests/customerWeb.test.mjs",
+      "scenarioCount": 5,
+      "targetSuite": "apps/customer-web/e2e/customer-web-parity.spec.ts",
+      "targetStatus": "planned",
+      "controls": [
+        "ledger",
+        "idempotency",
+        "audit",
+        "masking",
+        "fds-aml"
+      ]
+    },
+    {
+      "nodeSuite": "tests/staffTerminal.test.mjs",
+      "scenarioCount": 4,
+      "targetSuite": "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
+      "targetStatus": "planned",
+      "controls": [
+        "audit",
+        "masking",
+        "maker-checker",
+        "manifest"
+      ]
+    },
+    {
+      "nodeSuite": "tests/complaintWorkflow.test.mjs",
+      "scenarioCount": 4,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../ComplaintWorkflowParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "workflow",
+        "complaint",
+        "maker-checker",
+        "audit"
+      ]
+    },
+    {
+      "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
+      "scenarioCount": 4,
+      "targetSuite": "services/core-banking/src/test/kotlin/.../FdsAmlReconciliationParityTest.kt",
+      "targetStatus": "planned",
+      "controls": [
+        "fds-aml",
+        "reconciliation",
+        "ledger",
+        "maker-checker",
+        "audit"
+      ]
+    }
+  ],
+  "commandChecks": [
+    {
+      "name": "manifest-contract",
+      "command": "node scripts/validate-manifests.mjs",
+      "controls": [
+        "manifest",
+        "audit",
+        "masking",
+        "maker-checker"
+      ]
+    },
+    {
+      "name": "evidence-pack",
+      "command": "node scripts/generate-evidence-pack.mjs",
+      "controls": [
+        "evidence",
+        "ledger",
+        "audit",
+        "reconciliation"
+      ]
+    }
+  ]
+}

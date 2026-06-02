@@ -1,0 +1,18 @@
+server:
+  port: ${PORT:8081}
+
+banking-lab:
+  synthetic-only: true
+  node-reference-runtime-retained: true
+  migration-target: kotlin-spring-boot
+
+spring:
+  application:
+    name: banking-lab-core-banking
+  datasource:
+    url: ${BANKING_LAB_DATABASE_URL:jdbc:postgresql://localhost:5432/banking_lab}
+    username: ${BANKING_LAB_DATABASE_USER:banking_lab}
+    password: ${BANKING_LAB_DATABASE_PASSWORD:banking_lab}
+  flyway:
+    enabled: true
+    locations: ${BANKING_LAB_FLYWAY_LOCATIONS:filesystem:infra/db/migrations}
