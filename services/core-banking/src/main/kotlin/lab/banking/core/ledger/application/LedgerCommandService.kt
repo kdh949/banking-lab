@@ -130,12 +130,16 @@ class LedgerCommandService(
             val original = findTransaction(command.originalTransactionId)
                 ?: throw ledgerNotFound("original transaction not found: ${command.originalTransactionId}")
             if (original.transactionType == "REVERSAL") {
-                throw ledgerValidation("reversal transactions cannot be reversed directly")
+                throw ledgerConflict(
+                    code = "LEDGER_REVERSAL_POLICY_VIOLATION",
+                    message = "reversal transactions cannot be reversed directly",
+                    invariant = "reversal references original transaction"
+                )
             }
             val existingReversal = findExistingReversal(command.originalTransactionId)
             if (existingReversal != null && existingReversal.idempotencyKey != command.idempotencyKey) {
                 throw ledgerConflict(
-                    code = "LEDGER_ALREADY_REVERSED",
+                    code = "LEDGER_REVERSAL_POLICY_VIOLATION",
                     message = "transaction already reversed: ${command.originalTransactionId}",
                     invariant = "one reversal per original transaction"
                 )

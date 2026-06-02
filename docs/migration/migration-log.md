@@ -48,3 +48,22 @@ Verification:
 - Kotlin unit tests pass through Docker/JDK.
 - PostgreSQL/Flyway/Testcontainers integration tests pass through Docker/JDK with Docker Desktop Testcontainers overrides.
 - Node retirement remains blocked until the remaining parity suites and Next.js screens are proven.
+
+## 2026-06-02: Parallel Subagent Integration Slice
+
+Changes completed:
+
+- Added Kotlin workflow state-machine parity for maker-checker, complaint answer approval, FDS release/block, AML closure, and reconciliation adjustment handoff.
+- Added Flyway V007 workflow case lifecycle tables for complaint cases, timelines, comments, and reconciliation adjustment requests.
+- Hardened Spring ledger reversal API errors to use the documented `LEDGER_REVERSAL_POLICY_VIOLATION` family and added MockMvc/Testcontainers parity coverage.
+- Added reusable manifest expansion contracts for inquiry, command, case, and parameter templates plus three parameter screen manifests.
+- Added Next.js manifest-rendered shells for staff terminal, complaint portal, ops console, audit console, and FDS/AML console.
+- Added repo-scoped Codex skills, subagent profile examples, QA evidence reports, and a parity coverage matrix.
+
+Verification:
+
+- `npm run validate:manifests` validates 26 screen manifests.
+- `npm test` and `npm run parity` remain the Node reference gates.
+- All six Next channel apps typecheck and build through workspace scripts.
+- Kotlin unit and integration tests pass through Docker/JDK; host `./gradlew` remains unavailable because no host Java runtime is installed.
+- Node retirement remains blocked until API, workflow durability, Kafka/Temporal, Keycloak, Playwright, security, and observability gates are proven.

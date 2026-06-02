@@ -1,0 +1,68 @@
+{
+  "screenId": "OPS-301",
+  "title": "Reconciliation Parameter Change",
+  "app": "ops-console",
+  "type": "PARAMETER",
+  "domain": "reconciliation",
+  "highRisk": true,
+  "requiredRoles": ["OPS_MANAGER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false
+  },
+  "parameter": {
+    "namespace": "reconciliation",
+    "keys": ["autoMatchToleranceMinor", "unmatchedItemSlaHours"],
+    "currentValueEndpoint": "GET /api/ops/parameters/reconciliation",
+    "historyEndpoint": "GET /api/ops/parameters/reconciliation/history"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "OPS_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["RECONCILIATION_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "parameterKey",
+      "label": "Parameter",
+      "type": "select",
+      "required": true,
+      "options": ["autoMatchToleranceMinor", "unmatchedItemSlaHours"]
+    },
+    {
+      "name": "scheduledValue",
+      "label": "Scheduled Value",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "effectiveAt",
+      "label": "Effective Date Time",
+      "type": "datetime",
+      "required": true
+    },
+    {
+      "name": "rollbackPlan",
+      "label": "Rollback Plan",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/parameters/reconciliation/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}

@@ -7,6 +7,7 @@ coverage/
 .nyc_output/
 dist/
 build/
+.gradle/
 .next/
 *.tsbuildinfo
 tmp/

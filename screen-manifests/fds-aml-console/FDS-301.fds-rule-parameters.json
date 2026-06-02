@@ -1,0 +1,68 @@
+{
+  "screenId": "FDS-301",
+  "title": "FDS Rule Parameter Change",
+  "app": "fds-aml-console",
+  "type": "PARAMETER",
+  "domain": "fds",
+  "highRisk": true,
+  "requiredRoles": ["FDS_REVIEWER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false
+  },
+  "parameter": {
+    "namespace": "fds",
+    "keys": ["highAmountMinor", "newDeviceHoldHours", "velocityWindowMinutes"],
+    "currentValueEndpoint": "GET /api/staff/fds-parameters",
+    "historyEndpoint": "GET /api/staff/fds-parameters/history"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["FDS_RULE_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "parameterKey",
+      "label": "Parameter",
+      "type": "select",
+      "required": true,
+      "options": ["highAmountMinor", "newDeviceHoldHours", "velocityWindowMinutes"]
+    },
+    {
+      "name": "scheduledValue",
+      "label": "Scheduled Value",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "effectiveAt",
+      "label": "Effective Date Time",
+      "type": "datetime",
+      "required": true
+    },
+    {
+      "name": "rollbackPlan",
+      "label": "Rollback Plan",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/fds-parameters/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}

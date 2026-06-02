@@ -27,14 +27,24 @@
         "services/core-banking/build.gradle.kts",
         "services/core-banking/src/main/kotlin/lab/banking/core/api/HealthController.kt",
         "services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalStore.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintWorkflow.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsWorkflow.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlWorkflow.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationWorkflow.kt",
         "services/core-banking/src/main/resources/application.yml",
         "services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt",
+        "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt",
+        "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt",
+        "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
         "db/migrations/V001__foundation.sql",
         "db/migrations/V002__ledger_constraints.sql",
         "db/migrations/V003__audit_approval_workflow.sql",
         "db/migrations/V004__outbox_inbox.sql",
         "db/migrations/V005__fds_aml_reconciliation.sql",
+        "db/migrations/V007__workflow_case_lifecycle.sql",
         "tests/springScaffold.test.mjs",
         "docs/architecture/kotlin-spring-foundation.md"
       ]
@@ -54,6 +64,7 @@
       "evidence": [
         "docs/migration/structured-api-error-contract.md",
         "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorHandler.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
         "packages/banking-domain/src/apiErrors.mjs",
         "tests/apiErrorContract.test.mjs"
       ]
@@ -65,7 +76,17 @@
       "evidence": [
         "apps/customer-web/src/app/page.tsx",
         "apps/customer-web/src/lib/manifestLoader.ts",
+        "apps/staff-terminal/src/app/page.jsx",
+        "apps/complaint-portal/src/app/page.jsx",
+        "apps/ops-console/src/app/page.jsx",
+        "apps/audit-console/src/app/page.jsx",
+        "apps/fds-aml-console/src/app/page.jsx",
+        "packages/screen-engine/src/manifest.mjs",
+        "screen-manifests/ops-console/OPS-301.reconciliation-parameters.json",
+        "screen-manifests/audit-console/AUD-201.audit-retention-parameters.json",
+        "screen-manifests/fds-aml-console/FDS-301.fds-rule-parameters.json",
         "tests/nextScaffold.test.mjs",
+        "tests/manifestExpansion.test.mjs",
         "docs/architecture/next-customer-web-foundation.md"
       ]
     },
@@ -75,10 +96,17 @@
       "description": "Docs, ADRs, threat/control mappings, test evidence, reconciliation evidence, and demo notes are updated for the Kotlin/Next implementation.",
       "evidence": [
         "docs/test-evidence/migration-foundation.md",
+        "docs/test-evidence/parity-coverage-matrix.md",
+        "docs/test-evidence/evidence-gap-report.md",
+        "docs/test-evidence/structured-error-contract-gap-report.md",
         "docs/test-evidence/phase-2-ledger-core.md",
         "docs/migration/migration-log.md",
         "docs/architecture/kotlin-spring-foundation.md",
-        "docs/architecture/phase-2-ledger-core.md"
+        "docs/architecture/phase-2-ledger-core.md",
+        "docs/architecture/workflow-cases-kotlin-port.md",
+        "docs/architecture/frontend-channels-manifest-shells.md",
+        "docs/architecture/manifest-screen-factory-conventions.md",
+        "docs/architecture/qa-evidence-node-retirement-recommendation.md"
       ]
     },
     {

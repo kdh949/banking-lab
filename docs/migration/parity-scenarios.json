@@ -66,8 +66,8 @@
     {
       "nodeSuite": "tests/makerChecker.test.mjs",
       "scenarioCount": 2,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../MakerCheckerParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt",
+      "targetStatus": "in-progress",
       "controls": [
         "maker-checker",
         "audit"
@@ -87,8 +87,8 @@
     {
       "nodeSuite": "tests/runtime.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../RuntimeApiParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
+      "targetStatus": "in-progress",
       "controls": [
         "ledger",
         "idempotency",
@@ -124,8 +124,8 @@
     {
       "nodeSuite": "tests/complaintWorkflow.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../ComplaintWorkflowParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt",
+      "targetStatus": "in-progress",
       "controls": [
         "workflow",
         "complaint",
@@ -136,8 +136,8 @@
     {
       "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../FdsAmlReconciliationParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt",
+      "targetStatus": "in-progress",
       "controls": [
         "fds-aml",
         "reconciliation",

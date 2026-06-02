@@ -1,0 +1,24 @@
+# Project-local Codex configuration notes for banking-lab.
+# The TOML files under .codex/agents/ are examples for coordinator-spawned subagents.
+# Keep global/runtime Codex settings outside this repository unless the coordinator explicitly asks.
+
+[project]
+name = "banking-lab"
+root = "/Users/donghyunkim/Documents/banking-lab"
+synthetic_only = true
+node_reference_retirement_gate = "docs/migration/node-retirement-gate.json"
+parallel_plan = "docs/codex/parallel-subagent-implementation-plan.md"
+
+[agent_examples]
+banking_explorer = ".codex/agents/banking_explorer.toml"
+banking_worker = ".codex/agents/banking_worker.toml"
+banking_reviewer = ".codex/agents/banking_reviewer.toml"
+banking_security_reviewer = ".codex/agents/banking_security_reviewer.toml"
+
+[skills]
+ledger_invariant_review = ".agents/skills/ledger-invariant-review/SKILL.md"
+manifest_screen_generator = ".agents/skills/manifest-screen-generator/SKILL.md"
+maker_checker_review = ".agents/skills/maker-checker-review/SKILL.md"
+structured_error_contract_review = ".agents/skills/structured-error-contract-review/SKILL.md"
+evidence_pack_builder = ".agents/skills/evidence-pack-builder/SKILL.md"
+migration_parity_review = ".agents/skills/migration-parity-review/SKILL.md"
