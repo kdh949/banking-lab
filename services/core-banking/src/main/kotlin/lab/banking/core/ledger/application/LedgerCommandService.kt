@@ -6,6 +6,7 @@ import java.sql.ResultSet
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
+import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.common.BankingLabDomainException
 import lab.banking.core.ledger.domain.BANK_SUSPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.DailyClosingDto
@@ -171,6 +172,15 @@ class LedgerCommandService(
     fun adjustment(command: AdjustmentCommand): LedgerCommandResult =
         postLedgerCommand("ADJUSTMENT", command.idempotencyKey, command) {
             requirePositiveAmount(command.amountMinor)
+            requireNonBlank(command.reason, "reason")
+            requireNonBlank(command.businessReferenceId, "businessReferenceId")
+            val businessReferenceId = command.businessReferenceId!!
+            requireApprovedOperation(
+                approvalId = command.approvalId,
+                businessType = ApprovalBusinessTypes.RECONCILIATION_ADJUSTMENT,
+                businessReferenceId = businessReferenceId,
+                requestedBy = command.requestedBy
+            )
             val businessDate = command.businessDate ?: LocalDate.now()
             ensureBusinessDateOpen(businessDate)
             ensureBankSuspenseAccount(command.currency)
@@ -202,7 +212,23 @@ class LedgerCommandService(
                 } else {
                     listOf(accountPosting, suspensePosting)
                 }
-            )
+            ).also { transactionId ->
+                appendAuditEvent(
+                    eventType = "COMMAND_EXECUTED",
+                    actorId = command.requestedBy,
+                    actorRole = "OPS_OPERATOR",
+                    screenId = "OPS-201",
+                    businessReferenceId = businessReferenceId,
+                    accountId = command.accountId,
+                    reason = command.reason,
+                    payload = mapOf(
+                        "ledgerTransactionId" to transactionId,
+                        "approvalId" to command.approvalId,
+                        "businessType" to ApprovalBusinessTypes.RECONCILIATION_ADJUSTMENT,
+                        "syntheticOnly" to true
+                    )
+                )
+            }
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -541,6 +567,95 @@ class LedgerCommandService(
         }
     }
 
+    private fun requireApprovedOperation(
+        approvalId: String?,
+        businessType: String,
+        businessReferenceId: String?,
+        requestedBy: String
+    ) {
+        if (approvalId.isNullOrBlank()) {
+            throw BankingLabDomainException(
+                code = "REQUEST_VALIDATION_FAILED",
+                status = HttpStatus.BAD_REQUEST,
+                domain = "validation",
+                policy = "MAKER_CHECKER_APPROVAL_REQUIRED",
+                message = "approvalId is required for high-risk operation",
+                causeText = "A high-risk banking command was submitted without a maker-checker approval reference.",
+                fix = "Submit the operation for approval and retry with the approved approvalId."
+            )
+        }
+        val approval = jdbc.query(
+            """
+            SELECT approval_id, business_type, business_reference_id, requested_by, status, approved_by
+            FROM operator_approvals
+            WHERE approval_id = :approvalId
+            FOR UPDATE
+            """.trimIndent(),
+            mapOf("approvalId" to approvalId)
+        ) { rs, _ ->
+            ApprovalRecord(
+                approvalId = rs.getString("approval_id"),
+                businessType = rs.getString("business_type"),
+                businessReferenceId = rs.getString("business_reference_id"),
+                requestedBy = rs.getString("requested_by"),
+                status = rs.getString("status"),
+                approvedBy = rs.getString("approved_by")
+            )
+        }.firstOrNull() ?: throw BankingLabDomainException(
+            code = "RESOURCE_NOT_FOUND",
+            status = HttpStatus.NOT_FOUND,
+            domain = "resource",
+            policy = "MAKER_CHECKER_APPROVAL_REQUIRED",
+            message = "approval not found: $approvalId",
+            causeText = "The submitted approvalId does not exist in PostgreSQL approval state.",
+            fix = "Use an existing synthetic approvalId created through the approval workflow."
+        )
+        if (approval.businessType != businessType || approval.businessReferenceId != businessReferenceId) {
+            throw BankingLabDomainException(
+                code = "WORKFLOW_STATE_VIOLATION",
+                status = HttpStatus.CONFLICT,
+                domain = "workflow",
+                policy = "APPROVAL_TARGET_MATCH_REQUIRED",
+                message = "approval does not match high-risk operation target",
+                causeText = "The approved business type or reference does not match the submitted command.",
+                fix = "Use an approval created for this exact business type and business reference."
+            )
+        }
+        if (approval.status != "APPROVED") {
+            throw BankingLabDomainException(
+                code = "WORKFLOW_STATE_VIOLATION",
+                status = HttpStatus.CONFLICT,
+                domain = "workflow",
+                policy = "APPROVAL_MUST_BE_APPROVED",
+                message = "approval is not approved: ${approval.status}",
+                causeText = "The high-risk operation was attempted before maker-checker approval completed.",
+                fix = "Have an authorized checker approve the operation before execution."
+            )
+        }
+        if (approval.requestedBy == approval.approvedBy || approval.approvedBy.isNullOrBlank()) {
+            throw BankingLabDomainException(
+                code = "MAKER_CHECKER_SELF_APPROVAL_REJECTED",
+                status = HttpStatus.CONFLICT,
+                domain = "maker-checker",
+                policy = "MAKER_CHECKER_SEPARATION_OF_DUTIES",
+                message = "maker and checker must be different users",
+                causeText = "The approval record does not prove separation of duties.",
+                fix = "Approve with a different checker actor who has the required approval role."
+            )
+        }
+        if (approval.requestedBy != requestedBy) {
+            throw BankingLabDomainException(
+                code = "AUTHORIZATION_POLICY_VIOLATION",
+                status = HttpStatus.FORBIDDEN,
+                domain = "auth",
+                policy = "APPROVAL_REQUESTER_MUST_EXECUTE",
+                message = "approval requester must execute the high-risk operation",
+                causeText = "The command actor does not match the maker recorded on the approval.",
+                fix = "Retry as the original maker or request a new approval for this actor."
+            )
+        }
+    }
+
     private fun insertIdempotency(idempotencyKey: String, commandType: String, commandHash: String) {
         jdbc.update(
             """
@@ -599,6 +714,53 @@ class LedgerCommandService(
                 "idempotencyKey" to idempotencyKey,
                 "payload" to objectMapper.writeValueAsString(payload),
                 "headers" to objectMapper.writeValueAsString(mapOf("syntheticOnly" to true))
+            )
+        )
+    }
+
+    private fun appendAuditEvent(
+        eventType: String,
+        actorId: String,
+        actorRole: String,
+        screenId: String,
+        businessReferenceId: String,
+        accountId: String?,
+        reason: String?,
+        payload: Map<String, Any?>
+    ) {
+        val payloadJson = objectMapper.writeValueAsString(payload)
+        val previousHash = jdbc.query(
+            """
+            SELECT payload_hash
+            FROM audit_events
+            ORDER BY created_at DESC, audit_event_id DESC
+            LIMIT 1
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        ) { rs, _ -> rs.getString("payload_hash") }.firstOrNull()
+        jdbc.update(
+            """
+            INSERT INTO audit_events (
+              audit_event_id, event_type, actor_type, actor_id, actor_role, screen_id,
+              business_reference_id, account_id, reason, payload_hash, previous_event_hash, payload_json
+            )
+            VALUES (
+              :auditEventId, :eventType, 'STAFF', :actorId, :actorRole, :screenId,
+              :businessReferenceId, :accountId, :reason, :payloadHash, :previousHash, CAST(:payload AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "auditEventId" to "AUD-${UUID.randomUUID()}",
+                "eventType" to eventType,
+                "actorId" to actorId,
+                "actorRole" to actorRole,
+                "screenId" to screenId,
+                "businessReferenceId" to businessReferenceId,
+                "accountId" to accountId,
+                "reason" to reason,
+                "payloadHash" to sha256("${previousHash.orEmpty()}:$payloadJson"),
+                "previousHash" to previousHash,
+                "payload" to payloadJson
             )
         )
     }
@@ -668,8 +830,8 @@ class LedgerCommandService(
         }
     }
 
-    private fun requireNonBlank(value: String, field: String) {
-        if (value.isBlank()) {
+    private fun requireNonBlank(value: String?, field: String) {
+        if (value.isNullOrBlank()) {
             throw ledgerValidation("$field is required")
         }
     }
@@ -719,5 +881,14 @@ class LedgerCommandService(
         val commandHash: String,
         val ledgerTransactionId: String?,
         val responseJson: String?
+    )
+
+    private data class ApprovalRecord(
+        val approvalId: String,
+        val businessType: String,
+        val businessReferenceId: String,
+        val requestedBy: String,
+        val status: String,
+        val approvedBy: String?
     )
 }

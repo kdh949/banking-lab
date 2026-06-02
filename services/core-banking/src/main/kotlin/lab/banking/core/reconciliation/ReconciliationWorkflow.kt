@@ -144,7 +144,8 @@ class ReconciliationWorkflow(private val approvalStore: ApprovalStore, private v
             businessDate = draft.businessDate,
             reason = draft.reason,
             currency = item.currency,
-            businessReferenceId = item.itemId
+            businessReferenceId = item.itemId,
+            approvalId = approval.approvalId
         )
         return ReconciliationAdjustmentExecution(adjusted, command)
     }

@@ -60,7 +60,8 @@ data class AdjustmentCommand(
     val businessDate: LocalDate? = null,
     val reason: String? = null,
     val currency: String = "KRW",
-    val businessReferenceId: String? = null
+    val businessReferenceId: String? = null,
+    val approvalId: String? = null
 )
 
 data class DailyClosingCommand(

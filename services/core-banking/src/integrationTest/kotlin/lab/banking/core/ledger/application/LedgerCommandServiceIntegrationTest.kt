@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.nio.file.Paths
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.common.BankingLabDomainException
 import lab.banking.core.ledger.domain.PostingDirection
 import org.junit.jupiter.api.AfterEach
@@ -163,6 +164,40 @@ class LedgerCommandServiceIntegrationTest {
     }
 
     @Test
+    fun `reconciliation adjustment requires maker-checker approval`() {
+        seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
+
+        val error = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.adjustment(adjustment("ACC-A", 1_000, "IT-ADJ-NO-APPROVAL", "REC-IT-001", null))
+        }
+
+        assertEquals("REQUEST_VALIDATION_FAILED", error.code)
+        assertEquals(0, countTransactionsByType("ADJUSTMENT"))
+    }
+
+    @Test
+    fun `approved reconciliation adjustment posts balanced transaction with audit and outbox evidence`() {
+        seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
+        seedApprovedApproval(
+            approvalId = "APR-IT-ADJ-001",
+            businessType = ApprovalBusinessTypes.RECONCILIATION_ADJUSTMENT,
+            businessReferenceId = "REC-IT-002",
+            requestedBy = "ops01",
+            approvedBy = "manager01"
+        )
+
+        val result = ledgerCommandService.adjustment(
+            adjustment("ACC-A", 1_000, "IT-ADJ-APPROVED", "REC-IT-002", "APR-IT-ADJ-001")
+        )
+
+        assertEquals("ADJUSTMENT", result.value.transactionType)
+        assertEquals("REC-IT-002", result.value.businessReferenceId)
+        assertEquals(1_000, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
+        assertEquals(1, countOutboxEvents(result.value.id, "AdjustmentPosted"))
+        assertEquals(1, countAuditEvents("COMMAND_EXECUTED", "REC-IT-002"))
+    }
+
+    @Test
     fun `repeatable read row locking prevents concurrent overdraft`() {
         assertConcurrentWithdrawalsCannotOverdraw("RR") { command ->
             ledgerCommandService.withdrawRepeatableReadForIsolationTest(command)
@@ -244,10 +279,80 @@ class LedgerCommandServiceIntegrationTest {
             requestedChannel = "CUSTOMER_WEB"
         )
 
+    private fun adjustment(
+        accountId: String,
+        amountMinor: Long,
+        key: String,
+        businessReferenceId: String,
+        approvalId: String?
+    ): AdjustmentCommand =
+        AdjustmentCommand(
+            accountId = accountId,
+            direction = PostingDirection.CREDIT,
+            amountMinor = amountMinor,
+            idempotencyKey = key,
+            requestedBy = "ops01",
+            requestedChannel = "OPS_RECONCILIATION",
+            reason = "Synthetic reconciliation adjustment",
+            businessReferenceId = businessReferenceId,
+            approvalId = approvalId
+        )
+
+    private fun seedApprovedApproval(
+        approvalId: String,
+        businessType: String,
+        businessReferenceId: String,
+        requestedBy: String,
+        approvedBy: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO operator_approvals (
+              approval_id, business_type, business_reference_id, requested_by, request_reason,
+              before_snapshot_json, after_snapshot_json, status, approved_by, approved_at
+            )
+            VALUES (
+              :approvalId, :businessType, :businessReferenceId, :requestedBy,
+              'Synthetic maker-checker approval',
+              CAST(:beforeSnapshot AS jsonb), CAST(:afterSnapshot AS jsonb),
+              'APPROVED', :approvedBy, now()
+            )
+            """.trimIndent(),
+            mapOf(
+                "approvalId" to approvalId,
+                "businessType" to businessType,
+                "businessReferenceId" to businessReferenceId,
+                "requestedBy" to requestedBy,
+                "approvedBy" to approvedBy,
+                "beforeSnapshot" to """{"status":"OPEN"}""",
+                "afterSnapshot" to """{"status":"ADJUSTED"}"""
+            )
+        )
+    }
+
     private fun countOutboxEvents(aggregateId: String, eventType: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM outbox_events WHERE aggregate_id = :aggregateId AND event_type = :eventType",
             mapOf("aggregateId" to aggregateId, "eventType" to eventType),
+            Int::class.java
+        ) ?: 0
+
+    private fun countTransactionsByType(transactionType: String): Int =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM ledger_transactions WHERE transaction_type = :transactionType",
+            mapOf("transactionType" to transactionType),
+            Int::class.java
+        ) ?: 0
+
+    private fun countAuditEvents(eventType: String, businessReferenceId: String): Int =
+        jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM audit_events
+            WHERE event_type = :eventType
+              AND business_reference_id = :businessReferenceId
+            """.trimIndent(),
+            mapOf("eventType" to eventType, "businessReferenceId" to businessReferenceId),
             Int::class.java
         ) ?: 0
 
