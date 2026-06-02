@@ -18,6 +18,10 @@
   "scripts": {
     "start": "node runtime/server.mjs",
     "test": "node --test tests/*.test.mjs",
+    "test:core-banking": "scripts/run-core-banking-tests.sh",
+    "test:core-banking:rerun": "scripts/run-core-banking-tests.sh --rerun-tasks",
+    "test:core-banking:unit": "scripts/run-core-banking-tests.sh :services:core-banking:test",
+    "test:core-banking:integration": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest",
     "parity": "node scripts/run-parity-checks.mjs",
     "node:retirement-gate": "node scripts/check-node-retirement-gate.mjs",
     "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",
