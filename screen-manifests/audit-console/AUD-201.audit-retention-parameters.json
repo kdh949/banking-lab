@@ -1,0 +1,68 @@
+{
+  "screenId": "AUD-201",
+  "title": "Audit Retention Parameter Change",
+  "app": "audit-console",
+  "type": "PARAMETER",
+  "domain": "audit",
+  "highRisk": true,
+  "requiredRoles": ["AUDITOR", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false
+  },
+  "parameter": {
+    "namespace": "audit",
+    "keys": ["retentionYears", "hashChainVerificationCadenceHours"],
+    "currentValueEndpoint": "GET /api/staff/audit-parameters",
+    "historyEndpoint": "GET /api/staff/audit-parameters/history"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["AUDIT_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "parameterKey",
+      "label": "Parameter",
+      "type": "select",
+      "required": true,
+      "options": ["retentionYears", "hashChainVerificationCadenceHours"]
+    },
+    {
+      "name": "scheduledValue",
+      "label": "Scheduled Value",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "effectiveAt",
+      "label": "Effective Date Time",
+      "type": "datetime",
+      "required": true
+    },
+    {
+      "name": "rollbackPlan",
+      "label": "Rollback Plan",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/audit-parameters/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}

@@ -1,0 +1,33 @@
+{
+  "conventionVersion": 1,
+  "templates": [
+    {
+      "type": "INQUIRY",
+      "template": "inquiry",
+      "requiredKeys": ["query", "resultTable"],
+      "regions": ["search", "resultTable", "detailPanel", "auditPanel"],
+      "controls": ["roles", "audit", "masking", "reason"]
+    },
+    {
+      "type": "COMMAND",
+      "template": "command",
+      "requiredKeys": ["fields", "api"],
+      "regions": ["targetLookup", "beforeSnapshot", "commandForm", "approvalPanel", "afterSnapshot", "auditPanel"],
+      "controls": ["roles", "audit", "validation", "approval"]
+    },
+    {
+      "type": "CASE",
+      "template": "case",
+      "requiredKeys": ["workflow"],
+      "regions": ["caseSummary", "ownerPanel", "slaPanel", "comments", "attachments", "approvalTimeline", "workflowTimeline", "auditPanel"],
+      "controls": ["roles", "audit", "workflow", "approval", "sla"]
+    },
+    {
+      "type": "PARAMETER",
+      "template": "parameter",
+      "requiredKeys": ["parameter", "fields", "api", "approval"],
+      "regions": ["currentValue", "scheduledValue", "effectiveDate", "approvalPanel", "rollbackPanel", "auditPanel"],
+      "controls": ["roles", "audit", "approval", "rollback"]
+    }
+  ]
+}

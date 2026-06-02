@@ -1,0 +1,41 @@
+{
+  "conventionVersion": 1,
+  "templates": {
+    "INQUIRY": {
+      "layoutTemplate": "inquiry",
+      "requiredManifestKeys": ["query", "resultTable"],
+      "regions": ["search", "resultTable", "detailPanel", "auditPanel"],
+      "controlMetadata": ["requiredRoles", "audit", "masking"],
+      "requiredControls": ["role-aware", "audit-logged", "masking-aware", "reason-aware"]
+    },
+    "COMMAND": {
+      "layoutTemplate": "command",
+      "requiredManifestKeys": ["fields", "api"],
+      "regions": ["targetLookup", "beforeSnapshot", "commandForm", "approvalPanel", "afterSnapshot", "auditPanel"],
+      "controlMetadata": ["requiredRoles", "audit", "approval", "validation"],
+      "requiredControls": ["role-aware", "audit-logged", "validation-aware", "approval-aware"]
+    },
+    "CASE": {
+      "layoutTemplate": "case",
+      "requiredManifestKeys": ["workflow"],
+      "regions": ["caseSummary", "ownerPanel", "slaPanel", "comments", "attachments", "approvalTimeline", "workflowTimeline", "auditPanel"],
+      "controlMetadata": ["requiredRoles", "audit", "workflow", "approval", "sla"],
+      "requiredControls": ["role-aware", "audit-logged", "workflow-aware", "approval-aware"]
+    },
+    "PARAMETER": {
+      "layoutTemplate": "parameter",
+      "requiredManifestKeys": ["parameter", "fields", "api", "approval"],
+      "regions": ["currentValue", "scheduledValue", "effectiveDate", "approvalPanel", "rollbackPanel", "auditPanel"],
+      "controlMetadata": ["requiredRoles", "audit", "approval", "rollback"],
+      "requiredControls": ["role-aware", "audit-logged", "approval-aware", "rollback-aware"]
+    }
+  },
+  "channelCoverage": {
+    "staff-terminal": ["INQUIRY", "COMMAND", "CASE"],
+    "customer-web": ["INQUIRY", "COMMAND", "CASE"],
+    "complaint-portal": ["CASE"],
+    "ops-console": ["CASE", "DASHBOARD", "PARAMETER"],
+    "audit-console": ["INQUIRY", "PARAMETER"],
+    "fds-aml-console": ["CASE", "PARAMETER"]
+  }
+}
