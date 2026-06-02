@@ -67,3 +67,31 @@ Verification:
 - All six Next channel apps typecheck and build through workspace scripts.
 - Kotlin unit and integration tests pass through Docker/JDK; host `./gradlew` remains unavailable because no host Java runtime is installed.
 - Node retirement remains blocked until API, workflow durability, Kafka/Temporal, Keycloak, Playwright, security, and observability gates are proven.
+
+## 2026-06-02: Node Retirement MVP Evidence Slice
+
+Changes completed:
+
+- Added maker-checker approval enforcement for Spring reconciliation adjustment postings through `approvalId`.
+- Added PostgreSQL audit event evidence for approved adjustment execution.
+- Added Spring HTTP integration coverage for every required structured error family.
+- Added durable PostgreSQL workflow repository tests for restart-safe workflow state and event history.
+- Added durable outbox/inbox state-transition tests for publish, retry, dead-letter, and duplicate consumer replay.
+- Added Playwright manifest shell parity for customer, staff, complaint, ops, audit, and FDS/AML Next channels.
+
+Verification:
+
+- Docker/JDK `:services:core-banking:test :services:core-banking:integrationTest --rerun-tasks --no-daemon` passed with a separate project cache.
+- Live Spring Boot smoke against isolated PostgreSQL applied Flyway through v007 and returned `/health` with `status=ok` and `syntheticOnly=true`.
+- Live structured error smoke returned `LEDGER_RESOURCE_NOT_FOUND` with request ID propagation and `syntheticOnly=true`.
+- `npm run validate:manifests` passed for 26 manifests.
+- All six Next workspace typecheck commands passed.
+- `npm run test:e2e` passed 12 Playwright tests across six manifest shells.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Full target parity for all 42 Node scenarios is not complete.
+- Keycloak/OAuth2/OIDC enforcement is not proven.
+- Real Kafka/Redpanda publish/consume is not proven; current eventing evidence is durable state-transition only.
+- Semgrep, Trivy, SBOM, DAST, and observability smoke outputs are still missing.

@@ -17,14 +17,14 @@ Source of truth:
 
 | Area | Node reference scenarios | Target suite | Target status | Retirement impact |
 | --- | ---: | --- | --- | --- |
-| Ledger domain invariants | 5 | `services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt` | In progress | Keep Node oracle until Spring tests remain green in normal target workflow. |
-| Ledger command service and isolation | 7 | `services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt` | In progress | Keep Node oracle until PostgreSQL/Testcontainers evidence is reproducible and retry policy is decided. |
+| Ledger domain invariants | 5 | `services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt` | Pass for current slice | Keep Node oracle until every mapped suite is target-backed. |
+| Ledger command service and isolation | 7 | `services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt` | Pass for current slice | Keep Node oracle until retry policy and non-ledger suites are complete. |
 | Audit and masking | 3 | `services/core-banking/src/test/kotlin/.../AuditMaskingParityTest.kt` | Planned | Blocks retirement. |
 | Maker-checker | 2 | `services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt` | In progress | Blocks retirement until persistence/API execution parity is complete. |
 | Screen manifest contract | 4 | `services/core-banking/src/test/kotlin/.../ScreenManifestContractTest.kt` | Planned | Blocks retirement for staff/customer screen controls. |
-| Runtime API parity and errors | 4 | `services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt` | In progress | Blocks retirement for non-ledger route semantics. |
-| Customer web | 5 | `apps/customer-web/e2e/customer-web-parity.spec.ts` | Planned | Blocks retirement; Next scaffold is not channel parity. |
-| Staff terminal | 4 | `apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` | Planned | Blocks retirement; staff controls still depend on Node reference. |
+| Runtime API parity and errors | 4 | `services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt`, `services/core-banking/src/integrationTest/kotlin/lab/banking/core/api/StructuredApiErrorContractIntegrationTest.kt` | Partial | Blocks retirement for non-ledger route semantics. |
+| Customer web | 5 | `apps/customer-web/e2e/customer-web-parity.spec.ts` | Shell parity pass | Blocks retirement until API-backed flows replace shell-only checks. |
+| Staff terminal | 4 | `apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` | Shell parity pass | Blocks retirement until staff controls are API/auth-backed. |
 | Complaint workflow | 4 | `services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt` | In progress | Blocks retirement until workflow state and approval parity are durable and API-backed. |
 | FDS, AML, reconciliation | 4 | `services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt` | In progress | Blocks retirement until risk/reconciliation cases are target-stack backed and transactionally wired. |
 
@@ -34,18 +34,18 @@ Total mapped reference scenarios: 42.
 
 | Control | Current evidence | Target-stack parity status | Gap |
 | --- | --- | --- | --- |
-| Ledger | Node tests plus Kotlin unit/integration evidence in `docs/test-evidence/migration-foundation.md`. | Partial. | Live `bootRun` and `/health` smoke remain pending; retry behavior after serialization conflicts needs a decision. |
+| Ledger | Node tests plus Kotlin unit/integration evidence and live Spring `/health` smoke. | Partial. | Retry behavior after serialization conflicts needs a decision before final retirement. |
 | Idempotency | Node tests and Kotlin ledger integration evidence. | Partial. | Needs API-level target parity for duplicate external commands outside ledger-only integration tests. |
 | Audit | Node audit/runtime/staff tests. | Planned. | Needs Spring-backed audit event persistence and hash-chain verification tests. |
 | Masking | Node audit/staff/customer tests. | Planned. | Needs target API and Next/Playwright assertions that PII is masked by default. |
 | Maker-checker | Node maker-checker/staff/complaint/FDS/AML tests plus Kotlin `ApprovalStore` unit tests. | Partial. | Needs durable target approval state and API execution tests. |
-| Workflow | Node complaint/FDS/AML/reconciliation state machines plus Kotlin state-machine unit tests. | Partial. | Needs Temporal or justified durable state-machine tests and repository-backed restart evidence. |
+| Workflow | Node complaint/FDS/AML/reconciliation state machines plus Kotlin state-machine unit tests and durable PostgreSQL workflow repository tests. | Partial. | Needs case-specific API wiring and final Temporal-deferral justification review. |
 | Complaint | Node complaint workflow tests plus Kotlin complaint workflow unit tests. | Partial. | Needs target complaint API parity and durable customer-visible answer controls. |
 | FDS/AML | Node FDS/AML tests plus Kotlin FDS/AML workflow unit tests. | Partial. | Needs target analytics/risk workflow parity and approval-controlled release/block/closure through APIs. |
 | Reconciliation | Node ledger and FDS/AML/reconciliation tests, SQL migration evidence, and Kotlin adjustment handoff tests. | Partial. | Needs target EOD, mismatch ownership, and transactionally executed adjustment tests beyond handoff commands. |
-| Manifest | Node manifest validation, expanded template tests, Next customer scaffold, and Next shells for five additional channels. | Partial. | Needs Playwright coverage and API-backed interaction parity for all required app shells. |
+| Manifest | Node manifest validation, expanded template tests, six Next shells, and Playwright shell parity. | Partial. | Needs API-backed interaction parity for required channel workflows. |
 | Evidence | Evidence pack and migration foundation docs. | Partial. | Needs command logs for full target workflow, security scans, Playwright, and workflow/event tests. |
-| Structured errors | Node API error contract tests plus Spring DTO/handler structural test. | Partial. | Needs target HTTP integration tests for each required error family. |
+| Structured errors | Node API error contract tests plus Spring HTTP integration tests for all required error families. | Pass for response shape. | Probe-backed families need real API route replacement before final retirement. |
 
 ## Covered Reference Scenarios
 

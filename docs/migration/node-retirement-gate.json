@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "statusReason": "Kotlin/Spring Boot ledger Phase 1A evidence exists, but full backend and TypeScript/Next.js parity has not been proven yet.",
+  "statusReason": "Spring health, structured error coverage, durable workflow/outbox evidence, and Next manifest Playwright shell parity are now proven, but full Node reference parity, Keycloak enforcement, Kafka delivery, security scans, and final retirement review remain incomplete.",
   "nodeReferenceRuntime": {
     "requiredUntil": "KOTLIN_NEXT_PARITY_GREEN",
     "paths": [
@@ -19,7 +19,7 @@
   "requiredGates": [
     {
       "id": "kotlin-spring-health",
-      "status": "in-progress",
+      "status": "pass",
       "description": "Spring Boot core-banking service starts, applies Flyway migrations, and returns /health with syntheticOnly=true.",
       "evidence": [
         "gradlew",
@@ -39,6 +39,8 @@
         "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/eventing/OutboxPublisherConsumerIntegrationTest.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/workflow/DurableWorkflowStateMachineIntegrationTest.kt",
         "db/migrations/V001__foundation.sql",
         "db/migrations/V002__ledger_constraints.sql",
         "db/migrations/V003__audit_approval_workflow.sql",
@@ -59,11 +61,13 @@
     },
     {
       "id": "structured-error-contract",
-      "status": "in-progress",
+      "status": "pass",
       "description": "Reference API failures and target API failures use code/message/domain/invariant-or-policy/cause/fix/requestId/docs fields.",
       "evidence": [
         "docs/migration/structured-api-error-contract.md",
         "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorHandler.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorParityProbeController.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/api/StructuredApiErrorContractIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
         "packages/banking-domain/src/apiErrors.mjs",
         "tests/apiErrorContract.test.mjs"
@@ -71,7 +75,7 @@
     },
     {
       "id": "next-manifest-renderer",
-      "status": "in-progress",
+      "status": "pass",
       "description": "Next.js app shells render customer, staff, complaint, ops, audit, and FDS/AML screens from manifests.",
       "evidence": [
         "apps/customer-web/src/app/page.tsx",
@@ -85,6 +89,14 @@
         "screen-manifests/ops-console/OPS-301.reconciliation-parameters.json",
         "screen-manifests/audit-console/AUD-201.audit-retention-parameters.json",
         "screen-manifests/fds-aml-console/FDS-301.fds-rule-parameters.json",
+        "playwright.config.ts",
+        "apps/customer-web/e2e/customer-web-parity.spec.ts",
+        "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
+        "apps/complaint-portal/e2e/complaint-portal-parity.spec.ts",
+        "apps/ops-console/e2e/ops-console-parity.spec.ts",
+        "apps/audit-console/e2e/audit-console-parity.spec.ts",
+        "apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts",
+        "docs/test-evidence/next-playwright-manifest-parity.md",
         "tests/nextScaffold.test.mjs",
         "tests/manifestExpansion.test.mjs",
         "docs/architecture/next-customer-web-foundation.md"

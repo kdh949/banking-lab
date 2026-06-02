@@ -6,27 +6,27 @@ Review date: 2026-06-02
 
 Keep the Node reference runtime. Do not mark `docs/migration/node-retirement-gate.json` ready.
 
-The correct current status is blocked because the target stack has not yet proven all parity, durability, security, workflow, eventing, and frontend evidence required by `PLAN.md` and `AGENTS.md`.
+The correct current status is blocked because the target stack has not yet proven all Node reference parity, Keycloak enforcement, real Kafka delivery, security scans, observability smoke, and final retirement review required by `PLAN.md` and `AGENTS.md`.
 
 ## Basis
 
 | Gate | Current status in gate file | QA recommendation |
 | --- | --- | --- |
-| `kotlin-spring-health` | In progress | Keep in progress until live Spring `/health` and normal target workflow evidence are captured. |
+| `kotlin-spring-health` | Pass | Keep passed; live Spring `/health`, Flyway v007, and Docker/JDK target tests have been captured. |
 | `node-reference-parity` | Pending | Keep pending until all 42 scenarios pass against target Kotlin/Spring or Next/Playwright tests. |
-| `structured-error-contract` | In progress | Keep in progress until all required error families have target HTTP integration tests. |
-| `next-manifest-renderer` | In progress | Keep in progress until customer, staff, complaint, ops, audit, and FDS/AML surfaces have Next/manifest parity. |
+| `structured-error-contract` | Pass | Keep passed for response shape; probe-backed families still need real API replacement before final retirement. |
+| `next-manifest-renderer` | Pass | Keep passed for six-shell manifest/Playwright parity; API-backed channel parity remains separate. |
 | `evidence-refresh` | In progress | Keep in progress until target command outputs, security scans, observability smoke, and failure drills are captured. |
 | `retirement-review` | Pending | Keep pending until a final review confirms no critical behavior depends on Node-only code. |
 
 ## Retirement Blockers
 
 - The Node runtime still provides the executable oracle for audit, masking, maker-checker, complaint, FDS/AML, reconciliation, runtime APIs, and channel behavior.
-- Kotlin/Spring ledger evidence is partial and promising, but the live service smoke test remains pending.
-- Outbox persistence has evidence, but Kafka/Redpanda delivery, idempotent consumption, retry, and dead-letter behavior are not proven.
-- Temporal or equivalent durable workflow behavior is not proven.
+- Kotlin/Spring health and ledger evidence are stronger, but full non-ledger route parity is not complete.
+- Outbox persistence and status transitions have evidence, but real Kafka/Redpanda delivery is not proven.
+- Durable PostgreSQL workflow state-machine evidence exists, but Temporal adapters or case-specific durable APIs are not complete.
 - Keycloak/OAuth2/OIDC authorization enforcement is not proven.
-- Next.js parity is limited to the customer-web scaffold; Playwright parity flows and other app shells are pending.
+- Next.js shell parity is covered by Playwright for six manifest shells, but API-backed channel workflows are pending.
 - Required security verification evidence is incomplete.
 
 ## Required Before Ready
