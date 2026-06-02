@@ -19,9 +19,15 @@
   "requiredGates": [
     {
       "id": "kotlin-spring-health",
-      "status": "pending",
+      "status": "in-progress",
       "description": "Spring Boot core-banking service starts, applies Flyway migrations, and returns /health with syntheticOnly=true.",
-      "evidence": []
+      "evidence": [
+        "services/core-banking/build.gradle.kts",
+        "services/core-banking/src/main/kotlin/lab/banking/core/api/HealthController.kt",
+        "services/core-banking/src/main/resources/application.yml",
+        "tests/springScaffold.test.mjs",
+        "docs/architecture/kotlin-spring-foundation.md"
+      ]
     },
     {
       "id": "node-reference-parity",

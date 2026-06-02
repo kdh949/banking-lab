@@ -34,7 +34,7 @@ Reference runtime:
 Target migration stack:
 
 - JDK 21
-- Gradle wrapper committed to the repository before the first Spring Boot service commit
+- Gradle 8.14 or newer, or 9.x
 - Kotlin with Spring Boot
 - PostgreSQL through Flyway migrations and Testcontainers for integration tests
 - TypeScript with Next.js or React
@@ -72,6 +72,22 @@ Node reference retirement gate: blocked
 ```
 
 The blocked result is correct until Spring Boot, Next.js, parity tests, evidence, and final review gates are complete.
+
+Spring Boot scaffold commands once JDK and Gradle are available:
+
+```bash
+docker compose --profile migration up -d postgres
+gradle :services:core-banking:test
+gradle :services:core-banking:bootRun
+curl http://127.0.0.1:8081/health
+```
+
+After a Gradle wrapper is committed, replace the raw `gradle` commands with:
+
+```bash
+./gradlew :services:core-banking:test
+./gradlew :services:core-banking:bootRun
+```
 
 ## Migration Sequence
 

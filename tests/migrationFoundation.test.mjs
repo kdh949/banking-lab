@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { access, readFile, readdir } from "node:fs/promises";
-import path from "node:path";
+import { access, readFile } from "node:fs/promises";
 
 async function exists(filePath) {
   try {
@@ -14,14 +13,9 @@ async function exists(filePath) {
 
 test("migration parity map covers every current Node reference test scenario", async () => {
   const parityMap = JSON.parse(await readFile("docs/migration/parity-scenarios.json", "utf8"));
-  const testFiles = (await readdir("tests"))
-    .filter((fileName) => fileName.endsWith(".test.mjs"))
-    .filter((fileName) => fileName !== "migrationFoundation.test.mjs" && fileName !== "apiErrorContract.test.mjs")
-    .sort();
-
   let currentReferenceCount = 0;
-  for (const fileName of testFiles) {
-    const source = await readFile(path.join("tests", fileName), "utf8");
+  for (const suite of parityMap.suites) {
+    const source = await readFile(suite.nodeSuite, "utf8");
     currentReferenceCount += [...source.matchAll(/^test\(/gm)].length;
   }
   const mappedCount = parityMap.suites.reduce((sum, suite) => sum + suite.scenarioCount, 0);

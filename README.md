@@ -173,6 +173,14 @@ npm run node:retirement-gate
 
 Read `docs/migration/kotlin-next-playbook.md` before adding target-stack code. The migration must preserve the 42 mapped Node reference scenarios in `docs/migration/parity-scenarios.json`, use the structured error contract in `docs/migration/structured-api-error-contract.md`, and keep `docs/migration/node-retirement-gate.json` blocked until Spring Boot, Next.js, evidence, and review gates pass.
 
+Initial Spring Boot scaffold files live under `services/core-banking/src/main/kotlin`. Once JDK 21 and Gradle are available, verify the target backend with:
+
+```bash
+docker compose --profile migration up -d postgres
+gradle :services:core-banking:test
+gradle :services:core-banking:bootRun
+```
+
 ## 12. Failure Drills
 
 Failure drill documents live under `docs/failure-drills`.
