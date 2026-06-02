@@ -23,15 +23,15 @@ Browser
 
 ## Persistence Direction
 
-`infra/db/migrations/001_foundation.sql` defines the foundation database contract:
+`db/migrations/V001__foundation.sql` and follow-up Flyway migrations define the foundation database contract:
 
 - Ledger source of truth: `ledger_transactions`, `ledger_postings`.
-- Projection/cache: `account_balances`.
+- Projection/cache: `account_balance_projections`.
 - Idempotency: `idempotency_keys`.
 - Operational controls: `audit_events`, `operator_approvals`, `screen_access_logs`, `masking_access_logs`.
-- Reliability controls: `daily_closings`, `reconciliation_items`.
+- Reliability controls: `daily_closings`, `reconciliation_items`, `outbox_events`, `inbox_events`.
 
-The migration includes triggers that reject update/delete against finalized ledger source rows.
+The migration includes triggers that reject update/delete against finalized ledger source rows and reject direct posting on closed business dates.
 
 ## Synthetic Data
 

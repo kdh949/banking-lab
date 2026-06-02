@@ -101,7 +101,7 @@ npm audit --omit=dev
 
 1. Keep `runtime`, `packages/*/*.mjs`, static app shells, and current Node tests intact.
 2. Add Spring Boot/Kotlin scaffold under `services/core-banking` while preserving the Node reference entrypoint.
-3. Wire Flyway to `infra/db/migrations/001_foundation.sql`; use Testcontainers for integration tests.
+3. Wire Flyway to `db/migrations/V001__foundation.sql` and following `V...` migrations; use Testcontainers for integration tests.
 4. Port domain behavior in order: ledger, idempotency, audit/masking, maker-checker, workflow, complaint, FDS/AML, reconciliation.
 5. Preserve current route semantics first; publish OpenAPI from Spring after route parity stabilizes.
 6. Add Next.js app shells that render from existing screen manifests instead of hand-coded business screens.
@@ -115,7 +115,7 @@ npm audit --omit=dev
 Backend:
 
 - Spring Boot `/health` returns `status=ok`, `syntheticOnly=true`, and audit hash-chain status.
-- Flyway applies the existing foundation migration.
+- Flyway applies the canonical `db/migrations/V...` migrations.
 - Structured API error responses match `docs/migration/structured-api-error-contract.md`.
 
 Frontend:

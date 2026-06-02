@@ -51,7 +51,7 @@ test("Spring Boot scaffold declares structured errors and PostgreSQL Flyway migr
   }
   assert.match(errorHandler, /x-request-id/);
   assert.match(application, /jdbc:postgresql:\/\/localhost:5432\/banking_lab/);
-  assert.match(application, /filesystem:infra\/db\/migrations/);
+  assert.match(application, /filesystem:db\/migrations/);
   assert.match(compose, /postgres:16-alpine/);
   assert.match(compose, /profiles:/);
 });

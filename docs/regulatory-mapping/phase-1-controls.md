@@ -3,7 +3,7 @@
 | Control area | Phase 1 evidence |
 | --- | --- |
 | Ledger integrity | `packages/banking-domain/src/ledger.mjs`, `tests/ledger.test.mjs` |
-| Balance projection only | `projectBalances`, `account_balances` migration comments and tests |
+| Balance projection only | `projectBalances`, `account_balance_projections` migration comments and tests |
 | Idempotent external commands | `IdempotencyStore`, transfer runtime test |
 | Reversal instead of mutation | `createReversalTransaction`, append-only SQL triggers |
 | Staff access audit | `AuditLog`, reason-required staff search API, runtime test |

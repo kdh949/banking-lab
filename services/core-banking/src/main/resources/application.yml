@@ -15,4 +15,4 @@ spring:
     password: ${BANKING_LAB_DATABASE_PASSWORD:banking_lab}
   flyway:
     enabled: true
-    locations: ${BANKING_LAB_FLYWAY_LOCATIONS:filesystem:infra/db/migrations}
+    locations: ${BANKING_LAB_FLYWAY_LOCATIONS:filesystem:db/migrations}

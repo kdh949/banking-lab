@@ -17,7 +17,7 @@ Foundation boundaries:
 - `packages/banking-domain` owns double-entry transaction creation, balance projection, idempotency, reversal, audit hash chain, masking, maker-checker, workflow, and synthetic data.
 - `packages/screen-engine` validates screen manifests before runtime use.
 - `runtime` serves static app shells and mock APIs backed by in-memory state.
-- `infra/db/migrations/001_foundation.sql` defines the intended PostgreSQL schema and append-only guards for later persistence.
+- `db/migrations/V001__foundation.sql` and follow-up Flyway migrations define the intended PostgreSQL schema and append-only guards for target-stack persistence.
 - `screen-manifests` are the source of business-screen metadata.
 
 ## Consequences

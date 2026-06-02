@@ -37,12 +37,17 @@ test("staff PII inquiry manifests require reason and masking policy", async () =
 });
 
 test("foundation migration contains source-of-truth and control tables", async () => {
-  const sql = await readFile("infra/db/migrations/001_foundation.sql", "utf8");
+  const sql = await readFile("db/migrations/V001__foundation.sql", "utf8");
+  const constraints = await readFile("db/migrations/V002__ledger_constraints.sql", "utf8");
+  const audit = await readFile("db/migrations/V003__audit_approval_workflow.sql", "utf8");
+  const outbox = await readFile("db/migrations/V004__outbox_inbox.sql", "utf8");
 
   assert.match(sql, /CREATE TABLE ledger_transactions/);
   assert.match(sql, /CREATE TABLE ledger_postings/);
-  assert.match(sql, /CREATE TABLE account_balances/);
-  assert.match(sql, /CREATE TABLE audit_events/);
-  assert.match(sql, /CREATE TABLE operator_approvals/);
-  assert.match(sql, /ledger_transactions_no_update_delete/);
+  assert.match(sql, /CREATE TABLE account_balance_projections/);
+  assert.match(audit, /CREATE TABLE audit_events/);
+  assert.match(audit, /CREATE TABLE operator_approvals/);
+  assert.match(constraints, /ledger_transactions_no_update_delete/);
+  assert.match(outbox, /CREATE TABLE outbox_events/);
+  assert.match(outbox, /CREATE TABLE inbox_events/);
 });

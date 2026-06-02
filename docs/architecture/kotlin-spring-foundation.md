@@ -20,7 +20,7 @@ The Node runtime remains the executable reference while this target backend is i
 - Spring Boot/Kotlin source lives under `services/core-banking/src/main/kotlin`.
 - `/health` returns `status`, `syntheticOnly`, `auditHashChainValid`, `nodeReferenceRuntimeRetained`, and `migrationTarget`.
 - Structured error DTOs mirror `docs/migration/structured-api-error-contract.md`.
-- `application.yml` points to PostgreSQL and `infra/db/migrations` for Flyway.
+- `application.yml` points to PostgreSQL and `db/migrations` for Flyway.
 - `docker-compose.yml` keeps the Node runtime as default and adds PostgreSQL behind the `migration` profile.
 
 ## Verification Gap
