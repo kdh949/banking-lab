@@ -1,0 +1,50 @@
+{
+  "realm": "banking-lab",
+  "enabled": true,
+  "displayName": "Synthetic Banking Lab",
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER" },
+      { "name": "BRANCH_STAFF" },
+      { "name": "BRANCH_MANAGER" },
+      { "name": "CALL_CENTER" },
+      { "name": "COMPLAINT_HANDLER" },
+      { "name": "FDS_REVIEWER" },
+      { "name": "AML_REVIEWER" },
+      { "name": "OPS_OPERATOR" },
+      { "name": "AUDITOR" },
+      { "name": "COMPLIANCE_MANAGER" },
+      { "name": "SYSTEM" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "customer-web",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["http://localhost:3000/*"]
+    },
+    {
+      "clientId": "staff-terminal",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["http://localhost:3002/*"]
+    },
+    {
+      "clientId": "admin-console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["http://localhost:3003/*"]
+    },
+    {
+      "clientId": "core-banking-api",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true
+    }
+  ]
+}

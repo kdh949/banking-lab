@@ -61,6 +61,9 @@ test("Spring Boot scaffold declares structured errors and PostgreSQL Flyway migr
   assert.match(application, /jdbc:postgresql:\/\/localhost:5432\/banking_lab/);
   assert.match(application, /filesystem:db\/migrations/);
   assert.match(compose, /postgres:16-alpine/);
+  for (const service of ["redis:7-alpine", "redpandadata/redpanda", "quay.io/keycloak/keycloak", "temporalio/auto-setup", "prom/prometheus", "grafana/grafana", "grafana/loki", "grafana/tempo"]) {
+    assert.match(compose, new RegExp(service.replaceAll("/", "\\/")));
+  }
   assert.match(compose, /profiles:/);
   for (const route of ["/ledger/deposits", "/ledger/withdrawals", "/ledger/transfers", "/ledger/reversals", "/ledger/adjustments", "/ops/daily-closings"]) {
     assert.match(ledgerController, new RegExp(route.replaceAll("/", "\\/")));

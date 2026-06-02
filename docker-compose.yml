@@ -17,6 +17,7 @@ services:
     image: postgres:16-alpine
     profiles:
       - migration
+      - platform
     environment:
       POSTGRES_DB: banking_lab
       POSTGRES_USER: banking_lab
@@ -28,3 +29,120 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    profiles:
+      - platform
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  redpanda:
+    image: redpandadata/redpanda:v24.3.7
+    profiles:
+      - platform
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://127.0.0.1:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles:
+      - platform
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./infra/keycloak/realm-banking-lab.json:/opt/keycloak/data/import/realm-banking-lab.json:ro
+  temporal:
+    image: temporalio/auto-setup:1.26
+    profiles:
+      - platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgresql
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: banking_lab
+      POSTGRES_PWD: banking_lab
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    profiles:
+      - platform
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  grafana:
+    image: grafana/grafana:11.4.0
+    profiles:
+      - platform
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+  loki:
+    image: grafana/loki:3.3.2
+    profiles:
+      - platform
+    command: ["-config.file=/etc/loki/loki.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+  tempo:
+    image: grafana/tempo:2.6.1
+    profiles:
+      - platform
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./infra/observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
+volumes:
+  postgres-data:
+  redpanda-data:
+  grafana-data:
+  loki-data:
+  tempo-data:
