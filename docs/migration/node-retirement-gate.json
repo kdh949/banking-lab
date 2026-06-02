@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "statusReason": "Kotlin/Spring Boot backend and TypeScript/Next.js frontend parity has not been proven yet.",
+  "statusReason": "Kotlin/Spring Boot ledger Phase 1A evidence exists, but full backend and TypeScript/Next.js parity has not been proven yet.",
   "nodeReferenceRuntime": {
     "requiredUntil": "KOTLIN_NEXT_PARITY_GREEN",
     "paths": [
@@ -22,9 +22,19 @@
       "status": "in-progress",
       "description": "Spring Boot core-banking service starts, applies Flyway migrations, and returns /health with syntheticOnly=true.",
       "evidence": [
+        "gradlew",
+        "gradle/wrapper/gradle-wrapper.properties",
         "services/core-banking/build.gradle.kts",
         "services/core-banking/src/main/kotlin/lab/banking/core/api/HealthController.kt",
+        "services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt",
         "services/core-banking/src/main/resources/application.yml",
+        "services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
+        "db/migrations/V001__foundation.sql",
+        "db/migrations/V002__ledger_constraints.sql",
+        "db/migrations/V003__audit_approval_workflow.sql",
+        "db/migrations/V004__outbox_inbox.sql",
+        "db/migrations/V005__fds_aml_reconciliation.sql",
         "tests/springScaffold.test.mjs",
         "docs/architecture/kotlin-spring-foundation.md"
       ]
@@ -43,6 +53,7 @@
       "description": "Reference API failures and target API failures use code/message/domain/invariant-or-policy/cause/fix/requestId/docs fields.",
       "evidence": [
         "docs/migration/structured-api-error-contract.md",
+        "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorHandler.kt",
         "packages/banking-domain/src/apiErrors.mjs",
         "tests/apiErrorContract.test.mjs"
       ]
@@ -60,10 +71,14 @@
     },
     {
       "id": "evidence-refresh",
-      "status": "pending",
+      "status": "in-progress",
       "description": "Docs, ADRs, threat/control mappings, test evidence, reconciliation evidence, and demo notes are updated for the Kotlin/Next implementation.",
       "evidence": [
-        "docs/test-evidence/migration-foundation.md"
+        "docs/test-evidence/migration-foundation.md",
+        "docs/test-evidence/phase-2-ledger-core.md",
+        "docs/migration/migration-log.md",
+        "docs/architecture/kotlin-spring-foundation.md",
+        "docs/architecture/phase-2-ledger-core.md"
       ]
     },
     {

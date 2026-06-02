@@ -14,12 +14,27 @@ Runtime API
        -> projected balances
 ```
 
+Target-stack Phase 1A now adds:
+
+```text
+Spring Boot LedgerController
+  -> LedgerCommandService
+       -> SERIALIZABLE PostgreSQL transaction
+       -> idempotency key advisory lock
+       -> account and balance rows SELECT FOR UPDATE
+       -> ledger_transactions and ledger_postings append
+       -> account_balance_projections update
+       -> outbox_events PENDING insert
+```
+
 ## Supported Commands
 
 - `deposit`
 - `withdraw`
 - `transfer`
 - `reverseTransaction`
+- `adjustment`
+- `closeBusinessDay`
 
 ## Runtime APIs
 
@@ -27,6 +42,8 @@ Runtime API
 - `POST /api/ledger/withdrawals`
 - `POST /api/ledger/transfers`
 - `POST /api/ledger/reversals`
+- `POST /api/ledger/adjustments`
+- `POST /api/ops/daily-closings`
 - `GET /api/ledger/transactions`
 - `GET /api/ledger/balances`
 
@@ -43,4 +60,4 @@ Runtime API
 
 ## Current Persistence Boundary
 
-Phase 2 keeps command state in memory while preserving the Phase 1 PostgreSQL schema as the intended persistence contract. The next persistence slice should map the same command service semantics onto SQL transactions.
+The Node reference still keeps its command state in memory for oracle parity. The target Spring service now maps the first ledger command semantics onto PostgreSQL, Flyway, idempotency rows, locked balance projections, and durable outbox rows. Full Node retirement remains blocked until every parity suite is covered.
