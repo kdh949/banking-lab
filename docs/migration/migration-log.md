@@ -1538,3 +1538,32 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Live Compose Temporal server and PostgreSQL restart continuity is now proven for all current synthetic Temporal workflow contracts.
 - Host crash shapes, API/outbox deployed process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Live Compose Outbox Worker Restart-Before-Publish Drill
+
+Changes completed:
+
+- Added `LiveOutboxWorkerSmokeIntegrationTest` as an env-gated live Compose drill for the deployed `core-banking-outbox-worker`.
+- Split Redpanda Compose listeners so Docker-internal clients use `redpanda:9092` while host-side drill clients use `127.0.0.1:${BANKING_LAB_REDPANDA_PORT}`.
+- Updated outbox failure drill evidence, the evidence gap report, parity matrix, QA recommendation, observability note, and node-retirement gate wording.
+
+Verification:
+
+- `docker compose --profile platform config` passed and rendered Redpanda internal/external listeners plus the outbox worker service.
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest` failed before Gradle startup because the sandbox blocked Gradle's local file-lock socket.
+- The approved env-gated compile/skip run of the same integration test passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build --no-deps core-banking-outbox-worker` passed after regenerating the boot jar.
+- `env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest.live outbox worker publishes pending event after Compose worker container restart'` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down` removed the temporary containers and network.
+
+Result:
+
+- The live test killed the outbox worker, inserted a synthetic durable `PENDING` outbox row, restarted the worker, observed the row become `PUBLISHED` with `published_at`, and consumed the corresponding Redpanda record through the host-side listener.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- The deployed outbox worker restart-before-publish path is now proven.
+- API process crash after durable ledger/outbox commit, deployed post-broker-ack outbox worker crash, outbox tracing, host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.

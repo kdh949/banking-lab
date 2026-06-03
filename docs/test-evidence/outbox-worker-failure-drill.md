@@ -4,9 +4,9 @@ Review date: 2026-06-03
 
 ## Scope
 
-This drill verifies the durable outbox recovery path for a publisher crash after broker acknowledgement but before the outbox row is marked `PUBLISHED`.
+This drill verifies durable outbox recovery paths for worker interruption around publish.
 
-The drill uses PostgreSQL and Redpanda through Testcontainers. It does not depend on the Node reference runtime.
+The first drill uses PostgreSQL and Redpanda through Testcontainers. The live worker drill uses Docker Compose PostgreSQL, Redpanda, and `core-banking-outbox-worker`. Neither path depends on the Node reference runtime.
 
 ## Failure Injected
 
@@ -51,6 +51,26 @@ Results:
 - `ObservabilityActuatorIntegrationTest` proves `/actuator/prometheus` exposes `banking_lab_outbox_worker_running`, `banking_lab_outbox_worker_starts_total`, `banking_lab_outbox_worker_events_attempted_total`, and `banking_lab_outbox_worker_events_published_total` with topic and client ID labels.
 - `docker compose --profile platform config` renders `core-banking-outbox-worker` with `BANKING_LAB_OUTBOX_WORKER_ENABLED=true`, Redpanda bootstrap configuration, synthetic-only scope, and a Prometheus scrape target.
 
+## Live Compose Worker Container Restart
+
+Additional verification on 2026-06-03 proved the deployed worker-container restart path before publish.
+
+Commands:
+
+```bash
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar
+env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker
+env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build --no-deps core-banking-outbox-worker
+env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest.live outbox worker publishes pending event after Compose worker container restart'
+env COMPOSE_PROJECT_NAME=banking-lab-outbox-worker-drill BANKING_LAB_POSTGRES_PORT=15496 BANKING_LAB_REDPANDA_PORT=19096 BANKING_LAB_REDPANDA_ADMIN_PORT=19696 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-worker-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down
+```
+
+Result:
+
+- `LiveOutboxWorkerSmokeIntegrationTest` waited for the Compose-managed Flyway schema, killed `core-banking-outbox-worker`, inserted a synthetic `PENDING` outbox row, and confirmed it stayed `PENDING` while the worker was down.
+- The test restarted `core-banking-outbox-worker` with `docker compose up -d --no-deps`, waited for the row to become `PUBLISHED`, verified `published_at` was set, and consumed the corresponding Redpanda record from the host-side external listener.
+- `docker-compose.yml` now advertises separate Redpanda listeners for Docker-internal clients (`redpanda:9092`) and host-side drill clients (`127.0.0.1:${BANKING_LAB_REDPANDA_PORT}`).
+
 ## Retirement Impact
 
-This closes the durable outbox crash-before-mark-published failure drill for the current Redpanda-backed event path and adds a scheduled/manual target-stack worker entrypoint with Micrometer/Prometheus metrics. Node retirement remains blocked until host crash shapes, API/outbox deployed worker-container process-failure variants, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the durable outbox crash-before-mark-published replay drill for the current Redpanda-backed event path, adds a scheduled/manual target-stack worker entrypoint with Micrometer/Prometheus metrics, and proves a deployed worker-container restart-before-publish path. Node retirement remains blocked until host crash shapes, API process crash after durable ledger/outbox commit, deployed post-broker-ack outbox worker crash, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
