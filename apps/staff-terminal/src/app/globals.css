@@ -125,6 +125,12 @@ input {
   margin-top: 18px;
 }
 
+.side-stack {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
 .panel,
 .screen-card {
   border: 1px solid var(--border);
@@ -214,6 +220,18 @@ dd {
   margin-top: 10px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.api-panel {
+  background: #fbfcfd;
+}
+
+.api-panel h2 {
+  font-size: 14px;
+}
+
+.api-panel dd {
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 860px) {

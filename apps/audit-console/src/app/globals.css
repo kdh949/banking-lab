@@ -112,12 +112,48 @@ td {
   overflow-wrap: anywhere;
 }
 
+.api-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fbfcfd;
+}
+
+.api-panel h2 {
+  font-size: 16px;
+}
+
+.api-panel dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.api-panel dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.api-panel dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
 @media (max-width: 700px) {
   main {
     padding: 16px;
   }
 
   .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .api-panel dl {
     grid-template-columns: 1fr;
   }
 }
