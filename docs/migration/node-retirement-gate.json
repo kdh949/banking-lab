@@ -319,7 +319,9 @@
         "docs/test-evidence/passkey-non-synthetic-operations.md",
         "legacy-node-reference/README.md",
         "scripts/record-passkey-non-synthetic-evidence.ts",
+        "scripts/check-retirement-boundary-audit.ts",
         "tests/passkeyEvidenceRecorder.test.mjs",
+        "tests/retirementBoundaryAudit.test.mjs",
         "tests/migrationFoundation.test.mjs"
       ]
     },

@@ -25,6 +25,7 @@
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",
+    "retirement:audit": "node --experimental-strip-types scripts/check-retirement-boundary-audit.ts",
     "passkey:evidence:record": "node --experimental-strip-types scripts/record-passkey-non-synthetic-evidence.ts",
     "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",
     "next:customer-web:build": "npm --workspace @banking-lab/customer-web run build",

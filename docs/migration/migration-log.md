@@ -1777,3 +1777,28 @@ Remaining blockers:
 
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Node Retirement Boundary Audit
+
+Changes completed:
+
+- Added `scripts/check-retirement-boundary-audit.ts` and `npm run retirement:audit`.
+- The audit fails on `.mjs` files outside approved reference/support paths, direct legacy imports through target `services/`, missing target-stack anchors, missing listed gate evidence paths, and parity map drift from the 42 mapped scenarios.
+- Fixed the Phase 2 evidence generator to import `LedgerCore` through `legacy-node-reference/services` instead of the target `services/` tree.
+- Added `tests/retirementBoundaryAudit.test.mjs` and listed the audit in the evidence-refresh gate.
+- Updated QA recommendation and evidence-gap docs while keeping the gate blocked.
+
+Verification:
+
+- `npm run retirement:audit` should report blocked with reference boundary, target anchors, evidence paths, and parity map passing.
+- The audit does not mark Node ready; it preserves the current blockers for non-synthetic passkey operations, evidence-refresh completion, and final retirement review.
+
+Result:
+
+- The repo now has an executable Node-independence boundary check for the current retirement scope.
+- Target `services/` remains free of Node business modules, and stale imports through the old service path are guarded.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
