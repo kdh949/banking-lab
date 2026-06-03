@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-test("retirement boundary audit passes while keeping current gate blocked", async () => {
+test("retirement boundary audit passes with current gate ready", async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
     ["--experimental-strip-types", "scripts/check-retirement-boundary-audit.ts"],
@@ -14,13 +14,12 @@ test("retirement boundary audit passes while keeping current gate blocked", asyn
   );
 
   assert.equal(stderr, "");
-  assert.match(stdout, /Retirement boundary audit: blocked/);
+  assert.match(stdout, /Retirement boundary audit: ready/);
   assert.match(stdout, /Reference boundary: pass/);
   assert.match(stdout, /Target stack anchors: pass/);
   assert.match(stdout, /Evidence paths: pass/);
   assert.match(stdout, /Parity map: pass \(42\/42 mapped scenarios\)/);
-  assert.match(stdout, /retirement-review: pending/);
-  assert.doesNotMatch(stdout, /non-synthetic-passkey-operations: pending/);
+  assert.doesNotMatch(stdout, /Incomplete gates:/);
 });
 
 test("retirement boundary audit is wired into the package scripts and gate evidence", async () => {

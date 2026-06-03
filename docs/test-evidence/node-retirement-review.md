@@ -1,14 +1,14 @@
 # Node Retirement Review
 
-Date: 2026-06-03
+Date: 2026-06-04
 
-Status: blocked
+Status: pass
 
 ## Scope
 
 This document tracks the final Node retirement review gate. The review must confirm that ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, and evidence behavior no longer depends on Node-only code.
 
-This document does not mark Node retirement ready.
+This document records the final review evidence that marks the Node retirement gate ready for the current synthetic lab scope.
 
 ## Current Preflight
 
@@ -18,7 +18,7 @@ Run:
 npm run retirement:review-preflight
 ```
 
-The preflight combines the current retirement boundary audit, stack retirement area audit, generated artifact boundary audit, evidence-refresh check, passkey evidence preflight, strict final retirement review verifier, completion audit, ready-state simulation, and retirement gate check. It verifies that target source directories stay free of legacy Node/runtime dependencies by implementation area, generated output is not treated as target source, current evidence is refreshed, current mapped parity remains target-backed, the final review verifier fails closed while the generated artifact is missing, and the retirement gate is blocked only by non-synthetic passkey operations and final retirement review.
+The preflight combines the current retirement boundary audit, stack retirement area audit, generated artifact boundary audit, evidence-refresh check, passkey evidence preflight, strict final retirement review verifier, completion audit, ready-state simulation, and retirement gate check. It verifies that target source directories stay free of legacy Node/runtime dependencies by implementation area, generated output is not treated as target source, current evidence is refreshed, current mapped parity remains target-backed, the final review artifact verifies, and the retirement gate is ready.
 
 Run the area-specific stack audit directly when reviewing the "no disallowed stack by area" requirement:
 
@@ -44,13 +44,13 @@ Run the completion audit before any final completion claim:
 npm run goal:completion-audit
 ```
 
-After real passkey evidence is recorded and before this review is marked pass, run:
+The real passkey evidence is recorded and verified with:
 
 ```bash
 npm run passkey:evidence:verify
 ```
 
-That verifier must pass against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`; a missing artifact is still a blocker.
+That verifier passes against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`.
 
 Prepare the final review command evidence template before rerunning the post-passkey review commands:
 
@@ -71,26 +71,26 @@ After the final reviewer reruns the required post-passkey commands and records t
 npm run retirement:final-review:record
 ```
 
-Then verify the generated final review artifact:
+The generated final review artifact was verified with:
 
 ```bash
 npm run retirement:final-review:verify
 ```
 
-That verifier must pass against `docs/test-evidence/generated/final-node-retirement-review.json`; a missing artifact is still a blocker if `retirement-review` is marked pass.
+That verifier passes against `docs/test-evidence/generated/final-node-retirement-review.json`.
 
-While `retirement-review` is still pending, the preflight also runs the strict final retirement review verifier and requires it to fail against the missing default artifact path. This proves the verifier is executable and fail-closed before any future ready claim.
+Before `retirement-review` was marked pass, the preflight also ran the strict final retirement review verifier and required it to fail against the missing default artifact path. After artifact generation, the same preflight requires the verifier to pass.
 
 ## Current Result
 
-Not ready. The final review cannot be marked passed until:
+Node retirement gate is ready for the current synthetic lab scope. The final review artifact proves:
 
 - non-synthetic passkey operations are proven with a real platform authenticator or hardware security key;
 - `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes `npm run passkey:evidence:verify` plus the retirement gate validation;
 - `docs/test-evidence/generated/final-node-retirement-review.json` exists and passes `npm run retirement:final-review:verify`;
-- the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, ready-state simulation, passkey preflight, final-review preflight, and passkey verifier commands after passkey evidence exists;
+- the final reviewer reran the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, ready-state simulation, passkey preflight, final-review preflight, and passkey verifier commands after passkey evidence existed;
 - `npm run goal:completion-audit -- --require-complete` passes after all retirement blockers are resolved;
-- the final reviewer confirms no critical behavior depends on Node-only code.
+- the final reviewer confirmed no critical behavior depends on Node-only code.
 
 ## Controls To Reconfirm In Final Review
 
@@ -108,4 +108,4 @@ Not ready. The final review cannot be marked passed until:
 
 ## Retirement Impact
 
-Node retirement remains blocked by non-synthetic passkey operations and final retirement review. The Node reference runtime must remain available as the oracle until the gate becomes ready.
+Node retirement gate is ready. The Node reference runtime remains preserved only as archived oracle/reference material and must not be used as the target product implementation.

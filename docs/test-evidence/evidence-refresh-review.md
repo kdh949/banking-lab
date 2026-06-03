@@ -8,7 +8,7 @@ Status: pass
 
 This review covers the current evidence-refresh gate for the Kotlin/Spring and Next.js migration. It checks that the evidence docs, generated evidence pack, parity matrix, security/observability evidence, Node reference boundary docs, and retirement gate metadata are consistent with the current target-stack implementation.
 
-This review does not mark Node retirement ready. Node retirement remains blocked by final retirement review.
+This review now aligns with the ready Node retirement gate after verified passkey and final review evidence.
 
 ## Commands
 
@@ -51,11 +51,11 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 
 - `docs/test-evidence/generated/evidence-pack-summary.json` reports all generated evidence checks passing with `syntheticOnly=true`.
 - `docs/test-evidence/parity-coverage-matrix.md` now reflects pass status for current mapped parity instead of stale partial status.
-- `docs/test-evidence/evidence-gap-report.md` records passkey completion and keeps Node retirement blocked for Node-independence review without listing evidence-refresh as a remaining blocker.
-- `docs/architecture/qa-evidence-node-retirement-recommendation.md` marks evidence-refresh passed while keeping Node retirement blocked.
+- `docs/test-evidence/evidence-gap-report.md` records passkey completion and final Node-independence review without listing evidence-refresh as a remaining blocker.
+- `docs/architecture/qa-evidence-node-retirement-recommendation.md` marks evidence-refresh and all required retirement gates passed.
 - `docs/test-evidence/stack-retirement-area-audit.md` proves target implementation areas are free of legacy Node MVP stack source while preserving the approved Node oracle/support paths.
 - `docs/test-evidence/generated-artifact-boundary.md` proves generated `.next`/`build` output is ignored and not tracked as target source.
-- `npm run retirement:ready-simulate` proves the future ready path with fixture passkey/final-review artifacts without changing the real blocked gate.
+- `npm run retirement:ready-simulate` proves the ready path with fixture passkey/final-review artifacts independently from the real ready gate.
 - `npm run passkey:evidence:prepare` creates ignored local command, staff-panel, and recorder-command templates with TODO values so the future manual run starts from the required redaction format without accidentally producing pass evidence.
 - `npm run passkey:evidence:readiness` proves the prepared local templates align with the documented Compose ports, Keycloak issuer, simulator-token-disabled startup, Spring health URL, recorder command, and masked staff-panel markers without marking passkey evidence complete.
 - `passkey:evidence:live-readiness` has a fixture-tested verifier and a live local stack run for the live stack step: it checks prepared templates against Keycloak discovery/JWKS and Spring `/health`, while the generated manual-live-passkey artifact provides the non-synthetic proof.
@@ -63,12 +63,12 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - The passkey preflight now locks the staff-terminal manual mode, WebAuthn spec, generated artifact, and strict verifier as explicit passkey/evidence-refresh evidence.
 - `npm run retirement:final-review:prepare` creates ignored local command and recorder-command templates with TODO values so the future post-passkey final review starts from the required command/control format without accidentally producing pass evidence.
 - Passkey recorder and verifier evidence now require structured passing command evidence with `command`, `status: "pass"`, `exitCode: 0`, a non-empty `summary`, no duplicate commands, live Compose startup, simulator-token-disabled Spring configuration, Keycloak discovery readiness, Spring `/health` readiness, a real platform/hardware authenticator attestation, structured manual ceremony evidence for `http://localhost` staff-terminal origin, `http://localhost/.../realms/banking-lab` issuer, RP ID `localhost`, synthetic `manager-webauthn01`, Authorization Code + PKCE, no browser virtual authenticator automation, and the recorder command before accepting future non-synthetic passkey evidence.
-- Final retirement review recorder and verifier now require the referenced passkey evidence artifact to pass the strict passkey verifier, then require post-passkey `retirement:ready-simulate`, `passkey:evidence:preflight`, and `retirement:review-preflight` command evidence in addition to parity, manifest, evidence pack, boundary, and passkey verifier commands.
+- Final retirement review recorder and verifier require the referenced passkey evidence artifact to pass the strict passkey verifier, then require post-passkey `retirement:ready-simulate`, `passkey:evidence:preflight`, and `retirement:review-preflight` command evidence in addition to parity, manifest, evidence pack, boundary, and passkey verifier commands.
 - Final retirement review recorder and verifier now also reject duplicate command entries, non-object command evidence entries, silent non-object extras, and any extra command evidence item that is not passing.
-- `docs/test-evidence/final-retirement-review-verifier.md` defines the future final-review artifact recorder/verifier schema and keeps the retirement review fail-closed until post-passkey commands and control attestations are recorded.
-- `docs/test-evidence/goal-completion-audit.md` keeps the active objective blocked until passkey evidence, final review, and the ready retirement gate are all proven.
-- `docs/migration/node-retirement-gate.json` marks `evidence-refresh` and `non-synthetic-passkey-operations` passed, leaving only `retirement-review` incomplete.
+- `docs/test-evidence/final-retirement-review-verifier.md` defines the final-review artifact recorder/verifier schema and records the verified final review artifact.
+- `docs/test-evidence/goal-completion-audit.md` records the active objective as complete after passkey evidence, final review, and the ready retirement gate are all proven.
+- `docs/migration/node-retirement-gate.json` marks `evidence-refresh`, `non-synthetic-passkey-operations`, and `retirement-review` passed and sets the gate to `ready`.
 
 ## Remaining Blockers
 
-- Final retirement review must still confirm no ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, or evidence behavior depends on Node-only code.
+- None for the current synthetic Node retirement scope. Future feature work must keep the archived Node oracle/reference boundary separate from target implementation paths.

@@ -68,4 +68,4 @@ The current parity map covers every Node oracle suite by count:
 
 ## Retirement Recommendation
 
-Node retirement is not recommended yet. All 42 mapped scenarios now have target-stack parity evidence and the current API-backed channel parity gate is closed, but the reference runtime remains required until final review proves that ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, and evidence behavior no longer depends on Node-only code.
+Node retirement is ready for the current synthetic lab scope. All 42 mapped scenarios now have target-stack parity evidence, the current API-backed channel parity gate is closed, non-synthetic passkey evidence verifies, and the final review proves that ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, and evidence behavior no longer depends on Node-only code.

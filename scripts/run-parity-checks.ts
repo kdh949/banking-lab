@@ -20,7 +20,9 @@ type ParityScenarioMap = {
 };
 
 const parityMapPath = "docs/migration/parity-scenarios.json";
+const gatePath = "docs/migration/node-retirement-gate.json";
 const parityMap = JSON.parse(await readFile(parityMapPath, "utf8")) as ParityScenarioMap;
+const gate = JSON.parse(await readFile(gatePath, "utf8")) as { status?: string };
 
 function commandLine(command: string, args: readonly string[]): string {
   return [command, ...args].join(" ");
@@ -98,4 +100,8 @@ await runStep("Target screen-engine manifest parity tests", "npm", ["run", "test
 await runStep("Evidence pack generation", process.execPath, ["scripts/generate-evidence-pack.mjs"]);
 
 console.log("\n[parity] Reference and target manifest parity checks passed.");
-console.log("[parity] Node reference runtime remains required until docs/migration/node-retirement-gate.json is ready.");
+if (gate.status === "ready") {
+  console.log("[parity] Node reference runtime is preserved only as archived oracle/reference material after the ready gate.");
+} else {
+  console.log("[parity] Node reference runtime remains required until docs/migration/node-retirement-gate.json is ready.");
+}

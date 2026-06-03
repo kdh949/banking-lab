@@ -312,7 +312,11 @@ if (passkeyPassed && reviewPassed) {
 
 const evidenceRefreshReview = await readFile(evidenceRefreshReviewPath, "utf8").catch(() => "");
 requireIncludes(evidenceRefreshReview, "Status: pass", "Evidence refresh review must be marked pass.");
-requireIncludes(evidenceRefreshReview, "does not mark Node retirement ready", "Evidence refresh review must avoid overstating retirement readiness.");
+if (gateReady) {
+  requireIncludes(evidenceRefreshReview, "ready Node retirement gate", "Evidence refresh review must record the ready retirement gate state.");
+} else {
+  requireIncludes(evidenceRefreshReview, "does not mark Node retirement ready", "Evidence refresh review must avoid overstating retirement readiness.");
+}
 for (const command of requiredCommands) {
   requireIncludes(evidenceRefreshReview, command, `Evidence refresh review must include command: ${command}.`);
 }

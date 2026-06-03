@@ -1,12 +1,12 @@
 # Final Retirement Review Verifier
 
-Date: 2026-06-03
+Date: 2026-06-04
 
-Status: blocked
+Status: pass
 
 ## Scope
 
-This evidence boundary defines the machine-verifiable artifact required before the final Node retirement review gate can pass. It does not prove non-synthetic passkey operations, does not mark Node retirement ready, and does not remove the Node reference oracle.
+This evidence boundary defines the machine-verifiable artifact required before the final Node retirement review gate can pass. The generated artifact now verifies and supports the ready gate; it does not remove the Node reference oracle from archived reference/oracle use.
 
 ## Command
 
@@ -68,8 +68,14 @@ Each command evidence array entry must be an object with `command`, `status: "pa
 
 ## Current Result
 
-Blocked. The default final review artifact intentionally does not exist yet because non-synthetic passkey evidence is still missing and final review has not been performed. The recorder and verifier fail closed while `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` is missing or invalid.
+Pass. `docs/test-evidence/generated/final-node-retirement-review.json` exists, references `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`, carries post-passkey command evidence for all required commands, records all required control attestations as true, and passes:
+
+```text
+npm run retirement:final-review:verify
+Final retirement review verification: pass
+Verified final retirement review artifact: docs/test-evidence/generated/final-node-retirement-review.json
+```
 
 ## Retirement Impact
 
-`npm run retirement:review-preflight` runs this verifier while the review gate is pending and requires it to fail against the missing default artifact path. `npm run goal:completion-audit` and `npm run node:retirement-gate` must run this verifier if `retirement-review` is later marked `pass`. This keeps the final retirement claim fail-closed until a concrete review artifact exists and passes schema, command, and control checks.
+`npm run retirement:review-preflight`, `npm run goal:completion-audit`, and `npm run node:retirement-gate` now require this verifier to pass because `retirement-review` is marked `pass`. This keeps the final retirement claim tied to a concrete review artifact that passes schema, command, and control checks.

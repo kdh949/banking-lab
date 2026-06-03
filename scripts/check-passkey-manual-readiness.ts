@@ -126,8 +126,8 @@ function validateGateAndScripts(packageJson: PackageJson | undefined, gate: Node
   if (packageJson?.scripts?.["passkey:evidence:readiness"] !== `node --experimental-strip-types ${readinessPath}`) {
     errors.push("package.json must expose passkey:evidence:readiness for manual passkey template readiness.");
   }
-  if (gate?.status !== "blocked") {
-    errors.push("Node retirement gate must remain blocked while manual passkey readiness is only a pre-evidence check.");
+  if (gate?.status !== "blocked" && gate?.status !== "ready") {
+    errors.push("Node retirement gate must be blocked before evidence completion or ready after verified passkey and final review evidence.");
   }
   const requiredGates = objectArray<RequiredGate>(gate?.requiredGates);
   for (const gateId of ["non-synthetic-passkey-operations", "evidence-refresh"]) {
