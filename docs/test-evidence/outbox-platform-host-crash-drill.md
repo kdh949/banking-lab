@@ -81,4 +81,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the current outbox platform host-crash-shaped recovery evidence slice for durable pending events. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the current outbox platform host-crash-shaped recovery evidence slice for durable pending events. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

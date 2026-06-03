@@ -64,4 +64,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes outbox worker trace/log correlation evidence for the current synthetic target-stack outbox publish path. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes outbox worker trace/log correlation evidence for the current synthetic target-stack outbox publish path. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

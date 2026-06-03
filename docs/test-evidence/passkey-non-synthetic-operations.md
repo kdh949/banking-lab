@@ -124,4 +124,4 @@ After artifact generation, update this document with the exact commands and atta
 
 ## Retirement Impact
 
-Node retirement remains blocked until this evidence is proven, evidence-refresh is complete, and the final retirement review confirms no critical behavior depends on Node-only code.
+Node retirement remains blocked until this evidence is proven and the final retirement review confirms no critical behavior depends on Node-only code.

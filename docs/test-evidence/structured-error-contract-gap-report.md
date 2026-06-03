@@ -52,4 +52,4 @@ Current Spring HTTP integration assertions verify these fields for every require
 
 ## Recommendation
 
-Mark the structured error contract gate as passed for response-shape coverage. Keep Node retirement blocked for the remaining retirement gates: non-synthetic passkey operations, evidence-refresh completion, and final review.
+Mark the structured error contract gate as passed for response-shape coverage. Keep Node retirement blocked for the remaining retirement gates: non-synthetic passkey operations and final review.

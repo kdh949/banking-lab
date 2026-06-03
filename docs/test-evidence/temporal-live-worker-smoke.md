@@ -43,4 +43,4 @@ Passed. Temporal server started, default namespace registered, Spring Boot worke
 - Worker restart is captured for the synthetic complaint-answer Temporal contract; broader worker failure and container crash drills are not yet captured.
 - OpenTelemetry trace/log correlation is not yet captured.
 - API-backed channel flows do not yet start or observe these workflows.
-- Node retirement remains blocked until all mapped parity scenarios and final review gates pass.
+- Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

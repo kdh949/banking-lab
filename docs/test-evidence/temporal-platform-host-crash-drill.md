@@ -84,4 +84,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the current Temporal platform host-crash-shaped restart evidence slice for synthetic workflows. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the current Temporal platform host-crash-shaped restart evidence slice for synthetic workflows. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

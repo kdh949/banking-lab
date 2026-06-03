@@ -43,4 +43,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the live Temporal SDK worker restart drill for the current synthetic workflow contract. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the live Temporal SDK worker restart drill for the current synthetic workflow contract. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

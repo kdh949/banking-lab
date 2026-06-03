@@ -14,7 +14,7 @@ This evidence note covers the frontend parity scaffolding for the current Node r
 - `fds-aml-console`
 - `admin-console`
 
-`admin-console` is now included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. The gate remains blocked; the admin shell does not remove the non-synthetic passkey, evidence-refresh, or final retirement-review blockers.
+`admin-console` is now included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. The gate remains blocked; the admin shell does not remove the non-synthetic passkey or final retirement-review blockers.
 
 ## Added Playwright Coverage
 
@@ -41,7 +41,7 @@ When `BANKING_LAB_E2E_API_BASE_URL` is set, the specs additionally prove a read-
 - `fds-aml-console` loads synthetic FDS and AML cases from Spring.
 - `admin-console` loads a synthetic platform-control summary from Spring and keeps the Node reference boundary visible as blocked.
 
-These tests do not claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console now has live browser proof for `security-admin01` Keycloak token propagation into the Spring admin platform summary route, but this only closes the admin surface smoke gap; the Node retirement gate remains blocked by non-synthetic passkey operations, evidence-refresh completion, and final retirement review.
+These tests do not claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console now has live browser proof for `security-admin01` Keycloak token propagation into the Spring admin platform summary route, but this only closes the admin surface smoke gap; the Node retirement gate remains blocked by non-synthetic passkey operations and final retirement review.
 
 ## Local Command
 

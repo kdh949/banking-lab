@@ -97,4 +97,4 @@ An earlier representative drill attempt failed because the test-managed `docker 
 
 ## Retirement Impact
 
-This closes live Compose Temporal server process restart coverage for all current synthetic Temporal workflow contracts. The PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`, and the platform host-crash-shaped drill is recorded in `docs/test-evidence/temporal-platform-host-crash-drill.md`. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes live Compose Temporal server process restart coverage for all current synthetic Temporal workflow contracts. The PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`, and the platform host-crash-shaped drill is recorded in `docs/test-evidence/temporal-platform-host-crash-drill.md`. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

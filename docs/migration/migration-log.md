@@ -2053,3 +2053,36 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Evidence-refresh completion and final retirement review remain incomplete.
+
+## 2026-06-03: Evidence Refresh Gate Closure
+
+Changes completed:
+
+- Added `docs/test-evidence/evidence-refresh-review.md` as the current evidence-refresh review artifact.
+- Added `scripts/check-evidence-refresh.ts` and `npm run evidence:refresh-check`.
+- Added `tests/evidenceRefresh.test.mjs` so stale `Partial` statuses or stale `evidence-refresh completion` blocker text fail the Node test suite.
+- Refreshed `docs/test-evidence/parity-coverage-matrix.md`, `docs/test-evidence/evidence-gap-report.md`, and `docs/architecture/qa-evidence-node-retirement-recommendation.md` so current mapped parity is marked covered while Node retirement remains separate.
+- Marked the `evidence-refresh` gate as `pass` in `docs/migration/node-retirement-gate.json`.
+
+Verification:
+
+- `node --test tests/evidenceRefresh.test.mjs tests/qaEvidenceCodexPlan.test.mjs tests/retirementBoundaryAudit.test.mjs tests/passkeyEvidencePreflight.test.mjs` passed 11 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:audit` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm test` passed 80 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `git diff --check` passed.
+- `npm run parity` passed under the approved execution path with 80 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Evidence-refresh is no longer a retirement blocker for the current synthetic target-stack evidence set.
+- Node retirement remains blocked because non-synthetic passkey operations and final retirement review are still incomplete.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real passkey run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.

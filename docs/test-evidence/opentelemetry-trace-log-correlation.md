@@ -62,4 +62,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes basic OpenTelemetry trace/log correlation evidence for the Spring `core-banking` HTTP path. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes basic OpenTelemetry trace/log correlation evidence for the Spring `core-banking` HTTP path. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
