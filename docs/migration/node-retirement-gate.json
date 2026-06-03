@@ -347,7 +347,11 @@
       "id": "retirement-review",
       "status": "pending",
       "description": "A final review confirms no ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, or evidence behavior depends on Node-only code.",
-      "evidence": []
+      "evidence": [
+        "docs/test-evidence/node-retirement-review.md",
+        "scripts/check-retirement-review-preflight.ts",
+        "tests/retirementReviewPreflight.test.mjs"
+      ]
     }
   ]
 }

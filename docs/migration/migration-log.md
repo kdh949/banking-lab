@@ -2086,3 +2086,35 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.
+
+## 2026-06-03: Final Retirement Review Preflight
+
+Changes completed:
+
+- Added `docs/test-evidence/node-retirement-review.md` as the blocked final retirement review artifact.
+- Added `scripts/check-retirement-review-preflight.ts` and `npm run retirement:review-preflight`.
+- Added `tests/retirementReviewPreflight.test.mjs` to keep the final review gate pending while checking that boundary audit, evidence refresh, passkey preflight, and the retirement gate remain consistent.
+- Wired the final review document, preflight script, and test into the `retirement-review` gate evidence list without marking the gate passed.
+
+Verification:
+
+- `npm run retirement:review-preflight` passed.
+- `node --test tests/retirementReviewPreflight.test.mjs` passed 2 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run retirement:audit` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run evidence:refresh-check` passed.
+- `npm test` passed 82 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `git diff --check` passed.
+- `npm run parity` passed under the approved execution path with 82 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Final retirement review now has an executable preflight that fails closed on stale gate state, missing review evidence, or Node boundary/evidence/passkey prerequisite drift.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real passkey run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.

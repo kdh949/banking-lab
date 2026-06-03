@@ -29,6 +29,7 @@
     "passkey:evidence:record": "node --experimental-strip-types scripts/record-passkey-non-synthetic-evidence.ts",
     "passkey:evidence:preflight": "node --experimental-strip-types scripts/check-passkey-non-synthetic-preflight.ts",
     "evidence:refresh-check": "node --experimental-strip-types scripts/check-evidence-refresh.ts",
+    "retirement:review-preflight": "node --experimental-strip-types scripts/check-retirement-review-preflight.ts",
     "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",
     "next:customer-web:build": "npm --workspace @banking-lab/customer-web run build",
     "next:customer-web:typecheck": "npm --workspace @banking-lab/customer-web run typecheck",
