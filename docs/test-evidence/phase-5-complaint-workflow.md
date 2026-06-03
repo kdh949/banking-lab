@@ -9,6 +9,7 @@
 - Manager approval sends the answer.
 - Customer can confirm the answer and close the case.
 - Complaint workflow manifests cover customer and staff views.
+- Spring customer confirmation API closes an answered case with `customer_confirmed_at`, `CLOSED` timeline, and customer audit evidence.
 
 ## Commands
 
@@ -16,6 +17,8 @@
 npm test
 npm run validate:manifests
 npm run evidence:phase5
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.complaint.CustomerComplaintConfirmApiParityIntegrationTest
+env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18099 npm run test:e2e
 ```
 
 Generated machine-readable evidence is written to `docs/test-evidence/generated/phase-5-complaint-workflow.json`.

@@ -39,4 +39,6 @@ The scaffold should keep the override until a stable Next release removes the vu
 
 - Add the shared manifest renderer for the remaining app shells.
 - Generate or stabilize the TypeScript API client after Spring OpenAPI parity.
-- Add Playwright parity flows for customer transfer, account detail, transaction history, and complaint entry.
+- Customer account detail, transfer retry/failure, transaction history, held FDS status, durable held/failed transfer status parity, complaint entry, and complaint confirmation now have API-backed Playwright smoke.
+- Customer account detail, transfer retry/failure, transaction history, held FDS status, durable held/failed transfer status parity, complaint entry, and complaint confirmation now have live Keycloak Authorization Code + PKCE login propagation through the Next BFF token exchange route, with Spring simulator tokens disabled and JWKS validation enabled.
+- Remaining customer-web auth work is WebAuthn/MFA browser evidence; broader channel auth work now moves to ops, audit, complaint, and FDS/AML login propagation after the staff-terminal masked lookup/customer-change approval slice.

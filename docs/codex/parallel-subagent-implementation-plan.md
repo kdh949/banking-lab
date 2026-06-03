@@ -160,7 +160,7 @@ Allowed write paths:
 Read-only reference:
 - apps/**
 - tests/manifest.test.mjs
-- scripts/validate-manifests.mjs
+- scripts/validate-manifests.ts
 Objective:
 Add manifest conventions and reusable definitions for many bank screens without hand-coding each screen. Expand screen coverage for staff terminal, customer web, complaint portal, ops console, audit console, and FDS/AML console. Preserve manifest-declared roles, audit, masking, workflow, and approval metadata. Do not edit app UI files directly.
 
@@ -449,7 +449,7 @@ Expand the manifest-driven screen system so the repo can scale to many bank scre
 Read first:
 - README.md
 - tests/manifest.test.mjs
-- scripts/validate-manifests.mjs
+- scripts/validate-manifests.ts
 - packages/screen-engine/**
 - packages/form-engine/**
 - docs/migration/parity-scenarios.json

@@ -54,8 +54,8 @@ docker run --rm -e TESTCONTAINERS_RYUK_DISABLED=true -e TESTCONTAINERS_HOST_OVER
 - `docs/migration/parity-scenarios.json`
 - `docs/migration/structured-api-error-contract.md`
 - `docs/migration/node-retirement-gate.json`
-- `scripts/run-parity-checks.mjs`
-- `scripts/check-node-retirement-gate.mjs`
+- `scripts/run-parity-checks.ts`
+- `scripts/check-node-retirement-gate.ts`
 - `docs/architecture/kotlin-spring-foundation.md`
 - `services/core-banking/build.gradle.kts`
 - `services/core-banking/src/main/kotlin/lab/banking/core/api/HealthController.kt`

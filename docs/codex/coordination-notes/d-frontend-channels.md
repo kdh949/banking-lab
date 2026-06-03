@@ -10,7 +10,7 @@
 
 - Add root package scripts for the new channel apps, for example `next:staff-terminal:typecheck`, `next:staff-terminal:build`, and equivalent scripts for the other four apps.
 - Update `package-lock.json` for the new app workspaces after coordinator approval, since Agent D scope allowed app-local `package.json` only.
-- Add app-local `tsconfig.json`, `next.config.mjs`, and generated `next-env.d.ts` files for the new channels if the project wants strict TypeScript parity with `customer-web`.
+- Add app-local `tsconfig.json`, `next.config.ts`, and generated `next-env.d.ts` files for the channels when strict TypeScript parity with `customer-web` is required.
 - Add Playwright configuration and route wiring once the coordinator decides whether these shells are served independently by Next or through a shared BFF gateway.
 
 ## Validation Run By Agent D

@@ -12,5 +12,5 @@ Please route this to the QA evidence owner or coordinator. Agent C did not edit 
 
 ## Slice Verification
 
-- `node scripts/validate-manifests.mjs` passed with 26 manifests.
+- `node --experimental-strip-types scripts/validate-manifests.ts` passed with 26 manifests.
 - `node --test tests/manifest.test.mjs tests/manifestExpansion*.test.mjs` passed 10/10 tests.

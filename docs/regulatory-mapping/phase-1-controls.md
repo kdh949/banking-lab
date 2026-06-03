@@ -6,9 +6,9 @@
 | Balance projection only | `projectBalances`, `account_balance_projections` migration comments and tests |
 | Idempotent external commands | `IdempotencyStore`, transfer runtime test |
 | Reversal instead of mutation | `createReversalTransaction`, append-only SQL triggers |
-| Staff access audit | `AuditLog`, reason-required staff search API, runtime test |
-| PII masked by default | `masking.mjs`, staff customer search response |
-| Maker-checker | `ApprovalStore`, `operator_approvals`, tests |
+| Staff access audit | `AuditLog`, `StaffAccessService`, reason-required staff search API, runtime test |
+| PII masked by default | `masking.mjs`, `StaffAccessService`, staff customer search response |
+| Maker-checker | `ApprovalStore`, `PersistentApprovalService`, `/api/approvals`, `/api/staff/approvals`, `operator_approvals`, tests |
 | Screen manifest scaling | `screen-manifests/*`, `packages/screen-engine`, manifest tests |
 | Evidence pack | `docs/test-evidence`, `scripts/generate-phase1-evidence.mjs` |
 
@@ -60,12 +60,12 @@
 | Control area | Phase 6 evidence |
 | --- | --- |
 | FDS high-risk transfer hold | FDS hold/release test and generated evidence |
-| FDS release/block maker-checker | `FDS_RELEASE`, `FDS_BLOCK` approval tests |
-| AML STR simulation | AML case lifecycle test |
+| FDS release/block maker-checker | `FDS_RELEASE`, `FDS_BLOCK` approval tests, `FdsCaseService` |
+| AML STR simulation | AML case lifecycle test, `AmlCaseService`, AML case API integration test |
 | EOD ledger invariant validation | Daily closing evidence |
 | External file reconciliation | Synthetic external file mismatch test |
 | Closed day mutation rejection | Closed-day posting rejection test |
-| Reconciliation adjustment control | `RECONCILIATION_ADJUSTMENT` approval test |
+| Reconciliation adjustment control | `RECONCILIATION_ADJUSTMENT` approval test, `ReconciliationOpsService`, reconciliation API integration test |
 | Risk and operations manifests | `FDS-201`, `AML-201`, `OPS-201` validation |
 
 ## Explicit Non-Production Boundary

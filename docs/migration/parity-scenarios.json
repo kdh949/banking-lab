@@ -22,7 +22,7 @@
   ],
   "currentReferenceCommands": [
     "node --test tests/*.test.mjs",
-    "node scripts/validate-manifests.mjs",
+    "node --experimental-strip-types scripts/validate-manifests.ts",
     "node scripts/generate-evidence-pack.mjs"
   ],
   "targetCommands": [
@@ -99,8 +99,8 @@
     {
       "nodeSuite": "tests/customerWeb.test.mjs",
       "scenarioCount": 5,
-      "targetSuite": "apps/customer-web/e2e/customer-web-parity.spec.ts",
-      "targetStatus": "planned",
+      "targetSuite": "apps/customer-web/e2e/customer-web-parity.spec.ts; services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerTransferApiParityIntegrationTest.kt",
+      "targetStatus": "in-progress",
       "controls": [
         "ledger",
         "idempotency",
@@ -136,7 +136,7 @@
     {
       "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/fds/FdsCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/aml/AmlCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/reconciliation/ReconciliationOpsApiParityIntegrationTest.kt",
       "targetStatus": "in-progress",
       "controls": [
         "fds-aml",
@@ -150,7 +150,7 @@
   "commandChecks": [
     {
       "name": "manifest-contract",
-      "command": "node scripts/validate-manifests.mjs",
+      "command": "node --experimental-strip-types scripts/validate-manifests.ts",
       "controls": [
         "manifest",
         "audit",

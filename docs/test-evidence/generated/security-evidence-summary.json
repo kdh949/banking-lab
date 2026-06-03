@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-06-02T23:30:35.306Z",
+  "syntheticOnly": true,
+  "checks": [
+    {
+      "id": "npm-audit-high",
+      "status": "pass",
+      "command": "npm audit --audit-level=high",
+      "outputPath": "docs/test-evidence/generated/npm-audit.txt",
+      "exitCode": 0
+    },
+    {
+      "id": "semgrep-sast",
+      "status": "pass",
+      "command": "docker run --rm -v <repo>:/workspace -w /workspace --entrypoint semgrep semgrep/semgrep:latest --config infra/security/semgrep.yml --json --error .",
+      "outputPath": "docs/test-evidence/generated/semgrep.json",
+      "exitCode": 0
+    },
+    {
+      "id": "trivy-fs",
+      "status": "pass",
+      "command": "docker run --rm -v <repo>:/workspace -w /workspace --entrypoint trivy aquasec/trivy:latest fs --config infra/security/trivy.yaml --format json --exit-code 1 /workspace",
+      "outputPath": "docs/test-evidence/generated/trivy-fs.json",
+      "exitCode": 0
+    },
+    {
+      "id": "sbom-cyclonedx",
+      "status": "pass",
+      "command": "docker run --rm -v <repo>:/workspace -w /workspace --entrypoint trivy aquasec/trivy:latest fs --format cyclonedx /workspace",
+      "outputPath": "docs/test-evidence/generated/sbom.cdx.json",
+      "exitCode": 0
+    },
+    {
+      "id": "dast-zap-baseline",
+      "status": "pass",
+      "command": "docker run --rm -v <generated>:/zap/wrk -v <repo>:/workspace:ro ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t <url> -J zap-baseline.json -c /workspace/infra/security/zap-baseline.conf",
+      "outputPath": "docs/test-evidence/generated/zap-baseline.log",
+      "exitCode": 0
+    }
+  ],
+  "totals": {
+    "pass": 5,
+    "fail": 0,
+    "skipped": 0
+  }
+}
