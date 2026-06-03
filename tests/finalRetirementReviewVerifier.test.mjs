@@ -21,6 +21,47 @@ const requiredCommands = [
   "npm run passkey:evidence:verify"
 ];
 
+function passkeyCommandEvidence() {
+  return [
+    "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
+    "manual browser sign-in completed with a real platform authenticator",
+    "npm run passkey:evidence:record"
+  ].map((command) => ({
+    command,
+    status: "pass",
+    exitCode: 0,
+    summary: `${command} passed during the manual non-synthetic passkey evidence run.`
+  }));
+}
+
+function passkeyArtifact() {
+  return {
+    schemaVersion: 1,
+    status: "pass",
+    testDate: "2026-06-03",
+    evidenceKind: "manual-live-passkey",
+    authenticatorKind: "platform",
+    usedBrowserVirtualAuthenticator: false,
+    usedPlaywrightCdpWebAuthn: false,
+    simulatorTokensEnabled: false,
+    keycloakRequiredActionCompleted: true,
+    springSignedTokenAccepted: true,
+    syntheticOnly: true,
+    redactionConfirmed: true,
+    commands: passkeyCommandEvidence(),
+    staffPanelAssertions: {
+      webAuthnLoaded: true,
+      managerSubjectObserved: true,
+      bearerTokenTypeObserved: true,
+      syntheticCustomerObserved: true,
+      maskedPiiObserved: true,
+      auditEventObserved: true
+    }
+  };
+}
+
 const controlAttestations = {
   ledgerBalancedPostings: true,
   balancesProjectedFromPostings: true,
@@ -38,13 +79,13 @@ const controlAttestations = {
   nodeOnlyCriticalDependencyRemoved: true
 };
 
-function validArtifact(overrides = {}) {
+function validArtifact(passkeyEvidenceArtifact, overrides = {}) {
   return {
     schemaVersion: 1,
     status: "pass",
     reviewDate: "2026-06-03",
     evidenceKind: "final-node-retirement-review",
-    passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json",
+    passkeyEvidenceArtifact,
     reviewer: "final-retirement-reviewer",
     commands: requiredCommands.map((command) => ({
       command,
@@ -66,9 +107,22 @@ async function artifactFile(content) {
   return artifactPath;
 }
 
-function runVerifier(artifactPath) {
+async function artifactFixture(overrides = {}) {
+  const dir = await mkdtemp(join(tmpdir(), "banking-lab-final-review-"));
+  const passkeyPath = join(dir, "passkey-evidence.json");
+  const artifactPath = join(dir, "final-review.json");
+  await writeFile(passkeyPath, `${JSON.stringify(passkeyArtifact(), null, 2)}\n`);
+  await writeFile(artifactPath, `${JSON.stringify(validArtifact(passkeyPath, overrides), null, 2)}\n`);
+  return { artifactPath, passkeyPath };
+}
+
+function runVerifier(artifactPath, passkeyPath) {
   const env = artifactPath
-    ? { ...process.env, BANKING_LAB_FINAL_REVIEW_ARTIFACT: artifactPath }
+    ? {
+      ...process.env,
+      BANKING_LAB_FINAL_REVIEW_ARTIFACT: artifactPath,
+      ...(passkeyPath ? { BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: passkeyPath } : {})
+    }
     : process.env;
   return spawnSync(process.execPath, ["--experimental-strip-types", script], {
     cwd: process.cwd(),
@@ -78,7 +132,8 @@ function runVerifier(artifactPath) {
 }
 
 test("final retirement review verifier accepts complete post-passkey evidence", async () => {
-  const result = runVerifier(await artifactFile(validArtifact()));
+  const fixture = await artifactFixture();
+  const result = runVerifier(fixture.artifactPath, fixture.passkeyPath);
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Final retirement review verification: pass/);
@@ -86,7 +141,7 @@ test("final retirement review verifier accepts complete post-passkey evidence", 
 });
 
 test("final retirement review verifier rejects missing commands and controls", async () => {
-  const artifact = validArtifact({
+  const fixture = await artifactFixture({
     commands: requiredCommands
       .filter((command) => command !== "npm run parity")
       .map((command) => ({
@@ -102,7 +157,7 @@ test("final retirement review verifier rejects missing commands and controls", a
     },
     remainingBlockers: ["manual review incomplete"]
   });
-  const result = runVerifier(await artifactFile(artifact));
+  const result = runVerifier(fixture.artifactPath, fixture.passkeyPath);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /commands must include npm run parity/);
@@ -111,7 +166,7 @@ test("final retirement review verifier rejects missing commands and controls", a
 });
 
 test("final retirement review verifier rejects unredacted reusable material", async () => {
-  const artifact = validArtifact({
+  const fixture = await artifactFixture({
     commands: [
       {
         command: "npm run parity",
@@ -122,14 +177,14 @@ test("final retirement review verifier rejects unredacted reusable material", as
       }
     ]
   });
-  const result = runVerifier(await artifactFile(artifact));
+  const result = runVerifier(fixture.artifactPath, fixture.passkeyPath);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /unredacted token|reusable passkey artifact|unmasked phone/);
 });
 
 test("final retirement review verifier rejects extra failed or duplicate command evidence", async () => {
-  const artifact = validArtifact({
+  const fixture = await artifactFixture({
     commands: [
       ...requiredCommands.map((command) => ({
         command,
@@ -154,14 +209,14 @@ test("final retirement review verifier rejects extra failed or duplicate command
       }
     ]
   });
-  const result = runVerifier(await artifactFile(artifact));
+  const result = runVerifier(fixture.artifactPath, fixture.passkeyPath);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /duplicate command npm run parity|unexpected-check status must be pass/);
 });
 
 test("final retirement review verifier rejects non-object command evidence", async () => {
-  const artifact = validArtifact({
+  const fixture = await artifactFixture({
     commands: [
       ...requiredCommands.map((command) => ({
         command,
@@ -173,10 +228,20 @@ test("final retirement review verifier rejects non-object command evidence", asy
       "npm run hidden-string-command"
     ]
   });
-  const result = runVerifier(await artifactFile(artifact));
+  const result = runVerifier(fixture.artifactPath, fixture.passkeyPath);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /commands must be an array of command evidence objects/);
+});
+
+test("final retirement review verifier rejects missing passkey evidence artifact", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "banking-lab-final-review-"));
+  const missingPasskeyPath = join(dir, "missing-passkey.json");
+  const artifactPath = await artifactFile(validArtifact(missingPasskeyPath));
+  const result = runVerifier(artifactPath, missingPasskeyPath);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Passkey evidence artifact must pass strict verification/);
 });
 
 test("final retirement review verifier fails strictly when the default artifact is missing", () => {

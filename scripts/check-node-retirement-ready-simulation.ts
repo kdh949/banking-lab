@@ -106,13 +106,13 @@ function passkeyArtifact() {
   };
 }
 
-function finalReviewArtifact() {
+function finalReviewArtifact(passkeyPath: string) {
   return {
     schemaVersion: 1,
     status: "pass",
     reviewDate: "2026-06-03",
     evidenceKind: "final-node-retirement-review",
-    passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json",
+    passkeyEvidenceArtifact: passkeyPath,
     reviewer: "ready-state-simulation",
     commands: requiredFinalReviewCommands.map((command) => ({
       command,
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
 
   await writeFile(gatePath, `${JSON.stringify(readyGate(sourceGate), null, 2)}\n`);
   await writeFile(passkeyPath, `${JSON.stringify(passkeyArtifact(), null, 2)}\n`);
-  await writeFile(finalReviewPath, `${JSON.stringify(finalReviewArtifact(), null, 2)}\n`);
+  await writeFile(finalReviewPath, `${JSON.stringify(finalReviewArtifact(passkeyPath), null, 2)}\n`);
 
   const result = spawnSync(process.execPath, ["--experimental-strip-types", "scripts/check-node-retirement-gate.ts"], {
     encoding: "utf8",

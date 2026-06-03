@@ -23,6 +23,47 @@ const requiredCommands = [
   "npm run passkey:evidence:verify"
 ];
 
+function passkeyCommandEvidence() {
+  return [
+    "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
+    "manual browser sign-in completed with a real platform authenticator",
+    "npm run passkey:evidence:record"
+  ].map((command) => ({
+    command,
+    status: "pass",
+    exitCode: 0,
+    summary: `${command} passed during the manual non-synthetic passkey evidence run.`
+  }));
+}
+
+function passkeyArtifact() {
+  return {
+    schemaVersion: 1,
+    status: "pass",
+    testDate: "2026-06-03",
+    evidenceKind: "manual-live-passkey",
+    authenticatorKind: "platform",
+    usedBrowserVirtualAuthenticator: false,
+    usedPlaywrightCdpWebAuthn: false,
+    simulatorTokensEnabled: false,
+    keycloakRequiredActionCompleted: true,
+    springSignedTokenAccepted: true,
+    syntheticOnly: true,
+    redactionConfirmed: true,
+    commands: passkeyCommandEvidence(),
+    staffPanelAssertions: {
+      webAuthnLoaded: true,
+      managerSubjectObserved: true,
+      bearerTokenTypeObserved: true,
+      syntheticCustomerObserved: true,
+      maskedPiiObserved: true,
+      auditEventObserved: true
+    }
+  };
+}
+
 const controlEnv = {
   BANKING_LAB_FINAL_REVIEW_LEDGER_BALANCED_POSTINGS: "true",
   BANKING_LAB_FINAL_REVIEW_BALANCES_PROJECTED_FROM_POSTINGS: "true",
@@ -55,8 +96,10 @@ async function fixtureDir(commands = commandEvidence()) {
   const dir = await mkdtemp(join(tmpdir(), "banking-lab-final-review-record-"));
   const commandsFile = join(dir, "commands.json");
   const outputFile = join(dir, "final-review.json");
+  const passkeyFile = join(dir, "passkey-evidence.json");
   await writeFile(commandsFile, `${JSON.stringify(commands, null, 2)}\n`);
-  return { commandsFile, outputFile };
+  await writeFile(passkeyFile, `${JSON.stringify(passkeyArtifact(), null, 2)}\n`);
+  return { commandsFile, outputFile, passkeyFile };
 }
 
 function baseEnv(fixture, overrides = {}) {
@@ -68,6 +111,7 @@ function baseEnv(fixture, overrides = {}) {
     BANKING_LAB_FINAL_REVIEW_DATE: "2026-06-03",
     BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE: fixture.commandsFile,
     BANKING_LAB_FINAL_REVIEW_OUTPUT: fixture.outputFile,
+    BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: fixture.passkeyFile,
     ...controlEnv,
     ...overrides
   };
@@ -81,10 +125,14 @@ function runRecorder(env) {
   });
 }
 
-function runVerifier(artifactPath) {
+function runVerifier(artifactPath, passkeyPath) {
   return spawnSync(process.execPath, ["--experimental-strip-types", verifierScript], {
     cwd: process.cwd(),
-    env: { ...process.env, BANKING_LAB_FINAL_REVIEW_ARTIFACT: artifactPath },
+    env: {
+      ...process.env,
+      BANKING_LAB_FINAL_REVIEW_ARTIFACT: artifactPath,
+      BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: passkeyPath
+    },
     encoding: "utf8"
   });
 }
@@ -99,12 +147,12 @@ test("final retirement review recorder writes an artifact accepted by the verifi
   assert.equal(artifact.schemaVersion, 1);
   assert.equal(artifact.status, "pass");
   assert.equal(artifact.evidenceKind, "final-node-retirement-review");
-  assert.equal(artifact.passkeyEvidenceArtifact, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json");
+  assert.equal(artifact.passkeyEvidenceArtifact, fixture.passkeyFile);
   assert.equal(artifact.commands.length, requiredCommands.length);
   assert.deepEqual(artifact.remainingBlockers, []);
   assert.equal(artifact.controlAttestations.outboxDurability, true);
 
-  const verifier = runVerifier(fixture.outputFile);
+  const verifier = runVerifier(fixture.outputFile, fixture.passkeyFile);
   assert.equal(verifier.status, 0, verifier.stderr);
   assert.match(verifier.stdout, /Final retirement review verification: pass/);
 });
@@ -175,5 +223,16 @@ test("final retirement review recorder rejects non-object command evidence", asy
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Every final review command evidence item must be an object/);
+  assert.equal(existsSync(fixture.outputFile), false);
+});
+
+test("final retirement review recorder rejects missing passkey evidence artifact", async () => {
+  const fixture = await fixtureDir();
+  const result = runRecorder(baseEnv(fixture, {
+    BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: join(fixture.outputFile, "missing-passkey.json")
+  }));
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Passkey evidence artifact must pass strict verification/);
   assert.equal(existsSync(fixture.outputFile), false);
 });

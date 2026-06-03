@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 
 type CommandEvidence = {
   command?: unknown;
@@ -22,7 +23,9 @@ type FinalReviewArtifact = {
 
 const artifactPath = process.env.BANKING_LAB_FINAL_REVIEW_ARTIFACT
   ?? "docs/test-evidence/generated/final-node-retirement-review.json";
-const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const passkeyArtifactPath = process.env.BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT
+  ?? "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 
 const requiredCommands = [
   "npm run parity",
@@ -91,8 +94,31 @@ function commandEvidenceArray(value: unknown): CommandEvidence[] {
     : [];
 }
 
+function runPasskeyVerifier(): string[] {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", passkeyVerifierPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: passkeyArtifactPath
+    },
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return [];
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  return [
+    "Passkey evidence artifact must pass strict verification before final retirement review can pass.",
+    output || result.error?.message || "Passkey evidence verifier failed without output."
+  ];
+}
+
 function validateFinalReview(artifact: FinalReviewArtifact, source: string): string[] {
   const errors = assertNoSensitiveMaterial(source);
+  errors.push(...runPasskeyVerifier());
   const commands = commandEvidenceArray(artifact.commands);
   const controls = objectRecord(artifact.controlAttestations);
   const remainingBlockers = Array.isArray(artifact.remainingBlockers) ? artifact.remainingBlockers : undefined;

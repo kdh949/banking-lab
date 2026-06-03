@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 type CommandEvidence = {
   command?: unknown;
@@ -14,7 +15,7 @@ type FinalReviewArtifact = {
   status: "pass";
   reviewDate: string;
   evidenceKind: "final-node-retirement-review";
-  passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+  passkeyEvidenceArtifact: string;
   reviewer: string;
   commands: Required<CommandEvidence>[];
   controlAttestations: Record<string, true>;
@@ -24,7 +25,9 @@ type FinalReviewArtifact = {
 const outputPath = process.env.BANKING_LAB_FINAL_REVIEW_OUTPUT
   ?? "docs/test-evidence/generated/final-node-retirement-review.json";
 const commandsFile = process.env.BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE;
-const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const passkeyArtifactPath = process.env.BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT
+  ?? "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 
 const requiredCommands = [
   "npm run parity",
@@ -167,6 +170,28 @@ function controlAttestations(): Record<string, true> {
   return controls;
 }
 
+function verifyPasskeyArtifact(): void {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", passkeyVerifierPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: passkeyArtifactPath
+    },
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return;
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  throw new Error([
+    "Passkey evidence artifact must pass strict verification before final retirement review can be recorded.",
+    output || result.error?.message || "Passkey evidence verifier failed without output."
+  ].join("\n"));
+}
+
 async function main(): Promise<void> {
   if (!commandsFile) {
     throw new Error("BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE is required.");
@@ -174,6 +199,7 @@ async function main(): Promise<void> {
 
   requireBoolean("BANKING_LAB_FINAL_REVIEW_CONFIRMED", true);
   requireBoolean("BANKING_LAB_FINAL_REVIEW_PASSKEY_ARTIFACT_VERIFIED", true);
+  verifyPasskeyArtifact();
 
   const reviewer = requireEnv("BANKING_LAB_FINAL_REVIEW_REVIEWER");
   const reviewDate = parseReviewDate();

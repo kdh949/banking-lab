@@ -28,6 +28,14 @@ The default artifact path is:
 docs/test-evidence/generated/final-node-retirement-review.json
 ```
 
+Both the recorder and verifier run the strict passkey evidence verifier first. The default passkey artifact path is:
+
+```text
+docs/test-evidence/generated/passkey-non-synthetic-evidence.json
+```
+
+For isolated test fixtures, `BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT` may point to a redacted passkey evidence artifact, and the final review artifact must reference the same path.
+
 ## Required Artifact
 
 The final review artifact must have:
@@ -35,7 +43,7 @@ The final review artifact must have:
 - `schemaVersion: 1`;
 - `status: "pass"`;
 - `evidenceKind: "final-node-retirement-review"`;
-- `passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json"`;
+- `passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json"` for the committed review artifact;
 - an empty `remainingBlockers` array;
 - passing command evidence for `npm run parity`, `npm test`, `npm run validate:manifests`, `npm run evidence:pack`, `npm run retirement:audit`, `npm run retirement:stack-audit`, `npm run retirement:generated-boundary`, `npm run retirement:ready-simulate`, `npm run passkey:evidence:preflight`, `npm run retirement:review-preflight`, and `npm run passkey:evidence:verify`;
 - each command marked as run after passkey evidence was recorded;
@@ -51,13 +59,14 @@ The recorder requires:
 - `BANKING_LAB_FINAL_REVIEW_PASSKEY_ARTIFACT_VERIFIED=true`;
 - `BANKING_LAB_FINAL_REVIEW_REVIEWER`;
 - `BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE`, containing a redacted JSON array of command evidence;
+- an existing passkey evidence artifact that passes `npm run passkey:evidence:verify`;
 - true environment attestations for every required control, including ledger, idempotency, audit, masking, maker-checker, workflow, outbox, reconciliation, target stack, generated artifact, synthetic-only, and Node-only dependency controls.
 
 Each command evidence array entry must be an object with `command`, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty `summary`. The recorder and verifier reject duplicate commands, non-object entries, and any extra command evidence item that is not passing.
 
 ## Current Result
 
-Blocked. The default final review artifact intentionally does not exist yet because non-synthetic passkey evidence is still missing and final review has not been performed.
+Blocked. The default final review artifact intentionally does not exist yet because non-synthetic passkey evidence is still missing and final review has not been performed. The recorder and verifier fail closed while `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` is missing or invalid.
 
 ## Retirement Impact
 
