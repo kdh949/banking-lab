@@ -1700,3 +1700,28 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Current target-stack host-crash-shaped evidence is now proven for the synthetic Temporal workflow and outbox eventing paths.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Non-Synthetic Passkey Retirement Guard
+
+Changes completed:
+
+- Added an explicit `non-synthetic-passkey-operations` required gate to `docs/migration/node-retirement-gate.json` with status `pending`.
+- Added `docs/test-evidence/passkey-non-synthetic-operations.md` to separate the existing Chromium CDP virtual-authenticator WebAuthn smoke from the still-missing real platform/hardware passkey evidence.
+- Extended `scripts/check-node-retirement-gate.ts` so a future pass claim requires `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` with simulator tokens disabled, no Playwright/CDP virtual authenticator, a real platform or hardware-security-key authenticator, Spring signed-token acceptance, redaction confirmation, and commands actually run.
+- Updated QA evidence tests and recommendation/gap docs while keeping Node retirement blocked.
+
+Verification:
+
+- `npm run node:retirement-gate` should report blocked and list `non-synthetic-passkey-operations`, `evidence-refresh`, and `retirement-review` as incomplete until real passkey evidence is captured.
+- `node --test tests/qaEvidenceCodexPlan.test.mjs tests/migrationFoundation.test.mjs` covers the explicit passkey gate and evidence boundary.
+
+Result:
+
+- The project now fails closed if the passkey gate is marked passed without a non-virtual passkey evidence artifact.
+- Existing Keycloak/WebAuthn virtual-authenticator evidence remains valid for local required-action smoke, but it is not accepted as non-synthetic passkey operations evidence.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations still require a manual or real-browser run with a platform authenticator or hardware security key.
+- Evidence-refresh completion and final retirement review remain incomplete.
