@@ -46,7 +46,7 @@ import {
   runDailyReconciliation
 } from "../legacy-node-reference/services/reconciliation-service/src/index.mjs";
 import { simulateExternalInstitutionFile } from "../legacy-node-reference/services/external-simulators/src/index.mjs";
-import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
+import { filterManifestsByApp, loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = join(__dirname, "..");

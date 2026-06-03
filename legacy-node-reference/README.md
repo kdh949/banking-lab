@@ -6,6 +6,8 @@ They are not target service or channel implementations. Target service code belo
 
 - `services/` holds legacy Node service-shaped oracle modules.
 - `packages/banking-domain/` holds legacy Node domain primitives used by the oracle tests and reference runtime.
+- `packages/screen-engine/` holds legacy Node-compatible manifest helpers used by oracle tests and the reference runtime.
+- `packages/form-engine/` holds legacy Node-compatible form validation helpers used by oracle tests.
 - `apps/` holds legacy static HTML shells for the Node reference runtime.
 - `ui/public/` holds the legacy static JS/CSS used by those shells.
 

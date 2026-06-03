@@ -331,8 +331,8 @@ These are read-only until the retirement gate is ready:
 runtime/server.mjs
 runtime/labApp.mjs
 legacy-node-reference/packages/banking-domain/src/**/*.mjs
-packages/screen-engine/src/**/*.mjs
-packages/form-engine/src/**/*.mjs
+legacy-node-reference/packages/screen-engine/src/**/*.mjs
+legacy-node-reference/packages/form-engine/src/**/*.mjs
 legacy-node-reference/apps/**
 tests/*.test.mjs
 scripts/generate-*.mjs

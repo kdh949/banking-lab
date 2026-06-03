@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { loadManifests } from "../packages/screen-engine/src/index.mjs";
+import { loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
 
 test("screen manifests validate and cover Phase 1 app shells", async () => {
   const manifests = await loadManifests("screen-manifests");

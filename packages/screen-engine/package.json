@@ -9,8 +9,7 @@
   },
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.mjs"
+      "types": "./src/index.ts"
     }
   }
 }

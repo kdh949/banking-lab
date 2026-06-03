@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadManifests } from "../packages/screen-engine/src/index.mjs";
+import { loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
 import {
   fieldsFromManifest,
   validateManifestSubmission
-} from "../packages/form-engine/src/index.mjs";
+} from "../legacy-node-reference/packages/form-engine/src/index.mjs";
 
 test("form engine reads reusable field contracts from command and parameter manifests", async () => {
   const manifests = await loadManifests("screen-manifests");

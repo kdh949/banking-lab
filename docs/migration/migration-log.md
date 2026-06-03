@@ -1778,6 +1778,37 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Legacy Screen/Form Oracle Boundary Isolation
+
+Changes completed:
+
+- Moved the Node-compatible screen-engine and form-engine `.mjs` helpers from target `packages/*/src` to `legacy-node-reference/packages`.
+- Kept the target `packages/screen-engine` and `packages/form-engine` workspaces as TypeScript-only source packages.
+- Updated the Node reference runtime, manifest/form oracle tests, and Phase 1 evidence generator to import the legacy `.mjs` helpers through `legacy-node-reference`.
+- Strengthened `npm run retirement:audit` so target `packages/screen-engine/src/*.mjs` and `packages/form-engine/src/*.mjs` fail the boundary audit if reintroduced.
+- Added target TypeScript screen/form files to the retirement audit anchors while keeping the node retirement gate blocked.
+
+Verification:
+
+- `node --test tests/manifest.test.mjs tests/manifestExpansion.test.mjs tests/manifestExpansionForm.test.mjs tests/nextScaffold.test.mjs tests/migrationFoundation.test.mjs tests/retirementBoundaryAudit.test.mjs` passed 21 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run packages:typecheck` passed.
+- `npm run retirement:audit` passed with blocked status, 37 target anchors checked, and the same remaining incomplete gates.
+- `npm run node:retirement-gate` passed with blocked status.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run parity` passed 73 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Target `packages/` no longer contains tracked `.mjs` compatibility files.
+- TypeScript screen/form target packages remain intact.
+- The executable Node manifest/form oracle remains intact under `legacy-node-reference`.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Legacy Domain Oracle Boundary Isolation
 
 Changes completed:

@@ -60,9 +60,7 @@ const allowedMjsPrefixes = [
   "runtime/",
   "scripts/",
   "tests/",
-  "legacy-node-reference/",
-  "packages/screen-engine/src/",
-  "packages/form-engine/src/"
+  "legacy-node-reference/"
 ];
 
 const requiredReferencePaths = [
@@ -70,6 +68,8 @@ const requiredReferencePaths = [
   "runtime/labApp.mjs",
   "legacy-node-reference/services",
   "legacy-node-reference/packages/banking-domain/src",
+  "legacy-node-reference/packages/screen-engine/src",
+  "legacy-node-reference/packages/form-engine/src",
   "legacy-node-reference/apps",
   "legacy-node-reference/ui/public",
   "tests"
@@ -85,7 +85,11 @@ const disallowedTargetReferencePaths = [
   "packages/banking-domain/src/makerChecker.mjs",
   "packages/banking-domain/src/masking.mjs",
   "packages/banking-domain/src/syntheticData.mjs",
-  "packages/banking-domain/src/workflow.mjs"
+  "packages/banking-domain/src/workflow.mjs",
+  "packages/screen-engine/src/index.mjs",
+  "packages/screen-engine/src/manifest.mjs",
+  "packages/form-engine/src/index.mjs",
+  "packages/form-engine/src/validation.mjs"
 ];
 
 const disallowedTargetStaticShellPaths = [
@@ -132,7 +136,12 @@ const targetAnchors = [
   "apps/fds-aml-console/src/app/page.tsx",
   "apps/fds-aml-console/src/components/ApiBackedRiskPanel.tsx",
   "apps/admin-console/src/app/page.tsx",
-  "apps/admin-console/src/components/ApiBackedAdminPanel.tsx"
+  "apps/admin-console/src/components/ApiBackedAdminPanel.tsx",
+  "packages/screen-engine/src/index.ts",
+  "packages/screen-engine/src/manifest.ts",
+  "packages/screen-engine/src/types.ts",
+  "packages/form-engine/src/index.ts",
+  "packages/form-engine/src/validation.ts"
 ];
 
 function normalizePath(path: string): string {

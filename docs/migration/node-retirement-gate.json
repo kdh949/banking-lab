@@ -11,8 +11,8 @@
       "legacy-node-reference/ui/public",
       "legacy-node-reference/apps",
       "legacy-node-reference/packages/banking-domain/src",
-      "packages/screen-engine/src",
-      "packages/form-engine/src",
+      "legacy-node-reference/packages/screen-engine/src",
+      "legacy-node-reference/packages/form-engine/src",
       "tests"
     ]
   },
