@@ -1255,3 +1255,21 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Live Compose worker container restart continuity is proven for all current synthetic Temporal workflow contracts, a representative Temporal server process restart is proven for complaint answer, and a representative PostgreSQL process restart with automatic recovery is proven for complaint answer.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Audit Masking Target Parity Slice
+
+Changes completed:
+
+- Added `AuditMaskingParityIntegrationTest` to mirror `tests/audit.test.mjs` against the Kotlin/Spring target stack.
+- Covered reason-required staff customer search before audit append, PostgreSQL append-only audit hash-chain continuity, default masked customer PII, and masked account numbers.
+- Updated the parity scenario map, parity coverage matrix, evidence gap report, and retirement gate evidence list while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.audit.AuditMaskingParityIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same command passed under the approved execution path.
+
+Remaining blockers:
+
+- `tests/audit.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.

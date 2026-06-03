@@ -88,6 +88,7 @@
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/observability/TemporalWorkflowTraceLogIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
+        "services/core-banking/src/integrationTest/kotlin/lab/banking/core/audit/AuditMaskingParityIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff/StaffAccessApiParityIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/eventing/OutboxPublisherConsumerIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/eventing/RedpandaOutboxDeliveryIntegrationTest.kt",

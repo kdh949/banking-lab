@@ -56,8 +56,8 @@
     {
       "nodeSuite": "tests/audit.test.mjs",
       "scenarioCount": 3,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../AuditMaskingParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/audit/AuditMaskingParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff/StaffAccessApiParityIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "audit",
         "masking"
