@@ -1390,3 +1390,28 @@ Remaining blockers:
 
 - `tests/ledgerCore.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Customer Web Target Parity Slice
+
+Changes completed:
+
+- Added customer self-service `ACCOUNT_VIEW` audit append to Spring customer account detail.
+- Added `CustomerAccountApiParityIntegrationTest` for masked customer account detail, audit metadata, raw account-number exclusion from audit payload, and ownership denial before account-view audit.
+- Mapped the five `tests/customerWeb.test.mjs` oracle scenarios to target Spring, Next.js, and screen-engine tests, while keeping the Node mock-login route as a legacy oracle only.
+- Updated the parity scenario map, parity coverage matrix, customer-web architecture/evidence notes, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.customer.CustomerAccountApiParityIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same customer account integration test command passed under the approved execution path.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.customer.CustomerAccountApiParityIntegrationTest' --tests 'lab.banking.core.customer.CustomerTransferApiParityIntegrationTest' --tests 'lab.banking.core.complaint.CustomerComplaintEntryApiParityIntegrationTest' --tests 'lab.banking.core.complaint.CustomerComplaintConfirmApiParityIntegrationTest'` passed under the approved execution path.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.security.SecurityAuthorizationIntegrationTest' --tests 'lab.banking.core.security.JwksAuthorizationIntegrationTest'` passed under the approved execution path.
+- `npm test` passed.
+- `npm run node:retirement-gate` passed and kept the Node reference retirement gate blocked.
+- Initial sandboxed `npm run parity` failed because the sandbox blocked local `127.0.0.1` listener creation for Node reference runtime tests.
+- The same parity command passed under the approved execution path and regenerated the evidence pack with no content diff.
+
+Remaining blockers:
+
+- `tests/customerWeb.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.

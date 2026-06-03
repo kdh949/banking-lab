@@ -100,8 +100,8 @@
     {
       "nodeSuite": "tests/customerWeb.test.mjs",
       "scenarioCount": 5,
-      "targetSuite": "apps/customer-web/e2e/customer-web-parity.spec.ts; services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerTransferApiParityIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerAccountApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerTransferApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintEntryApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintConfirmApiParityIntegrationTest.kt; apps/customer-web/e2e/customer-web-parity.spec.ts; packages/screen-engine/test/manifest-parity.test.ts",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",

@@ -1,6 +1,7 @@
 package lab.banking.core.customer
 
 import java.sql.ResultSet
+import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -9,12 +10,13 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CustomerAccountService(
-    private val jdbc: NamedParameterJdbcTemplate
+    private val jdbc: NamedParameterJdbcTemplate,
+    private val auditEvents: AuditEventAppender
 ) {
-    @Transactional(readOnly = true)
+    @Transactional
     fun detail(customerId: String, accountId: String): CustomerAccountDetailDto {
         BankingLabAuthContext.requireCustomerOwnership(customerId)
-        return jdbc.queryForObject(
+        val detail = jdbc.queryForObject(
             """
             SELECT a.customer_id, a.account_id, a.account_no, a.status, a.currency,
                    COALESCE(p.ledger_balance_minor, 0) AS ledger_balance_minor,
@@ -30,6 +32,33 @@ class CustomerAccountService(
             mapOf("customerId" to customerId, "accountId" to accountId),
             this::mapDetail
         ) ?: throw WorkflowErrors.notFound("customer account not found: $accountId")
+        appendAccountViewAudit(customerId, accountId, detail)
+        return detail
+    }
+
+    private fun appendAccountViewAudit(customerId: String, accountId: String, detail: CustomerAccountDetailDto) {
+        val principal = BankingLabAuthContext.get()
+        auditEvents.append(
+            eventType = "ACCOUNT_VIEW",
+            actorType = "CUSTOMER",
+            actorId = principal?.subject ?: customerId,
+            actorRole = principal?.roles?.sorted()?.joinToString(",") ?: "CUSTOMER",
+            screenId = "CWB-102",
+            businessReferenceId = accountId,
+            customerId = customerId,
+            accountId = accountId,
+            reason = null,
+            payload = mapOf(
+                "maskedAccountNo" to detail.maskedAccountNo,
+                "status" to detail.status,
+                "currency" to detail.currency,
+                "ledgerBalanceMinor" to detail.ledgerBalanceMinor,
+                "availableBalanceMinor" to detail.availableBalanceMinor,
+                "holdAmountMinor" to detail.holdAmountMinor,
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
     }
 
     private fun mapDetail(rs: ResultSet, rowNum: Int): CustomerAccountDetailDto =

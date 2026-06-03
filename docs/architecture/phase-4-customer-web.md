@@ -4,8 +4,10 @@
 
 ```text
 Customer Web
-  -> mock login
+  -> Keycloak/OIDC login propagation
   -> account list/detail
+       -> masked customer self-service account detail
+       -> ACCOUNT_VIEW audit event
   -> transaction history from LedgerCore
   -> transfer command
        -> idempotency result check
@@ -17,7 +19,6 @@ Customer Web
 
 ## Runtime APIs
 
-- `POST /api/customer/login`
 - `GET /api/customer/accounts`
 - `GET /api/customer/accounts/{accountId}/detail`
 - `GET /api/customer/transactions`
@@ -33,3 +34,7 @@ Customer Web
 ## Shared Source of Truth
 
 Customer history and staff history both read from `LedgerCore` transactions and postings. Tests assert the same transaction ID appears through both channels after a customer transfer.
+
+## Legacy Reference Boundary
+
+The Node reference still exposes `POST /api/customer/login` for oracle tests and generated Phase 4 evidence. The target customer-web path uses Keycloak/OIDC token propagation and Spring customer APIs; new target code must not add a mock-login backend.
