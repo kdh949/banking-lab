@@ -95,6 +95,97 @@ class LiveOutboxWorkerSmokeIntegrationTest {
     }
 
     @Test
+    fun `live outbox worker publishes pending event after Compose platform host crash restart`() {
+        val composeProject = System.getenv("BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT")
+        assumeTrue(
+            !composeProject.isNullOrBlank(),
+            "set BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT to run live outbox platform host crash drill"
+        )
+
+        val topic = System.getenv("BANKING_LAB_OUTBOX_TOPIC") ?: "banking.lab.domain-events"
+        val databaseUrl = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_URL")
+            ?: "jdbc:postgresql://127.0.0.1:${System.getenv("BANKING_LAB_POSTGRES_PORT") ?: "5432"}/banking_lab"
+        val databaseUser = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_USER") ?: "banking_lab"
+        val databasePassword = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_PASSWORD") ?: "banking_lab"
+        val bootstrapServers = System.getenv("BANKING_LAB_LIVE_OUTBOX_BOOTSTRAP_SERVERS")
+            ?: "127.0.0.1:${System.getenv("BANKING_LAB_REDPANDA_PORT") ?: "9092"}"
+        val workerService = System.getenv("BANKING_LAB_LIVE_OUTBOX_WORKER_SERVICE") ?: "core-banking-outbox-worker"
+        val postgresService = System.getenv("BANKING_LAB_LIVE_OUTBOX_POSTGRES_SERVICE") ?: "postgres"
+        val redpandaService = System.getenv("BANKING_LAB_LIVE_OUTBOX_REDPANDA_SERVICE") ?: "redpanda"
+        val composeEnv = composeEnvironment(topic)
+        val outboxEventId = "OBX-HOST-CRASH-${UUID.randomUUID().toString().uppercase()}"
+        val aggregateId = "TX-LIVE-OUTBOX-HOST-CRASH-${UUID.randomUUID().toString().uppercase()}"
+        val idempotencyKey = "IDEMP-LIVE-OUTBOX-HOST-CRASH-${UUID.randomUUID().toString().uppercase()}"
+
+        waitForOutboxSchema(databaseUrl, databaseUser, databasePassword, Duration.ofSeconds(60))
+        waitForTopic(bootstrapServers, topic, Duration.ofSeconds(60))
+
+        var workerKilled = false
+        var platformKilled = false
+        try {
+            runDockerCompose(composeProject, composeEnv, "kill", workerService)
+            workerKilled = true
+
+            insertPendingOutboxEvent(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                aggregateId = aggregateId,
+                idempotencyKey = idempotencyKey,
+                drill = "compose-outbox-platform-host-crash"
+            )
+            assertEquals(
+                "PENDING",
+                outboxStatus(databaseUrl, databaseUser, databasePassword, outboxEventId)
+            )
+
+            runDockerCompose(composeProject, composeEnv, "kill", redpandaService, postgresService)
+            platformKilled = true
+            runDockerCompose(composeProject, composeEnv, "up", "-d", postgresService, redpandaService, workerService)
+            platformKilled = false
+            workerKilled = false
+
+            waitForOutboxSchema(databaseUrl, databaseUser, databasePassword, Duration.ofSeconds(90))
+            waitForTopic(bootstrapServers, topic, Duration.ofSeconds(90))
+            waitForOutboxStatus(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                expectedStatus = "PUBLISHED",
+                timeout = Duration.ofSeconds(120)
+            )
+
+            val publishedAt = outboxPublishedAt(databaseUrl, databaseUser, databasePassword, outboxEventId)
+            assertNotNull(publishedAt)
+            val kafkaValue = waitForKafkaRecords(
+                bootstrapServers,
+                topic,
+                outboxEventId,
+                expectedCount = 1,
+                timeout = Duration.ofSeconds(90)
+            ).first()
+            assertTrue(kafkaValue.contains(outboxEventId))
+            assertTrue(kafkaValue.contains("\"syntheticOnly\":true"))
+        } finally {
+            if (workerKilled || platformKilled) {
+                runCatching {
+                    runDockerCompose(
+                        composeProject!!,
+                        composeEnv,
+                        "up",
+                        "-d",
+                        postgresService,
+                        redpandaService,
+                        workerService
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun `live outbox worker batch logs carry trace and span ids after publish`() {
         val composeProject = System.getenv("BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT")
         assumeTrue(
@@ -434,6 +525,21 @@ class LiveOutboxWorkerSmokeIntegrationTest {
                 }
             }
         }
+    }
+
+    private fun waitForTopic(bootstrapServers: String, topic: String, timeout: Duration) {
+        val deadline = System.nanoTime() + timeout.toNanos()
+        var lastError: Throwable? = null
+        while (System.nanoTime() < deadline) {
+            try {
+                createTopic(bootstrapServers, topic)
+                return
+            } catch (error: Exception) {
+                lastError = error
+            }
+            Thread.sleep(500)
+        }
+        fail<Unit>("Kafka topic $topic was not ready at $bootstrapServers: ${lastError?.message}")
     }
 
     private fun waitForKafkaRecords(

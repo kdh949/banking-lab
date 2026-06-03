@@ -525,6 +525,56 @@ class LiveTemporalWorkerSmokeIntegrationTest {
         )
     }
 
+    @Test
+    fun `live all Temporal workflows survive Compose platform host crash restart before approval completion`() {
+        runComposePlatformHostCrashRestartDrill(
+            listOf(
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.COMPLAINT_ANSWER,
+                    businessReferenceId = "COMPLAINT-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "CUSTOMER_ANSWER_VISIBLE",
+                    approvalReason = "Synthetic complaint approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.FDS_RELEASE,
+                    businessReferenceId = "FDS-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "LEDGER_TRANSFER_HANDOFF",
+                    approvalReason = "Synthetic FDS release approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.FDS_BLOCK,
+                    businessReferenceId = "FDS-BLOCK-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "NO_LEDGER_POSTING",
+                    approvalReason = "Synthetic FDS block approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.AML_CLOSURE,
+                    businessReferenceId = "AML-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "STR_SIMULATION_CLOSURE",
+                    approvalReason = "Synthetic AML closure approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.RECONCILIATION_ADJUSTMENT,
+                    businessReferenceId = "REC-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "BALANCED_ADJUSTMENT_HANDOFF",
+                    approvalReason = "Synthetic reconciliation approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.ACCOUNT_HOLD,
+                    businessReferenceId = "HOLD-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "AVAILABLE_BALANCE_HOLD",
+                    approvalReason = "Synthetic account hold approval after platform host crash restart"
+                ),
+                ComposeHostCrashCase(
+                    caseType = TemporalBankingCaseType.ACCOUNT_RELEASE,
+                    businessReferenceId = "RELEASE-LIVE-TEMPORAL-HOST-CRASH",
+                    expectedControlEffect = "HOLD_RELEASE_HANDOFF",
+                    approvalReason = "Synthetic account release approval after platform host crash restart"
+                )
+            )
+        )
+    }
+
     private fun runComposeWorkerContainerRestartDrill(
         caseType: TemporalBankingCaseType,
         businessReferenceId: String,
@@ -793,6 +843,115 @@ class LiveTemporalWorkerSmokeIntegrationTest {
         }
     }
 
+    private fun runComposePlatformHostCrashRestartDrill(cases: List<ComposeHostCrashCase>) {
+        val target = System.getenv("BANKING_LAB_LIVE_TEMPORAL_TARGET")
+        assumeTrue(!target.isNullOrBlank(), "set BANKING_LAB_LIVE_TEMPORAL_TARGET to run live platform host crash drill")
+        val composeProject = System.getenv("BANKING_LAB_LIVE_TEMPORAL_COMPOSE_PROJECT")
+        assumeTrue(
+            !composeProject.isNullOrBlank(),
+            "set BANKING_LAB_LIVE_TEMPORAL_COMPOSE_PROJECT to run live platform host crash drill"
+        )
+
+        val namespace = System.getenv("BANKING_LAB_LIVE_TEMPORAL_NAMESPACE") ?: "default"
+        val taskQueue = System.getenv("BANKING_LAB_LIVE_TEMPORAL_TASK_QUEUE") ?: "banking-case-workflows"
+        val composeEnv = restartComposeEnvironment(taskQueue)
+        val workerService = System.getenv("BANKING_LAB_LIVE_TEMPORAL_WORKER_SERVICE")
+            ?: "core-banking-temporal-worker"
+        val temporalService = System.getenv("BANKING_LAB_LIVE_TEMPORAL_SERVICE") ?: "temporal"
+        val postgresService = System.getenv("BANKING_LAB_LIVE_POSTGRES_SERVICE") ?: "postgres"
+        val serviceStubs = WorkflowServiceStubs.newServiceStubs(
+            WorkflowServiceStubsOptions.newBuilder()
+                .setTarget(target)
+                .build()
+        )
+        var platformKilled = false
+        try {
+            val client = WorkflowClient.newInstance(
+                serviceStubs,
+                WorkflowClientOptions.newBuilder()
+                    .setNamespace(namespace)
+                    .build()
+            )
+            val workflows = cases.map { drill ->
+                val workflow = client.newWorkflowStub(
+                    BankingCaseTemporalWorkflow::class.java,
+                    WorkflowOptions.newBuilder()
+                        .setTaskQueue(taskQueue)
+                        .setWorkflowId("banking-case-host-crash-${drill.caseType.name.lowercase()}-${UUID.randomUUID()}")
+                        .setWorkflowExecutionTimeout(Duration.ofSeconds(240))
+                        .build()
+                )
+
+                WorkflowClient.start(
+                    workflow::run,
+                    TemporalBankingCaseInput(
+                        caseType = drill.caseType,
+                        businessReferenceId = drill.businessReferenceId,
+                        requestedBy = maker(drill.caseType),
+                        requestedByRole = makerRole(drill.caseType),
+                        reason = "Synthetic live Temporal ${drill.caseType.name} platform host crash drill"
+                    )
+                )
+                workflow to drill
+            }
+            workflows.forEach { (workflow, _) ->
+                waitForStatus(workflow, "WAITING_APPROVAL", Duration.ofSeconds(60))
+            }
+
+            runDockerCompose(composeProject, composeEnv, "kill", workerService, temporalService, postgresService)
+            platformKilled = true
+            runDockerCompose(composeProject, composeEnv, "up", "-d", postgresService, temporalService, workerService)
+            platformKilled = false
+            waitForPostgresService(composeProject, composeEnv, postgresService, Duration.ofSeconds(120))
+            waitForTemporalService(serviceStubs, Duration.ofSeconds(150))
+            workflows.forEach { (workflow, _) ->
+                waitForStatus(workflow, "WAITING_APPROVAL", Duration.ofSeconds(90))
+            }
+
+            workflows.forEach { (workflow, drill) ->
+                workflow.approve(
+                    TemporalApprovalSignal(
+                        approvedBy = "manager01",
+                        approvedByRole = "BRANCH_MANAGER",
+                        reason = drill.approvalReason
+                    )
+                )
+            }
+
+            workflows.forEach { (workflow, drill) ->
+                val result = WorkflowStub.fromTyped(workflow)
+                    .getResult(90, TimeUnit.SECONDS, TemporalBankingCaseResult::class.java)
+                assertEquals("COMPLETED", result.finalStatus)
+                assertEquals(drill.caseType.name, result.caseType)
+                assertEquals(drill.expectedControlEffect, result.controlEffect)
+                assertEquals(true, result.syntheticOnly)
+                assertEquals(
+                    listOf(
+                        "${drill.caseType.name}:STARTED",
+                        "${drill.caseType.name}:WAITING_APPROVAL",
+                        "${drill.caseType.name}:COMPLETED"
+                    ),
+                    result.checkpoints
+                )
+            }
+        } finally {
+            if (platformKilled) {
+                runCatching {
+                    runDockerCompose(
+                        composeProject!!,
+                        composeEnv,
+                        "up",
+                        "-d",
+                        postgresService,
+                        temporalService,
+                        workerService
+                    )
+                }
+            }
+            serviceStubs.shutdownNow()
+        }
+    }
+
     private fun waitForStatus(workflow: BankingCaseTemporalWorkflow, status: String) {
         waitForStatus(workflow, status, Duration.ofSeconds(15))
     }
@@ -939,5 +1098,12 @@ class LiveTemporalWorkerSmokeIntegrationTest {
     private data class CommandResult(
         val exitCode: Int,
         val output: String
+    )
+
+    private data class ComposeHostCrashCase(
+        val caseType: TemporalBankingCaseType,
+        val businessReferenceId: String,
+        val expectedControlEffect: String,
+        val approvalReason: String
     )
 }
