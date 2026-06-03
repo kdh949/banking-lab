@@ -2443,6 +2443,42 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Final Review Command Evidence Consistency Guard
+
+Changes completed:
+
+- Strengthened `scripts/record-final-retirement-review.ts` so every command evidence item in a final-review pass artifact must have a non-empty command, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty summary.
+- Strengthened `scripts/verify-final-retirement-review.ts` with the same all-command validation.
+- Added duplicate-command rejection so a pass artifact cannot carry multiple evidence entries for the same command.
+- Added recorder and verifier tests that reject duplicate `npm run parity` evidence and extra failed command evidence.
+- Updated `docs/test-evidence/final-retirement-review-verifier.md` and `docs/test-evidence/evidence-refresh-review.md` to document the consistency guard.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 16 tests.
+- `npm run retirement:ready-simulate` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm run evidence:refresh-check` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run retirement:audit` passed with blocked status, 60 approved-reference `.mjs` files, 37 target anchors, 316 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 107 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 107 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Future final retirement review pass evidence can no longer hide failed or duplicate command evidence alongside the required passing commands.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Area-Based Stack Retirement Audit
 
 Changes completed:

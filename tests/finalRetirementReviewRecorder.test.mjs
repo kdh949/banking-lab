@@ -139,3 +139,29 @@ test("final retirement review recorder rejects unredacted reusable material", as
   assert.match(result.stderr, /unredacted token|reusable passkey artifact|unmasked phone/);
   assert.equal(existsSync(fixture.outputFile), false);
 });
+
+test("final retirement review recorder rejects extra failed or duplicate command evidence", async () => {
+  const commands = [
+    ...commandEvidence(),
+    {
+      command: "npm run parity",
+      status: "pass",
+      exitCode: 0,
+      runAfterPasskeyEvidence: true,
+      summary: "duplicate parity evidence"
+    },
+    {
+      command: "npm run unexpected-check",
+      status: "failed",
+      exitCode: 1,
+      runAfterPasskeyEvidence: true,
+      summary: "unexpected check failed"
+    }
+  ];
+  const fixture = await fixtureDir(commands);
+  const result = runRecorder(baseEnv(fixture));
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /duplicate command npm run parity|unexpected-check status must be pass/);
+  assert.equal(existsSync(fixture.outputFile), false);
+});

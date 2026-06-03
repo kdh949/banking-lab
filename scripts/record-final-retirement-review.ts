@@ -123,22 +123,33 @@ function parseCommands(source: string): Required<CommandEvidence>[] {
   }
 
   const commands = parsed.filter((item): item is CommandEvidence => item && typeof item === "object");
+  const seenCommands = new Set<string>();
+  for (const evidence of commands) {
+    if (typeof evidence.command !== "string" || evidence.command.trim().length === 0) {
+      throw new Error("Every final review command evidence item must include a non-empty command.");
+    }
+    if (seenCommands.has(evidence.command)) {
+      throw new Error(`Final review command evidence must not include duplicate command ${evidence.command}.`);
+    }
+    seenCommands.add(evidence.command);
+    if (evidence.status !== "pass") {
+      throw new Error(`${evidence.command} status must be pass.`);
+    }
+    if (evidence.exitCode !== 0) {
+      throw new Error(`${evidence.command} exitCode must be 0.`);
+    }
+    if (evidence.runAfterPasskeyEvidence !== true) {
+      throw new Error(`${evidence.command} must be marked runAfterPasskeyEvidence=true.`);
+    }
+    if (typeof evidence.summary !== "string" || evidence.summary.trim().length === 0) {
+      throw new Error(`${evidence.command} summary must be a non-empty string.`);
+    }
+  }
+
   for (const requiredCommand of requiredCommands) {
     const evidence = commands.find((item) => item.command === requiredCommand);
     if (!evidence) {
       throw new Error(`Final review command evidence must include ${requiredCommand}.`);
-    }
-    if (evidence.status !== "pass") {
-      throw new Error(`${requiredCommand} status must be pass.`);
-    }
-    if (evidence.exitCode !== 0) {
-      throw new Error(`${requiredCommand} exitCode must be 0.`);
-    }
-    if (evidence.runAfterPasskeyEvidence !== true) {
-      throw new Error(`${requiredCommand} must be marked runAfterPasskeyEvidence=true.`);
-    }
-    if (typeof evidence.summary !== "string" || evidence.summary.trim().length === 0) {
-      throw new Error(`${requiredCommand} summary must be a non-empty string.`);
     }
   }
   return commands as Required<CommandEvidence>[];

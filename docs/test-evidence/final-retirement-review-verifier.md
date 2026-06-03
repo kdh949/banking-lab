@@ -53,7 +53,7 @@ The recorder requires:
 - `BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE`, containing a redacted JSON array of command evidence;
 - true environment attestations for every required control, including ledger, idempotency, audit, masking, maker-checker, workflow, outbox, reconciliation, target stack, generated artifact, synthetic-only, and Node-only dependency controls.
 
-Each command evidence item must include `command`, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty `summary`.
+Each command evidence item must include `command`, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty `summary`. The recorder and verifier reject duplicate commands and any extra command evidence item that is not passing.
 
 ## Current Result
 

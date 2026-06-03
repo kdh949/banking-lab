@@ -113,17 +113,31 @@ function validateFinalReview(artifact: FinalReviewArtifact, source: string): str
     errors.push("remainingBlockers must be empty for final retirement review pass evidence.");
   }
 
+  const seenCommands = new Set<string>();
+  for (const evidence of commands) {
+    if (typeof evidence.command !== "string" || evidence.command.trim().length === 0) {
+      errors.push("Every command evidence item must include a non-empty command.");
+      continue;
+    }
+    if (seenCommands.has(evidence.command)) {
+      errors.push(`commands must not include duplicate command ${evidence.command}.`);
+    }
+    seenCommands.add(evidence.command);
+    if (evidence.status !== "pass") errors.push(`${evidence.command} status must be pass.`);
+    if (evidence.exitCode !== 0) errors.push(`${evidence.command} exitCode must be 0.`);
+    if (evidence.runAfterPasskeyEvidence !== true) {
+      errors.push(`${evidence.command} must be run after passkey evidence is recorded.`);
+    }
+    if (typeof evidence.summary !== "string" || evidence.summary.trim().length === 0) {
+      errors.push(`${evidence.command} summary must be a non-empty string.`);
+    }
+  }
+
   for (const command of requiredCommands) {
     const evidence = commands.find((item) => item.command === command);
     if (!evidence) {
       errors.push(`commands must include ${command}.`);
       continue;
-    }
-    if (evidence.status !== "pass") errors.push(`${command} status must be pass.`);
-    if (evidence.exitCode !== 0) errors.push(`${command} exitCode must be 0.`);
-    if (evidence.runAfterPasskeyEvidence !== true) errors.push(`${command} must be run after passkey evidence is recorded.`);
-    if (typeof evidence.summary !== "string" || evidence.summary.trim().length === 0) {
-      errors.push(`${command} summary must be a non-empty string.`);
     }
   }
 
