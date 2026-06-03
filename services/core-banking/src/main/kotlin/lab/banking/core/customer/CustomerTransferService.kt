@@ -267,14 +267,8 @@ class CustomerTransferService(
         val caseId = nextId("FDS")
         val businessDate = command.businessDate ?: LocalDate.now()
         val transferReferenceId = "TR-$resultId"
-        val alertsJson = objectMapper.writeValueAsString(
-            listOf(
-                mapOf(
-                    "ruleId" to "FDS-RULE-UNUSUAL-AMOUNT",
-                    "message" to "Synthetic high amount threshold"
-                )
-            )
-        )
+        val alerts = fdsAlerts(command)
+        val alertsJson = objectMapper.writeValueAsString(alerts)
         jdbc.update(
             """
             INSERT INTO fds_cases (
@@ -292,7 +286,7 @@ class CustomerTransferService(
                 "caseId" to caseId,
                 "transferReferenceId" to transferReferenceId,
                 "customerId" to customerId,
-                "riskScore" to 820,
+                "riskScore" to (alerts.size * 300).coerceAtMost(1000),
                 "alertsJson" to alertsJson,
                 "fromAccountId" to command.fromAccountId,
                 "toAccountId" to command.toAccountId,
@@ -542,10 +536,40 @@ class CustomerTransferService(
                     "requestedBy" to (command.requestedBy ?: customerId),
                     "businessDate" to command.businessDate?.toString(),
                     "reason" to command.reason,
-                    "businessReferenceId" to command.businessReferenceId
+                    "businessReferenceId" to command.businessReferenceId,
+                    "newDevice" to command.newDevice,
+                    "firstTimeBeneficiary" to command.firstTimeBeneficiary
                 )
             )
         )
+
+    private fun fdsAlerts(command: CustomerTransferCommand): List<Map<String, String>> =
+        buildList {
+            if (command.amountMinor >= FDS_HIGH_AMOUNT_THRESHOLD_MINOR) {
+                add(
+                    mapOf(
+                        "ruleId" to "FDS-RULE-UNUSUAL-AMOUNT",
+                        "message" to "Synthetic unusual transfer amount"
+                    )
+                )
+            }
+            if (command.newDevice) {
+                add(
+                    mapOf(
+                        "ruleId" to "FDS-RULE-NEW-DEVICE",
+                        "message" to "Synthetic new device transfer"
+                    )
+                )
+            }
+            if (command.firstTimeBeneficiary) {
+                add(
+                    mapOf(
+                        "ruleId" to "FDS-RULE-FIRST-BENEFICIARY",
+                        "message" to "Synthetic first-time beneficiary"
+                    )
+                )
+            }
+        }
 
     private fun sha256(value: String): String =
         MessageDigest.getInstance("SHA-256")

@@ -20,6 +20,13 @@ class FdsCaseController(
     fun case(@PathVariable caseId: String): FdsCaseDto =
         fdsCaseService.find(caseId)
 
+    @PostMapping("/{caseId}/assign")
+    fun assign(
+        @PathVariable caseId: String,
+        @RequestBody command: FdsAssignCommand
+    ): FdsCaseDto =
+        fdsCaseService.assign(caseId, command)
+
     @PostMapping("/{caseId}/release-requests")
     fun requestRelease(
         @PathVariable caseId: String,

@@ -13,6 +13,7 @@ import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.temporal.TemporalWorkflowReference
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.dao.PessimisticLockingFailureException
@@ -44,6 +45,38 @@ class FdsCaseService(
     @Transactional(readOnly = true)
     fun find(caseId: String): FdsCaseDto =
         findForRead(caseId)
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun assign(caseId: String, command: FdsAssignCommand): FdsCaseDto {
+        val actorId = command.actorId ?: command.owner ?: "fds01"
+        val actorRole = command.actorRole ?: "FDS_REVIEWER"
+        BankingLabAuthContext.requireActor(actorId, actorRole)
+        val owner = command.owner?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("owner is required for FDS assignment")
+        val fdsCase = findForUpdate(caseId)
+        if (fdsCase.status != "HELD") {
+            throw WorkflowErrors.stateViolation("FDS case is not held: ${fdsCase.status}")
+        }
+        jdbc.update(
+            """
+            UPDATE fds_cases
+            SET status = 'INVESTIGATING',
+                owner_id = :owner,
+                updated_at = now()
+            WHERE fds_case_id = :caseId
+            """.trimIndent(),
+            mapOf("caseId" to caseId, "owner" to owner)
+        )
+        appendTimeline(
+            caseId = caseId,
+            eventType = "INVESTIGATION_STARTED",
+            fromStatus = fdsCase.status,
+            toStatus = "INVESTIGATING",
+            actorId = actorId,
+            note = command.reason ?: "FDS investigation assigned"
+        )
+        return findForRead(caseId)
+    }
 
     fun requestRelease(caseId: String, command: FdsDecisionCommand): FdsDecisionRequestResponse =
         runSerializableDecisionRequest {

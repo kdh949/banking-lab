@@ -1442,3 +1442,27 @@ Remaining blockers:
 
 - `tests/complaintWorkflow.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - The remaining direct in-progress Node suite is `tests/fdsAmlReconciliation.test.mjs`; host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: FDS AML Reconciliation Target Parity Slice
+
+Changes completed:
+
+- Added Spring FDS assignment API so customer-created held FDS cases can move into `INVESTIGATING` before release/block requests.
+- Added synthetic customer transfer risk flags for `newDevice` and `firstTimeBeneficiary`, with FDS alert and idempotency command-hash coverage.
+- Strengthened `FdsCaseApiParityIntegrationTest` to create FDS cases through `/api/customer/transfers`, assign them, prove no ledger posting before approval, reject self-approval, post exactly one release transfer after checker approval, and keep block decisions posting-free.
+- Updated the phase 6 evidence generator to validate the structured `LEDGER_CLOSED_DAY_IMMUTABLE` error contract for closed-day posting rejection.
+- Updated the parity scenario map, node retirement gate metadata, parity coverage matrix, FDS/AML/reconciliation architecture/evidence docs, QA recommendation, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.fds.FdsCaseApiParityIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same FDS integration test command passed under the approved execution path.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests 'lab.banking.core.fds.FdsAmlReconciliationWorkflowParityTest'` passed under the approved execution path.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.fds.FdsCaseApiParityIntegrationTest' --tests 'lab.banking.core.aml.AmlCaseApiParityIntegrationTest' --tests 'lab.banking.core.reconciliation.ReconciliationOpsApiParityIntegrationTest'` passed under the approved execution path.
+- `npm run packages:typecheck` passed.
+- `npm run evidence:phase6` passed and regenerated `docs/test-evidence/generated/phase-6-fds-aml-reconciliation.json` with all checks passing.
+
+Remaining blockers:
+
+- All direct Node reference suites are now target-backed, but Node retirement remains blocked.
+- Remaining blockers are broader workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review.

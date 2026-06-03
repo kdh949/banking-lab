@@ -231,8 +231,9 @@ const evidence = await withHandler(async ({ invoke, state }) => {
       },
       {
         id: "closed-day-and-adjustment-control",
-        status: closedDayMutation.status === 500
-          && /business day is closed/.test(closedDayMutation.payload.error)
+        status: closedDayMutation.status === 409
+          && closedDayMutation.payload.error?.code === "LEDGER_CLOSED_DAY_IMMUTABLE"
+          && /closed day/.test(closedDayMutation.payload.error?.invariant || "")
           && adjustmentApproval.payload.reconciliationItem.status === "ADJUSTED"
           && adjustmentApproval.payload.ledgerTransaction.transactionType === "ADJUSTMENT"
           && adjustmentApproval.payload.ledgerTransaction.businessDate === nextDate

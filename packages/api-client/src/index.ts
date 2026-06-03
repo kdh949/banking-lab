@@ -44,6 +44,8 @@ export interface CustomerTransferCommand {
   readonly reason?: string;
   readonly currency?: string;
   readonly businessReferenceId?: string;
+  readonly newDevice?: boolean;
+  readonly firstTimeBeneficiary?: boolean;
 }
 
 export interface CustomerTransferDto {
@@ -312,6 +314,13 @@ export interface FdsDecisionCommand {
   readonly reason?: string;
 }
 
+export interface FdsAssignCommand {
+  readonly actorId?: string;
+  readonly actorRole?: string;
+  readonly owner?: string;
+  readonly reason?: string;
+}
+
 export interface FdsDecisionRequestResponse {
   readonly item: FdsCaseDto;
   readonly approval: OperatorApproval;
@@ -556,6 +565,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         "/api/staff/fds-cases",
         {},
         options.bearerToken
+      );
+    },
+
+    assignFdsCase(caseId: string, command: FdsAssignCommand) {
+      return request<FdsCaseDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/fds-cases/${encodeURIComponent(caseId)}/assign`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
       );
     },
 

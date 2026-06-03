@@ -33,6 +33,13 @@ data class FdsDecisionCommand(
     val reason: String? = null
 )
 
+data class FdsAssignCommand(
+    val actorId: String? = null,
+    val actorRole: String? = null,
+    val owner: String? = null,
+    val reason: String? = null
+)
+
 data class FdsDecisionRequestResponse(
     val item: FdsCaseDto,
     val approval: OperatorApproval

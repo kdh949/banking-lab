@@ -13,7 +13,9 @@ data class CustomerTransferCommand(
     val businessDate: LocalDate? = null,
     val reason: String? = null,
     val currency: String = "KRW",
-    val businessReferenceId: String? = null
+    val businessReferenceId: String? = null,
+    val newDevice: Boolean = false,
+    val firstTimeBeneficiary: Boolean = false
 )
 
 data class CustomerTransferDto(

@@ -138,7 +138,7 @@
       "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
       "scenarioCount": 4,
       "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/fds/FdsCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/aml/AmlCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/reconciliation/ReconciliationOpsApiParityIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetStatus": "pass",
       "controls": [
         "fds-aml",
         "reconciliation",
