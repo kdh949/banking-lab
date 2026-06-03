@@ -6,7 +6,7 @@ Review date: 2026-06-03
 
 This drill verifies that live Temporal workflows backed by Docker Compose PostgreSQL survive actual `postgres` container crash/restart before checker approval is completed. It uses an external Compose Temporal server backed by PostgreSQL, a unique task queue, starts the Spring Boot `core-banking-temporal-worker`, starts each current synthetic workflow case type, waits for `WAITING_APPROVAL`, kills the `postgres` container, starts the same PostgreSQL service on the same host port and volume, waits for `pg_isready`, waits for Temporal health to return `SERVING`, verifies the workflow still reports `WAITING_APPROVAL`, sends the checker approval signal, and verifies completion through Temporal history replay.
 
-This proves one target-stack database process crash shape for the Temporal persistence database across all current workflow case types. It does not claim host crash recovery, multi-node PostgreSQL failover, disk-loss recovery, API-backed channel propagation through a database restart, API/outbox deployed process crash coverage, external alert routing, Loki ingestion, dashboard validation, or production-grade backup/restore.
+This proves one target-stack database process crash shape for the Temporal persistence database across all current workflow case types. It does not claim host crash recovery, multi-node PostgreSQL failover, disk-loss recovery, API-backed channel propagation through a database restart, outbox trace correlation, external alert routing, Loki ingestion, dashboard validation, or production-grade backup/restore. API post-commit crash coverage is recorded separately in `docs/test-evidence/api-process-crash-drill.md`.
 
 ## Commands
 
@@ -101,4 +101,4 @@ The earlier representative live drill hardened `LiveTemporalWorkerSmokeIntegrati
 
 ## Retirement Impact
 
-This closes live Compose PostgreSQL process restart coverage for all current synthetic Temporal workflow contracts. Node retirement remains blocked until host crash shapes, API process crash after durable ledger/outbox commit, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes live Compose PostgreSQL process restart coverage for all current synthetic Temporal workflow contracts. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

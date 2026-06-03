@@ -1598,3 +1598,36 @@ Remaining blockers:
 - Node retirement remains blocked.
 - The deployed outbox worker post-broker-ack crash/replay path is now proven for the current synthetic Compose drill.
 - API process crash after durable ledger/outbox commit, outbox tracing, host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Live Compose API Post-Commit Crash Replay Drill
+
+Changes completed:
+
+- Added synthetic-only `CustomerTransferFaultProperties` configuration for halting `core-banking` after a customer transfer durable commit and before the HTTP response.
+- Wired the fault switch through `CustomerTransferController`, `application.yml`, and Docker Compose without enabling any default crash behavior.
+- Added `CustomerTransferFaultPropertiesTest` and env-gated `LiveCustomerTransferApiCrashIntegrationTest`.
+- Added `docs/test-evidence/api-process-crash-drill.md` and updated the node-retirement gate, failure-drill notes, parity matrix, evidence gap report, QA recommendation, and related evidence conclusions while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed Gradle runs failed before test execution because the sandbox blocked Gradle's local file-lock socket.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.customer.CustomerTransferFaultPropertiesTest` passed after approval.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.customer.LiveCustomerTransferApiCrashIntegrationTest` passed without live API env, proving compile and env-gated skip behavior.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-api-crash-drill BANKING_LAB_POSTGRES_PORT=15499 BANKING_LAB_CORE_BANKING_PORT=18139 BANKING_LAB_SYNTHETIC_SEED_ENABLED=true BANKING_LAB_SECURITY_ENABLED=false BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres core-banking` passed after Docker approval.
+- The first approved live API crash integration run exposed an uncaught `java.io.IOException` during health polling while the container was being recreated; after widening the polling catch to `Exception`, the same live drill passed.
+- `env BANKING_LAB_LIVE_API_CRASH_COMPOSE_PROJECT=banking-lab-api-crash-drill BANKING_LAB_POSTGRES_PORT=15499 BANKING_LAB_CORE_BANKING_PORT=18139 BANKING_LAB_SYNTHETIC_SEED_ENABLED=true BANKING_LAB_SECURITY_ENABLED=false BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.customer.LiveCustomerTransferApiCrashIntegrationTest` passed against the live Compose PostgreSQL and Spring API stack.
+- `env COMPOSE_PROJECT_NAME=banking-lab-api-crash-drill BANKING_LAB_POSTGRES_PORT=15499 BANKING_LAB_CORE_BANKING_PORT=18139 BANKING_LAB_SYNTHETIC_SEED_ENABLED=true BANKING_LAB_SECURITY_ENABLED=false BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v` removed the temporary stack and volume.
+
+Result:
+
+- The live drill configured a one-use idempotency-key fault, posted a synthetic customer transfer, and observed `core-banking` exit with code `89` after the durable commit.
+- PostgreSQL contained exactly one `ledger_transactions` row, one `customer_transfer_results` row with status `POSTED`, and one `outbox_events` row with status `PENDING` for the idempotency key.
+- Source and destination balance projections moved exactly once.
+- Restarting `core-banking` without the fault and retrying the same request returned HTTP 200 with `replayed=true`, the same transaction ID, unchanged row counts, and unchanged balances after replay.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- The API process crash after durable ledger/outbox commit path is now proven for the current synthetic Compose customer-transfer drill.
+- Host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
