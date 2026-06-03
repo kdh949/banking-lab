@@ -56,6 +56,7 @@ test("Node retirement gate keeps reference runtime until parity evidence is read
     "node-reference-parity",
     "structured-error-contract",
     "next-manifest-renderer",
+    "non-synthetic-passkey-operations",
     "evidence-refresh",
     "retirement-review"
   ]) {
