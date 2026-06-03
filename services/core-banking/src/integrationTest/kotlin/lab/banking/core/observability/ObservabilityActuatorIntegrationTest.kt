@@ -1,6 +1,8 @@
 package lab.banking.core.observability
 
 import java.nio.file.Paths
+import lab.banking.core.eventing.KafkaOutboxPublishBatchResult
+import lab.banking.core.eventing.OutboxWorkerMetrics
 import lab.banking.core.temporal.TemporalWorkerMetrics
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsString
@@ -34,6 +36,9 @@ class ObservabilityActuatorIntegrationTest {
     @Autowired
     lateinit var temporalWorkerMetrics: TemporalWorkerMetrics
 
+    @Autowired
+    lateinit var outboxWorkerMetrics: OutboxWorkerMetrics
+
     @Test
     fun `Prometheus actuator exposes Temporal worker control metrics`() {
         temporalWorkerMetrics.recordStarted()
@@ -44,6 +49,29 @@ class ObservabilityActuatorIntegrationTest {
             .andExpect(content().string(containsString("banking_lab_temporal_worker_starts_total")))
             .andExpect(content().string(containsString("namespace=\"default\"")))
             .andExpect(content().string(containsString("task_queue=\"banking-case-workflows\"")))
+    }
+
+    @Test
+    fun `Prometheus actuator exposes Outbox worker control and delivery metrics`() {
+        outboxWorkerMetrics.recordStarted()
+        outboxWorkerMetrics.recordBatch(
+            KafkaOutboxPublishBatchResult(
+                attempted = 2,
+                published = 1,
+                failed = 1,
+                deadLettered = 0,
+                results = emptyList()
+            )
+        )
+
+        mockMvc.perform(get("/actuator/prometheus"))
+            .andExpect(status().isOk)
+            .andExpect(content().string(containsString("banking_lab_outbox_worker_running")))
+            .andExpect(content().string(containsString("banking_lab_outbox_worker_starts_total")))
+            .andExpect(content().string(containsString("banking_lab_outbox_worker_events_attempted_total")))
+            .andExpect(content().string(containsString("banking_lab_outbox_worker_events_published_total")))
+            .andExpect(content().string(containsString("topic=\"banking.lab.domain-events\"")))
+            .andExpect(content().string(containsString("client_id=\"core-banking-outbox-worker\"")))
     }
 
     @Test

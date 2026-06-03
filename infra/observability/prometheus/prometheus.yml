@@ -8,6 +8,7 @@ scrape_configs:
       - targets:
           - core-banking:8081
           - core-banking-temporal-worker:8081
+          - core-banking-outbox-worker:8081
   - job_name: redpanda
     static_configs:
       - targets:

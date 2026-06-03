@@ -20,10 +20,10 @@ class KafkaOutboxPublisher(
     private val outboxService: DurableOutboxService,
     private val objectMapper: ObjectMapper,
     transactionManager: PlatformTransactionManager
-) {
+) : OutboxPublisherPort {
     private val transactions = TransactionTemplate(transactionManager)
 
-    fun publishAvailable(config: KafkaOutboxPublisherConfig, limit: Int = 100): KafkaOutboxPublishBatchResult {
+    override fun publishAvailable(config: KafkaOutboxPublisherConfig, limit: Int): KafkaOutboxPublishBatchResult {
         require(limit > 0) { "limit must be positive" }
         val results = mutableListOf<KafkaOutboxPublishResult>()
         while (results.size < limit) {

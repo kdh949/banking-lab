@@ -84,6 +84,36 @@ services:
         condition: service_healthy
       temporal:
         condition: service_started
+  core-banking-outbox-worker:
+    build:
+      context: .
+      dockerfile: infra/docker-compose/core-banking.Dockerfile
+    profiles:
+      - platform
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/banking_lab
+      SPRING_DATASOURCE_USERNAME: banking_lab
+      SPRING_DATASOURCE_PASSWORD: banking_lab
+      BANKING_LAB_SYNTHETIC_ONLY: "true"
+      BANKING_LAB_TEMPORAL_WORKER_ENABLED: "false"
+      BANKING_LAB_OUTBOX_BOOTSTRAP_SERVERS: redpanda:9092
+      BANKING_LAB_OUTBOX_TOPIC: "${BANKING_LAB_OUTBOX_TOPIC:-banking.lab.domain-events}"
+      BANKING_LAB_OUTBOX_WORKER_ENABLED: "true"
+      BANKING_LAB_OUTBOX_WORKER_CLIENT_ID: "${BANKING_LAB_OUTBOX_WORKER_CLIENT_ID:-core-banking-outbox-worker}"
+      BANKING_LAB_OUTBOX_WORKER_BATCH_SIZE: "${BANKING_LAB_OUTBOX_WORKER_BATCH_SIZE:-100}"
+      BANKING_LAB_OUTBOX_WORKER_POLL_INTERVAL_MILLIS: "${BANKING_LAB_OUTBOX_WORKER_POLL_INTERVAL_MILLIS:-1000}"
+      BANKING_LAB_OUTBOX_PUBLISH_TIMEOUT_MILLIS: "${BANKING_LAB_OUTBOX_PUBLISH_TIMEOUT_MILLIS:-5000}"
+      BANKING_LAB_OUTBOX_DEAD_LETTER_THRESHOLD: "${BANKING_LAB_OUTBOX_DEAD_LETTER_THRESHOLD:-3}"
+      BANKING_LAB_OUTBOX_RETRY_DELAY_SECONDS: "${BANKING_LAB_OUTBOX_RETRY_DELAY_SECONDS:-60}"
+      BANKING_LAB_TRACING_ENABLED: "${BANKING_LAB_TRACING_ENABLED:-true}"
+      BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED: "${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:-true}"
+      BANKING_LAB_OTLP_TRACES_ENDPOINT: "${BANKING_LAB_OTLP_TRACES_ENDPOINT:-http://tempo:4318/v1/traces}"
+      BANKING_LAB_OTEL_SERVICE_NAME: banking-lab-core-banking-outbox-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
   aml-fds-analytics:
     build:
       context: .

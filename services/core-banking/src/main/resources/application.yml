@@ -22,6 +22,17 @@ banking-lab:
     task-queue: ${BANKING_LAB_TEMPORAL_TASK_QUEUE:banking-case-workflows}
     worker:
       enabled: ${BANKING_LAB_TEMPORAL_WORKER_ENABLED:false}
+  outbox:
+    bootstrap-servers: ${BANKING_LAB_OUTBOX_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    topic: ${BANKING_LAB_OUTBOX_TOPIC:banking.lab.domain-events}
+    worker:
+      enabled: ${BANKING_LAB_OUTBOX_WORKER_ENABLED:false}
+      client-id: ${BANKING_LAB_OUTBOX_WORKER_CLIENT_ID:core-banking-outbox-worker}
+      batch-size: ${BANKING_LAB_OUTBOX_WORKER_BATCH_SIZE:100}
+      poll-interval-millis: ${BANKING_LAB_OUTBOX_WORKER_POLL_INTERVAL_MILLIS:1000}
+      publish-timeout-millis: ${BANKING_LAB_OUTBOX_PUBLISH_TIMEOUT_MILLIS:5000}
+      dead-letter-threshold: ${BANKING_LAB_OUTBOX_DEAD_LETTER_THRESHOLD:3}
+      retry-delay-seconds: ${BANKING_LAB_OUTBOX_RETRY_DELAY_SECONDS:60}
 
 spring:
   application:
