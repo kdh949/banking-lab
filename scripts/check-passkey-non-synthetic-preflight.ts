@@ -202,7 +202,10 @@ for (const commandMarker of [
   ".well-known/openid-configuration",
   "/health",
   "real platform authenticator",
-  "npm run passkey:evidence:record"
+  "npm run passkey:evidence:record",
+  "\"status\": \"pass\"",
+  "\"exitCode\": 0",
+  "duplicate commands and failed extra commands are rejected"
 ]) {
   includes(evidenceDoc, commandMarker, `Passkey evidence doc must require command evidence marker ${commandMarker}.`);
 }
@@ -219,6 +222,9 @@ for (const recorderMarker of [
   "AUD-",
   "assertNoReusableSecrets",
   "assertRequiredPasskeyCommandEvidence",
+  "status must be pass",
+  "exitCode must be 0",
+  "duplicate command",
   "docker compose --profile platform up",
   "openid-configuration",
   "/health"
@@ -239,6 +245,9 @@ for (const verifierMarker of [
   "maskedPiiObserved",
   "auditEventObserved",
   "assertNoReusableSecrets",
+  "status must be pass",
+  "exitCode must be 0",
+  "duplicate command",
   "010-0000-1001",
   "docker compose --profile platform up",
   "openid-configuration",

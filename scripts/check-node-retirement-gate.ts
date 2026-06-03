@@ -55,6 +55,13 @@ type PasskeyEvidenceRecord = {
   staffPanelAssertions?: unknown;
 };
 
+type PasskeyCommandEvidence = {
+  command?: unknown;
+  status?: unknown;
+  exitCode?: unknown;
+  summary?: unknown;
+};
+
 async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   const errors: string[] = [];
   const passkeyGate = gate.requiredGates.find((item) => item.id === passkeyGateId);
@@ -102,7 +109,9 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   }
 
   const authenticatorKind = typeof evidence.authenticatorKind === "string" ? evidence.authenticatorKind : "";
-  const commands = Array.isArray(evidence.commands) ? evidence.commands : [];
+  const commands = Array.isArray(evidence.commands)
+    ? evidence.commands.filter((item): item is PasskeyCommandEvidence => item && typeof item === "object")
+    : [];
   const staffPanelAssertions = evidence.staffPanelAssertions && typeof evidence.staffPanelAssertions === "object"
     ? evidence.staffPanelAssertions as Record<string, unknown>
     : {};
@@ -120,8 +129,27 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   if (evidence.springSignedTokenAccepted !== true) errors.push("springSignedTokenAccepted must be true.");
   if (evidence.syntheticOnly !== true) errors.push("syntheticOnly must be true.");
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
-  if (commands.length === 0 || !commands.every((item) => typeof item === "string" && item.trim().length > 0)) {
-    errors.push("Passkey evidence commands must include at least one non-empty command.");
+  if (!Array.isArray(evidence.commands) || commands.length !== evidence.commands.length) {
+    errors.push("Passkey evidence commands must be an array of command evidence objects.");
+  }
+  if (commands.length === 0) {
+    errors.push("Passkey evidence commands must include at least one command evidence item.");
+  }
+  const seenCommands = new Set<string>();
+  for (const commandEvidence of commands) {
+    if (typeof commandEvidence.command !== "string" || commandEvidence.command.trim().length === 0) {
+      errors.push("Every passkey command evidence item must include a non-empty command.");
+      continue;
+    }
+    if (seenCommands.has(commandEvidence.command)) {
+      errors.push(`Passkey evidence commands must not include duplicate command ${commandEvidence.command}.`);
+    }
+    seenCommands.add(commandEvidence.command);
+    if (commandEvidence.status !== "pass") errors.push(`${commandEvidence.command} status must be pass.`);
+    if (commandEvidence.exitCode !== 0) errors.push(`${commandEvidence.command} exitCode must be 0.`);
+    if (typeof commandEvidence.summary !== "string" || commandEvidence.summary.trim().length === 0) {
+      errors.push(`${commandEvidence.command} summary must be a non-empty string.`);
+    }
   }
   for (const key of [
     "webAuthnLoaded",

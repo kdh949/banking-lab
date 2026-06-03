@@ -33,6 +33,14 @@ const requiredFinalReviewCommands = [
   "npm run passkey:evidence:verify"
 ];
 
+const requiredPasskeyCommands = [
+  "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+  "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+  "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
+  "manual browser sign-in completed with a real platform authenticator",
+  "npm run passkey:evidence:record"
+];
+
 const controlAttestations = {
   ledgerBalancedPostings: true,
   balancesProjectedFromPostings: true,
@@ -81,13 +89,12 @@ function passkeyArtifact() {
     springSignedTokenAccepted: true,
     syntheticOnly: true,
     redactionConfirmed: true,
-    commands: [
-      "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
-      "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
-      "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
-      "manual browser sign-in completed with a real platform authenticator",
-      "npm run passkey:evidence:record"
-    ],
+    commands: requiredPasskeyCommands.map((command) => ({
+      command,
+      status: "pass",
+      exitCode: 0,
+      summary: `${command} passed during the manual non-synthetic passkey evidence run.`
+    })),
     staffPanelAssertions: {
       webAuthnLoaded: true,
       managerSubjectObserved: true,

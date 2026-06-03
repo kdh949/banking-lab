@@ -12,6 +12,13 @@ type StaffPanelAssertions = {
   auditEventObserved: boolean;
 };
 
+type CommandEvidence = {
+  command?: unknown;
+  status?: unknown;
+  exitCode?: unknown;
+  summary?: unknown;
+};
+
 type PasskeyEvidenceRecord = {
   schemaVersion: 1;
   status: "pass";
@@ -25,7 +32,7 @@ type PasskeyEvidenceRecord = {
   springSignedTokenAccepted: true;
   syntheticOnly: true;
   redactionConfirmed: true;
-  commands: string[];
+  commands: Array<Required<CommandEvidence>>;
   staffPanelAssertions: StaffPanelAssertions;
 };
 
@@ -72,19 +79,46 @@ function parseTestDate(): string {
   return value;
 }
 
-function parseCommands(source: string): string[] {
-  const commands = source
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
-  if (commands.length === 0) {
-    throw new Error("Passkey evidence commands file must contain at least one command.");
+function parseCommands(source: string): Array<Required<CommandEvidence>> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch (error) {
+    throw new Error(`Passkey evidence commands file must be a JSON array: ${(error as Error).message}`);
   }
-  return commands;
+  const commands = Array.isArray(parsed)
+    ? parsed.filter((item): item is CommandEvidence => item && typeof item === "object")
+    : [];
+  if (commands.length === 0) {
+    throw new Error("Passkey evidence commands file must contain at least one command evidence item.");
+  }
+  if (commands.length !== (Array.isArray(parsed) ? parsed.length : 0)) {
+    throw new Error("Every passkey command evidence item must be an object.");
+  }
+  const seenCommands = new Set<string>();
+  for (const evidence of commands) {
+    if (typeof evidence.command !== "string" || evidence.command.trim().length === 0) {
+      throw new Error("Every passkey command evidence item must include a non-empty command.");
+    }
+    if (seenCommands.has(evidence.command)) {
+      throw new Error(`Passkey command evidence must not include duplicate command ${evidence.command}.`);
+    }
+    seenCommands.add(evidence.command);
+    if (evidence.status !== "pass") {
+      throw new Error(`${evidence.command} status must be pass.`);
+    }
+    if (evidence.exitCode !== 0) {
+      throw new Error(`${evidence.command} exitCode must be 0.`);
+    }
+    if (typeof evidence.summary !== "string" || evidence.summary.trim().length === 0) {
+      throw new Error(`${evidence.command} summary must be a non-empty string.`);
+    }
+  }
+  return commands as Array<Required<CommandEvidence>>;
 }
 
-function assertRequiredPasskeyCommandEvidence(commands: string[]): void {
-  const source = commands.join("\n");
+function assertRequiredPasskeyCommandEvidence(commands: Array<Required<CommandEvidence>>): void {
+  const source = commands.map((item) => item.command).join("\n");
   const requiredMarkers: Array<[RegExp, string]> = [
     [/docker compose --profile platform up/u, "live Docker Compose platform startup"],
     [/BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/u, "simulator-token-disabled Spring setting"],

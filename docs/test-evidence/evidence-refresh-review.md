@@ -14,7 +14,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 
 - `npm run passkey:evidence:preflight` passed.
 - `node --test tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 16 tests.
-- `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/goalCompletionAudit.test.mjs` passed 16 tests.
+- `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementBoundaryAudit.test.mjs tests/evidenceRefresh.test.mjs` passed 19 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run retirement:audit` passed with blocked status.
 - `npm run retirement:stack-audit` passed.
@@ -22,10 +22,10 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `npm run retirement:ready-simulate` passed.
 - `npm run goal:completion-audit` passed with `not complete` status and blocked passkey/final-review items.
 - `npm run node:retirement-gate` passed with blocked status.
-- `npm test` passed 107 tests.
+- `npm test` passed 109 tests.
 - `npm run validate:manifests` validated 28 manifests.
 - `git diff --check` passed.
-- `npm run parity` passed under the approved execution path with 107 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+- `npm run parity` passed under the approved execution path with 109 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
 - `npm run evidence:pack` passed and regenerated the evidence pack summary.
 - `npm run evidence:refresh-check` passed.
 
@@ -38,7 +38,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `docs/test-evidence/stack-retirement-area-audit.md` proves target implementation areas are free of legacy Node MVP stack source while preserving the approved Node oracle/support paths.
 - `docs/test-evidence/generated-artifact-boundary.md` proves generated `.next`/`build` output is ignored and not tracked as target source.
 - `npm run retirement:ready-simulate` proves the future ready path with fixture passkey/final-review artifacts without changing the real blocked gate.
-- Passkey recorder and verifier evidence now require live Compose startup, simulator-token-disabled Spring configuration, Keycloak discovery readiness, Spring `/health` readiness, a real platform/hardware authenticator attestation, and the recorder command before accepting future non-synthetic passkey evidence.
+- Passkey recorder and verifier evidence now require structured passing command evidence with `command`, `status: "pass"`, `exitCode: 0`, a non-empty `summary`, no duplicate commands, live Compose startup, simulator-token-disabled Spring configuration, Keycloak discovery readiness, Spring `/health` readiness, a real platform/hardware authenticator attestation, and the recorder command before accepting future non-synthetic passkey evidence.
 - Final retirement review recorder and verifier now require post-passkey `retirement:ready-simulate`, `passkey:evidence:preflight`, and `retirement:review-preflight` command evidence in addition to parity, manifest, evidence pack, boundary, and passkey verifier commands.
 - Final retirement review recorder and verifier now also reject duplicate command entries and any extra command evidence item that is not passing.
 - `docs/test-evidence/final-retirement-review-verifier.md` defines the future final-review artifact recorder/verifier schema and keeps the retirement review fail-closed until post-passkey commands and control attestations are recorded.

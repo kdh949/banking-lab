@@ -7,6 +7,21 @@ import { tmpdir } from "node:os";
 
 const script = "scripts/verify-passkey-non-synthetic-evidence.ts";
 
+function commandEvidence() {
+  return [
+    "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
+    "manual browser sign-in completed with a real platform authenticator",
+    "npm run passkey:evidence:record"
+  ].map((command) => ({
+    command,
+    status: "pass",
+    exitCode: 0,
+    summary: `${command} passed during the manual non-synthetic passkey evidence run.`
+  }));
+}
+
 function validArtifact(overrides = {}) {
   return {
     schemaVersion: 1,
@@ -21,13 +36,7 @@ function validArtifact(overrides = {}) {
     springSignedTokenAccepted: true,
     syntheticOnly: true,
     redactionConfirmed: true,
-    commands: [
-      "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
-      "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
-      "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
-      "manual browser sign-in completed with a real platform authenticator",
-      "npm run passkey:evidence:record"
-    ],
+    commands: commandEvidence(),
     staffPanelAssertions: {
       webAuthnLoaded: true,
       managerSubjectObserved: true,
@@ -81,8 +90,18 @@ test("passkey evidence verifier rejects virtual or CDP-backed evidence", async (
 test("passkey evidence verifier rejects unredacted reusable material and unmasked PII", async () => {
   const artifactPath = await artifactFile(validArtifact({
     commands: [
-      "curl -H 'Authorization: Bearer eyJabc.def.ghi' http://localhost",
-      "staff panel showed 010-0000-1001"
+      {
+        command: "curl -H 'Authorization: Bearer eyJabc.def.ghi' http://localhost",
+        status: "pass",
+        exitCode: 0,
+        summary: "Secret-bearing command should be rejected."
+      },
+      {
+        command: "staff panel showed 010-0000-1001",
+        status: "pass",
+        exitCode: 0,
+        summary: "Unmasked PII should be rejected."
+      }
     ]
   }));
   const result = runVerifier(artifactPath);
@@ -93,15 +112,32 @@ test("passkey evidence verifier rejects unredacted reusable material and unmaske
 
 test("passkey evidence verifier rejects incomplete live command evidence", async () => {
   const artifactPath = await artifactFile(validArtifact({
-    commands: [
-      "manual browser sign-in completed with a real platform authenticator",
-      "npm run passkey:evidence:record"
-    ]
+    commands: commandEvidence().slice(3)
   }));
   const result = runVerifier(artifactPath);
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /live Docker Compose platform startup|live Keycloak discovery readiness check/);
+});
+
+test("passkey evidence verifier rejects failed or duplicate command evidence", async () => {
+  const commands = commandEvidence();
+  const artifactPath = await artifactFile(validArtifact({
+    commands: [
+      {
+        ...commands[0],
+        status: "failed",
+        exitCode: 1,
+        summary: "This command failed."
+      },
+      commands[0],
+      ...commands.slice(1)
+    ]
+  }));
+  const result = runVerifier(artifactPath);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /status must be pass|duplicate command/);
 });
 
 test("passkey evidence verifier fails strictly when the default artifact is missing", () => {

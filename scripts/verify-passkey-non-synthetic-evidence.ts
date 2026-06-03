@@ -17,6 +17,13 @@ type PasskeyEvidenceRecord = {
   staffPanelAssertions?: unknown;
 };
 
+type CommandEvidence = {
+  command?: unknown;
+  status?: unknown;
+  exitCode?: unknown;
+  summary?: unknown;
+};
+
 const artifactPath = process.env.BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT
   ?? "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 
@@ -46,11 +53,20 @@ function assertNoReusableSecrets(source: string): string[] {
   return errors;
 }
 
+function commandEvidenceArray(value: unknown): CommandEvidence[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is CommandEvidence => item && typeof item === "object")
+    : [];
+}
+
 function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): string[] {
   const errors: string[] = [...assertNoReusableSecrets(source)];
   const authenticatorKind = typeof evidence.authenticatorKind === "string" ? evidence.authenticatorKind : "";
-  const commands = Array.isArray(evidence.commands) ? evidence.commands : [];
-  const commandText = commands.filter((item): item is string => typeof item === "string").join("\n");
+  const commands = commandEvidenceArray(evidence.commands);
+  const commandText = commands
+    .filter((item): item is CommandEvidence & { command: string } => typeof item.command === "string")
+    .map((item) => item.command)
+    .join("\n");
   const staffPanelAssertions = evidence.staffPanelAssertions && typeof evidence.staffPanelAssertions === "object"
     ? evidence.staffPanelAssertions as Record<string, unknown>
     : {};
@@ -72,8 +88,27 @@ function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): stri
   if (evidence.springSignedTokenAccepted !== true) errors.push("springSignedTokenAccepted must be true.");
   if (evidence.syntheticOnly !== true) errors.push("syntheticOnly must be true.");
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
-  if (commands.length === 0 || !commands.every((item) => typeof item === "string" && item.trim().length > 0)) {
-    errors.push("commands must include at least one non-empty command.");
+  if (!Array.isArray(evidence.commands) || commands.length !== evidence.commands.length) {
+    errors.push("commands must be an array of command evidence objects.");
+  }
+  if (commands.length === 0) {
+    errors.push("commands must include at least one command evidence item.");
+  }
+  const seenCommands = new Set<string>();
+  for (const commandEvidence of commands) {
+    if (typeof commandEvidence.command !== "string" || commandEvidence.command.trim().length === 0) {
+      errors.push("Every command evidence item must include a non-empty command.");
+      continue;
+    }
+    if (seenCommands.has(commandEvidence.command)) {
+      errors.push(`commands must not include duplicate command ${commandEvidence.command}.`);
+    }
+    seenCommands.add(commandEvidence.command);
+    if (commandEvidence.status !== "pass") errors.push(`${commandEvidence.command} status must be pass.`);
+    if (commandEvidence.exitCode !== 0) errors.push(`${commandEvidence.command} exitCode must be 0.`);
+    if (typeof commandEvidence.summary !== "string" || commandEvidence.summary.trim().length === 0) {
+      errors.push(`${commandEvidence.command} summary must be a non-empty string.`);
+    }
   }
   for (const [pattern, description] of [
     [/docker compose --profile platform up/u, "live Docker Compose platform startup"],
