@@ -196,6 +196,16 @@ for (const panelMarker of [
 ]) {
   includes(evidenceDoc, panelMarker, `Passkey evidence doc must require staff panel marker ${panelMarker}.`);
 }
+for (const commandMarker of [
+  "docker compose --profile platform up",
+  "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false",
+  ".well-known/openid-configuration",
+  "/health",
+  "real platform authenticator",
+  "npm run passkey:evidence:record"
+]) {
+  includes(evidenceDoc, commandMarker, `Passkey evidence doc must require command evidence marker ${commandMarker}.`);
+}
 
 const recorder = await readFile(recorderPath, "utf8").catch(() => "");
 for (const recorderMarker of [
@@ -207,7 +217,11 @@ for (const recorderMarker of [
   "manager-webauthn01",
   "maskedPiiObserved",
   "AUD-",
-  "assertNoReusableSecrets"
+  "assertNoReusableSecrets",
+  "assertRequiredPasskeyCommandEvidence",
+  "docker compose --profile platform up",
+  "openid-configuration",
+  "/health"
 ]) {
   includes(recorder, recorderMarker, `Passkey recorder must keep validation marker ${recorderMarker}.`);
 }
@@ -225,7 +239,10 @@ for (const verifierMarker of [
   "maskedPiiObserved",
   "auditEventObserved",
   "assertNoReusableSecrets",
-  "010-0000-1001"
+  "010-0000-1001",
+  "docker compose --profile platform up",
+  "openid-configuration",
+  "/health"
 ]) {
   includes(verifier, verifierMarker, `Passkey verifier must keep validation marker ${verifierMarker}.`);
 }

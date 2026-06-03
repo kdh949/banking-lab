@@ -45,7 +45,11 @@ When the gate is genuinely proven, create `docs/test-evidence/generated/passkey-
   "syntheticOnly": true,
   "redactionConfirmed": true,
   "commands": [
-    "commands actually run"
+    "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
+    "manual browser sign-in completed with a real platform authenticator",
+    "npm run passkey:evidence:record"
   ],
   "staffPanelAssertions": {
     "webAuthnLoaded": true,
@@ -92,7 +96,7 @@ The preflight command does not create `docs/test-evidence/generated/passkey-non-
 
 The future non-synthetic run should use the same Compose stack shape as the existing WebAuthn smoke, but the browser interaction must be manual or use only ordinary browser automation that does not install a virtual authenticator. The operator should sign in as `manager-webauthn01`, complete Keycloak passkey registration with a real authenticator, return to `staff-terminal`, and confirm the staff panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event ID.
 
-After the run, copy the redacted command list to a local text file and copy the relevant staff panel text to a redacted snapshot file. Then run:
+After the run, copy the redacted command list to a local text file and copy the relevant staff panel text to a redacted snapshot file. The command list must include the live Compose startup with `BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false`, Keycloak discovery readiness, Spring `/health` readiness, a redacted manual real-authenticator sign-in attestation, and `npm run passkey:evidence:record`. Then run:
 
 ```bash
 env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \

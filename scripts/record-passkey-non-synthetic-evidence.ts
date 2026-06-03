@@ -83,6 +83,36 @@ function parseCommands(source: string): string[] {
   return commands;
 }
 
+function assertRequiredPasskeyCommandEvidence(commands: string[]): void {
+  const source = commands.join("\n");
+  const requiredMarkers: Array<[RegExp, string]> = [
+    [/docker compose --profile platform up/u, "live Docker Compose platform startup"],
+    [/BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/u, "simulator-token-disabled Spring setting"],
+    [/\.well-known\/openid-configuration/u, "live Keycloak discovery readiness check"],
+    [/\/health/u, "live Spring health readiness check"],
+    [/real (platform authenticator|hardware security key)/iu, "real platform authenticator or hardware security key attestation"],
+    [/npm run passkey:evidence:record/u, "passkey evidence recorder command"]
+  ];
+  for (const [pattern, description] of requiredMarkers) {
+    if (!pattern.test(source)) {
+      throw new Error(`Passkey evidence commands must include ${description}.`);
+    }
+  }
+
+  const forbiddenMarkers = [
+    /WebAuthn\.enable/u,
+    /WebAuthn\.addVirtualAuthenticator/u,
+    /addVirtualAuthenticator/u,
+    /virtual authenticator/iu,
+    /CDP WebAuthn/iu
+  ];
+  for (const pattern of forbiddenMarkers) {
+    if (pattern.test(source)) {
+      throw new Error("Passkey evidence commands must not include CDP or browser virtual-authenticator operations.");
+    }
+  }
+}
+
 function assertNoReusableSecrets(label: string, value: string): void {
   const forbidden = [
     /\baccess_token\b/i,
@@ -152,6 +182,7 @@ async function main(): Promise<void> {
   const commands = parseCommands(commandsSource);
 
   assertNoReusableSecrets("commands file", commandsSource);
+  assertRequiredPasskeyCommandEvidence(commands);
   assertNoReusableSecrets("staff panel snapshot", snapshot);
   const assertions = staffPanelAssertions(snapshot);
   assertAllStaffPanelAssertions(assertions);

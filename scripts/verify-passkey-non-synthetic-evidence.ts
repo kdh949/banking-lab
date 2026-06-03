@@ -50,6 +50,7 @@ function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): stri
   const errors: string[] = [...assertNoReusableSecrets(source)];
   const authenticatorKind = typeof evidence.authenticatorKind === "string" ? evidence.authenticatorKind : "";
   const commands = Array.isArray(evidence.commands) ? evidence.commands : [];
+  const commandText = commands.filter((item): item is string => typeof item === "string").join("\n");
   const staffPanelAssertions = evidence.staffPanelAssertions && typeof evidence.staffPanelAssertions === "object"
     ? evidence.staffPanelAssertions as Record<string, unknown>
     : {};
@@ -73,6 +74,30 @@ function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): stri
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
   if (commands.length === 0 || !commands.every((item) => typeof item === "string" && item.trim().length > 0)) {
     errors.push("commands must include at least one non-empty command.");
+  }
+  for (const [pattern, description] of [
+    [/docker compose --profile platform up/u, "live Docker Compose platform startup"],
+    [/BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/u, "simulator-token-disabled Spring setting"],
+    [/\.well-known\/openid-configuration/u, "live Keycloak discovery readiness check"],
+    [/\/health/u, "live Spring health readiness check"],
+    [/real (platform authenticator|hardware security key)/iu, "real platform authenticator or hardware security key attestation"],
+    [/npm run passkey:evidence:record/u, "passkey evidence recorder command"]
+  ] as Array<[RegExp, string]>) {
+    if (!pattern.test(commandText)) {
+      errors.push(`commands must include ${description}.`);
+    }
+  }
+  for (const pattern of [
+    /WebAuthn\.enable/u,
+    /WebAuthn\.addVirtualAuthenticator/u,
+    /addVirtualAuthenticator/u,
+    /virtual authenticator/iu,
+    /CDP WebAuthn/iu
+  ]) {
+    if (pattern.test(commandText)) {
+      errors.push("commands must not include CDP or browser virtual-authenticator operations.");
+      break;
+    }
   }
 
   for (const key of [

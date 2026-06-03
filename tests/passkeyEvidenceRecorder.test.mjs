@@ -16,6 +16,8 @@ async function fixtureDir() {
 
   await writeFile(commandsFile, [
     "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration",
+    "curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health",
     "manual browser sign-in completed with a real platform authenticator",
     "npm run passkey:evidence:record"
   ].join("\n"));
@@ -77,7 +79,7 @@ test("passkey evidence recorder writes a validated non-synthetic artifact", asyn
   assert.equal(artifact.redactionConfirmed, true);
   assert.equal(artifact.staffPanelAssertions.maskedPiiObserved, true);
   assert.equal(artifact.staffPanelAssertions.auditEventObserved, true);
-  assert.equal(artifact.commands.length, 3);
+  assert.equal(artifact.commands.length, 5);
 });
 
 test("passkey evidence recorder rejects virtual or CDP-backed evidence", async () => {
@@ -109,5 +111,18 @@ test("passkey evidence recorder rejects unredacted secrets and unmasked PII", as
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /unredacted token|unmasked phone output/);
+  assert.equal(existsSync(fixture.outputFile), false);
+});
+
+test("passkey evidence recorder rejects incomplete live command evidence", async () => {
+  const fixture = await fixtureDir();
+  await writeFile(fixture.commandsFile, [
+    "manual browser sign-in completed with a real platform authenticator",
+    "npm run passkey:evidence:record"
+  ].join("\n"));
+  const result = runRecorder(baseEnv(fixture));
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /live Docker Compose platform startup|live Keycloak discovery readiness check/);
   assert.equal(existsSync(fixture.outputFile), false);
 });
