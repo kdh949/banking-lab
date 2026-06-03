@@ -20,6 +20,7 @@ test("goal completion audit reports current blockers without marking the objecti
   assert.match(stdout, /stack-retirement-by-area: pass/);
   assert.match(stdout, /generated-artifact-boundary: pass/);
   assert.match(stdout, /retirement-ready-state-simulation: pass/);
+  assert.match(stdout, /passkey-non-synthetic-preflight: pass/);
   assert.match(stdout, /mapped-parity: pass/);
   assert.match(stdout, /gate:non-synthetic-passkey-operations: blocked/);
   assert.match(stdout, /gate:retirement-review: blocked/);
@@ -50,6 +51,7 @@ test("goal completion audit is wired into scripts and retirement evidence", asyn
 
   assert.equal(packageJson.scripts["goal:completion-audit"], `node --experimental-strip-types ${script}`);
   assert.match(auditScript, /check-node-retirement-ready-simulation\.ts/);
+  assert.match(auditScript, /check-passkey-non-synthetic-preflight\.ts/);
   assert.ok(evidenceRefresh?.evidence?.includes(doc));
   assert.ok(evidenceRefresh?.evidence?.includes(script));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
@@ -59,5 +61,6 @@ test("goal completion audit is wired into scripts and retirement evidence", asyn
   assert.match(evidenceDoc, /Status:\s+blocked/i);
   assert.match(evidenceDoc, /Goal completion audit: not complete/);
   assert.match(evidenceDoc, /ready-state simulation/i);
+  assert.match(evidenceDoc, /passkey preflight/i);
   assert.match(evidenceDoc, /does not mark Node retirement ready/);
 });

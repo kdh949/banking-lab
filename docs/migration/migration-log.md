@@ -2338,6 +2338,39 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Goal Completion Passkey Preflight Coupling
+
+Changes completed:
+
+- Extended `scripts/check-goal-completion-audit.ts` so the active-goal completion audit runs `scripts/check-passkey-non-synthetic-preflight.ts`.
+- Updated `tests/goalCompletionAudit.test.mjs` to assert that completion output includes `passkey-non-synthetic-preflight: pass` while the current result remains `Goal completion audit: not complete`.
+- Updated `docs/test-evidence/goal-completion-audit.md` to document passkey preflight as a required completion precondition that does not prove the real non-synthetic passkey gate.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/goalCompletionAudit.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs tests/retirementReviewPreflight.test.mjs` passed 9 tests.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`, `retirement-ready-state-simulation: pass`, and `passkey-non-synthetic-preflight: pass`.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run retirement:audit` passed with blocked status, 60 approved-reference `.mjs` files, 37 target anchors, 316 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 103 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 103 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The goal completion audit now fails if the manual passkey evidence runbook, recorder/verifier wiring, Keycloak WebAuthn policy, recovery segregation, or staff-terminal evidence markers regress before final completion.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Area-Based Stack Retirement Audit
 
 Changes completed:

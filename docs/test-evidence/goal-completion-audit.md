@@ -6,7 +6,7 @@ Status: blocked
 
 ## Scope
 
-This evidence checks whether the active goal can be truthfully marked complete. It is intentionally stricter than the current migration evidence checks: all mapped parity and target-stack area checks must pass, the fixture-based Node retirement ready-state simulation must pass, all retirement gates must pass, the real non-synthetic passkey artifact must exist and verify, and the Node retirement gate must be ready.
+This evidence checks whether the active goal can be truthfully marked complete. It is intentionally stricter than the current migration evidence checks: all mapped parity and target-stack area checks must pass, the fixture-based Node retirement ready-state simulation must pass, passkey preflight must prove the manual evidence path is still intact, all retirement gates must pass, the real non-synthetic passkey artifact must exist and verify, and the Node retirement gate must be ready.
 
 This document does not mark Node retirement ready.
 
@@ -31,6 +31,7 @@ Passing items:
 - Area-based stack retirement audit is passing.
 - Generated artifact boundary audit is passing.
 - Node retirement ready-state simulation is passing with temporary fixture artifacts, proving the future ready path without changing the real blocked gate.
+- Passkey preflight is passing for static manual-run prerequisites without proving the real non-synthetic passkey gate.
 - The parity scenario map covers 42 mapped Node reference scenarios with target `pass` status.
 - Current target-stack evidence gates for Spring health, structured errors, Next manifest rendering, API-backed channel parity, and evidence refresh are passing.
 - The Node retirement gate now requires strict final-review artifact recording and verification if `retirement-review` is later marked `pass`.

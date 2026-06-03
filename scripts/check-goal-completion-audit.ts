@@ -126,6 +126,12 @@ requirements.push(runCheck(
   "Node retirement ready-state simulation: pass"
 ));
 
+requirements.push(runCheck(
+  "passkey-non-synthetic-preflight",
+  ["--experimental-strip-types", "scripts/check-passkey-non-synthetic-preflight.ts"],
+  "Passkey non-synthetic evidence preflight: pass"
+));
+
 const mappedScenarioCount = paritySuites.reduce((sum, suite) => sum + numberValue(suite.scenarioCount), 0);
 const parityPass = parity?.nodeReferenceTestCount === 42
   && mappedScenarioCount === 42
