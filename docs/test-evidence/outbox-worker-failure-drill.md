@@ -71,6 +71,29 @@ Result:
 - The test restarted `core-banking-outbox-worker` with `docker compose up -d --no-deps`, waited for the row to become `PUBLISHED`, verified `published_at` was set, and consumed the corresponding Redpanda record from the host-side external listener.
 - `docker-compose.yml` now advertises separate Redpanda listeners for Docker-internal clients (`redpanda:9092`) and host-side drill clients (`127.0.0.1:${BANKING_LAB_REDPANDA_PORT}`).
 
+## Live Compose Post-Broker-Ack Crash And Replay
+
+Additional verification on 2026-06-03 proved the deployed worker crash path after broker acknowledgement and before marking the outbox row `PUBLISHED`.
+
+Commands:
+
+```bash
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.eventing.OutboxWorkerRunnerTest
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar
+env COMPOSE_PROJECT_NAME=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker
+env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest
+env COMPOSE_PROJECT_NAME=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down
+```
+
+Result:
+
+- `KafkaOutboxPublisher` now has a synthetic-only fault injection switch that halts the worker after `producer.send(...).get(...)` succeeds and before `OutboxService.markPublished(...)` runs.
+- `LiveOutboxWorkerSmokeIntegrationTest` inserted a synthetic durable `PENDING` outbox row, started `core-banking-outbox-worker` with the fault pointed at that event ID, and observed the worker container exit with code `88`.
+- After the forced process halt, the database row remained `PENDING` with `published_at` still null while one Redpanda record for the event was already visible through the host-side listener.
+- Restarting the worker without the fault replayed the still-pending row, marked it `PUBLISHED`, set `published_at`, and produced a second Redpanda record with the same `outboxEventId`.
+- This proves the deployed post-broker-ack worker crash/replay path. Downstream side-effect safety still depends on idempotent inbox consumers, already covered by `RedpandaOutboxDeliveryIntegrationTest`.
+
 ## Retirement Impact
 
-This closes the durable outbox crash-before-mark-published replay drill for the current Redpanda-backed event path, adds a scheduled/manual target-stack worker entrypoint with Micrometer/Prometheus metrics, and proves a deployed worker-container restart-before-publish path. Node retirement remains blocked until host crash shapes, API process crash after durable ledger/outbox commit, deployed post-broker-ack outbox worker crash, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the durable outbox crash-before-mark-published replay drill for the current Redpanda-backed event path, adds a scheduled/manual target-stack worker entrypoint with Micrometer/Prometheus metrics, and proves deployed worker-container restart-before-publish plus post-broker-ack crash/replay paths. Node retirement remains blocked until host crash shapes, API process crash after durable ledger/outbox commit, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

@@ -18,7 +18,7 @@ It covers the current synthetic banking workflow case types:
 
 The integration test also covers an `AML_CLOSURE` rejection path and an `FDS_RELEASE` self-approval failure path, asserting both logs carry trace/span IDs, final status, control effect, workflow metadata, business reference ID, error type, and `syntheticOnly=true`.
 
-This evidence does not claim external alert routing, every workflow transition, host crash-shape coverage, API/outbox deployed process-failure variants, or propagation from a browser/API request into the Temporal workflow trace. Loki ingestion, local alert evaluation, and dashboard provisioning are covered separately in `docs/test-evidence/observability-stack-smoke.md`.
+This evidence does not claim external alert routing, every workflow transition, host crash-shape coverage, API process crash after durable ledger/outbox commit, outbox tracing, or propagation from a browser/API request into the Temporal workflow trace. Loki ingestion, local alert evaluation, and dashboard provisioning are covered separately in `docs/test-evidence/observability-stack-smoke.md`.
 
 ## Commands
 
@@ -175,4 +175,4 @@ The temporary transition Compose stack was removed with `docker compose --profil
 
 ## Retirement Impact
 
-This closes workflow-specific trace/log correlation for Temporal signal and approval-completion events across the current banking case types, plus live rejection and self-approval failure transitions. Node retirement remains blocked until host crash shapes, API/outbox deployed process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes workflow-specific trace/log correlation for Temporal signal and approval-completion events across the current banking case types, plus live rejection and self-approval failure transitions. Node retirement remains blocked until host crash shapes, API process crash after durable ledger/outbox commit, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

@@ -1567,3 +1567,34 @@ Remaining blockers:
 - Node retirement remains blocked.
 - The deployed outbox worker restart-before-publish path is now proven.
 - API process crash after durable ledger/outbox commit, deployed post-broker-ack outbox worker crash, outbox tracing, host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Live Compose Outbox Post-Ack Crash Replay Drill
+
+Changes completed:
+
+- Added synthetic-only post-broker-ack fault injection to `KafkaOutboxPublisher` through `OutboxWorkerProperties`, `OutboxEventModels`, and `application.yml`.
+- Passed the fault injection settings into the Docker Compose `core-banking-outbox-worker` service without enabling any default crash behavior.
+- Extended `LiveOutboxWorkerSmokeIntegrationTest` to halt the deployed worker after broker acknowledgement and before marking the outbox row `PUBLISHED`, then restart the worker and verify replay.
+- Updated outbox failure drill evidence, the failure-drill gap notes, evidence gap report, parity matrix, QA recommendation, observability note, and node-retirement gate wording while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.eventing.OutboxWorkerRunnerTest` failed before test execution because the sandbox blocked Gradle's local file-lock socket.
+- The approved focused `OutboxWorkerRunnerTest` run passed and verified the configured fault event ID and exit code are propagated to the publisher config.
+- Initial approved env-gated `LiveOutboxWorkerSmokeIntegrationTest` compile/skip run failed on a missing return in the new helper; after the helper fix, the same command passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker` passed.
+- `env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest` passed against the live Compose PostgreSQL and Redpanda stack.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-postack-drill BANKING_LAB_POSTGRES_PORT=15497 BANKING_LAB_REDPANDA_PORT=19097 BANKING_LAB_REDPANDA_ADMIN_PORT=19697 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-postack-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down` removed the temporary containers and network.
+
+Result:
+
+- The live post-ack drill inserted a synthetic durable `PENDING` outbox row, started `core-banking-outbox-worker` with `BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EVENT_ID` set to that row, and observed the worker container exit with code `88` after broker acknowledgement.
+- After the forced process halt, the outbox row remained `PENDING` with `published_at` null and one Redpanda record was visible for the event.
+- Restarting the worker without the fault replayed the still-pending row, marked it `PUBLISHED`, set `published_at`, and produced a second Redpanda record with the same `outboxEventId`.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- The deployed outbox worker post-broker-ack crash/replay path is now proven for the current synthetic Compose drill.
+- API process crash after durable ledger/outbox commit, outbox tracing, host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
