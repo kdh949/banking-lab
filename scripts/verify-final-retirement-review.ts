@@ -112,6 +112,9 @@ function validateFinalReview(artifact: FinalReviewArtifact, source: string): str
   } else if (remainingBlockers.length > 0) {
     errors.push("remainingBlockers must be empty for final retirement review pass evidence.");
   }
+  if (!Array.isArray(artifact.commands) || commands.length !== artifact.commands.length) {
+    errors.push("commands must be an array of command evidence objects.");
+  }
 
   const seenCommands = new Set<string>();
   for (const evidence of commands) {

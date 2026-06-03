@@ -160,6 +160,25 @@ test("final retirement review verifier rejects extra failed or duplicate command
   assert.match(result.stderr, /duplicate command npm run parity|unexpected-check status must be pass/);
 });
 
+test("final retirement review verifier rejects non-object command evidence", async () => {
+  const artifact = validArtifact({
+    commands: [
+      ...requiredCommands.map((command) => ({
+        command,
+        status: "pass",
+        exitCode: 0,
+        runAfterPasskeyEvidence: true,
+        summary: `${command} passed.`
+      })),
+      "npm run hidden-string-command"
+    ]
+  });
+  const result = runVerifier(await artifactFile(artifact));
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /commands must be an array of command evidence objects/);
+});
+
 test("final retirement review verifier fails strictly when the default artifact is missing", () => {
   const result = runVerifier();
 

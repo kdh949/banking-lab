@@ -123,6 +123,9 @@ function parseCommands(source: string): Required<CommandEvidence>[] {
   }
 
   const commands = parsed.filter((item): item is CommandEvidence => item && typeof item === "object");
+  if (commands.length !== parsed.length) {
+    throw new Error("Every final review command evidence item must be an object.");
+  }
   const seenCommands = new Set<string>();
   for (const evidence of commands) {
     if (typeof evidence.command !== "string" || evidence.command.trim().length === 0) {

@@ -165,3 +165,15 @@ test("final retirement review recorder rejects extra failed or duplicate command
   assert.match(result.stderr, /duplicate command npm run parity|unexpected-check status must be pass/);
   assert.equal(existsSync(fixture.outputFile), false);
 });
+
+test("final retirement review recorder rejects non-object command evidence", async () => {
+  const fixture = await fixtureDir([
+    ...commandEvidence(),
+    "npm run hidden-string-command"
+  ]);
+  const result = runRecorder(baseEnv(fixture));
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Every final review command evidence item must be an object/);
+  assert.equal(existsSync(fixture.outputFile), false);
+});
