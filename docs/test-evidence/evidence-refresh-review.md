@@ -13,6 +13,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 ## Commands
 
 - `npm run passkey:evidence:preflight` passed.
+- `node --test tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 14 tests.
 - `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/goalCompletionAudit.test.mjs` passed 16 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run retirement:audit` passed with blocked status.
@@ -38,6 +39,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `docs/test-evidence/generated-artifact-boundary.md` proves generated `.next`/`build` output is ignored and not tracked as target source.
 - `npm run retirement:ready-simulate` proves the future ready path with fixture passkey/final-review artifacts without changing the real blocked gate.
 - Passkey recorder and verifier evidence now require live Compose startup, simulator-token-disabled Spring configuration, Keycloak discovery readiness, Spring `/health` readiness, a real platform/hardware authenticator attestation, and the recorder command before accepting future non-synthetic passkey evidence.
+- Final retirement review recorder and verifier now require post-passkey `retirement:ready-simulate`, `passkey:evidence:preflight`, and `retirement:review-preflight` command evidence in addition to parity, manifest, evidence pack, boundary, and passkey verifier commands.
 - `docs/test-evidence/final-retirement-review-verifier.md` defines the future final-review artifact recorder/verifier schema and keeps the retirement review fail-closed until post-passkey commands and control attestations are recorded.
 - `docs/test-evidence/goal-completion-audit.md` keeps the active objective blocked until passkey evidence, final review, and the ready retirement gate are all proven.
 - `docs/migration/node-retirement-gate.json` marks `evidence-refresh` passed and leaves `non-synthetic-passkey-operations` plus `retirement-review` incomplete.

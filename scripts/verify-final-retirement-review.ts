@@ -32,6 +32,9 @@ const requiredCommands = [
   "npm run retirement:audit",
   "npm run retirement:stack-audit",
   "npm run retirement:generated-boundary",
+  "npm run retirement:ready-simulate",
+  "npm run passkey:evidence:preflight",
+  "npm run retirement:review-preflight",
   "npm run passkey:evidence:verify"
 ];
 

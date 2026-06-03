@@ -37,7 +37,7 @@ The final review artifact must have:
 - `evidenceKind: "final-node-retirement-review"`;
 - `passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json"`;
 - an empty `remainingBlockers` array;
-- passing command evidence for `npm run parity`, `npm test`, `npm run validate:manifests`, `npm run evidence:pack`, `npm run retirement:audit`, `npm run retirement:stack-audit`, `npm run retirement:generated-boundary`, and `npm run passkey:evidence:verify`;
+- passing command evidence for `npm run parity`, `npm test`, `npm run validate:manifests`, `npm run evidence:pack`, `npm run retirement:audit`, `npm run retirement:stack-audit`, `npm run retirement:generated-boundary`, `npm run retirement:ready-simulate`, `npm run passkey:evidence:preflight`, `npm run retirement:review-preflight`, and `npm run passkey:evidence:verify`;
 - each command marked as run after passkey evidence was recorded;
 - true control attestations for ledger balanced postings, balance projections, idempotency, append-only finalized transactions, reason-required audit, default PII masking, maker-checker separation, workflow durability, outbox durability, balanced reconciliation adjustments, target areas without disallowed stack, ignored generated artifacts, synthetic-only data, and absence of Node-only critical dependencies.
 
