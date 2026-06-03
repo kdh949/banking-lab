@@ -14,6 +14,8 @@ This document does not mark Node retirement ready.
 
 Not proven. Existing Keycloak evidence proves WebAuthn required-action blocking, the committed synthetic realm WebAuthn policy, passkey recovery role segregation, and a staff-terminal browser smoke with simulator tokens disabled. The browser smoke uses Chromium CDP `WebAuthn.enable` plus `WebAuthn.addVirtualAuthenticator`; that is valid local WebAuthn required-action evidence, but it is not non-synthetic passkey evidence.
 
+The 2026-06-03 live-readiness run proved that the local manual passkey platform stack can start with simulator tokens disabled, Keycloak discovery/JWKS reachable, and Spring `/health` reporting the target Kotlin/Spring synthetic boundary. That still does not prove non-synthetic passkey operations because no real platform authenticator or hardware security key ceremony has been completed and no `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` artifact exists.
+
 ## Required Evidence Before Passing
 
 - A live Keycloak realm is imported from `infra/keycloak/realm-banking-lab.json`.
@@ -157,6 +159,31 @@ npm run passkey:evidence:live-readiness
 ```
 
 This checks the prepared command template against the live Keycloak discovery document, Keycloak JWKS endpoint, and Spring `/health` response. It requires the discovery issuer and JWKS URI to match the configured local `banking-lab` realm, the authorization-code endpoint to be present, at least one JWKS signing key, and Spring `/health` to return `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`. It still does not prove non-synthetic passkey operations because no real platform-authenticator or hardware-security-key ceremony has been completed.
+
+## 2026-06-03 Live Platform Readiness Evidence
+
+The following commands were run against an isolated local Compose project before the manual browser ceremony:
+
+```bash
+npm run passkey:evidence:prepare
+npm run passkey:evidence:preflight
+npm run passkey:evidence:readiness
+COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_POSTGRES_PORT=15477 BANKING_LAB_CORE_BANKING_PORT=18126 BANKING_LAB_KEYCLOAK_PORT=18127 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18127/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres keycloak core-banking
+curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration
+curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health
+COMPOSE_PROJECT_NAME=banking-lab-passkey-manual docker compose --profile platform ps postgres keycloak core-banking
+npm run passkey:evidence:live-readiness
+```
+
+Results:
+
+- The Compose command built and started `postgres`, `keycloak`, and `core-banking` under `banking-lab-passkey-manual`.
+- Keycloak discovery returned issuer `http://localhost:18127/realms/banking-lab` and JWKS URI `http://localhost:18127/realms/banking-lab/protocol/openid-connect/certs`.
+- Spring `/health` returned `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`.
+- `COMPOSE_PROJECT_NAME=banking-lab-passkey-manual docker compose --profile platform ps postgres keycloak core-banking` showed all three services running, with Postgres healthy and ports `15477`, `18127`, and `18126` published.
+- The first sandboxed `npm run passkey:evidence:live-readiness` attempt failed because Node `fetch` could not reach loopback endpoints from the sandbox. The same command passed under the approved execution path against the live local endpoints.
+
+This is platform-readiness evidence only. It does not create the generated passkey evidence artifact, does not assert `manual-live-passkey`, and must not be used to mark `non-synthetic-passkey-operations` passed.
 
 ## Manual Runbook Boundary
 

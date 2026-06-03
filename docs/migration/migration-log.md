@@ -2279,6 +2279,36 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Passkey Live Platform Readiness Smoke
+
+Changes completed:
+
+- Ran the passkey manual evidence preparation, preflight, static readiness, isolated Compose platform startup, live endpoint probes, and `passkey:evidence:live-readiness` against a real local `banking-lab-passkey-manual` stack.
+- Updated the passkey evidence boundary and evidence-refresh review to record the live readiness evidence without marking non-synthetic passkey operations complete.
+
+Verification:
+
+- `npm run passkey:evidence:prepare` passed and generated ignored local TODO templates under `tmp/passkey-evidence-manual/`.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run passkey:evidence:readiness` passed.
+- The first sandboxed Compose startup failed because the Docker socket was unavailable from the sandbox.
+- `COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_POSTGRES_PORT=15477 BANKING_LAB_CORE_BANKING_PORT=18126 BANKING_LAB_KEYCLOAK_PORT=18127 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18127/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres keycloak core-banking` passed under approved Docker execution.
+- `curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/realms/banking-lab/.well-known/openid-configuration` passed and returned issuer `http://localhost:18127/realms/banking-lab`.
+- `curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health` passed and returned `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`.
+- `COMPOSE_PROJECT_NAME=banking-lab-passkey-manual docker compose --profile platform ps postgres keycloak core-banking` showed Postgres healthy and Keycloak/core-banking running on ports `18127` and `18126`.
+- The first sandboxed `npm run passkey:evidence:live-readiness` failed because Node `fetch` could not reach loopback endpoints.
+- `npm run passkey:evidence:live-readiness` passed under approved execution against the live local endpoints.
+
+Result:
+
+- The future manual passkey ceremony now has a proven local platform readiness checkpoint using real Keycloak discovery/JWKS and Spring health responses with simulator tokens disabled.
+- This does not mark Node retirement ready, does not create a passkey artifact, and does not prove non-synthetic passkey operations.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key ceremony and generated redacted artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Passkey Manual Ceremony Evidence Guard
 
 Changes completed:
