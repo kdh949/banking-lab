@@ -101,4 +101,4 @@ The earlier representative live drill hardened `LiveTemporalWorkerSmokeIntegrati
 
 ## Retirement Impact
 
-This closes live Compose PostgreSQL process restart coverage for all current synthetic Temporal workflow contracts. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes live Compose PostgreSQL process restart coverage for all current synthetic Temporal workflow contracts. The platform host-crash-shaped drill is recorded in `docs/test-evidence/temporal-platform-host-crash-drill.md`. Node retirement remains blocked until non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

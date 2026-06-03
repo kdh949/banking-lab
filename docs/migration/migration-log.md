@@ -1664,3 +1664,39 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Outbox worker trace/log correlation is now proven for the current synthetic target-stack outbox publish path.
 - Host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Platform Host-Crash-Shaped Temporal And Outbox Drills
+
+Changes completed:
+
+- Extended `LiveTemporalWorkerSmokeIntegrationTest` with a live platform host-crash-shaped drill that starts all current Temporal workflow case types, waits for `WAITING_APPROVAL`, kills `core-banking-temporal-worker`, `temporal`, and `postgres`, restarts them on the same task queue and volumes, then verifies checker approval completion from Temporal history.
+- Extended `LiveOutboxWorkerSmokeIntegrationTest` with a live platform host-crash-shaped drill that creates a durable `PENDING` outbox row, kills the eventing platform services, restarts PostgreSQL, Redpanda, and `core-banking-outbox-worker`, then verifies the row becomes `PUBLISHED` and a Redpanda record is observable.
+- Added `docs/test-evidence/temporal-platform-host-crash-drill.md` and `docs/test-evidence/outbox-platform-host-crash-drill.md`.
+- Updated evidence, parity, failure-drill, architecture, and node-retirement gate docs while keeping Node retirement blocked.
+
+Verification:
+
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.temporal.LiveTemporalWorkerSmokeIntegrationTest.live all Temporal workflows survive Compose platform host crash restart before approval completion'` passed without live Temporal env, proving compile and env-gated skip behavior.
+- `env COMPOSE_PROJECT_NAME=banking-lab-temporal-host-crash-drill BANKING_LAB_POSTGRES_PORT=15510 BANKING_LAB_TEMPORAL_PORT=17260 BANKING_LAB_TEMPORAL_TASK_QUEUE=banking-case-workflows-host-crash-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres temporal core-banking-temporal-worker` passed.
+- `env BANKING_LAB_LIVE_TEMPORAL_TARGET=127.0.0.1:17260 BANKING_LAB_LIVE_TEMPORAL_TASK_QUEUE=banking-case-workflows-host-crash-drill BANKING_LAB_LIVE_TEMPORAL_COMPOSE_PROJECT=banking-lab-temporal-host-crash-drill BANKING_LAB_POSTGRES_PORT=15510 BANKING_LAB_TEMPORAL_PORT=17260 BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.temporal.LiveTemporalWorkerSmokeIntegrationTest.live all Temporal workflows survive Compose platform host crash restart before approval completion'` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-temporal-host-crash-drill docker compose ps --all` showed PostgreSQL healthy and Temporal plus the restarted worker running after the drill.
+- `env COMPOSE_PROJECT_NAME=banking-lab-temporal-host-crash-drill docker compose logs --no-color --tail=360 core-banking-temporal-worker` showed transient `UNAVAILABLE` poller failures during the outage and `COMPLETED` workflow logs for complaint answer, FDS release, FDS block, AML closure, reconciliation adjustment, account hold, and account release.
+- `env COMPOSE_PROJECT_NAME=banking-lab-temporal-host-crash-drill BANKING_LAB_POSTGRES_PORT=15510 BANKING_LAB_TEMPORAL_PORT=17260 BANKING_LAB_TEMPORAL_TASK_QUEUE=banking-case-workflows-host-crash-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v` removed the temporary Temporal drill stack.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest.live outbox worker publishes pending event after Compose platform host crash restart'` passed without live outbox env, proving compile and env-gated skip behavior.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-host-crash-drill BANKING_LAB_POSTGRES_PORT=15511 BANKING_LAB_REDPANDA_PORT=19110 BANKING_LAB_REDPANDA_ADMIN_PORT=19710 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-host-crash-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker` passed.
+- `env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-host-crash-drill BANKING_LAB_POSTGRES_PORT=15511 BANKING_LAB_REDPANDA_PORT=19110 BANKING_LAB_REDPANDA_ADMIN_PORT=19710 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-host-crash-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest.live outbox worker publishes pending event after Compose platform host crash restart'` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-host-crash-drill docker compose ps --all` showed PostgreSQL healthy, Redpanda running, and the restarted outbox worker running.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-host-crash-drill docker compose logs --no-color --tail=260 core-banking-outbox-worker` showed `observability.outbox.worker event=batch ... attempted=1 published=1 failed=0 deadLettered=0` for `OBX-HOST-CRASH-9CB5A46E-5BFB-4F62-9676-6EE04776D6E6`.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-host-crash-drill docker compose logs --no-color --tail=180 redpanda` showed recovery from an existing data directory and Kafka listener startup after restart.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-host-crash-drill BANKING_LAB_POSTGRES_PORT=15511 BANKING_LAB_REDPANDA_PORT=19110 BANKING_LAB_REDPANDA_ADMIN_PORT=19710 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-host-crash-drill BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v` removed the temporary outbox drill stack.
+
+Result:
+
+- The Temporal platform drill proved all current synthetic Temporal workflow case types survive a simultaneous PostgreSQL, Temporal server, and worker outage before checker approval and complete after restart.
+- The outbox platform drill proved a durable pending event survives PostgreSQL, Redpanda, and worker outage before publish, then publishes once after restart with `PUBLISHED` state and a Redpanda record.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Current target-stack host-crash-shaped evidence is now proven for the synthetic Temporal workflow and outbox eventing paths.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.

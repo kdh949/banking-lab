@@ -182,5 +182,5 @@ Result: passed for complaint, FDS, AML, reconciliation adjustment, and account h
 
 ## Remaining Integration Work
 
-- Broaden workflow/container failure drills beyond the current worker/server/PostgreSQL restart paths into host crash shapes and additional database/process-failure variants; Loki ingestion, local alert evaluation, and dashboard provisioning are covered in `docs/test-evidence/observability-stack-smoke.md`.
+- Keep broadening workflow/container failure drills as new database/process-failure variants are introduced. Current worker/server/PostgreSQL restart paths and the Compose platform host-crash-shaped restart are covered in `docs/test-evidence/temporal-container-worker-restart-drill.md`, `docs/test-evidence/temporal-server-restart-drill.md`, `docs/test-evidence/temporal-postgres-restart-drill.md`, and `docs/test-evidence/temporal-platform-host-crash-drill.md`; Loki ingestion, local alert evaluation, and dashboard provisioning are covered in `docs/test-evidence/observability-stack-smoke.md`.
 - Add API-backed channel tests that start and observe these workflows.
