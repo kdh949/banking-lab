@@ -125,8 +125,8 @@
     {
       "nodeSuite": "tests/complaintWorkflow.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintEntryApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/ComplaintCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintConfirmApiParityIntegrationTest.kt; packages/screen-engine/test/manifest-parity.test.ts; apps/complaint-portal/e2e/complaint-portal-parity.spec.ts; apps/customer-web/e2e/customer-web-parity.spec.ts",
+      "targetStatus": "pass",
       "controls": [
         "workflow",
         "complaint",

@@ -43,6 +43,25 @@ class ComplaintCaseService(
     fun find(caseId: String): ComplaintCaseDto =
         findForRead(caseId)
 
+    @Transactional
+    fun listCustomerComplaints(customerId: String): CustomerComplaintListResponse {
+        val resolvedCustomerId = customerId.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("customerId is required for complaint list")
+        BankingLabAuthContext.requireCustomerOwnership(resolvedCustomerId)
+        val items = jdbc.query(
+            complaintSql(
+                """
+                WHERE customer_id = :customerId
+                ORDER BY created_at, complaint_case_id
+                """.trimIndent()
+            ),
+            mapOf("customerId" to resolvedCustomerId),
+            this::mapCase
+        )
+        appendCustomerComplaintViewAudit(resolvedCustomerId, items)
+        return CustomerComplaintListResponse(items = items)
+    }
+
     fun createCustomerComplaint(command: CustomerComplaintEntryCommand): CustomerComplaintEntryResponse {
         return runSerializableComplaintCommand {
             createCustomerComplaintInTransaction(command)
@@ -266,6 +285,33 @@ class ComplaintCaseService(
         )
         appendTimeline(complaint.caseId, "ANSWERED", complaint.status, "ANSWERED", answeredBy, "answer sent")
         return findForRead(complaint.caseId)
+    }
+
+    private fun appendCustomerComplaintViewAudit(customerId: String, items: List<ComplaintCaseDto>) {
+        val principal = BankingLabAuthContext.get()
+        auditEvents.append(
+            eventType = "COMPLAINT_VIEW",
+            actorType = "CUSTOMER",
+            actorId = principal?.subject ?: customerId,
+            actorRole = principal?.roles?.sorted()?.joinToString(",") ?: "CUSTOMER",
+            screenId = "CMP-102",
+            businessReferenceId = customerId,
+            customerId = customerId,
+            reason = null,
+            payload = mapOf(
+                "caseCount" to items.size,
+                "cases" to items.map {
+                    mapOf(
+                        "caseId" to it.caseId,
+                        "category" to it.category,
+                        "status" to it.status,
+                        "slaDueAt" to it.slaDueAt.toString()
+                    )
+                },
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
     }
 
     private fun updateComplaintForDraft(caseId: String, draft: ComplaintAnswerDraftDto, approvalId: String) {

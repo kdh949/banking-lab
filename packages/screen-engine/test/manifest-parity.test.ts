@@ -30,6 +30,32 @@ test("target staff high-risk commands require maker-checker approval metadata", 
   }
 });
 
+test("target complaint workflow manifests cover staff and customer views", async () => {
+  const manifests = await loadExpandedManifests(manifestRoot);
+  const byId = new Map(manifests.map((manifest) => [manifest.screenId, manifest]));
+
+  const staffWorkflow = byId.get("CMP-201");
+  const customerIntake = byId.get("CMP-101");
+  const customerStatus = byId.get("CMP-102");
+
+  assert.equal(staffWorkflow?.app, "staff-terminal");
+  assert.equal(staffWorkflow?.type, "CASE");
+  assert.equal(staffWorkflow?.approval?.makerChecker, true);
+  assert.equal(staffWorkflow?.controlMetadata.approval.makerChecker, true);
+  assert.equal(staffWorkflow?.audit.reasonRequired, true);
+  assert.equal(staffWorkflow?.workflow?.states.includes("WAITING_APPROVAL"), true);
+  assert.equal(staffWorkflow?.workflow?.states.includes("ANSWERED"), true);
+
+  for (const manifest of [customerIntake, customerStatus]) {
+    assert.equal(manifest?.app, "complaint-portal");
+    assert.equal(manifest?.type, "CASE");
+    assert.equal(manifest?.audit.selfService, true);
+    assert.equal(manifest?.audit.maskingPolicy, "CUSTOMER_SELF");
+    assert.equal(manifest?.controlMetadata.workflow.required, true);
+    assert.equal(manifest?.sla?.targetHours, 72);
+  }
+});
+
 test("target staff PII inquiries require reason and non-empty masking policy", async () => {
   const manifests = await loadExpandedManifests(manifestRoot);
   const staffPiiScreens = manifests.filter((manifest) => manifest.app === "staff-terminal" && manifest.audit.piiAccess === true);

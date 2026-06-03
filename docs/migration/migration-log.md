@@ -1415,3 +1415,30 @@ Remaining blockers:
 
 - `tests/customerWeb.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Complaint Workflow Target Parity Slice
+
+Changes completed:
+
+- Added Spring customer complaint list API with customer ownership checks and self-service `COMPLAINT_VIEW` audit that omits complaint descriptions.
+- Strengthened `CustomerComplaintEntryApiParityIntegrationTest` for shared customer/staff case visibility, SLA/timeline parity, and masked audit payload evidence.
+- Added explicit screen-engine complaint manifest coverage for `CMP-201`, `CMP-101`, and `CMP-102`.
+- Updated the parity scenario map, parity coverage matrix, phase-5 complaint docs, architecture notes, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.complaint.CustomerComplaintEntryApiParityIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same customer complaint entry integration test command passed under the approved execution path.
+- `npm run packages:typecheck` passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests 'lab.banking.core.complaint.ComplaintWorkflowParityTest'` passed under the approved execution path.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.complaint.CustomerComplaintEntryApiParityIntegrationTest' --tests 'lab.banking.core.complaint.ComplaintCaseApiParityIntegrationTest' --tests 'lab.banking.core.complaint.CustomerComplaintConfirmApiParityIntegrationTest'` passed under the approved execution path.
+- `npm run test:screen-engine` passed.
+- `npm test` passed.
+- `npm run node:retirement-gate` passed and kept the Node reference retirement gate blocked.
+- Initial sandboxed `npm run parity` failed because the sandbox blocked local `127.0.0.1` listener creation for Node reference runtime tests.
+- The same parity command passed under the approved execution path and regenerated the evidence pack with no content diff.
+
+Remaining blockers:
+
+- `tests/complaintWorkflow.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- The remaining direct in-progress Node suite is `tests/fdsAmlReconciliation.test.mjs`; host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.

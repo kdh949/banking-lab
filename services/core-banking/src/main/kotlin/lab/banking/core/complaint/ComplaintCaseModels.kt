@@ -65,6 +65,10 @@ data class CustomerComplaintEntryResponse(
     val item: ComplaintCaseDto
 )
 
+data class CustomerComplaintListResponse(
+    val items: List<ComplaintCaseDto>
+)
+
 data class CustomerComplaintConfirmCommand(
     val customerId: String? = null,
     val note: String? = null,

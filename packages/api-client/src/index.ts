@@ -155,6 +155,10 @@ export interface CustomerComplaintEntryResponse {
   readonly item: ComplaintCaseDto;
 }
 
+export interface CustomerComplaintListResponse {
+  readonly items: readonly ComplaintCaseDto[];
+}
+
 export interface CustomerComplaintConfirmCommand {
   readonly customerId?: string;
   readonly note?: string;
@@ -458,6 +462,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    customerComplaints(customerId: string) {
+      return request<CustomerComplaintListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/complaints",
+        { customerId },
+        options.bearerToken
       );
     },
 

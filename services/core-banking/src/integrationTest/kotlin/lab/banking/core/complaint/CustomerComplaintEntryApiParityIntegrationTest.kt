@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -58,6 +59,57 @@ class CustomerComplaintEntryApiParityIntegrationTest {
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
+    }
+
+    @Test
+    fun `customer and staff share the same complaint case with SLA and timeline`() {
+        val response = mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "TRANSFER_DISPUTE",
+                      "description": "Synthetic complaint workflow test",
+                      "reason": "Customer submitted complaint workflow parity"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.status").value("RECEIVED"))
+            .andExpect(jsonPath("$.item.slaDueAt").exists())
+            .andExpect(jsonPath("$.item.timeline[0].type").value("RECEIVED"))
+            .andReturn()
+
+        val created = objectMapper.readTree(response.response.contentAsString).path("item")
+        val caseId = created.path("caseId").asText()
+
+        val customerList = mockMvc.perform(
+            get("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .queryParam("customerId", "SYN-CUS-001")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val staffList = mockMvc.perform(
+            get("/api/staff/complaints")
+                .header("Authorization", bearer("complaint01", listOf("COMPLAINT_HANDLER")))
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val customerItems = objectMapper.readTree(customerList.response.contentAsString).path("items")
+        val staffItems = objectMapper.readTree(staffList.response.contentAsString)
+        assertEquals(true, customerItems.any { it.path("caseId").asText() == caseId })
+        assertEquals(true, staffItems.any { it.path("caseId").asText() == caseId })
+        assertEquals(true, customerItems.first { it.path("caseId").asText() == caseId }.path("slaDueAt").asText().isNotBlank())
+        assertEquals("RECEIVED", customerItems.first { it.path("caseId").asText() == caseId }.path("timeline").first().path("type").asText())
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMPLAINT_VIEW' AND actor_type = 'CUSTOMER' AND screen_id = 'CMP-102'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'COMPLAINT_VIEW' AND payload_json::text LIKE '%Synthetic complaint workflow test%'"))
     }
 
     @Test
