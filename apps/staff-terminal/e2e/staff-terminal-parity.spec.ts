@@ -64,6 +64,34 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await expect(page.getByText("프린터")).toBeVisible();
 });
 
+test("staff terminal renders CST-001 through the inquiry manifest renderer", async ({ page }) => {
+  await page.goto(`${baseUrl}/?screen=CST-001`);
+
+  const workArea = page.locator(".manifest-work-area");
+  const titleMeta = page.locator(".manifest-title-meta");
+  const rail = page.locator(".right-rail");
+
+  await expect(page.getByText("INZENT Banking")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Customer Integrated Search" })).toBeVisible();
+  await expect(page.getByText("CST-001")).toBeVisible();
+  await expect(titleMeta.getByText("CST001", { exact: true })).toBeVisible();
+  await expect(workArea.locator(".manifest-search-panel")).toContainText("Search Panel");
+  await expect(page.getByLabel("Customer Name")).toBeVisible();
+  await expect(page.getByLabel("Phone")).toBeVisible();
+  await expect(page.getByLabel("Customer ID")).toBeVisible();
+  await expect(page.getByText("Business reason required")).toBeVisible();
+  await expect(page.getByLabel("Lookup Reason")).toBeVisible();
+  await expect(workArea.locator(".manifest-result-panel")).toContainText("Result Table");
+  await expect(page.getByText("maskedName")).toBeVisible();
+  await expect(page.getByText("K** D***")).toBeVisible();
+  await expect(rail.locator(".manifest-audit-panel")).toContainText("Audit Panel");
+  await expect(page.getByText("CUSTOMER_SEARCH")).toBeVisible();
+  await expect(rail.locator(".manifest-masking-panel")).toContainText("Masking Panel");
+  await expect(page.getByText("CUSTOMER_PII")).toBeVisible();
+  await expect(page.getByText("Status Bar")).toBeVisible();
+  await expect(page.getByText("manifest renderer")).toBeVisible();
+});
+
 test("staff terminal shell has no app-router one-off business screens", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const componentDir = path.join(repoRoot, "apps", app, "src", "components");
@@ -75,6 +103,7 @@ test("staff terminal shell has no app-router one-off business screens", async ()
   expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
   expect(pageSource).toContain("loadChannelManifests");
   expect(pageSource).toContain("TerminalNavigationWorkbench");
+  expect(pageSource).toContain("StaffManifestScreenRenderer");
   expect(screenSource).toContain("TerminalPortalDashboard");
   expect(screenSource).toContain("TerminalShell");
   expect(uiSource).toContain("TerminalField");

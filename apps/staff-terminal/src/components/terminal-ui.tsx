@@ -106,6 +106,8 @@ export type StatusDevice = {
 };
 
 export type TableRow = readonly ReactNode[];
+export type TerminalFieldType = "text" | "search" | "select" | "date" | "amount" | "readonly" | "textarea";
+export type TerminalFieldChangeHandler = ChangeEventHandler<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -155,25 +157,31 @@ export function TerminalButton({
 export function TerminalField({
   label,
   fieldType,
+  name,
   options = [],
   className = "",
   value,
   defaultValue,
   placeholder,
   readOnly,
+  required = false,
+  rows = 3,
   ariaLabel,
   onChange
 }: {
   readonly label: string;
-  readonly fieldType: "text" | "search" | "select" | "date" | "amount" | "readonly";
+  readonly fieldType: TerminalFieldType;
+  readonly name?: string;
   readonly options?: readonly string[];
   readonly className?: string;
   readonly value?: string | number;
   readonly defaultValue?: string | number;
   readonly placeholder?: string;
   readonly readOnly?: boolean;
+  readonly required?: boolean;
+  readonly rows?: number;
   readonly ariaLabel?: string;
-  readonly onChange?: ChangeEventHandler<HTMLInputElement>;
+  readonly onChange?: TerminalFieldChangeHandler;
 }) {
   const sharedClassName = cx("terminal-field-control", `terminal-field-${fieldType}`);
 
@@ -181,17 +189,39 @@ export function TerminalField({
     <label className={cx("terminal-field", className)}>
       <span>{label}</span>
       {fieldType === "select" ? (
-        <select className={sharedClassName} defaultValue={(defaultValue as string | undefined) ?? options[0]} aria-label={ariaLabel ?? label}>
+        <select
+          className={sharedClassName}
+          defaultValue={(defaultValue as string | undefined) ?? options[0]}
+          name={name}
+          required={required}
+          aria-label={ariaLabel ?? label}
+          onChange={onChange}
+        >
           {options.map((option) => (
             <option key={option}>{option}</option>
           ))}
         </select>
+      ) : fieldType === "textarea" ? (
+        <textarea
+          className={sharedClassName}
+          defaultValue={defaultValue}
+          name={name}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          required={required}
+          rows={rows}
+          value={value}
+          onChange={onChange}
+          aria-label={ariaLabel ?? label}
+        />
       ) : (
         <input
           className={sharedClassName}
           defaultValue={defaultValue}
+          name={name}
           placeholder={placeholder}
           readOnly={fieldType === "readonly" || readOnly}
+          required={required}
           type={fieldType === "amount" ? "text" : fieldType}
           value={value}
           onChange={onChange}

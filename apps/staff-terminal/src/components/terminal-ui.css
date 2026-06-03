@@ -478,6 +478,200 @@
   font-weight: 800;
 }
 
+.terminal-field-textarea {
+  min-height: 72px;
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+.manifest-terminal-body {
+  align-items: stretch;
+}
+
+.manifest-work-area {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.manifest-screen-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  padding: 8px 12px;
+  gap: 12px;
+}
+
+.manifest-screen-title h1 {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.manifest-screen-title span,
+.manifest-title-meta span,
+.manifest-endpoint,
+.manifest-muted,
+.manifest-table-note {
+  color: var(--muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.manifest-title-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.manifest-title-meta span,
+.manifest-endpoint {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-container-low);
+  padding: 2px 6px;
+}
+
+.manifest-panel {
+  min-height: 0;
+}
+
+.manifest-search-form {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.manifest-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manifest-reason-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(186, 26, 26, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(186, 26, 26, 0.04);
+  padding: 10px;
+}
+
+.manifest-reason-panel.is-optional {
+  border-color: var(--border);
+  background: var(--surface-container-low);
+}
+
+.manifest-reason-panel strong {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.manifest-reason-panel span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.manifest-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manifest-result-panel .dense-table {
+  border-bottom: 1px solid var(--border);
+}
+
+.manifest-result-panel .dense-table td:first-child,
+.manifest-result-panel .dense-table th:first-child {
+  width: auto;
+  text-align: left;
+}
+
+.manifest-table-note {
+  padding: 8px 12px;
+}
+
+.manifest-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manifest-definition-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.manifest-definition-list div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+
+.manifest-definition-list dt {
+  color: var(--muted);
+}
+
+.manifest-definition-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manifest-action-list,
+.manifest-mask-list,
+.manifest-coverage-list,
+.manifest-empty-state {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.manifest-action-list div,
+.manifest-mask-list span,
+.manifest-coverage-list span {
+  display: grid;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.manifest-action-list strong {
+  color: var(--primary);
+}
+
+.manifest-action-list span,
+.manifest-empty-state span {
+  color: var(--muted);
+}
+
+.manifest-rail-panel {
+  min-height: 0;
+}
+
+.manifest-rail-panel .manifest-definition-list dd {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .terminal-footer-links {
   display: grid;
   gap: 6px;

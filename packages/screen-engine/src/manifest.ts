@@ -119,6 +119,7 @@ function buildControlMetadata(manifest: ScreenManifest) {
     audit: {
       enabled: manifest.audit.enabled === true,
       reasonRequired: manifest.audit.reasonRequired === true,
+      eventTypes: manifest.audit.eventTypes || [],
       piiAccess: manifest.audit.piiAccess === true,
       selfService: manifest.audit.selfService === true,
       maskingPolicy
@@ -211,6 +212,14 @@ export function validateManifest(manifest: ScreenManifest): true {
   }
   if (manifest.audit.piiAccess === true && manifest.audit.reasonRequired !== true && manifest.audit.selfService !== true) {
     throw new Error(`${manifest.screenId} PII access must require a reason`);
+  }
+  if (
+    manifest.app === "staff-terminal" &&
+    manifest.type === "INQUIRY" &&
+    manifest.audit.piiAccess === true &&
+    (!Array.isArray(manifest.audit.eventTypes) || manifest.audit.eventTypes.length === 0)
+  ) {
+    throw new Error(`${manifest.screenId} staff PII inquiry must declare audit.eventTypes`);
   }
   if (manifest.type === "INQUIRY") {
     requireField(manifest, "query");

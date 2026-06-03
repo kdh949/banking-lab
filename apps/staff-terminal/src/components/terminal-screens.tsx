@@ -32,7 +32,7 @@ type ManifestEvidence = {
   readonly makerChecker: number;
 };
 
-const topModules = [
+export const topModules = [
   { label: "수신", icon: "account_balance_wallet", active: true },
   { label: "여신", icon: "real_estate_agent" },
   { label: "외환", icon: "currency_exchange" },
@@ -41,7 +41,7 @@ const topModules = [
   { label: "신용카드", icon: "credit_card" }
 ] as const;
 
-const sideTools = [
+export const sideTools = [
   { label: "업무메뉴", icon: "menu" },
   { label: "즐겨찾기", icon: "star" },
   { label: "워크플로우", icon: "account_tree", active: true },
@@ -51,14 +51,14 @@ const sideTools = [
   { label: "오피스", icon: "business_center" }
 ] as const;
 
-const taskTabs = ["업무포털", "신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"] as const;
+export const taskTabs = ["업무포털", "신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"] as const;
 
-const workspaceTabs = [
+export const workspaceTabs = [
   { title: "[20000] 수신_네비게이션", active: true },
   { title: "[S5801] 외환이자수수료" }
 ] as const;
 
-const treeGroups = [
+export const treeGroups = [
   {
     label: "수신",
     children: [

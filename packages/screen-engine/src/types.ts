@@ -40,6 +40,7 @@ export type ScreenManifest = {
   audit: {
     enabled: boolean;
     reasonRequired: boolean;
+    eventTypes?: string[];
     piiAccess?: boolean;
     maskingPolicy: string;
     selfService?: boolean;
