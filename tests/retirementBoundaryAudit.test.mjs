@@ -38,4 +38,6 @@ test("retirement boundary audit is wired into the package scripts and gate evide
   assert.match(script, /targetSourceRoots/);
   assert.match(script, /disallowedTargetSourceExtensions/);
   assert.match(script, /Target source directories contain disallowed Node\/static source files/);
+  assert.match(script, /targetSourceDependencyPattern/);
+  assert.match(script, /Target source files depend on legacy Node reference\/runtime modules/);
 });

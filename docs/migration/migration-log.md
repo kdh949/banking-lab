@@ -1778,6 +1778,31 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Target Source Legacy Dependency Audit Hardening
+
+Changes completed:
+
+- Strengthened `npm run retirement:audit` to fail if target `apps/`, `services/`, or `packages/` source files import or reference `legacy-node-reference`, root Node `runtime` modules, or direct `.mjs` dependencies.
+- Added migration foundation coverage proving target source files do not depend on the legacy Node reference/runtime boundary.
+- Kept Node reference imports isolated to `legacy-node-reference`, `runtime`, `scripts`, and `tests`.
+
+Verification:
+
+- `node --test tests/retirementBoundaryAudit.test.mjs tests/migrationFoundation.test.mjs` passed 8 tests.
+- `npm run retirement:audit` passed with blocked status, 37 target anchors checked, and the same remaining incomplete gates.
+- `npm run scripts:typecheck` passed.
+- `rg -n "legacy-node-reference|runtime/(labApp|server)\\.mjs|\\.mjs[\\\"']" apps services packages --glob '!**/.next/**' --glob '!**/build/**' --glob '!**/node_modules/**'` returned no target source matches.
+
+Result:
+
+- The target source boundary now guards both forbidden source file extensions and forbidden dependencies on the Node reference/runtime.
+- Final retirement review remains pending, but it now has stronger automated evidence for target-source independence.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Target Source Stack Boundary Audit Hardening
 
 Changes completed:

@@ -117,6 +117,8 @@ const disallowedTargetSourceExtensions = [
   ".html"
 ];
 
+const targetSourceDependencyPattern = /legacy-node-reference|(?:\.\.\/)+runtime\/(?:labApp|server)\.mjs|runtime\/(?:labApp|server)\.mjs|\.mjs["']/;
+
 const targetAnchors = [
   "services/core-banking/build.gradle.kts",
   "services/core-banking/src/main/kotlin/lab/banking/core/CoreBankingApplication.kt",
@@ -199,7 +201,8 @@ const gate = JSON.parse(await readFile(gatePath, "utf8")) as NodeRetirementGate;
 const parity = JSON.parse(await readFile(parityPath, "utf8")) as ParityScenarioMap;
 const files = (await Promise.all(scanRoots.map((root) => listFiles(root)))).flat();
 const mjsFiles = files.filter((file) => file.endsWith(".mjs"));
-const sourceFiles = files.filter((file) => /\.(mjs|ts)$/.test(file));
+const sourceFiles = files.filter((file) => /\.(mjs|ts|tsx|kt|kts|java|py)$/.test(file));
+const targetSourceFiles = sourceFiles.filter((file) => targetSourceRoots.some((root) => file.startsWith(`${root}/`)));
 const errors: string[] = [];
 
 const unboundedMjsFiles = mjsFiles.filter((file) => !isAllowedMjsPath(file));
@@ -255,6 +258,18 @@ for (const file of sourceFiles) {
 if (staleServiceImports.length > 0) {
   errors.push("Source files still import legacy Node modules through target services/:");
   errors.push(...staleServiceImports.map((file) => `  - ${file}`));
+}
+
+const targetLegacyDependencies: string[] = [];
+for (const file of targetSourceFiles) {
+  const source = await readFile(file, "utf8");
+  if (targetSourceDependencyPattern.test(source)) {
+    targetLegacyDependencies.push(file);
+  }
+}
+if (targetLegacyDependencies.length > 0) {
+  errors.push("Target source files depend on legacy Node reference/runtime modules:");
+  errors.push(...targetLegacyDependencies.map((file) => `  - ${file}`));
 }
 
 const missingReferenceDeclarations = requiredReferencePaths.filter((path) => !gate.nodeReferenceRuntime.paths.includes(path));

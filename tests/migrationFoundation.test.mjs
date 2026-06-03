@@ -113,6 +113,20 @@ test("target source directories do not contain Node or static shell source files
   assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/form-engine/src"), true);
 });
 
+test("target source directories do not import legacy Node reference runtime", async () => {
+  const files = (await Promise.all(["apps", "services", "packages"].map((root) => listFiles(root)))).flat();
+  const sourceFiles = files.filter((filePath) => /\.(ts|tsx|kt|kts|java|py)$/.test(filePath));
+  const offenders = [];
+  for (const filePath of sourceFiles) {
+    const source = await readFile(filePath, "utf8");
+    if (/legacy-node-reference|(?:\.\.\/)+runtime\/(?:labApp|server)\.mjs|runtime\/(?:labApp|server)\.mjs|\.mjs["']/.test(source)) {
+      offenders.push(filePath);
+    }
+  }
+
+  assert.deepEqual(offenders, []);
+});
+
 test("migration playbook names parity command, structured error contract, and retirement gate", async () => {
   const playbook = await readFile("docs/migration/kotlin-next-playbook.md", "utf8");
 
