@@ -47,7 +47,7 @@
       "nodeSuite": "tests/ledgerCore.test.mjs",
       "scenarioCount": 7,
       "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",

@@ -1367,3 +1367,26 @@ Remaining blockers:
 
 - `tests/ledger.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Ledger Core Command Target Parity Slice
+
+Changes completed:
+
+- Strengthened `LedgerCommandServiceIntegrationTest` for the seven `tests/ledgerCore.test.mjs` oracle scenarios.
+- Added PostgreSQL side-effect assertions for failed withdrawal, duplicate reversal, and closed-day direct posting rejection.
+- Changed durable idempotency replay coverage to use an internal transfer command so both accounts prove the same ledger source of truth is replayed once.
+- Updated the parity scenario map, parity coverage matrix, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same integration test command passed under the approved execution path.
+- `npm test` passed.
+- `npm run node:retirement-gate` passed and kept the Node reference retirement gate blocked.
+- Initial sandboxed `npm run parity` failed because the sandbox blocked local `127.0.0.1` listener creation for Node reference runtime tests.
+- The same parity command passed under the approved execution path and regenerated the evidence pack with no content diff.
+
+Remaining blockers:
+
+- `tests/ledgerCore.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.

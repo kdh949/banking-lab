@@ -86,28 +86,53 @@ class LedgerCommandServiceIntegrationTest {
         seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
         seedAccount("CUS-B", "ACC-B", "LAB-100-000002")
 
-        ledgerCommandService.deposit(deposit("ACC-A", 100_000, "IT-DEP-A"))
+        val deposit = ledgerCommandService.deposit(deposit("ACC-A", 100_000, "IT-DEP-A"))
         val withdrawal = ledgerCommandService.withdraw(withdrawal("ACC-A", 20_000, "IT-WDR-A"))
         val transfer = ledgerCommandService.internalTransfer(transfer("ACC-A", "ACC-B", 30_000, "IT-TRF-A"))
 
+        assertEquals("DEPOSIT", deposit.value.transactionType)
         assertEquals("WITHDRAWAL", withdrawal.value.transactionType)
         assertEquals("INTERNAL_TRANSFER", transfer.value.transactionType)
+        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-DEP-A"))
+        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-WDR-A"))
+        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-TRF-A"))
         assertEquals(50_000, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
         assertEquals(30_000, ledgerCommandService.balance("ACC-B").availableBalanceMinor)
     }
 
     @Test
+    fun `withdrawal cannot exceed available balance and does not mutate ledger on failure`() {
+        seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
+        ledgerCommandService.deposit(deposit("ACC-A", 10_000, "IT-WDR-FAIL-SEED"))
+        val beforeTransactionCount = countTransactions()
+        val beforeBalance = ledgerCommandService.balance("ACC-A").availableBalanceMinor
+
+        val error = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-A", 999_999_999, "IT-WDR-BAD-001"))
+        }
+
+        assertEquals("LEDGER_INSUFFICIENT_AVAILABLE_BALANCE", error.code)
+        assertEquals(beforeTransactionCount, countTransactions())
+        assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-WDR-BAD-001"))
+        assertEquals(beforeBalance, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
+    }
+
+    @Test
     fun `duplicate idempotency key replays the original ledger result without duplicate postings or outbox events`() {
         seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
+        seedAccount("CUS-B", "ACC-B", "LAB-100-000002")
+        ledgerCommandService.deposit(deposit("ACC-A", 50_000, "IT-IDEMP-SEED"))
 
-        val first = ledgerCommandService.deposit(deposit("ACC-A", 10_000, "IT-IDEMP-DEP"))
-        val second = ledgerCommandService.deposit(deposit("ACC-A", 10_000, "IT-IDEMP-DEP"))
+        val first = ledgerCommandService.internalTransfer(transfer("ACC-A", "ACC-B", 10_000, "IT-IDEMP-TRF"))
+        val second = ledgerCommandService.internalTransfer(transfer("ACC-A", "ACC-B", 10_000, "IT-IDEMP-TRF"))
 
         assertEquals(false, first.replayed)
         assertEquals(true, second.replayed)
         assertEquals(first.value.id, second.value.id)
-        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-IDEMP-DEP"))
+        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-IDEMP-TRF"))
         assertEquals(1, countOutboxEvents(first.value.id, "LedgerTransactionPosted"))
+        assertEquals(40_000, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
+        assertEquals(10_000, ledgerCommandService.balance("ACC-B").availableBalanceMinor)
     }
 
     @Test
@@ -142,6 +167,25 @@ class LedgerCommandServiceIntegrationTest {
         assertEquals(transfer.value.id, reversal.value.originalTransactionId)
         assertEquals(100_000, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
         assertEquals(0, ledgerCommandService.balance("ACC-B").availableBalanceMinor)
+
+        val beforeDuplicateReversalCount = countTransactionsByType("REVERSAL")
+        val duplicateError = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.reverseTransaction(
+                ReversalCommand(
+                    originalTransactionId = transfer.value.id,
+                    idempotencyKey = "IT-REV-DUP-001",
+                    requestedBy = "branch01",
+                    requestedChannel = "STAFF_TERMINAL",
+                    reason = "Synthetic duplicate reversal test"
+                )
+            )
+        }
+
+        assertEquals("LEDGER_REVERSAL_POLICY_VIOLATION", duplicateError.code)
+        assertEquals(beforeDuplicateReversalCount, countTransactionsByType("REVERSAL"))
+        assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-REV-DUP-001"))
+        assertEquals(100_000, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
+        assertEquals(0, ledgerCommandService.balance("ACC-B").availableBalanceMinor)
     }
 
     @Test
@@ -161,6 +205,9 @@ class LedgerCommandServiceIntegrationTest {
         }
 
         assertEquals("LEDGER_CLOSED_DAY_IMMUTABLE", error.code)
+        assertEquals(0, countTransactionsByType("DEPOSIT"))
+        assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-CLOSED-DEP"))
+        assertEquals(0, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
     }
 
     @Test
@@ -341,6 +388,13 @@ class LedgerCommandServiceIntegrationTest {
         jdbc.queryForObject(
             "SELECT count(*) FROM ledger_transactions WHERE transaction_type = :transactionType",
             mapOf("transactionType" to transactionType),
+            Int::class.java
+        ) ?: 0
+
+    private fun countTransactions(): Int =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM ledger_transactions",
+            emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
 
