@@ -61,4 +61,4 @@ Blocked. The default final review artifact intentionally does not exist yet beca
 
 ## Retirement Impact
 
-`npm run node:retirement-gate` must run this verifier if `retirement-review` is later marked `pass`. This keeps the final retirement claim fail-closed until a concrete review artifact exists and passes schema, command, and control checks.
+`npm run retirement:review-preflight` runs this verifier while the review gate is pending and requires it to fail against the missing default artifact path. `npm run goal:completion-audit` and `npm run node:retirement-gate` must run this verifier if `retirement-review` is later marked `pass`. This keeps the final retirement claim fail-closed until a concrete review artifact exists and passes schema, command, and control checks.

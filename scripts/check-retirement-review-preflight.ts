@@ -32,6 +32,7 @@ const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
+const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
 const readySimulationScriptPath = "scripts/check-node-retirement-ready-simulation.ts";
 const finalReviewRecorderTestPath = "tests/finalRetirementReviewRecorder.test.mjs";
 const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
@@ -170,6 +171,25 @@ function requireIncludes(source: string, needle: string, message: string): void 
   }
 }
 
+function assertPendingFinalReviewVerifierFailsClosed(): void {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", finalReviewVerifierScriptPath], {
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024
+  });
+  const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
+
+  if (result.status === 0) {
+    errors.push("Final retirement review verifier must not pass while the final review artifact is missing and the review gate is pending.");
+    return;
+  }
+  if (!output.includes("Final retirement review verification failed")) {
+    errors.push("Final retirement review verifier must emit a strict failure message while the artifact is missing.");
+  }
+  if (!output.includes(`Could not read final retirement review artifact at ${finalReviewArtifactPath}`)) {
+    errors.push(`Final retirement review verifier must fail against the default artifact path: ${finalReviewArtifactPath}.`);
+  }
+}
+
 for (const path of [
   packageJsonPath,
   gatePath,
@@ -255,6 +275,7 @@ if (passkeyGate?.status !== "pending") {
 if (reviewGate?.status !== "pending") {
   errors.push("retirement-review must remain pending until passkey evidence exists and final review is actually performed.");
 }
+assertPendingFinalReviewVerifierFailsClosed();
 for (const path of [
   reviewDocPath,
   stackAreaAuditDocPath,
@@ -331,5 +352,5 @@ if (errors.length > 0) {
 }
 
 console.log("Node retirement review preflight: pass");
-console.log("Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
+console.log("Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, strict final review verifier, and retirement gate checks are consistent.");
 console.log("This does not mark Node retirement ready; non-synthetic passkey operations and final retirement review remain pending.");

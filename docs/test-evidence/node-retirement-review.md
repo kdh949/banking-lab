@@ -18,7 +18,7 @@ Run:
 npm run retirement:review-preflight
 ```
 
-The preflight combines the current retirement boundary audit, stack retirement area audit, evidence-refresh check, passkey evidence preflight, and retirement gate check. It verifies that target source directories stay free of legacy Node/runtime dependencies by implementation area, current evidence is refreshed, current mapped parity remains target-backed, and the retirement gate is blocked only by non-synthetic passkey operations and final retirement review.
+The preflight combines the current retirement boundary audit, stack retirement area audit, generated artifact boundary audit, evidence-refresh check, passkey evidence preflight, strict final retirement review verifier, completion audit, ready-state simulation, and retirement gate check. It verifies that target source directories stay free of legacy Node/runtime dependencies by implementation area, generated output is not treated as target source, current evidence is refreshed, current mapped parity remains target-backed, the final review verifier fails closed while the generated artifact is missing, and the retirement gate is blocked only by non-synthetic passkey operations and final retirement review.
 
 Run the area-specific stack audit directly when reviewing the "no disallowed stack by area" requirement:
 
@@ -65,6 +65,8 @@ npm run retirement:final-review:verify
 ```
 
 That verifier must pass against `docs/test-evidence/generated/final-node-retirement-review.json`; a missing artifact is still a blocker if `retirement-review` is marked pass.
+
+While `retirement-review` is still pending, the preflight also runs the strict final retirement review verifier and requires it to fail against the missing default artifact path. This proves the verifier is executable and fail-closed before any future ready claim.
 
 ## Current Result
 
