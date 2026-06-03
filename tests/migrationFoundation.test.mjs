@@ -135,3 +135,11 @@ test("migration playbook names parity command, structured error contract, and re
   assert.match(playbook, /node-retirement-gate\.json/);
   assert.match(playbook, /Do not remove or rewrite/);
 });
+
+test("node retirement gate requires boundary audit before ready status", async () => {
+  const script = await readFile("scripts/check-node-retirement-gate.ts", "utf8");
+
+  assert.match(script, /check-retirement-boundary-audit\.ts/);
+  assert.match(script, /runReadyBoundaryAudit/);
+  assert.match(script, /Retirement boundary audit must pass before the Node reference gate can be ready/);
+});

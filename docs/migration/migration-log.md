@@ -1778,6 +1778,29 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Ready Gate Boundary Audit Coupling
+
+Changes completed:
+
+- Updated `npm run node:retirement-gate` so a future `ready` status must also pass `scripts/check-retirement-boundary-audit.ts`.
+- Kept current blocked gate output unchanged while adding a ready-only guard against target-source stack or dependency regressions.
+- Added migration foundation coverage that locks the ready-gate dependency on the retirement boundary audit.
+
+Verification:
+
+- `node --test tests/migrationFoundation.test.mjs` should pass with the ready-boundary static check.
+- `npm run node:retirement-gate` should continue to pass with expected blocked status until non-synthetic passkey evidence, evidence-refresh completion, and final retirement review are complete.
+
+Result:
+
+- A future ready claim now depends on both required-gate status and the source/reference boundary audit.
+- The current Node retirement gate remains blocked.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Target Source Legacy Dependency Audit Hardening
 
 Changes completed:

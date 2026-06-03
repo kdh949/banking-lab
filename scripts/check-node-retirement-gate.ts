@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 
 type RequiredGate = {
@@ -15,6 +16,7 @@ type NodeRetirementGate = {
 };
 
 const gatePath = "docs/migration/node-retirement-gate.json";
+const boundaryAuditPath = "scripts/check-retirement-boundary-audit.ts";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const passkeyEvidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
 const passkeyEvidenceArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
@@ -124,6 +126,24 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   return errors;
 }
 
+function runReadyBoundaryAudit(): string[] {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", boundaryAuditPath], {
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return [];
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  return [
+    "Retirement boundary audit must pass before the Node reference gate can be ready.",
+    output || result.error?.message || "Boundary audit failed without output."
+  ];
+}
+
 const missingReferencePaths: string[] = [];
 for (const referencePath of gate.nodeReferenceRuntime.paths) {
   if (!await exists(referencePath)) {
@@ -160,6 +180,18 @@ if (ready && incompleteGates.length > 0) {
     console.error(`- ${item.id}: ${item.status}`);
   }
   process.exit(1);
+}
+
+if (ready) {
+  const boundaryAuditErrors = runReadyBoundaryAudit();
+  if (boundaryAuditErrors.length > 0) {
+    console.error("Node reference retirement gate: failed");
+    console.error("Ready boundary audit failed:");
+    for (const error of boundaryAuditErrors) {
+      console.error(error);
+    }
+    process.exit(1);
+  }
 }
 
 if (!ready) {
