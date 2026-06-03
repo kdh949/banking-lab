@@ -1,65 +1,84 @@
 import type { ScreenManifest } from "../../../../packages/screen-engine/src/types";
 import { ApiBackedStaffPanel } from "../components/ApiBackedStaffPanel";
+import {
+  DenseTable,
+  Panel,
+  StatusBar,
+  TaskTabs,
+  TerminalMiniSidebar,
+  TerminalTopbar,
+  TerminalTreeSidebar,
+  WorkspaceTabs
+} from "../components/terminal-ui";
 import { loadChannelManifests } from "../lib/manifestLoader";
-
-type DomainGroup = {
-  label: string;
-  manifests: ScreenManifest[];
-};
 
 const topModules = [
   { label: "수신", icon: "account_balance_wallet", active: true },
-  { label: "여신", icon: "real_estate_agent", active: false },
-  { label: "외환", icon: "currency_exchange", active: false },
-  { label: "고객", icon: "group", active: false },
-  { label: "CRM", icon: "support_agent", active: false },
-  { label: "신용카드", icon: "credit_card", active: false }
+  { label: "여신", icon: "real_estate_agent" },
+  { label: "외환", icon: "currency_exchange" },
+  { label: "고객", icon: "group" },
+  { label: "CRM", icon: "support_agent" },
+  { label: "신용카드", icon: "credit_card" }
 ] as const;
 
 const sideTools = [
-  { label: "업무메뉴", icon: "menu", active: false },
-  { label: "즐겨찾기", icon: "star", active: false },
+  { label: "업무메뉴", icon: "menu" },
+  { label: "즐겨찾기", icon: "star" },
   { label: "워크플로우", icon: "account_tree", active: true },
-  { label: "탑리스트", icon: "leaderboard", active: false },
-  { label: "날짜계산기", icon: "calendar_today", active: false },
-  { label: "일정", icon: "event", active: false },
-  { label: "오피스", icon: "business_center", active: false }
+  { label: "탑리스트", icon: "leaderboard" },
+  { label: "날짜계산기", icon: "calendar_today" },
+  { label: "일정", icon: "event" },
+  { label: "오피스", icon: "business_center" }
 ] as const;
 
-const taskTabs = ["업무포털", "고객조회", "계좌조회", "원장내역", "정보변경", "승인", "감사", "민원"];
+const taskTabs = ["업무포털", "신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"] as const;
 
-const notices = [
-  ["1", "Synthetic PII masking policy review", "보안통제", "2026-06-04"],
-  ["2", "Staff access reason-required workflow", "채널운영", "2026-06-04"],
-  ["3", "Temporal case retry drill window", "플랫폼", "2026-06-03"],
-  ["4", "Maker-checker separation evidence refresh", "감사", "2026-06-03"],
-  ["5", "Ledger projection reconciliation smoke", "원장", "2026-06-02"]
+const noticeRows = [
+  ["No.", "제목", "담당부서", "게시일"],
+  ["5", ">>> [LAB차세대] 통합단말 시행관련 문서 <<<", "채널운영", "2026.06.04"],
+  ["4", "전자금융 통제 및 고객확인 시뮬레이션 안내", "고객업무", "2026.06.03"],
+  ["3", "내부통제 점검 화면 reason-code 입력 기준", "감사", "2026.06.02"],
+  ["2", "업무포털 주요 공지: 합성 데이터 운영 원칙", "IT기획", "2026.06.01"],
+  ["1", "개인정보 마스킹 기본 적용 및 승인 절차", "보안", "2026.05.31"]
+] as const;
+
+const faqRows = [
+  ["5", "[수신] 통합단말 조회에서 마스킹 해제 승인 요청"],
+  ["4", "[고객] 고객상세 화면 업무사유 입력 방법"],
+  ["3", "[원장] 거래내역 재처리와 역분개 확인 절차"],
+  ["2", "[민원] 답변 승인 반려 시 재상신 흐름"],
+  ["1", "[FDS] 의심거래 보류 해제 시 체크리스트"]
+] as const;
+
+const manualRows = [
+  ["업무매뉴얼", "계좌개설 사후점검 화면 사용법"],
+  ["업무매뉴얼", "통합고객조회 표준 처리 기준"],
+  ["상품설명서", "합성 예금상품 약관 예시"],
+  ["업무매뉴얼", "감사 로그 확인 및 증적 제출"],
+  ["업무매뉴얼", "승인함 maker-checker 운영"]
+] as const;
+
+const newScreenRows = [
+  ["S5801", "외환이자수수료 조회", "반영"],
+  ["CST002", "마스킹 고객상세", "반영"],
+  ["APR001", "승인함", "반영"],
+  ["FDS201", "이상거래 케이스", "검토"],
+  ["CMP201", "민원 답변", "검토"]
+] as const;
+
+const insideProducts = [
+  "합성 예금 패키지",
+  "디지털 입출금 계좌",
+  "비대면 예금 전환",
+  "수표/어음 처리 시뮬레이터"
 ] as const;
 
 const workflowEvents = [
   "CST-002 masked customer detail loaded",
-  "CST-103 waiting maker-checker approval",
-  "CMP-201 answer draft requires checker",
-  "FDS/AML console cross-channel case visible"
+  "APR-001 declared maker-checker approval",
+  "FDS case routed to workflow timeline",
+  "Exception/retry panel ready"
 ] as const;
-
-const exceptions = [
-  ["SERIALIZABLE retry", "ready", "green"],
-  ["Duplicate idempotency key", "guarded", "blue"],
-  ["PII unmask step-up", "manager only", "amber"]
-] as const;
-
-function list(value: readonly string[] | undefined | null): string {
-  return Array.isArray(value) && value.length > 0 ? value.join(", ") : "none";
-}
-
-function endpointOf(manifest: ScreenManifest): string {
-  return manifest.query?.endpoint || manifest.api?.command || manifest.actions?.[0]?.target || "declared in workflow";
-}
-
-function fieldCount(manifest: ScreenManifest): number {
-  return manifest.query?.fields?.length || manifest.fields?.length || manifest.sections?.length || manifest.widgets?.length || 0;
-}
 
 function domainLabel(domain: string): string {
   const labels: Record<string, string> = {
@@ -85,32 +104,47 @@ function typeLabel(type: ScreenManifest["type"]): string {
   return labels[type];
 }
 
-function groupByDomain(manifests: ScreenManifest[]): DomainGroup[] {
-  const groups = new Map<string, ScreenManifest[]>();
-  for (const manifest of manifests) {
-    const existing = groups.get(manifest.domain) ?? [];
-    existing.push(manifest);
-    groups.set(manifest.domain, existing);
-  }
-  return [...groups.entries()]
-    .sort(([left], [right]) => domainLabel(left).localeCompare(domainLabel(right)))
-    .map(([domain, items]) => ({
-      label: domainLabel(domain),
-      manifests: items.sort((left, right) => left.screenId.localeCompare(right.screenId))
-    }));
+function endpointOf(manifest: ScreenManifest): string {
+  return manifest.query?.endpoint || manifest.api?.command || manifest.actions?.[0]?.target || "declared in workflow";
 }
 
-function statusPill(manifest: ScreenManifest): string {
-  if (manifest.approval?.makerChecker) {
-    return "maker-checker";
-  }
-  if (manifest.audit.reasonRequired) {
-    return "reason-required";
-  }
-  if (manifest.type === "CASE") {
-    return "workflow";
-  }
-  return "manifest";
+function buildSourceTree(manifests: ScreenManifest[], activeManifest: ScreenManifest | undefined) {
+  const syntheticFolders = [
+    {
+      label: "수신",
+      children: [
+        { code: "11", label: "수신기본(신규,해지)" },
+        { code: "15", label: "계약공통" },
+        { code: "21", label: "수신기본(입출금)" },
+        { code: "23", label: "수표/어음", selected: true },
+        { code: "31", label: "제신고" }
+      ]
+    },
+    {
+      label: "통합단말",
+      children: manifests
+        .filter((manifest) => ["staff-workstation", "customer", "approval"].includes(manifest.domain))
+        .slice(0, 6)
+        .map((manifest) => ({
+          code: manifest.transactionCode ?? manifest.screenId,
+          label: manifest.title,
+          selected: manifest.screenId === activeManifest?.screenId
+        }))
+    },
+    {
+      label: "감사/리스크",
+      children: manifests
+        .filter((manifest) => ["audit", "complaint", "ledger"].includes(manifest.domain))
+        .slice(0, 5)
+        .map((manifest) => ({
+          code: manifest.transactionCode ?? manifest.screenId,
+          label: manifest.title,
+          selected: false
+        }))
+    }
+  ];
+
+  return syntheticFolders;
 }
 
 export default async function StaffTerminalPage() {
@@ -119,345 +153,164 @@ export default async function StaffTerminalPage() {
   const makerChecker = manifests.filter((manifest) => manifest.approval?.required).length;
   const piiScreens = manifests.filter((manifest) => manifest.audit.piiAccess).length;
   const activeManifest = manifests.find((manifest) => manifest.screenId === "CST-002") ?? manifests[0];
-  const dashboardManifest = manifests.find((manifest) => manifest.screenId === "WRK-001");
-  const domainGroups = groupByDomain(manifests);
+  const manifestRows = manifests.slice(0, 6).map((manifest) => [
+    manifest.transactionCode ?? manifest.screenId,
+    domainLabel(manifest.domain),
+    typeLabel(manifest.type),
+    endpointOf(manifest)
+  ]);
 
   return (
     <main className="bank-terminal">
-      <header className="global-topbar">
-        <div className="brand-block">
-          <div className="brand-title">Banking Lab</div>
-          <label className="global-search">
-            <span className="material-symbols-outlined" aria-hidden="true">search</span>
-            <input aria-label="Integrated search" placeholder="통합검색" />
-          </label>
-        </div>
-        <nav className="module-nav" aria-label="Primary banking modules">
-          {topModules.map((module) => (
-            <button className={module.active ? "module-tab is-active" : "module-tab"} type="button" key={module.label}>
-              <span className="material-symbols-outlined" aria-hidden="true">{module.icon}</span>
-              <span>{module.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="top-actions" aria-label="Operator actions">
-          <button type="button" aria-label="Help desk">
-            <span className="material-symbols-outlined" aria-hidden="true">support_agent</span>
-          </button>
-          <button type="button" aria-label="Settings">
-            <span className="material-symbols-outlined" aria-hidden="true">settings</span>
-          </button>
-          <button className="finish-button" type="button">
-            <span className="material-symbols-outlined" aria-hidden="true">logout</span>
-            완료
-          </button>
-        </div>
-      </header>
-
+      <TerminalTopbar brand="INZENT Banking" modules={topModules} />
       <div className="terminal-frame">
-        <aside className="mini-sidebar" aria-label="Staff utility navigation">
-          {sideTools.map((tool) => (
-            <button className={tool.active ? "mini-tool is-active" : "mini-tool"} type="button" key={tool.label}>
-              <span className="material-symbols-outlined" aria-hidden="true">{tool.icon}</span>
-              <span>{tool.label}</span>
-            </button>
-          ))}
-        </aside>
-
-        <aside className="context-sidebar" aria-label="Role-aware menu">
-          <div className="sidebar-header">
-            <strong>업무 메뉴 트리</strong>
-            <span className="material-symbols-outlined" aria-hidden="true">push_pin</span>
-          </div>
-          <div className="operator-card">
-            <div className="operator-avatar" aria-hidden="true">BL</div>
-            <div>
-              <strong>branch01</strong>
-              <span>BRANCH_STAFF</span>
-              <span>지점: Synthetic Branch</span>
-            </div>
-          </div>
-          <button className="operator-button" type="button">내 권한 보기</button>
-          <div className="tree-list">
-            {domainGroups.map((group) => (
-              <div className="tree-group" key={group.label}>
-                <div className="tree-folder">
-                  <span className="material-symbols-outlined" aria-hidden="true">arrow_drop_down</span>
-                  <span className="material-symbols-outlined folder-icon" aria-hidden="true">folder_open</span>
-                  {group.label}
-                </div>
-                <div className="tree-children">
-                  {group.manifests.map((manifest) => (
-                    <div
-                      className={manifest.screenId === activeManifest?.screenId ? "tree-item is-selected" : "tree-item"}
-                      key={manifest.screenId}
-                    >
-                      <span className="material-symbols-outlined" aria-hidden="true">description</span>
-                      <span>{manifest.screenId}</span>
-                      <strong>{manifest.transactionCode ?? manifest.screenId}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+        <TerminalMiniSidebar tools={sideTools} />
+        <TerminalTreeSidebar
+          groups={buildSourceTree(manifests, activeManifest)}
+          operator={{ initials: "BL", name: "branch01", role: "BRANCH_STAFF", branch: "Synthetic Branch" }}
+        />
 
         <section className="workspace">
-          <div className="window-tabs" aria-label="Open terminal tabs">
-            <button className="window-tab is-active" type="button">
-              <span className="tab-dot" aria-hidden="true" />
-              [WRK001] 통합단말_업무포털
-              <span className="material-symbols-outlined" aria-hidden="true">close</span>
-            </button>
-            <button className="window-tab" type="button">
-              <span className="tab-dot muted" aria-hidden="true" />
-              [{activeManifest?.transactionCode ?? "CST002"}] {activeManifest?.title ?? "Customer Detail"}
-              <span className="material-symbols-outlined" aria-hidden="true">close</span>
-            </button>
-          </div>
-
-          <div className="task-tabs" aria-label="Task tabs">
-            {taskTabs.map((tab, index) => (
-              <button className={index === 0 ? "task-tab is-active" : "task-tab"} type="button" key={tab}>
-                {tab}
-              </button>
-            ))}
-          </div>
+          <WorkspaceTabs
+            activeTitle="[20000] 수신_네비게이션"
+            secondaryTitle={`[${activeManifest?.transactionCode ?? "S5801"}] ${
+              activeManifest?.title ?? "외환이자수수료"
+            }`}
+          />
+          <TaskTabs tabs={taskTabs} />
 
           <div className="terminal-body">
             <section className="main-canvas" aria-label="Manifest-driven integrated terminal">
-              <div className="command-strip" aria-label="Staff terminal controls">
-                <div className="command-title">
-                  <p className="eyebrow">Synthetic staff terminal</p>
+              <div className="source-bento">
+                <Panel title="수신업무" icon="account_balance_wallet" className="panel-quick">
+                  <div className="quick-grid">
+                    {["신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"].map((label) => (
+                      <button type="button" key={label}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <DenseTable
+                    columns={["거래코드", "업무", "유형", "API"]}
+                    rows={manifestRows}
+                  />
+                </Panel>
+
+                <Panel title="수신_중요공지" icon="article" className="panel-notice">
+                  <DenseTable columns={noticeRows[0]} rows={noticeRows.slice(1)} />
+                </Panel>
+
+                <Panel title="FAQ BEST 5" icon="support_agent" className="panel-small">
+                  <DenseTable columns={["No.", "질문"]} rows={faqRows} />
+                </Panel>
+
+                <Panel title="매뉴얼" icon="description" className="panel-small">
+                  <DenseTable columns={["구분", "제목"]} rows={manualRows} />
+                </Panel>
+
+                <Panel title="신규화면/개선사항" icon="leaderboard" className="panel-small">
+                  <DenseTable columns={["코드", "화면명", "상태"]} rows={newScreenRows} />
+                </Panel>
+
+                <section className="manifest-evidence-strip" aria-label="Staff terminal control evidence">
                   <h1>Transaction-code workspace</h1>
-                </div>
-                <label className="terminal-command">
-                  <span>Transaction code</span>
-                  <input value={manifests[0]?.transactionCode || ""} readOnly aria-label="Transaction code" />
-                </label>
-                <div className="metric-card">
-                  <span className="metric">{manifests.length}</span>
-                  <span className="metric-label">screens</span>
-                </div>
-                <div className="metric-card">
-                  <span className="metric">{reasonRequired}</span>
-                  <span className="metric-label">reason-required</span>
-                </div>
-                <div className="metric-card">
-                  <span className="metric">{makerChecker}</span>
-                  <span className="metric-label">maker-checker</span>
-                </div>
+                  <label className="terminal-command">
+                    <span>Transaction code</span>
+                    <input value={manifests[0]?.transactionCode || ""} readOnly aria-label="Transaction code" />
+                  </label>
+                  <div className="metric-card">
+                    <span className="metric">{manifests.length}</span>
+                    <span className="metric-label">screens</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric">{reasonRequired}</span>
+                    <span className="metric-label">reason-required</span>
+                  </div>
+                  <div className="metric-card">
+                    <span className="metric">{makerChecker}</span>
+                    <span className="metric-label">maker-checker</span>
+                  </div>
+                  <p>Masked by default</p>
+                  <p>Business reason required</p>
+                  <p>APR-001 declared</p>
+                </section>
+
+                <ApiBackedStaffPanel />
               </div>
-
-              <section className="control-grid" aria-label="Core staff terminal controls">
-                <article className="terminal-panel customer-context">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">badge</span>
-                    <strong>Customer Context</strong>
-                  </div>
-                  <dl className="compact-definition">
-                    <div>
-                      <dt>Customer</dt>
-                      <dd>SYN-CUS-001</dd>
-                    </div>
-                    <div>
-                      <dt>PII exposure</dt>
-                      <dd>Masked by default</dd>
-                    </div>
-                    <div>
-                      <dt>Lookup control</dt>
-                      <dd>Business reason required</dd>
-                    </div>
-                    <div>
-                      <dt>Approval inbox</dt>
-                      <dd>APR-001 declared</dd>
-                    </div>
-                  </dl>
-                </article>
-
-                <article className="terminal-panel">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">account_tree</span>
-                    <strong>Workflow timeline</strong>
-                  </div>
-                  <ol className="timeline-list">
-                    {workflowEvents.map((event) => (
-                      <li key={event}>
-                        <span aria-hidden="true" />
-                        {event}
-                      </li>
-                    ))}
-                  </ol>
-                </article>
-
-                <article className="terminal-panel">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">policy</span>
-                    <strong>Audit log panel</strong>
-                  </div>
-                  <div className="audit-summary">
-                    <span>{piiScreens} masked PII screens</span>
-                    <span>{reasonRequired} reason-required lookups</span>
-                    <span>Append-only hash chain visible</span>
-                  </div>
-                </article>
-
-                <article className="terminal-panel">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">sync_problem</span>
-                    <strong>Exception/retry panel</strong>
-                  </div>
-                  <div className="exception-list">
-                    {exceptions.map(([label, value, tone]) => (
-                      <div className={`exception-row tone-${tone}`} key={label}>
-                        <span>{label}</span>
-                        <strong>{value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              </section>
-
-              <section className="bento-grid" aria-label="Operational workspace">
-                <article className="terminal-panel quick-menu">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">grid_view</span>
-                    <strong>{dashboardManifest?.title ?? "Integrated Workstation Dashboard"}</strong>
-                  </div>
-                  <div className="quick-menu-list">
-                    {manifests.slice(0, 7).map((manifest) => (
-                      <div className={manifest.screenId === activeManifest?.screenId ? "quick-menu-item is-selected" : "quick-menu-item"} key={manifest.screenId}>
-                        <span>{manifest.transactionCode ?? manifest.screenId}</span>
-                        <strong>{manifest.title}</strong>
-                        <em>{typeLabel(manifest.type)}</em>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="terminal-panel notice-table">
-                  <div className="panel-header split">
-                    <span>
-                      <span className="material-symbols-outlined" aria-hidden="true">campaign</span>
-                      Synthetic control notices
-                    </span>
-                    <button type="button">더보기 &gt;</button>
-                  </div>
-                  <div className="dense-table">
-                    <div className="table-head">
-                      <span>순번</span>
-                      <span>제목</span>
-                      <span>등록부서</span>
-                      <span>등록일시</span>
-                    </div>
-                    {notices.map(([number, title, owner, date]) => (
-                      <div className="table-row" key={number}>
-                        <span>{number}</span>
-                        <strong>{title}</strong>
-                        <span>{owner}</span>
-                        <span>{date}</span>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="terminal-panel manifest-table">
-                  <div className="panel-header">
-                    <span className="material-symbols-outlined" aria-hidden="true">view_list</span>
-                    <strong>Manifest-rendered staff screens</strong>
-                  </div>
-                  <div className="manifest-rows">
-                    {manifests.map((manifest) => (
-                      <article className="screen-card" key={manifest.screenId}>
-                        <div>
-                          <span className="screen-code">{manifest.transactionCode || manifest.screenId}</span>
-                          <h2>{manifest.title}</h2>
-                        </div>
-                        <div className="screen-meta-grid">
-                          <div>
-                            <span>Roles</span>
-                            <strong>{list(manifest.requiredRoles)}</strong>
-                          </div>
-                          <div>
-                            <span>Audit</span>
-                            <strong>{manifest.audit.reasonRequired ? "reason required" : "standard"}</strong>
-                          </div>
-                          <div>
-                            <span>Masking</span>
-                            <strong>{manifest.audit.maskingPolicy}</strong>
-                          </div>
-                          <div>
-                            <span>Approval</span>
-                            <strong>{manifest.approval?.required ? "maker-checker" : "not required"}</strong>
-                          </div>
-                        </div>
-                        <div className="detail-row">
-                          <span>{manifest.type}</span>
-                          <span>{manifest.domain}</span>
-                          <span>{fieldCount(manifest)} manifest elements</span>
-                          <strong>{statusPill(manifest)}</strong>
-                        </div>
-                        <p className="endpoint">{endpointOf(manifest)}</p>
-                      </article>
-                    ))}
-                  </div>
-                </article>
-              </section>
             </section>
 
             <aside className="inside-view" aria-label="Inside view and API smoke">
               <div className="inside-header">
-                <strong>Inside View</strong>
-                <span className="material-symbols-outlined" aria-hidden="true">close</span>
+                <strong>인사이드뷰</strong>
+                <span>MY INFO</span>
               </div>
-              <div className="inside-content">
-                <section className="inside-widget">
-                  <div className="inside-tabs">
-                    <button type="button">특이사항</button>
-                    <button type="button">거래성향</button>
-                    <button type="button">메모</button>
-                  </div>
-                  <dl className="compact-definition">
-                    <div>
-                      <dt>Active customer</dt>
-                      <dd>SYN-CUS-001</dd>
-                    </div>
-                    <div>
-                      <dt>Account</dt>
-                      <dd>LAB-***-0001</dd>
-                    </div>
-                  </dl>
-                </section>
-                <section className="inside-widget">
-                  <div className="panel-header compact">
-                    <span className="material-symbols-outlined" aria-hidden="true">inventory_2</span>
-                    <strong>내상품</strong>
-                  </div>
-                  <select aria-label="Synthetic product context">
-                    <option>우측 클릭 후 선택하세요</option>
-                  </select>
-                </section>
-                <ApiBackedStaffPanel />
+              <div className="inside-tabs" role="tablist" aria-label="Inside view tabs">
+                {["특이사항", "거래성향", "메모"].map((tab, index) => (
+                  <button className={index === 0 ? "is-active" : ""} type="button" key={tab}>
+                    {tab}
+                  </button>
+                ))}
               </div>
+              <Panel title="고객/거래 통제" compact>
+                <dl className="compact-definition">
+                  <div>
+                    <dt>Masking</dt>
+                    <dd>기본 마스킹</dd>
+                  </div>
+                  <div>
+                    <dt>Reason</dt>
+                    <dd>업무사유 필수</dd>
+                  </div>
+                  <div>
+                    <dt>Approval</dt>
+                    <dd>Maker-checker</dd>
+                  </div>
+                </dl>
+              </Panel>
+              <Panel title="상품추천" compact>
+                <ul className="inside-list">
+                  {insideProducts.map((product) => (
+                    <li key={product}>{product}</li>
+                  ))}
+                </ul>
+              </Panel>
+              <Panel title="Audit log panel" compact>
+                <dl className="compact-definition">
+                  <div>
+                    <dt>PII screens</dt>
+                    <dd>{piiScreens}</dd>
+                  </div>
+                  <div>
+                    <dt>reason-required</dt>
+                    <dd>{reasonRequired}</dd>
+                  </div>
+                </dl>
+              </Panel>
+              <Panel title="Workflow timeline" compact>
+                <ol className="timeline">
+                  {workflowEvents.map((event) => (
+                    <li key={event}>{event}</li>
+                  ))}
+                </ol>
+              </Panel>
+              <Panel title="Exception/retry panel" compact>
+                <DenseTable
+                  columns={["상태", "처리"]}
+                  rows={[
+                    ["SERIALIZABLE retry", "ready"],
+                    ["Duplicate idempotency key", "guarded"],
+                    ["PII unmask step-up", "manager"]
+                  ]}
+                />
+              </Panel>
             </aside>
           </div>
-
-          <footer className="status-bar" aria-label="Terminal status">
-            <div>
-              <span className="material-symbols-outlined" aria-hidden="true">computer</span>
-              10.1.91.174
-              <strong>정상 연결</strong>
-            </div>
-            <div>
-              <span>프린터 ready</span>
-              <span>핀패드 simulator</span>
-              <span>즉발기 disabled</span>
-              <time dateTime="2026-06-04T01:37:24+09:00">2026-06-04 01:37:24</time>
-            </div>
-          </footer>
         </section>
       </div>
+      <StatusBar
+        left="화면명: 수신_네비게이션 | 합성 데이터 전용"
+        right={`screens ${manifests.length} / reason ${reasonRequired} / approvals ${makerChecker}`}
+      />
     </main>
   );
 }

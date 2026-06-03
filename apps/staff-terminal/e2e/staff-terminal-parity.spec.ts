@@ -36,16 +36,21 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
 
   await page.goto(baseUrl);
 
-  await expect(page.getByRole("heading", { name: "Transaction-code workspace" })).toBeVisible();
+  await expect(page.getByText("INZENT Banking")).toBeVisible();
+  await expect(page.getByText("[20000] 수신_네비게이션")).toBeVisible();
+  await expect(page.getByRole("button", { name: "업무포털" })).toBeVisible();
+  await expect(page.getByText("수신업무")).toBeVisible();
+  await expect(page.getByText("수신_중요공지")).toBeVisible();
+  await expect(page.getByText("FAQ BEST 5")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Transaction-code workspace" })).toBeAttached();
   await expect(page.getByLabel("Transaction code")).toHaveValue(screens[0].transactionCode);
-  await expect(page.locator(".metric", { hasText: String(reasonRequired) })).toBeVisible();
-  await expect(page.locator(".metric-label", { hasText: "reason-required" })).toBeVisible();
-  await expect(page.locator(".metric", { hasText: String(makerChecker) })).toBeVisible();
-  await expect(page.getByText("maker-checker").first()).toBeVisible();
-  await expect(page.getByText("Masked by default")).toBeVisible();
-  await expect(page.getByText("Business reason required")).toBeVisible();
-  await expect(page.getByText("APR-001 declared")).toBeVisible();
-  await expect(page.getByText("Banking Lab")).toBeVisible();
+  await expect(page.locator(".metric", { hasText: String(reasonRequired) })).toBeAttached();
+  await expect(page.locator(".metric-label", { hasText: "reason-required" })).toBeAttached();
+  await expect(page.locator(".metric", { hasText: String(makerChecker) })).toBeAttached();
+  await expect(page.getByText("maker-checker").first()).toBeAttached();
+  await expect(page.getByText("Masked by default")).toBeAttached();
+  await expect(page.getByText("Business reason required")).toBeAttached();
+  await expect(page.getByText("APR-001 declared")).toBeAttached();
   await expect(page.getByLabel("Role-aware menu")).toBeVisible();
   await expect(page.getByLabel("Inside view and API smoke")).toBeVisible();
   await expect(page.getByText("Audit log panel")).toBeVisible();
