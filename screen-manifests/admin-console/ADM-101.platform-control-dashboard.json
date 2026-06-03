@@ -1,0 +1,24 @@
+{
+  "screenId": "ADM-101",
+  "title": "Platform Control Dashboard",
+  "app": "admin-console",
+  "type": "DASHBOARD",
+  "domain": "platform-admin",
+  "requiredRoles": ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "widgets": [
+    "synthetic-only-status",
+    "target-stack-readiness",
+    "node-reference-boundary",
+    "identity-recovery-segregation"
+  ]
+}

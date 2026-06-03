@@ -9,6 +9,7 @@ Agent D added Next.js App Router shells for these channel apps:
 - `ops-console`
 - `audit-console`
 - `fds-aml-console`
+- `admin-console`
 
 The existing `customer-web` Next scaffold remains unchanged because it already renders from `screen-manifests/customer-web`.
 
@@ -32,7 +33,7 @@ Each channel shell renders declared screen metadata only:
 - approval/maker-checker metadata
 - declared endpoints, actions, widgets, fields, or sections
 
-The shells remain manifest-first. The six active channel apps now include narrow API-backed smoke panels that use shared TypeScript clients instead of direct page-level fetch logic.
+The shells remain manifest-first. The seven active channel apps now include narrow API-backed smoke panels that use shared TypeScript clients instead of direct page-level fetch logic.
 
 ## Control Coverage
 
@@ -45,6 +46,8 @@ The ops console exposes daily closing and reconciliation screens, including the 
 The audit console exposes the hash-chain review inquiry manifest and its append-only evidence columns.
 
 The FDS/AML console exposes held-transfer review, release/block approval, AML STR simulation closure, workflow states, SLA, and masked customer context declarations.
+
+The admin console exposes platform control status and privileged security-policy parameter manifests, including maker-checker approval metadata for passkey recovery and simulator-token policy changes.
 
 ## Coordinator Integration
 
@@ -63,6 +66,7 @@ The first API-backed slice covered read-model calls:
 - `ops-console` calls the Spring reconciliation API and renders `REC-SYN-001`.
 - `audit-console` calls the Spring audit API and renders hash-chain validity plus `AUD-SYN-SEED-001`.
 - `fds-aml-console` calls the Spring FDS and AML APIs and renders `FDS-SYN-001` and `AML-SYN-001`.
+- `admin-console` calls the Spring admin platform API and renders synthetic-only, migration-target, and Node reference boundary controls.
 - Shared packages `@banking-lab/api-client` and `@banking-lab/auth-client` isolate API/auth concerns from the App Router page files.
 - The broad FDS-AML smoke still keeps simulator-token smoke coverage for local repeatability, and customer-web now has live Keycloak Authorization Code + PKCE smoke for all current API-backed customer paths through the Next BFF token exchange route.
 - Staff-terminal also has live Keycloak Authorization Code + PKCE smoke for masked lookup and branch-maker/manager-checker customer-change approval.
@@ -70,7 +74,7 @@ The first API-backed slice covered read-model calls:
 - Ops-console also has live Keycloak Authorization Code + PKCE smoke for ops-operator reconciliation adjustment, manager approval, and adjusted-item workflow failure-state rendering through its Next BFF token exchange route.
 - Audit-console also has live Keycloak Authorization Code + PKCE smoke for auditor hash-chain read-model evidence through its Next BFF token exchange route.
 - FDS/AML-console also has live Keycloak Authorization Code + PKCE smoke for risk read-model access, FDS release/block approval, AML closure approval, and duplicate workflow failure-state rendering through its Next BFF token exchange route.
-- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, and FDS/AML-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review.
+- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, FDS/AML-console, and admin-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review.
 
 Command-oriented browser smoke now runs in `customer-web`, `staff-terminal`, `complaint-portal`, `fds-aml-console`, and `ops-console`:
 

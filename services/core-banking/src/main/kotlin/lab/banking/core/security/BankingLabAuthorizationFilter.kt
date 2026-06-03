@@ -19,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 class BankingLabAuthorizationFilter(
     @param:Value("\${banking-lab.security.enabled:false}")
     private val enabled: Boolean,
-    @param:Value("\${banking-lab.cors.allowed-origins:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006}")
+    @param:Value("\${banking-lab.cors.allowed-origins:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006,http://127.0.0.1:3007}")
     private val allowedCorsOrigins: String,
     private val decoder: BankingLabTokenDecoder,
     private val auditEvents: AuditEventAppender,
@@ -74,6 +74,7 @@ class BankingLabAuthorizationFilter(
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "BRANCH_MANAGER")
+            path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
@@ -168,6 +169,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/customers") -> "CST-002"
             path.startsWith("/api/staff/pii") -> "CST-002"
             path.startsWith("/api/ops/") -> "OPS-201"
+            path.startsWith("/api/admin/") -> "ADM-101"
             path.startsWith("/api/customer/") -> "CWB-101"
             else -> "API"
         }

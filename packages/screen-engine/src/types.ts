@@ -1,6 +1,7 @@
 export type ScreenType = "INQUIRY" | "COMMAND" | "CASE" | "PARAMETER" | "DASHBOARD";
 
 export type ChannelAppId =
+  | "admin-console"
   | "audit-console"
   | "complaint-portal"
   | "customer-web"
@@ -51,6 +52,12 @@ export type ScreenManifest = {
     columns?: string[];
   };
   fields?: ManifestField[];
+  parameter?: {
+    namespace: string;
+    keys?: string[];
+    currentValueEndpoint?: string;
+    historyEndpoint?: string;
+  };
   api?: {
     command?: string;
   };

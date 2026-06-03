@@ -43,6 +43,11 @@ class KeycloakRealmPolicyTest {
         assertFalse(recoveryRoles.contains("CUSTOMER"))
         assertFalse(recoveryRoles.contains("BRANCH_STAFF"))
         assertFalse(recoveryRoles.contains("BRANCH_MANAGER"))
+
+        val clients = listMap(realm["clients"])
+        val adminClient = clients.single { it["clientId"] == "admin-console" }
+        assertTrue(listValue(adminClient["redirectUris"]).contains("http://localhost:3007/*"))
+        assertTrue(listValue(adminClient["webOrigins"]).contains("http://localhost:3007"))
     }
 
     @Suppress("UNCHECKED_CAST")

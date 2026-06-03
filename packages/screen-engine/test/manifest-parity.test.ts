@@ -10,10 +10,25 @@ test("target screen manifests validate and cover channel shells", async () => {
   const manifests = await loadManifests(manifestRoot);
   const apps = new Set(manifests.map((manifest) => manifest.app));
 
-  for (const app of ["customer-web", "staff-terminal", "complaint-portal", "ops-console", "audit-console", "fds-aml-console"]) {
+  for (const app of ["customer-web", "staff-terminal", "complaint-portal", "ops-console", "audit-console", "fds-aml-console", "admin-console"]) {
     assert.equal(apps.has(app), true, `${app} must have target manifest coverage`);
   }
-  assert.equal(manifests.length >= 26, true);
+  assert.equal(manifests.length >= 28, true);
+});
+
+test("target admin manifests cover privileged platform controls without one-off screens", async () => {
+  const manifests = await loadExpandedManifests(manifestRoot);
+  const adminManifests = manifests.filter((manifest) => manifest.app === "admin-console");
+  const parameter = adminManifests.find((manifest) => manifest.screenId === "ADM-201");
+
+  assert.equal(adminManifests.length >= 2, true);
+  assert.equal(parameter?.type, "PARAMETER");
+  assert.equal(parameter?.approval?.required, true);
+  assert.equal(parameter?.approval?.makerChecker, true);
+  assert.equal(parameter?.audit.reasonRequired, true);
+  assert.equal(parameter?.controlMetadata.approval.required, true);
+  assert.equal(parameter?.controlMetadata.approval.makerChecker, true);
+  assert.equal(parameter?.requiredRoles.includes("PASSKEY_RECOVERY_ADMIN"), true);
 });
 
 test("target staff high-risk commands require maker-checker approval metadata", async () => {

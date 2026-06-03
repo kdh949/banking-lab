@@ -1778,6 +1778,33 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Admin Console Target Surface
+
+Changes completed:
+
+- Added `admin-console` as a seventh manifest-driven Next target app on port 3007.
+- Added `ADM-101` platform-control dashboard and `ADM-201` privileged security-policy parameter manifests with compliance/passkey-recovery roles, reason-required audit metadata, and maker-checker approval metadata.
+- Added Spring `GET /api/admin/platform/summary` for synthetic-only platform controls, plus security filter coverage for `/api/admin/**`.
+- Added shared API client support, admin Playwright shell/API smoke hooks, Keycloak client redirect/audience config for `admin-console`, and CORS coverage for port 3007.
+- Updated screen-engine, scaffold, retirement-boundary, and evidence docs while keeping Node retirement blocked.
+
+Verification:
+
+- `npm run validate:manifests` should validate 28 screen manifests including `admin-console`.
+- `npm run next:admin-console:typecheck` should pass.
+- `npm --workspace @banking-lab/screen-engine run test` should pass with admin manifest coverage.
+- `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.admin.AdminPlatformApiParityIntegrationTest` should pass.
+
+Result:
+
+- The target architecture now has an admin UI surface instead of leaving admin as a plan-only artifact.
+- Admin live browser API/Keycloak evidence still needs a refreshed environment run before final retirement review.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, admin live browser evidence refresh, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Node Retirement Boundary Audit
 
 Changes completed:

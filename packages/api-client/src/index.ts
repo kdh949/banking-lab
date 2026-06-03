@@ -295,6 +295,19 @@ export interface AuditEventDto {
   readonly createdAt: string;
 }
 
+export interface AdminPlatformControlDto {
+  readonly controlId: string;
+  readonly status: string;
+  readonly evidence: string;
+}
+
+export interface AdminPlatformSummaryResponse {
+  readonly syntheticOnly: boolean;
+  readonly nodeReferenceRuntimeRetained: boolean;
+  readonly migrationTarget: string;
+  readonly controls: readonly AdminPlatformControlDto[];
+}
+
 export interface FdsCaseDto {
   readonly caseId: string;
   readonly transferReferenceId: string;
@@ -553,6 +566,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         "/api/audit/events",
+        {},
+        options.bearerToken
+      );
+    },
+
+    adminPlatformSummary() {
+      return request<AdminPlatformSummaryResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/admin/platform/summary",
         {},
         options.bearerToken
       );

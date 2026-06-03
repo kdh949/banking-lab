@@ -13,7 +13,8 @@ const apps = [
   ["complaint-portal", "@banking-lab/complaint-portal", 3003],
   ["ops-console", "@banking-lab/ops-console", 3004],
   ["audit-console", "@banking-lab/audit-console", 3005],
-  ["fds-aml-console", "@banking-lab/fds-aml-console", 3006]
+  ["fds-aml-console", "@banking-lab/fds-aml-console", 3006],
+  ["admin-console", "@banking-lab/admin-console", 3007]
 ] as const;
 
 export default defineConfig({

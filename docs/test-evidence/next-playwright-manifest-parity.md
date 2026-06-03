@@ -4,7 +4,7 @@ Review date: 2026-06-03
 
 ## Scope
 
-This evidence note covers the frontend parity scaffolding for the current Node retirement MVP gate. The active Next manifest shell scope is:
+This evidence note covers the frontend parity scaffolding for the current Node retirement gate. The active Next manifest shell scope is:
 
 - `customer-web`
 - `staff-terminal`
@@ -12,12 +12,13 @@ This evidence note covers the frontend parity scaffolding for the current Node r
 - `ops-console`
 - `audit-console`
 - `fds-aml-console`
+- `admin-console`
 
-`admin-console` is excluded from this MVP gate because `docs/migration/node-retirement-gate.json` currently enumerates the six shells above for `next-manifest-renderer` evidence. Adding `admin-console` would widen the gate rather than proving the current retirement scope. The gate remains blocked.
+`admin-console` is now included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. The gate remains blocked; the admin shell does not remove the non-synthetic passkey, evidence-refresh, or final retirement-review blockers.
 
 ## Added Playwright Coverage
 
-The root `playwright.config.ts` starts all six Next workspace dev servers through `webServer` entries and runs app-local specs under `apps/*/e2e`.
+The root `playwright.config.ts` starts all seven Next workspace dev servers through `webServer` entries and runs app-local specs under `apps/*/e2e`.
 
 The default specs validate manifest-rendered metadata:
 
@@ -36,8 +37,9 @@ When `BANKING_LAB_E2E_API_BASE_URL` is set, the specs additionally prove a read-
 - `ops-console` loads a synthetic reconciliation item from Spring.
 - `audit-console` loads audit event hash-chain evidence from Spring.
 - `fds-aml-console` loads synthetic FDS and AML cases from Spring.
+- `admin-console` loads a synthetic platform-control summary from Spring and keeps the Node reference boundary visible as blocked.
 
-These tests do not claim full backend parity, workflow durability, interactive Keycloak browser login, WebAuthn, or Node retirement readiness.
+These tests do not claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console has a Keycloak browser smoke hook for `security-admin01`, but live admin browser evidence must be rerun with `BANKING_LAB_E2E_API_BASE_URL` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` before treating it as live browser proof.
 
 ## Local Command
 

@@ -103,7 +103,9 @@ const targetAnchors = [
   "apps/audit-console/src/app/page.tsx",
   "apps/audit-console/src/components/ApiBackedAuditPanel.tsx",
   "apps/fds-aml-console/src/app/page.tsx",
-  "apps/fds-aml-console/src/components/ApiBackedRiskPanel.tsx"
+  "apps/fds-aml-console/src/components/ApiBackedRiskPanel.tsx",
+  "apps/admin-console/src/app/page.tsx",
+  "apps/admin-console/src/components/ApiBackedAdminPanel.tsx"
 ];
 
 function normalizePath(path: string): string {

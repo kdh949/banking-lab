@@ -1,0 +1,68 @@
+{
+  "screenId": "ADM-201",
+  "title": "Security Policy Parameter Change",
+  "app": "admin-console",
+  "type": "PARAMETER",
+  "domain": "platform-admin",
+  "highRisk": true,
+  "requiredRoles": ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false
+  },
+  "parameter": {
+    "namespace": "security",
+    "keys": ["simulatorTokensEnabled", "passkeyRecoveryDualControlRequired", "staffSessionTtlSeconds"],
+    "currentValueEndpoint": "GET /api/admin/platform/security-parameters",
+    "historyEndpoint": "GET /api/admin/platform/security-parameters/history"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["SECURITY_POLICY_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "parameterKey",
+      "label": "Parameter",
+      "type": "select",
+      "required": true,
+      "options": ["simulatorTokensEnabled", "passkeyRecoveryDualControlRequired", "staffSessionTtlSeconds"]
+    },
+    {
+      "name": "scheduledValue",
+      "label": "Scheduled Value",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "effectiveAt",
+      "label": "Effective Date Time",
+      "type": "datetime",
+      "required": true
+    },
+    {
+      "name": "rollbackPlan",
+      "label": "Rollback Plan",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/admin/platform/security-parameters/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}
