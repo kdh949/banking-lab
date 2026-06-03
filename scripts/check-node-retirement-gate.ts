@@ -18,9 +18,12 @@ type NodeRetirementGate = {
 const gatePath = "docs/migration/node-retirement-gate.json";
 const boundaryAuditPath = "scripts/check-retirement-boundary-audit.ts";
 const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
+const finalReviewVerifierPath = "scripts/verify-final-retirement-review.ts";
 const passkeyGateId = "non-synthetic-passkey-operations";
+const finalReviewGateId = "retirement-review";
 const passkeyEvidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
 const passkeyEvidenceArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
 const gate = JSON.parse(await readFile(gatePath, "utf8")) as NodeRetirementGate;
 
 async function exists(path: string): Promise<boolean> {
@@ -155,6 +158,50 @@ function runPasskeyEvidenceVerifier(): string[] {
   ];
 }
 
+async function validateFinalRetirementReviewGate(): Promise<string[]> {
+  const errors: string[] = [];
+  const reviewGate = gate.requiredGates.find((item) => item.id === finalReviewGateId);
+
+  if (!reviewGate) {
+    return [`Missing required retirement gate: ${finalReviewGateId}`];
+  }
+
+  if (reviewGate.status !== "pass") {
+    if (!/final retirement review/i.test(gate.statusReason)) {
+      errors.push("Gate statusReason must name final retirement review while the review gate is incomplete.");
+    }
+    return errors;
+  }
+
+  const verifierErrors = runFinalReviewVerifier();
+  if (verifierErrors.length > 0) {
+    errors.push(...verifierErrors);
+  }
+  return errors;
+}
+
+function runFinalReviewVerifier(): string[] {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", finalReviewVerifierPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      BANKING_LAB_FINAL_REVIEW_ARTIFACT: finalReviewArtifactPath
+    },
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return [];
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  return [
+    "Final retirement review artifact must pass strict verification before the review gate can pass.",
+    output || result.error?.message || "Final retirement review verifier failed without output."
+  ];
+}
+
 function runReadyBoundaryAudit(): string[] {
   const result = spawnSync(process.execPath, ["--experimental-strip-types", boundaryAuditPath], {
     encoding: "utf8",
@@ -183,6 +230,7 @@ for (const referencePath of gate.nodeReferenceRuntime.paths) {
 const incompleteGates = gate.requiredGates.filter((item) => item.status !== "pass");
 const ready = gate.status === "ready";
 const passkeyErrors = await validateNonSyntheticPasskeyGate();
+const finalReviewErrors = await validateFinalRetirementReviewGate();
 
 if (missingReferencePaths.length > 0 && !ready) {
   console.error("Node reference retirement gate: failed");
@@ -197,6 +245,15 @@ if (passkeyErrors.length > 0) {
   console.error("Node reference retirement gate: failed");
   console.error("Non-synthetic passkey evidence guard failed:");
   for (const error of passkeyErrors) {
+    console.error(`- ${error}`);
+  }
+  process.exit(1);
+}
+
+if (finalReviewErrors.length > 0) {
+  console.error("Node reference retirement gate: failed");
+  console.error("Final retirement review guard failed:");
+  for (const error of finalReviewErrors) {
     console.error(`- ${error}`);
   }
   process.exit(1);

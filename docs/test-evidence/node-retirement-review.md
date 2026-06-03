@@ -46,12 +46,21 @@ npm run passkey:evidence:verify
 
 That verifier must pass against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`; a missing artifact is still a blocker.
 
+After the final reviewer reruns the required post-passkey commands and records the control decisions, verify the generated final review artifact:
+
+```bash
+npm run retirement:final-review:verify
+```
+
+That verifier must pass against `docs/test-evidence/generated/final-node-retirement-review.json`; a missing artifact is still a blocker if `retirement-review` is marked pass.
+
 ## Current Result
 
 Not ready. The final review cannot be marked passed until:
 
 - non-synthetic passkey operations are proven with a real platform authenticator or hardware security key;
 - `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes `npm run passkey:evidence:verify` plus the retirement gate validation;
+- `docs/test-evidence/generated/final-node-retirement-review.json` exists and passes `npm run retirement:final-review:verify`;
 - the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, and retirement gate commands after passkey evidence exists;
 - `npm run goal:completion-audit -- --require-complete` passes after all retirement blockers are resolved;
 - the final reviewer confirms no critical behavior depends on Node-only code.

@@ -29,6 +29,9 @@ const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
 const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary.md";
 const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
 const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
+const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
+const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
+const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -167,6 +170,9 @@ for (const path of [
   generatedBoundaryDocPath,
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
+  finalReviewVerifierDocPath,
+  finalReviewVerifierScriptPath,
+  finalReviewVerifierTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath
@@ -193,6 +199,9 @@ if (packageJson?.scripts?.["retirement:stack-audit"] !== `node --experimental-st
 }
 if (packageJson?.scripts?.["retirement:generated-boundary"] !== `node --experimental-strip-types ${generatedBoundaryScriptPath}`) {
   errors.push("package.json must expose retirement:generated-boundary before final retirement review.");
+}
+if (packageJson?.scripts?.["retirement:final-review:verify"] !== `node --experimental-strip-types ${finalReviewVerifierScriptPath}`) {
+  errors.push("package.json must expose retirement:final-review:verify before final retirement review.");
 }
 if (packageJson?.scripts?.["goal:completion-audit"] !== `node --experimental-strip-types ${goalCompletionAuditScriptPath}`) {
   errors.push("package.json must expose goal:completion-audit before final retirement review.");
@@ -231,6 +240,9 @@ for (const path of [
   generatedBoundaryDocPath,
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
+  finalReviewVerifierDocPath,
+  finalReviewVerifierScriptPath,
+  finalReviewVerifierTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -248,9 +260,11 @@ requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement re
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
 requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review doc must include the stack area audit command.");
 requireIncludes(reviewDoc, "npm run retirement:generated-boundary", "Retirement review doc must include the generated artifact boundary command.");
+requireIncludes(reviewDoc, "npm run retirement:final-review:verify", "Retirement review doc must include the final review verifier command.");
 requireIncludes(reviewDoc, "npm run goal:completion-audit", "Retirement review doc must include the goal completion audit command.");
 requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
 requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
+requireIncludes(reviewDoc, "docs/test-evidence/generated/final-node-retirement-review.json", "Retirement review doc must name the generated final review evidence artifact.");
 requireIncludes(reviewDoc, "non-synthetic passkey operations", "Retirement review doc must name passkey as a remaining blocker.");
 requireIncludes(reviewDoc, "final retirement review", "Retirement review doc must name final review as pending.");
 

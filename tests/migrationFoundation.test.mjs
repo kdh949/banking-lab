@@ -142,4 +142,7 @@ test("node retirement gate requires boundary audit before ready status", async (
   assert.match(script, /check-retirement-boundary-audit\.ts/);
   assert.match(script, /runReadyBoundaryAudit/);
   assert.match(script, /Retirement boundary audit must pass before the Node reference gate can be ready/);
+  assert.match(script, /verify-final-retirement-review\.ts/);
+  assert.match(script, /runFinalReviewVerifier/);
+  assert.match(script, /Final retirement review artifact must pass strict verification/);
 });

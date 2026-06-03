@@ -33,6 +33,7 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.equal(packageJson.scripts["passkey:evidence:verify"], "node --experimental-strip-types scripts/verify-passkey-non-synthetic-evidence.ts");
   assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
   assert.equal(packageJson.scripts["retirement:generated-boundary"], "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts");
+  assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(packageJson.scripts["goal:completion-audit"], "node --experimental-strip-types scripts/check-goal-completion-audit.ts");
   assert.equal(gate.status, "blocked");
   assert.equal(passkey?.status, "pending");
@@ -44,6 +45,9 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/generated-artifact-boundary.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/check-generated-artifact-boundary.ts"));
   assert.ok(retirementReview?.evidence?.includes("tests/generatedArtifactBoundary.test.mjs"));
+  assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/final-retirement-review-verifier.md"));
+  assert.ok(retirementReview?.evidence?.includes("scripts/verify-final-retirement-review.ts"));
+  assert.ok(retirementReview?.evidence?.includes("tests/finalRetirementReviewVerifier.test.mjs"));
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
   assert.ok(retirementReview?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
@@ -53,8 +57,10 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.match(evidence, /npm run retirement:review-preflight/);
   assert.match(evidence, /npm run retirement:stack-audit/);
   assert.match(evidence, /npm run retirement:generated-boundary/);
+  assert.match(evidence, /npm run retirement:final-review:verify/);
   assert.match(evidence, /npm run goal:completion-audit/);
   assert.match(evidence, /npm run passkey:evidence:verify/);
   assert.match(evidence, /docs\/test-evidence\/generated\/passkey-non-synthetic-evidence\.json/);
+  assert.match(evidence, /docs\/test-evidence\/generated\/final-node-retirement-review\.json/);
   assert.match(evidence, /does not mark Node retirement ready/);
 });

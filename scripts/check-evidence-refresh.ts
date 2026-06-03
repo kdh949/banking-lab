@@ -32,6 +32,9 @@ const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
 const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary.md";
 const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
 const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
+const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
+const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
+const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -139,6 +142,9 @@ for (const path of [
   generatedBoundaryDocPath,
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
+  finalReviewVerifierDocPath,
+  finalReviewVerifierScriptPath,
+  finalReviewVerifierTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -179,6 +185,9 @@ if (!evidenceRefreshGate) {
     generatedBoundaryDocPath,
     generatedBoundaryScriptPath,
     generatedBoundaryTestPath,
+    finalReviewVerifierDocPath,
+    finalReviewVerifierScriptPath,
+    finalReviewVerifierTestPath,
     goalCompletionAuditDocPath,
     goalCompletionAuditScriptPath,
     goalCompletionAuditTestPath,
