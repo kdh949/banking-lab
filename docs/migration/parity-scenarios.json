@@ -89,7 +89,7 @@
       "nodeSuite": "tests/runtime.test.mjs",
       "scenarioCount": 4,
       "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",
