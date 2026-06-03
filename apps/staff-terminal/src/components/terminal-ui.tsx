@@ -26,33 +26,6 @@ type IconName =
   | "star"
   | "support_agent";
 
-const iconGlyphs: Record<IconName, string> = {
-  account_balance_wallet: "▣",
-  account_tree: "▦",
-  arrow_drop_down: "▾",
-  article: "▤",
-  business_center: "▥",
-  calendar_today: "□",
-  close: "×",
-  credit_card: "▭",
-  currency_exchange: "↔",
-  description: "▧",
-  event: "◇",
-  folder_open: "▰",
-  group: "◎",
-  leaderboard: "▥",
-  logout: "↗",
-  menu: "☰",
-  notifications: "●",
-  person: "◉",
-  push_pin: "◆",
-  real_estate_agent: "⌂",
-  search: "⌕",
-  settings: "⚙",
-  star: "★",
-  support_agent: "☎"
-};
-
 type NavItem = {
   label: string;
   icon: IconName;
@@ -75,8 +48,8 @@ type TableRow = readonly ReactNode[];
 
 export function TerminalIcon({ name, className = "" }: { name: IconName; className?: string }) {
   return (
-    <span className={`terminal-icon ${className}`} aria-hidden="true">
-      {iconGlyphs[name]}
+    <span className={`material-symbols-outlined terminal-icon ${className}`} aria-hidden="true">
+      {name}
     </span>
   );
 }
