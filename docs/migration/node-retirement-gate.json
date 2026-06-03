@@ -271,9 +271,11 @@
       "description": "A real browser passkey operation uses a non-virtual platform authenticator or hardware security key against the live Keycloak realm, Spring validates the signed token with simulator tokens disabled, and evidence proves no Playwright/CDP virtual authenticator was used. The lab data remains synthetic-only.",
       "evidence": [
         "docs/test-evidence/passkey-non-synthetic-operations.md",
+        "scripts/prepare-passkey-non-synthetic-evidence.ts",
         "scripts/record-passkey-non-synthetic-evidence.ts",
         "scripts/verify-passkey-non-synthetic-evidence.ts",
         "scripts/check-passkey-non-synthetic-preflight.ts",
+        "tests/passkeyEvidencePrepare.test.mjs",
         "tests/passkeyEvidenceRecorder.test.mjs",
         "tests/passkeyEvidenceVerifier.test.mjs",
         "tests/passkeyEvidencePreflight.test.mjs"
@@ -337,6 +339,7 @@
         "docs/test-evidence/outbox-platform-host-crash-drill.md",
         "docs/test-evidence/passkey-non-synthetic-operations.md",
         "legacy-node-reference/README.md",
+        "scripts/prepare-passkey-non-synthetic-evidence.ts",
         "scripts/record-passkey-non-synthetic-evidence.ts",
         "scripts/verify-passkey-non-synthetic-evidence.ts",
         "scripts/check-passkey-non-synthetic-preflight.ts",
@@ -348,6 +351,7 @@
         "scripts/check-goal-completion-audit.ts",
         "scripts/check-evidence-refresh.ts",
         "scripts/check-retirement-boundary-audit.ts",
+        "tests/passkeyEvidencePrepare.test.mjs",
         "tests/passkeyEvidenceRecorder.test.mjs",
         "tests/passkeyEvidenceVerifier.test.mjs",
         "tests/passkeyEvidencePreflight.test.mjs",

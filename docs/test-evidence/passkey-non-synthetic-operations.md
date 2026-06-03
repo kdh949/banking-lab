@@ -126,11 +126,27 @@ This checks that the retirement gate is still blocked, the passkey evidence runb
 
 The preflight command does not create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`, does not prove non-synthetic passkey operations, and must not be used to mark this gate passed.
 
+## Evidence Template Preparation
+
+Before the manual browser ceremony, prepare local redaction templates:
+
+```bash
+npm run passkey:evidence:prepare
+```
+
+By default, this writes ignored local files under `tmp/passkey-evidence-manual/`:
+
+- `redacted-commands.template.json`
+- `redacted-staff-panel.template.txt`
+- `record-command.template.sh`
+
+The generated command template intentionally contains `TODO_REPLACE_WITH_pass` and `TODO_REPLACE_WITH_0`, so it cannot be recorded as passing evidence without manual replacement after the real run. The staff-panel template also requires replacing the audit event placeholder with the redacted `AUD-...` value rendered by the staff terminal.
+
 ## Manual Runbook Boundary
 
 The future non-synthetic run should use the same Compose stack shape as the existing WebAuthn smoke, but the browser interaction must be manual or use only ordinary browser automation that does not install a virtual authenticator. The operator should sign in as `manager-webauthn01`, complete Keycloak passkey registration with a real authenticator, return to `staff-terminal`, and confirm the staff panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event ID.
 
-After the run, copy the redacted command evidence to a local JSON file and copy the relevant staff panel text to a redacted snapshot file. Each command evidence item must include `command`, `status: "pass"`, `exitCode: 0`, and a non-empty `summary`; duplicate commands and failed extra commands are rejected. The command evidence must include the live Compose startup with `BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false`, Keycloak discovery readiness, Spring `/health` readiness, a redacted manual real-authenticator sign-in attestation, and `npm run passkey:evidence:record`. Then run:
+After the run, replace the prepared command template with redacted passing command evidence and replace the staff panel template with the relevant redacted staff panel text. Each command evidence item must include `command`, `status: "pass"`, `exitCode: 0`, and a non-empty `summary`; duplicate commands and failed extra commands are rejected. The command evidence must include the live Compose startup with `BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false`, Keycloak discovery readiness, Spring `/health` readiness, a redacted manual real-authenticator sign-in attestation, and `npm run passkey:evidence:record`. Then run the prepared `tmp/passkey-evidence-manual/record-command.template.sh` command or this equivalent command:
 
 ```bash
 env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \

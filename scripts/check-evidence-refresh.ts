@@ -32,6 +32,8 @@ const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
 const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary.md";
 const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
 const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
+const passkeyPrepareScriptPath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
+const passkeyPrepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
@@ -68,6 +70,7 @@ const stalePatterns = [
 ];
 
 const requiredCommands = [
+  "npm run passkey:evidence:prepare",
   "npm run passkey:evidence:preflight",
   "npm run retirement:stack-audit",
   "npm run retirement:generated-boundary",
@@ -147,6 +150,8 @@ for (const path of [
   generatedBoundaryDocPath,
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
+  passkeyPrepareScriptPath,
+  passkeyPrepareTestPath,
   finalReviewVerifierDocPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
@@ -194,6 +199,8 @@ if (!evidenceRefreshGate) {
     generatedBoundaryDocPath,
     generatedBoundaryScriptPath,
     generatedBoundaryTestPath,
+    passkeyPrepareScriptPath,
+    passkeyPrepareTestPath,
     finalReviewVerifierDocPath,
     finalReviewRecorderScriptPath,
     finalReviewVerifierScriptPath,

@@ -29,6 +29,7 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
   assert.equal(packageJson.scripts["retirement:generated-boundary"], "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts");
   assert.equal(packageJson.scripts["retirement:ready-simulate"], "node --experimental-strip-types scripts/check-node-retirement-ready-simulation.ts");
+  assert.equal(packageJson.scripts["passkey:evidence:prepare"], "node --experimental-strip-types scripts/prepare-passkey-non-synthetic-evidence.ts");
   assert.equal(packageJson.scripts["retirement:final-review:record"], "node --experimental-strip-types scripts/record-final-retirement-review.ts");
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(evidenceRefresh?.status, "pass");
@@ -39,6 +40,8 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated-artifact-boundary.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-generated-artifact-boundary.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/generatedArtifactBoundary.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/prepare-passkey-non-synthetic-evidence.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/passkeyEvidencePrepare.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/final-retirement-review-verifier.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/record-final-retirement-review.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/verify-final-retirement-review.ts"));

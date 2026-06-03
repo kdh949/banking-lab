@@ -2119,6 +2119,45 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Passkey Evidence Template Preparation Guard
+
+Changes completed:
+
+- Added `scripts/prepare-passkey-non-synthetic-evidence.ts` and `npm run passkey:evidence:prepare`.
+- The prepare script writes ignored local templates under `tmp/passkey-evidence-manual/` for redacted command evidence, staff-panel snapshot text, and the recorder command.
+- The generated command template intentionally uses `TODO_REPLACE_WITH_pass` and `TODO_REPLACE_WITH_0`, so it cannot be recorded as passing evidence before the real manual passkey run is completed and redacted.
+- Added `tests/passkeyEvidencePrepare.test.mjs` to prove the templates include the required Compose, Keycloak discovery, Spring health, real-authenticator, masked staff-panel, and recorder command markers while rejecting unknown authenticator kinds.
+- Wired the prepare script/test into the non-synthetic passkey gate, evidence-refresh gate, passkey preflight, and evidence-refresh checker.
+- Updated `docs/test-evidence/passkey-non-synthetic-operations.md` and `docs/test-evidence/evidence-refresh-review.md` with the prepare command and current verification results.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `npm run passkey:evidence:prepare` passed and generated ignored TODO templates under `tmp/passkey-evidence-manual/`.
+- `node --test tests/passkeyEvidencePrepare.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 8 tests.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run evidence:refresh-check` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm run retirement:ready-simulate` passed.
+- `npm run retirement:audit` passed with blocked status, 61 approved-reference `.mjs` files, 37 target anchors, 320 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 119 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 119 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The future manual passkey run now has a standardized local evidence-input template path before artifact recording.
+- The template path is machine-checked but remains fail-closed because untouched templates cannot satisfy the recorder.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Passkey Manual Ceremony Evidence Guard
 
 Changes completed:

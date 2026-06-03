@@ -40,6 +40,7 @@ type KeycloakRealm = {
 const packageJsonPath = "package.json";
 const gatePath = "docs/migration/node-retirement-gate.json";
 const evidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
+const preparePath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
 const recorderPath = "scripts/record-passkey-non-synthetic-evidence.ts";
 const verifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const preflightPath = "scripts/check-passkey-non-synthetic-preflight.ts";
@@ -48,6 +49,7 @@ const staffPanelPath = "apps/staff-terminal/src/components/ApiBackedStaffPanel.t
 const staffWebAuthnSpecPath = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
 const recorderTestPath = "tests/passkeyEvidenceRecorder.test.mjs";
 const verifierTestPath = "tests/passkeyEvidenceVerifier.test.mjs";
+const prepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
 const preflightTestPath = "tests/passkeyEvidencePreflight.test.mjs";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -108,12 +110,14 @@ for (const path of [
   packageJsonPath,
   gatePath,
   evidenceDocPath,
+  preparePath,
   recorderPath,
   verifierPath,
   preflightPath,
   realmPath,
   staffPanelPath,
   staffWebAuthnSpecPath,
+  prepareTestPath,
   recorderTestPath,
   verifierTestPath,
   preflightTestPath
@@ -132,6 +136,9 @@ const evidenceRefreshGate = requiredGates.find((item) => item.id === evidenceRef
 if (packageJson?.scripts?.["passkey:evidence:record"] !== `node --experimental-strip-types ${recorderPath}`) {
   errors.push("package.json must expose passkey:evidence:record for the manual evidence recorder.");
 }
+if (packageJson?.scripts?.["passkey:evidence:prepare"] !== `node --experimental-strip-types ${preparePath}`) {
+  errors.push("package.json must expose passkey:evidence:prepare for manual evidence input templates.");
+}
 if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${verifierPath}`) {
   errors.push("package.json must expose passkey:evidence:verify for strict artifact verification.");
 }
@@ -146,9 +153,11 @@ if (!passkeyGate) {
     errors.push(`${passkeyGateId} must remain pending until manual-live-passkey evidence is recorded.`);
   }
   evidenceIncludes(passkeyGate, evidenceDocPath);
+  evidenceIncludes(passkeyGate, preparePath);
   evidenceIncludes(passkeyGate, recorderPath);
   evidenceIncludes(passkeyGate, verifierPath);
   evidenceIncludes(passkeyGate, preflightPath);
+  evidenceIncludes(passkeyGate, prepareTestPath);
   evidenceIncludes(passkeyGate, recorderTestPath);
   evidenceIncludes(passkeyGate, verifierTestPath);
   evidenceIncludes(passkeyGate, preflightTestPath);
@@ -158,9 +167,11 @@ if (!evidenceRefreshGate) {
   errors.push(`Missing required gate ${evidenceRefreshGateId}.`);
 } else {
   evidenceIncludes(evidenceRefreshGate, evidenceDocPath);
+  evidenceIncludes(evidenceRefreshGate, preparePath);
   evidenceIncludes(evidenceRefreshGate, recorderPath);
   evidenceIncludes(evidenceRefreshGate, verifierPath);
   evidenceIncludes(evidenceRefreshGate, preflightPath);
+  evidenceIncludes(evidenceRefreshGate, prepareTestPath);
   evidenceIncludes(evidenceRefreshGate, recorderTestPath);
   evidenceIncludes(evidenceRefreshGate, verifierTestPath);
   evidenceIncludes(evidenceRefreshGate, preflightTestPath);
@@ -177,6 +188,7 @@ const evidenceDoc = await readFile(evidenceDocPath, "utf8").catch(() => "");
 matches(evidenceDoc, /Status:\s+blocked/i, "Passkey evidence doc must keep Status: blocked.");
 matches(evidenceDoc, /not non-synthetic passkey evidence/i, "Passkey evidence doc must explicitly reject virtual-authenticator smoke as non-synthetic evidence.");
 includes(evidenceDoc, "manual-live-passkey", "Passkey evidence doc must name manual-live-passkey as the future evidence kind.");
+includes(evidenceDoc, "npm run passkey:evidence:prepare", "Passkey evidence doc must describe the template preparation command.");
 includes(evidenceDoc, "npm run passkey:evidence:record", "Passkey evidence doc must keep the recorder command in the manual runbook.");
 includes(evidenceDoc, "npm run passkey:evidence:preflight", "Passkey evidence doc must describe the preflight command.");
 for (const envName of [
@@ -218,6 +230,24 @@ for (const commandMarker of [
 }
 
 const recorder = await readFile(recorderPath, "utf8").catch(() => "");
+const prepare = await readFile(preparePath, "utf8").catch(() => "");
+for (const prepareMarker of [
+  "redacted-commands.template.json",
+  "redacted-staff-panel.template.txt",
+  "record-command.template.sh",
+  "TODO_REPLACE_WITH_pass",
+  "TODO_REPLACE_WITH_0",
+  "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false",
+  "BANKING_LAB_PASSKEY_BROWSER_AUTOMATION=ordinary-browser-no-virtual-authenticator",
+  "BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION=real-platform-or-hardware-authenticator-used",
+  "Keycloak WebAuthn manager loaded",
+  "manager-webauthn01",
+  "010-****-1001",
+  "AUD-"
+]) {
+  includes(prepare, prepareMarker, `Passkey prepare script must keep template marker ${prepareMarker}.`);
+}
+
 for (const recorderMarker of [
   "BANKING_LAB_PASSKEY_USED_BROWSER_VIRTUAL_AUTHENTICATOR",
   "BANKING_LAB_PASSKEY_USED_PLAYWRIGHT_CDP_WEBAUTHN",
