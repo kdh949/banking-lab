@@ -23,9 +23,8 @@ test("stack retirement area audit proves target areas do not use legacy Node MVP
   assert.match(stdout, /analytics: Python \+ DuckDB\/scikit-learn/);
   assert.match(stdout, /platform-infra: Docker Compose, Kubernetes, Terraform, Helm, Argo CD/);
   assert.match(stdout, /contracts-and-data: OpenAPI\/AsyncAPI\/Temporal contracts and PostgreSQL\/Flyway migrations/);
-  assert.match(stdout, /Node retirement gate: blocked/);
-  assert.match(stdout, /non-synthetic-passkey-operations: pending/);
-  assert.match(stdout, /retirement-review: pending/);
+  assert.match(stdout, /Node retirement gate: ready/);
+  assert.doesNotMatch(stdout, /Incomplete gates:/);
 });
 
 test("stack retirement area audit is wired into scripts and retirement evidence", async () => {
@@ -51,5 +50,5 @@ test("stack retirement area audit is wired into scripts and retirement evidence"
   assert.match(source, /contracts-and-data/);
   assert.match(source, /legacy-node-reference/);
   assert.match(evidenceDoc, /Status:\s+pass/i);
-  assert.match(evidenceDoc, /does not mark Node retirement ready/);
+  assert.match(evidenceDoc, /Status:\s+pass/i);
 });

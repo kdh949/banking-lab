@@ -2,19 +2,29 @@
 
 Date: 2026-06-03
 
-Status: blocked
+Status: pass
 
 ## Scope
 
 This evidence boundary covers the remaining passkey blocker for Node reference retirement. The data, users, accounts, and transactions must stay synthetic. The authenticator ceremony is the only part that must become non-synthetic: a real platform authenticator or hardware security key must complete the Keycloak WebAuthn registration/login path without browser virtual-authenticator APIs.
 
-This document does not mark Node retirement ready.
+This document proves only the non-synthetic passkey operations gate. Final Node retirement still requires the final retirement review artifact and ready-gate validation.
 
 ## Current Result
 
-Not proven. Existing Keycloak evidence proves WebAuthn required-action blocking, the committed synthetic realm WebAuthn policy, passkey recovery role segregation, and a staff-terminal browser smoke with simulator tokens disabled. The browser smoke uses Chromium CDP `WebAuthn.enable` plus `WebAuthn.addVirtualAuthenticator`; that is valid local WebAuthn required-action evidence, but it is not non-synthetic passkey evidence.
+Proven. `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` records a `manual-live-passkey` operation completed with a real platform authenticator for the synthetic `manager-webauthn01` account, with simulator tokens disabled and without browser virtual-authenticator APIs or Playwright CDP WebAuthn.
 
-The 2026-06-03 live-readiness run proved that the local manual passkey platform stack can start with simulator tokens disabled, Keycloak discovery/JWKS reachable, and Spring `/health` reporting the target Kotlin/Spring synthetic boundary. That still does not prove non-synthetic passkey operations because no real platform authenticator or hardware security key ceremony has been completed and no `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` artifact exists.
+Verification:
+
+```text
+npm run passkey:evidence:verify
+Passkey non-synthetic evidence verification: pass
+Verified manual-live-passkey artifact: docs/test-evidence/generated/passkey-non-synthetic-evidence.json
+```
+
+Existing Keycloak evidence also proves WebAuthn required-action blocking, the committed synthetic realm WebAuthn policy, passkey recovery role segregation, and a staff-terminal browser smoke with simulator tokens disabled. The browser smoke uses Chromium CDP `WebAuthn.enable` plus `WebAuthn.addVirtualAuthenticator`; that is valid local WebAuthn required-action evidence, but it is not non-synthetic passkey evidence.
+
+The 2026-06-03 live-readiness run proved that the local manual passkey platform stack can start with simulator tokens disabled, Keycloak discovery/JWKS reachable, and Spring `/health` reporting the target Kotlin/Spring synthetic boundary. The later manual artifact above closes the non-synthetic authenticator portion of this gate.
 
 ## Required Evidence Before Passing
 
@@ -30,7 +40,7 @@ The 2026-06-03 live-readiness run proved that the local manual passkey platform 
 
 ## Required Artifact
 
-When the gate is genuinely proven, create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` with this shape:
+The generated artifact at `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` uses this shape:
 
 ```json
 {
@@ -227,7 +237,7 @@ env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \
 
 The recorder writes `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` only after confirming the run did not use virtual/CDP WebAuthn, simulator tokens were disabled, the browser origin was an `http://localhost` staff-terminal origin, the Keycloak issuer was an `http://localhost` `banking-lab` realm issuer, the RP ID was `localhost`, the synthetic WebAuthn user was `manager-webauthn01`, the flow used Authorization Code + PKCE, `BANKING_LAB_PASSKEY_BROWSER_AUTOMATION=ordinary-browser-no-virtual-authenticator`, `BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION=real-platform-or-hardware-authenticator-used`, the panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event, and the inputs do not contain obvious reusable tokens, cookies, passwords, credential IDs, attestation objects, or unmasked phone output.
 
-After artifact generation, update this document with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
+After artifact generation, keep this document aligned with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
 
 Then verify the generated artifact before asking for final Node retirement review:
 

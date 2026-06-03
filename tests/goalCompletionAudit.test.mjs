@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const script = "scripts/check-goal-completion-audit.ts";
 const doc = "docs/test-evidence/goal-completion-audit.md";
 
-test("goal completion audit reports current blockers without marking the objective complete", async () => {
+test("goal completion audit reports complete when all retirement gates pass", async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
     ["--experimental-strip-types", script],
@@ -16,29 +16,27 @@ test("goal completion audit reports current blockers without marking the objecti
   );
 
   assert.equal(stderr, "");
-  assert.match(stdout, /Goal completion audit: not complete/);
+  assert.match(stdout, /Goal completion audit: complete/);
   assert.match(stdout, /stack-retirement-by-area: pass/);
   assert.match(stdout, /generated-artifact-boundary: pass/);
   assert.match(stdout, /retirement-ready-state-simulation: pass/);
   assert.match(stdout, /passkey-non-synthetic-preflight: pass/);
   assert.match(stdout, /mapped-parity: pass/);
-  assert.match(stdout, /gate:non-synthetic-passkey-operations: blocked/);
-  assert.match(stdout, /gate:retirement-review: blocked/);
-  assert.match(stdout, /node-retirement-gate: blocked/);
+  assert.match(stdout, /gate:non-synthetic-passkey-operations: pass/);
+  assert.match(stdout, /gate:retirement-review: pass/);
+  assert.match(stdout, /node-retirement-gate: pass/);
 });
 
-test("goal completion audit fails closed when completion is required", () => {
+test("goal completion audit passes when completion is required", () => {
   const result = spawnSync(
     process.execPath,
     ["--experimental-strip-types", script, "--require-complete"],
     { cwd: process.cwd(), encoding: "utf8", maxBuffer: 1024 * 1024 * 4 }
   );
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /Goal completion audit: not complete/);
-  assert.match(result.stderr, /Goal completion is still blocked/);
-  assert.match(result.stderr, /gate:non-synthetic-passkey-operations/);
-  assert.match(result.stderr, /gate:retirement-review/);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Goal completion audit: complete/);
+  assert.equal(result.stderr, "");
 });
 
 test("goal completion audit is wired into scripts and retirement evidence", async () => {
@@ -59,10 +57,10 @@ test("goal completion audit is wired into scripts and retirement evidence", asyn
   assert.ok(retirementReview?.evidence?.includes(doc));
   assert.ok(retirementReview?.evidence?.includes(script));
   assert.ok(retirementReview?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
-  assert.match(evidenceDoc, /Status:\s+blocked/i);
-  assert.match(evidenceDoc, /Goal completion audit: not complete/);
+  assert.match(evidenceDoc, /Status:\s+pass/i);
+  assert.match(evidenceDoc, /Goal completion audit: complete/);
   assert.match(evidenceDoc, /ready-state simulation/i);
   assert.match(evidenceDoc, /passkey preflight/i);
   assert.match(evidenceDoc, /strict final retirement review verifier/i);
-  assert.match(evidenceDoc, /does not mark Node retirement ready/);
+  assert.match(evidenceDoc, /docs\/migration\/node-retirement-gate\.json` is `ready`/);
 });

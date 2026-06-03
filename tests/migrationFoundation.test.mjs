@@ -68,14 +68,14 @@ test("migration parity map covers every current Node reference test scenario", a
   }
 });
 
-test("Node retirement gate keeps reference runtime until parity evidence is ready", async () => {
+test("Node retirement gate keeps reference runtime as archived oracle after ready", async () => {
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
 
-  assert.equal(gate.status, "blocked");
+  assert.equal(gate.status, "ready");
   assert.equal(gate.nodeReferenceRuntime.requiredUntil, "KOTLIN_NEXT_PARITY_GREEN");
 
   for (const referencePath of gate.nodeReferenceRuntime.paths) {
-    assert.equal(await exists(referencePath), true, `${referencePath} must remain while gate is blocked`);
+    assert.equal(await exists(referencePath), true, `${referencePath} must remain as archived oracle/reference material`);
   }
 
   const gateIds = new Set(gate.requiredGates.map((item) => item.id));

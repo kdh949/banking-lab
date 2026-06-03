@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 
 type PackageJson = {
@@ -46,6 +47,7 @@ const liveReadinessPath = "scripts/check-passkey-live-platform-readiness.ts";
 const recorderPath = "scripts/record-passkey-non-synthetic-evidence.ts";
 const verifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const preflightPath = "scripts/check-passkey-non-synthetic-preflight.ts";
+const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 const realmPath = "infra/keycloak/realm-banking-lab.json";
 const staffPanelPath = "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx";
 const staffWebAuthnSpecPath = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
@@ -102,6 +104,24 @@ function evidenceIncludes(gate: RequiredGate | undefined, path: string): void {
   }
 }
 
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function runStrictPasskeyVerifier(): void {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", verifierPath], {
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024
+  });
+  const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  if (result.status !== 0 || !output.includes("Passkey non-synthetic evidence verification: pass")) {
+    errors.push("Strict passkey evidence verifier must pass once non-synthetic-passkey-operations is marked pass.");
+    if (output.trim()) {
+      errors.push(output.trim());
+    }
+  }
+}
+
 async function validatePath(path: string): Promise<void> {
   if (!await exists(path)) {
     errors.push(`Required passkey preflight path is missing: ${path}.`);
@@ -140,6 +160,8 @@ const realm = await readJson<KeycloakRealm>(realmPath);
 const requiredGates = objectArray<RequiredGate>(gate?.requiredGates);
 const passkeyGate = requiredGates.find((item) => item.id === passkeyGateId);
 const evidenceRefreshGate = requiredGates.find((item) => item.id === evidenceRefreshGateId);
+const passkeyGateStatus = stringValue(passkeyGate?.status);
+const gateStatus = stringValue(gate?.status);
 
 if (packageJson?.scripts?.["passkey:evidence:record"] !== `node --experimental-strip-types ${recorderPath}`) {
   errors.push("package.json must expose passkey:evidence:record for the manual evidence recorder.");
@@ -163,8 +185,8 @@ if (packageJson?.scripts?.["passkey:evidence:preflight"] !== `node --experimenta
 if (!passkeyGate) {
   errors.push(`Missing required gate ${passkeyGateId}.`);
 } else {
-  if (passkeyGate.status !== "pending") {
-    errors.push(`${passkeyGateId} must remain pending until manual-live-passkey evidence is recorded.`);
+  if (passkeyGateStatus !== "pending" && passkeyGateStatus !== "pass") {
+    errors.push(`${passkeyGateId} must be pending before manual evidence or pass after strict manual-live-passkey evidence verification.`);
   }
   evidenceIncludes(passkeyGate, evidenceDocPath);
   evidenceIncludes(passkeyGate, preparePath);
@@ -181,6 +203,11 @@ if (!passkeyGate) {
   evidenceIncludes(passkeyGate, recorderTestPath);
   evidenceIncludes(passkeyGate, verifierTestPath);
   evidenceIncludes(passkeyGate, preflightTestPath);
+  if (passkeyGateStatus === "pass") {
+    evidenceIncludes(passkeyGate, passkeyArtifactPath);
+    await validatePath(passkeyArtifactPath);
+    runStrictPasskeyVerifier();
+  }
 }
 
 if (!evidenceRefreshGate) {
@@ -201,17 +228,35 @@ if (!evidenceRefreshGate) {
   evidenceIncludes(evidenceRefreshGate, recorderTestPath);
   evidenceIncludes(evidenceRefreshGate, verifierTestPath);
   evidenceIncludes(evidenceRefreshGate, preflightTestPath);
+  if (passkeyGateStatus === "pass") {
+    evidenceIncludes(evidenceRefreshGate, passkeyArtifactPath);
+  }
 }
 
-if (gate?.status !== "blocked") {
-  errors.push("Node retirement gate must remain blocked while non-synthetic passkey evidence is pending.");
-}
-if (typeof gate?.statusReason !== "string" || !/non-synthetic passkey operations/i.test(gate.statusReason)) {
-  errors.push("Node retirement gate statusReason must name non-synthetic passkey operations.");
+if (passkeyGateStatus === "pending") {
+  if (gateStatus !== "blocked") {
+    errors.push("Node retirement gate must remain blocked while non-synthetic passkey evidence is pending.");
+  }
+  if (typeof gate?.statusReason !== "string" || !/non-synthetic passkey operations/i.test(gate.statusReason)) {
+    errors.push("Node retirement gate statusReason must name non-synthetic passkey operations while passkey evidence is pending.");
+  }
+} else if (passkeyGateStatus === "pass") {
+  if (gateStatus !== "blocked" && gateStatus !== "ready") {
+    errors.push("Node retirement gate must be blocked by final review or ready after non-synthetic passkey evidence passes.");
+  }
+  if (gateStatus === "blocked" && (typeof gate?.statusReason !== "string" || !/final retirement review/i.test(gate.statusReason))) {
+    errors.push("Node retirement gate statusReason must name final retirement review after passkey evidence passes.");
+  }
 }
 
 const evidenceDoc = await readFile(evidenceDocPath, "utf8").catch(() => "");
-matches(evidenceDoc, /Status:\s+blocked/i, "Passkey evidence doc must keep Status: blocked.");
+if (passkeyGateStatus === "pass") {
+  matches(evidenceDoc, /Status:\s+pass/i, "Passkey evidence doc must be Status: pass after strict manual-live-passkey evidence verification.");
+  includes(evidenceDoc, passkeyArtifactPath, "Passkey evidence doc must name the generated manual-live-passkey artifact.");
+  includes(evidenceDoc, "Passkey non-synthetic evidence verification: pass", "Passkey evidence doc must include the strict verifier pass result.");
+} else {
+  matches(evidenceDoc, /Status:\s+blocked/i, "Passkey evidence doc must keep Status: blocked before manual-live-passkey evidence is recorded.");
+}
 matches(evidenceDoc, /not non-synthetic passkey evidence/i, "Passkey evidence doc must explicitly reject virtual-authenticator smoke as non-synthetic evidence.");
 includes(evidenceDoc, "manual-live-passkey", "Passkey evidence doc must name manual-live-passkey as the future evidence kind.");
 includes(evidenceDoc, "npm run passkey:evidence:prepare", "Passkey evidence doc must describe the template preparation command.");
@@ -478,4 +523,8 @@ if (errors.length > 0) {
 
 console.log("Passkey non-synthetic evidence preflight: pass");
 console.log("Static runbook, recorder, Keycloak realm, and staff terminal prerequisites are present.");
-console.log("This does not prove non-synthetic passkey operations; keep the gate pending until manual-live-passkey evidence is recorded.");
+if (passkeyGateStatus === "pass") {
+  console.log("Manual-live-passkey evidence artifact is recorded and strict verification passed.");
+} else {
+  console.log("This does not prove non-synthetic passkey operations; keep the gate pending until manual-live-passkey evidence is recorded.");
+}

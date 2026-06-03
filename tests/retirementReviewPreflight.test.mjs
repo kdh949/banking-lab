@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const script = "scripts/check-retirement-review-preflight.ts";
 const reviewDoc = "docs/test-evidence/node-retirement-review.md";
 
-test("retirement review preflight passes while keeping final retirement blocked", async () => {
+test("retirement review preflight passes with final retirement ready", async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
     ["--experimental-strip-types", script],
@@ -18,11 +18,10 @@ test("retirement review preflight passes while keeping final retirement blocked"
   assert.equal(stderr, "");
   assert.match(stdout, /Node retirement review preflight: pass/);
   assert.match(stdout, /Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, strict final review verifier, and retirement gate checks are consistent/);
-  assert.match(stdout, /does not mark Node retirement ready/);
-  assert.match(stdout, /non-synthetic passkey operations and final retirement review remain pending/);
+  assert.match(stdout, /Node retirement gate is ready; passkey and final retirement review artifacts verify/);
 });
 
-test("retirement review gate keeps preflight evidence but remains pending", async () => {
+test("retirement review gate keeps verified final review evidence", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
   const retirementReview = gate.requiredGates.find((item) => item.id === "retirement-review");
@@ -39,10 +38,12 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.equal(packageJson.scripts["retirement:final-review:record"], "node --experimental-strip-types scripts/record-final-retirement-review.ts");
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(packageJson.scripts["goal:completion-audit"], "node --experimental-strip-types scripts/check-goal-completion-audit.ts");
-  assert.equal(gate.status, "blocked");
-  assert.equal(passkey?.status, "pending");
-  assert.equal(retirementReview?.status, "pending");
+  assert.equal(gate.status, "ready");
+  assert.equal(passkey?.status, "pass");
+  assert.equal(retirementReview?.status, "pass");
+  assert.ok(passkey?.evidence?.includes("docs/test-evidence/generated/passkey-non-synthetic-evidence.json"));
   assert.ok(retirementReview?.evidence?.includes(reviewDoc));
+  assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/generated/final-node-retirement-review.json"));
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/check-stack-retirement-by-area.ts"));
   assert.ok(retirementReview?.evidence?.includes("tests/stackRetirementAreaAudit.test.mjs"));
@@ -63,9 +64,8 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.ok(retirementReview?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
   assert.ok(retirementReview?.evidence?.includes(script));
   assert.ok(retirementReview?.evidence?.includes("tests/retirementReviewPreflight.test.mjs"));
-  assert.match(preflightScript, /assertPendingFinalReviewVerifierFailsClosed/);
-  assert.match(preflightScript, /Could not read final retirement review artifact/);
-  assert.match(evidence, /Status:\s+blocked/i);
+  assert.match(preflightScript, /assertFinalReviewVerifierPasses/);
+  assert.match(evidence, /Status:\s+pass/i);
   assert.match(evidence, /npm run retirement:review-preflight/);
   assert.match(evidence, /npm run retirement:final-review:prepare/);
   assert.match(evidence, /npm run retirement:stack-audit/);
@@ -78,5 +78,6 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.match(evidence, /docs\/test-evidence\/generated\/passkey-non-synthetic-evidence\.json/);
   assert.match(evidence, /docs\/test-evidence\/generated\/final-node-retirement-review\.json/);
   assert.match(evidence, /strict final retirement review verifier/i);
-  assert.match(evidence, /does not mark Node retirement ready/);
+  assert.match(evidence, /Node retirement gate is ready/);
+  assert.match(evidence, /final retirement review/i);
 });

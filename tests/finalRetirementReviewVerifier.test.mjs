@@ -253,8 +253,8 @@ test("final retirement review verifier rejects missing passkey evidence artifact
   assert.match(result.stderr, /Passkey evidence artifact must pass strict verification/);
 });
 
-test("final retirement review verifier fails strictly when the default artifact is missing", () => {
-  const result = runVerifier();
+test("final retirement review verifier fails strictly when an explicit artifact is missing", () => {
+  const result = runVerifier(join(tmpdir(), "banking-lab-missing-final-review.json"));
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Could not read final retirement review artifact/);

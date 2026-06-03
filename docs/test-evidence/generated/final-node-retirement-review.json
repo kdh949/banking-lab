@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "status": "pass",
+  "reviewDate": "2026-06-04",
+  "evidenceKind": "final-node-retirement-review",
+  "passkeyEvidenceArtifact": "docs/test-evidence/generated/passkey-non-synthetic-evidence.json",
+  "reviewer": "codex",
+  "commands": [
+    {
+      "command": "npm run parity",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Approved execution path passed 131 Node reference and structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation after the sandboxed attempt hit local loopback bind EPERM."
+    },
+    {
+      "command": "npm test",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Node test runner passed 131 tests with no failures after the verified passkey evidence gate update."
+    },
+    {
+      "command": "npm run validate:manifests",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Validated 28 screen manifests across customer, staff, complaint, ops, audit, FDS/AML, and admin channels."
+    },
+    {
+      "command": "npm run evidence:pack",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Regenerated the evidence pack summary with syntheticOnly=true and 38 of 38 generated checks passing."
+    },
+    {
+      "command": "npm run retirement:audit",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Retirement boundary audit passed with the Node retirement gate ready, 64 approved-reference .mjs files, 37 target anchors, 340 evidence paths, and 42 of 42 mapped scenarios."
+    },
+    {
+      "command": "npm run retirement:stack-audit",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Stack retirement area audit passed for backend, frontend, shared packages, analytics, platform infrastructure, contracts, and data roots with the Node retirement gate ready."
+    },
+    {
+      "command": "npm run retirement:generated-boundary",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Generated artifact boundary audit passed with no tracked target legacy/static extension files and no untracked source-like legacy/static extension files."
+    },
+    {
+      "command": "npm run retirement:ready-simulate",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Ready-state simulation passed using fixture passkey and final-review artifacts without changing the real gate."
+    },
+    {
+      "command": "npm run passkey:evidence:preflight",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Passkey preflight passed and confirmed the manual-live-passkey artifact is recorded with strict verification."
+    },
+    {
+      "command": "npm run retirement:review-preflight",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Retirement review preflight passed with passkey and final retirement review artifacts verifying and the Node retirement gate ready."
+    },
+    {
+      "command": "npm run passkey:evidence:verify",
+      "status": "pass",
+      "exitCode": 0,
+      "runAfterPasskeyEvidence": true,
+      "summary": "Strict passkey evidence verifier passed for docs/test-evidence/generated/passkey-non-synthetic-evidence.json."
+    }
+  ],
+  "controlAttestations": {
+    "ledgerBalancedPostings": true,
+    "balancesProjectedFromPostings": true,
+    "idempotentExternalCommands": true,
+    "appendOnlyFinalizedTransactions": true,
+    "reasonRequiredAudit": true,
+    "piiMaskedByDefault": true,
+    "makerCheckerSeparation": true,
+    "workflowDurability": true,
+    "outboxDurability": true,
+    "reconciliationAdjustmentsBalanced": true,
+    "targetAreasNoDisallowedStack": true,
+    "generatedArtifactsIgnored": true,
+    "syntheticOnly": true,
+    "nodeOnlyCriticalDependencyRemoved": true
+  },
+  "remainingBlockers": []
+}

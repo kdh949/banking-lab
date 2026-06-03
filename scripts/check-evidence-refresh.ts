@@ -35,6 +35,7 @@ const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const passkeyPrepareScriptPath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
 const passkeyReadinessScriptPath = "scripts/check-passkey-manual-readiness.ts";
 const passkeyLiveReadinessScriptPath = "scripts/check-passkey-live-platform-readiness.ts";
+const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 const passkeyPrepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
 const passkeyReadinessTestPath = "tests/passkeyManualReadiness.test.mjs";
 const passkeyLiveReadinessTestPath = "tests/passkeyLivePlatformReadiness.test.mjs";
@@ -50,6 +51,7 @@ const readySimulationTestPath = "tests/nodeRetirementReadySimulation.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
+const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
 const checkScriptPath = "scripts/check-evidence-refresh.ts";
 const checkTestPath = "tests/evidenceRefresh.test.mjs";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -145,6 +147,10 @@ function requireIncludes(source: string, needle: string, message: string): void 
   }
 }
 
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 for (const path of [
   gatePath,
   evidencePackSummaryPath,
@@ -188,12 +194,32 @@ const gate = await readJson<NodeRetirementGate>(gatePath);
 const summary = await readJson<EvidencePackSummary>(evidencePackSummaryPath);
 const requiredGates = objectArray<RequiredGate>(gate?.requiredGates);
 const evidenceRefreshGate = requiredGates.find((item) => item.id === evidenceRefreshGateId);
+const passkeyGate = requiredGates.find((item) => item.id === "non-synthetic-passkey-operations");
+const reviewGate = requiredGates.find((item) => item.id === "retirement-review");
+const passkeyPassed = passkeyGate?.status === "pass";
+const reviewPassed = reviewGate?.status === "pass";
+const gateReady = gate?.status === "ready";
 
-if (gate?.status !== "blocked") {
-  errors.push("Node retirement gate must remain blocked until passkey evidence and final review are complete.");
+if (gate?.status !== "blocked" && gate?.status !== "ready") {
+  errors.push("Node retirement gate must be blocked while review work remains or ready after all retirement gates pass.");
 }
-if (typeof gate?.statusReason !== "string" || !/non-synthetic passkey operations and final retirement review remain incomplete/i.test(gate.statusReason)) {
-  errors.push("Node retirement gate statusReason must now list only non-synthetic passkey operations and final retirement review as incomplete.");
+if (!passkeyPassed && gate?.status !== "blocked") {
+  errors.push("Node retirement gate must remain blocked until passkey evidence is complete.");
+}
+if (reviewPassed && !gateReady) {
+  errors.push("Node retirement gate must be ready once final review passes.");
+}
+if (gateReady && (!passkeyPassed || !reviewPassed)) {
+  errors.push("Node retirement gate must not be ready until passkey and final review gates pass.");
+}
+if (!passkeyPassed && (typeof gate?.statusReason !== "string" || !/non-synthetic passkey operations and final retirement review remain incomplete/i.test(gate.statusReason))) {
+  errors.push("Node retirement gate statusReason must list non-synthetic passkey operations and final retirement review while both are incomplete.");
+}
+if (passkeyPassed && !reviewPassed && (typeof gate?.statusReason !== "string" || !/final retirement review remains incomplete/i.test(gate.statusReason))) {
+  errors.push("Node retirement gate statusReason must list only final retirement review after passkey evidence passes.");
+}
+if (gateReady && (typeof gate?.statusReason !== "string" || !/all required retirement gates/i.test(gate.statusReason))) {
+  errors.push("Node retirement gate statusReason must explain that all required retirement gates are passing when ready.");
 }
 if (typeof gate?.statusReason === "string" && /evidence-refresh completion/i.test(gate.statusReason)) {
   errors.push("Node retirement gate statusReason must not keep stale evidence-refresh completion blocker text.");
@@ -216,6 +242,7 @@ if (!evidenceRefreshGate) {
     passkeyPrepareScriptPath,
     passkeyReadinessScriptPath,
     passkeyLiveReadinessScriptPath,
+    ...(passkeyPassed ? [passkeyArtifactPath] : []),
     passkeyPrepareTestPath,
     passkeyReadinessTestPath,
     passkeyLiveReadinessTestPath,
@@ -223,6 +250,7 @@ if (!evidenceRefreshGate) {
     finalReviewPrepareScriptPath,
     finalReviewRecorderScriptPath,
     finalReviewVerifierScriptPath,
+    ...(reviewPassed ? [finalReviewArtifactPath] : []),
     readySimulationScriptPath,
     finalReviewPrepareTestPath,
     finalReviewRecorderTestPath,
@@ -260,19 +288,35 @@ if (summary) {
 const parityMatrix = await readFile(parityMatrixPath, "utf8").catch(() => "");
 requireIncludes(parityMatrix, "Total mapped reference scenarios: 42", "Parity matrix must keep the 42 mapped scenario count.");
 requireIncludes(parityMatrix, "Pass for current mapped parity", "Parity matrix must report pass for current mapped parity, not stale partial status.");
-requireIncludes(parityMatrix, "non-synthetic passkey evidence", "Parity matrix must name the current passkey retirement blocker.");
-requireIncludes(parityMatrix, "final review", "Parity matrix must name the current final review retirement blocker.");
+requireIncludes(parityMatrix, "non-synthetic passkey evidence", "Parity matrix must name non-synthetic passkey evidence.");
+requireIncludes(parityMatrix, "final review", "Parity matrix must name final review state.");
 
 const evidenceGapReport = await readFile(evidenceGapReportPath, "utf8").catch(() => "");
-requireIncludes(evidenceGapReport, "It does not yet prove non-synthetic passkey operations or Node independence for retirement.", "Evidence gap report must remove stale evidence-refresh blocker text.");
+if (passkeyPassed && reviewPassed) {
+  requireIncludes(evidenceGapReport, "It proves non-synthetic passkey operations and final Node independence for the current retirement gate.", "Evidence gap report must record ready-state passkey and final review evidence.");
+} else if (passkeyPassed) {
+  requireIncludes(evidenceGapReport, "It proves non-synthetic passkey operations, but it does not yet prove Node independence for retirement.", "Evidence gap report must record passkey completion and final review as the remaining gap.");
+} else {
+  requireIncludes(evidenceGapReport, "It does not yet prove non-synthetic passkey operations or Node independence for retirement.", "Evidence gap report must remove stale evidence-refresh blocker text.");
+}
 
 const qaRecommendation = await readFile(qaRecommendationPath, "utf8").catch(() => "");
 requireIncludes(qaRecommendation, "| `evidence-refresh` | Pass |", "QA recommendation must mark evidence-refresh pass.");
-requireIncludes(qaRecommendation, "remaining blockers are non-synthetic passkey operations and final retirement review", "QA recommendation must name the current remaining blockers.");
+if (passkeyPassed && reviewPassed) {
+  requireIncludes(qaRecommendation, "all required retirement gates are pass", "QA recommendation must record the final ready state.");
+} else if (passkeyPassed) {
+  requireIncludes(qaRecommendation, "remaining blocker is final retirement review", "QA recommendation must name final review as the only remaining blocker.");
+} else {
+  requireIncludes(qaRecommendation, "remaining blockers are non-synthetic passkey operations and final retirement review", "QA recommendation must name the current remaining blockers.");
+}
 
 const evidenceRefreshReview = await readFile(evidenceRefreshReviewPath, "utf8").catch(() => "");
 requireIncludes(evidenceRefreshReview, "Status: pass", "Evidence refresh review must be marked pass.");
-requireIncludes(evidenceRefreshReview, "does not mark Node retirement ready", "Evidence refresh review must avoid overstating retirement readiness.");
+if (gateReady) {
+  requireIncludes(evidenceRefreshReview, "ready Node retirement gate", "Evidence refresh review must record the ready retirement gate state.");
+} else {
+  requireIncludes(evidenceRefreshReview, "does not mark Node retirement ready", "Evidence refresh review must avoid overstating retirement readiness.");
+}
 for (const command of requiredCommands) {
   requireIncludes(evidenceRefreshReview, command, `Evidence refresh review must include command: ${command}.`);
 }
@@ -300,4 +344,10 @@ if (errors.length > 0) {
 
 console.log("Evidence refresh check: pass");
 console.log("Current evidence docs, generated evidence pack, and retirement gate refresh state are consistent.");
-console.log("Node retirement remains blocked by non-synthetic passkey operations and final retirement review.");
+if (gateReady) {
+  console.log("Node retirement gate is ready after verified passkey and final review evidence.");
+} else if (passkeyPassed) {
+  console.log("Node retirement remains blocked by final retirement review.");
+} else {
+  console.log("Node retirement remains blocked by non-synthetic passkey operations and final retirement review.");
+}

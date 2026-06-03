@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
-test("QA evidence review keeps Node retirement blocked until target parity is proven", async () => {
+test("QA evidence review marks Node retirement ready after final review", async () => {
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
   const recommendation = await readFile("docs/architecture/qa-evidence-node-retirement-recommendation.md", "utf8");
 
-  assert.equal(gate.status, "blocked");
+  assert.equal(gate.status, "ready");
   assert.equal(gate.requiredGates.find((item) => item.id === "api-backed-channel-parity")?.status, "pass");
-  assert.match(recommendation, /Keep the Node reference runtime/);
-  assert.match(recommendation, /All 42 mapped parity scenarios pass/);
+  assert.match(recommendation, /archived oracle\/reference material/);
+  assert.match(recommendation, /All required retirement gates are pass/i);
 });
 
 test("QA parity matrix matches the mapped Node reference scenario count", async () => {
@@ -50,8 +50,8 @@ test("QA Temporal restart evidence reflects all-current-case server and PostgreS
   const postgres = await readFile("docs/test-evidence/temporal-postgres-restart-drill.md", "utf8");
   const matrix = await readFile("docs/test-evidence/parity-coverage-matrix.md", "utf8");
 
-  assert.match(gate.statusReason, /Temporal server restart drill evidence for all current Temporal workflow case types/i);
-  assert.match(gate.statusReason, /PostgreSQL restart drill evidence for all current Temporal workflow case types/i);
+  assert.match(gate.statusReason, /All required retirement gates are passing/i);
+  assert.match(gate.statusReason, /final retirement review evidence/i);
   assert.match(server, /all current workflow case types/i);
   assert.match(postgres, /all current workflow case types/i);
   assert.match(matrix, /live Compose Temporal server restart drills for all current Temporal case types/i);
@@ -60,20 +60,25 @@ test("QA Temporal restart evidence reflects all-current-case server and PostgreS
   assert.doesNotMatch(gate.statusReason, /broader database\/process-failure variants/i);
 });
 
-test("QA passkey evidence keeps Node retirement blocked until non-synthetic proof exists", async () => {
+test("QA passkey and final review evidence keep Node retired from target dependency", async () => {
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
   const evidence = await readFile("docs/test-evidence/passkey-non-synthetic-operations.md", "utf8");
   const passkeyGate = gate.requiredGates.find((item) => item.id === "non-synthetic-passkey-operations");
+  const retirementReview = gate.requiredGates.find((item) => item.id === "retirement-review");
 
-  assert.equal(gate.status, "blocked");
-  assert.equal(passkeyGate?.status, "pending");
+  assert.equal(gate.status, "ready");
+  assert.equal(passkeyGate?.status, "pass");
+  assert.equal(retirementReview?.status, "pass");
+  assert.ok(passkeyGate?.evidence?.includes("docs/test-evidence/generated/passkey-non-synthetic-evidence.json"));
+  assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/generated/final-node-retirement-review.json"));
   assert.ok(passkeyGate?.evidence?.includes("scripts/record-passkey-non-synthetic-evidence.ts"));
   assert.ok(passkeyGate?.evidence?.includes("tests/passkeyEvidenceRecorder.test.mjs"));
-  assert.match(gate.statusReason, /non-synthetic passkey operations/i);
-  assert.match(evidence, /Status:\s+blocked/i);
+  assert.match(gate.statusReason, /All required retirement gates are passing/i);
+  assert.match(evidence, /Status:\s+pass/i);
   assert.match(evidence, /Chromium CDP `WebAuthn\.enable`/);
   assert.match(evidence, /not non-synthetic passkey evidence/i);
   assert.match(evidence, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
   assert.match(evidence, /npm run passkey:evidence:record/);
+  assert.match(evidence, /Passkey non-synthetic evidence verification: pass/);
   assert.match(evidence, /staffPanelAssertions/);
 });
