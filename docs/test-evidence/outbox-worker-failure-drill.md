@@ -32,6 +32,25 @@ Passed.
 - Exactly one inbox row was inserted.
 - Duplicate replay was counted as `duplicates=1`, proving consumer idempotency absorbs the publish-after-crash duplicate.
 
+## Worker Entrypoint And Metrics
+
+Additional verification on 2026-06-03 added the target-stack outbox worker entrypoint and metrics without using the Node reference runtime.
+
+Commands:
+
+```bash
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.eventing.OutboxWorkerMetricsTest --tests lab.banking.core.eventing.OutboxWorkerRunnerTest
+scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.observability.ObservabilityActuatorIntegrationTest
+docker compose --profile platform config
+```
+
+Results:
+
+- `OutboxWorkerRunner` delegates durable publish batches through `OutboxPublisherPort` with configured bootstrap servers, topic, client ID, batch size, timeout, DLQ threshold, and retry delay.
+- `OutboxWorkerMetricsTest` proves running state, lifecycle counters, batch counters, attempted/published/failed/dead-lettered event counters, and loop-failure counters.
+- `ObservabilityActuatorIntegrationTest` proves `/actuator/prometheus` exposes `banking_lab_outbox_worker_running`, `banking_lab_outbox_worker_starts_total`, `banking_lab_outbox_worker_events_attempted_total`, and `banking_lab_outbox_worker_events_published_total` with topic and client ID labels.
+- `docker compose --profile platform config` renders `core-banking-outbox-worker` with `BANKING_LAB_OUTBOX_WORKER_ENABLED=true`, Redpanda bootstrap configuration, synthetic-only scope, and a Prometheus scrape target.
+
 ## Retirement Impact
 
-This closes the durable outbox crash-before-mark-published failure drill for the current Redpanda-backed event path. Node retirement remains blocked until host crash shapes, API/outbox deployed process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the durable outbox crash-before-mark-published failure drill for the current Redpanda-backed event path and adds a scheduled/manual target-stack worker entrypoint with Micrometer/Prometheus metrics. Node retirement remains blocked until host crash shapes, API/outbox deployed worker-container process-failure variants, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

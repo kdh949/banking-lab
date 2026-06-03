@@ -28,7 +28,7 @@ Required commands:
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.RedpandaOutboxDeliveryIntegrationTest
 ```
 
-Current status: Partial. `RedpandaOutboxDeliveryIntegrationTest` proves durable outbox publish, retry, DLQ, replay idempotency, and a crash-before-mark-published drill where a broker-acked event remains `PENDING`, is replayed, and produces exactly one inbox side effect. A full API process crash/restart and deployed scheduled worker/container crash drill remain pending.
+Current status: Partial. `RedpandaOutboxDeliveryIntegrationTest` proves durable outbox publish, retry, DLQ, replay idempotency, and a crash-before-mark-published drill where a broker-acked event remains `PENDING`, is replayed, and produces exactly one inbox side effect. `OutboxWorkerRunnerTest`, `OutboxWorkerMetricsTest`, `ObservabilityActuatorIntegrationTest`, and `docker compose --profile platform config` now prove a target-stack scheduled/manual worker entrypoint, Micrometer/Prometheus actuator metrics, and a platform `core-banking-outbox-worker` service. A full API process crash/restart, deployed worker/container crash drill, and outbox trace correlation remain pending.
 
 ## Drill 2: Spring SERIALIZABLE Conflict Retry Policy
 
