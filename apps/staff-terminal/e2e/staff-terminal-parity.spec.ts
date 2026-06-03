@@ -39,12 +39,18 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await expect(page.getByRole("heading", { name: "Transaction-code workspace" })).toBeVisible();
   await expect(page.getByLabel("Transaction code")).toHaveValue(screens[0].transactionCode);
   await expect(page.locator(".metric", { hasText: String(reasonRequired) })).toBeVisible();
-  await expect(page.getByText("reason-required")).toBeVisible();
+  await expect(page.locator(".metric-label", { hasText: "reason-required" })).toBeVisible();
   await expect(page.locator(".metric", { hasText: String(makerChecker) })).toBeVisible();
   await expect(page.getByText("maker-checker").first()).toBeVisible();
   await expect(page.getByText("Masked by default")).toBeVisible();
   await expect(page.getByText("Business reason required")).toBeVisible();
   await expect(page.getByText("APR-001 declared")).toBeVisible();
+  await expect(page.getByText("Banking Lab")).toBeVisible();
+  await expect(page.getByLabel("Role-aware menu")).toBeVisible();
+  await expect(page.getByLabel("Inside view and API smoke")).toBeVisible();
+  await expect(page.getByText("Audit log panel")).toBeVisible();
+  await expect(page.getByText("Workflow timeline")).toBeVisible();
+  await expect(page.getByText("Exception/retry panel")).toBeVisible();
 });
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
