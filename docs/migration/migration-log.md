@@ -2241,6 +2241,44 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Passkey Live Platform Readiness Guard
+
+Changes completed:
+
+- Added `scripts/check-passkey-live-platform-readiness.ts` and `npm run passkey:evidence:live-readiness`.
+- The live readiness checker validates prepared passkey templates against the local Keycloak discovery document, JWKS endpoint, and Spring `/health` response before the real browser ceremony.
+- The checker requires the local `banking-lab` issuer/JWKS URI, authorization-code endpoint, at least one JWKS key, Spring `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`.
+- The checker still requires prepared templates to contain simulator-token-disabled startup and the matching Keycloak issuer before it will accept live endpoints.
+- Added `tests/passkeyLivePlatformReadiness.test.mjs` with fixture-backed discovery/JWKS/health coverage for pass, issuer mismatch, unhealthy synthetic boundary, and simulator-token drift.
+- Updated passkey preflight, evidence-refresh checker, retirement gate, passkey evidence boundary, and evidence-refresh review to track the live readiness command and test.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/passkeyLivePlatformReadiness.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs` initially failed because the passkey evidence boundary did not yet describe `npm run passkey:evidence:live-readiness` and because socket-based test stubs were blocked by sandbox loopback bind restrictions; the test was changed to fixture-backed endpoint JSON before rerunning.
+- `node --test tests/passkeyLivePlatformReadiness.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 8 tests after the fixture update.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run evidence:refresh-check` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm run retirement:audit` passed with blocked status, 64 approved-reference `.mjs` files, 37 target anchors, 332 evidence paths, and 42/42 mapped scenarios.
+- `npm run retirement:generated-boundary` passed.
+- `npm run retirement:ready-simulate` passed.
+- `npm test` passed 131 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 131 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The future manual passkey run now has a live platform readiness verifier for the step after Compose startup and before the real platform-authenticator or hardware-security-key ceremony.
+- This does not mark Node retirement ready or prove non-synthetic passkey operations.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Passkey Manual Ceremony Evidence Guard
 
 Changes completed:

@@ -150,6 +150,14 @@ npm run passkey:evidence:readiness
 
 This checks the prepared command template, staff-panel template, recorder command, Docker Compose platform service names and port overrides, Keycloak WebAuthn realm policy, local issuer `http://localhost:18127/realms/banking-lab`, Spring health URL `http://127.0.0.1:18126/health`, simulator-token-disabled startup, and the required masked staff-panel markers. It still does not prove non-synthetic passkey operations because the template values remain TODO placeholders until the real platform-authenticator or hardware-security-key ceremony is completed.
 
+After the Compose platform stack is running, verify the live local endpoints before the browser ceremony:
+
+```bash
+npm run passkey:evidence:live-readiness
+```
+
+This checks the prepared command template against the live Keycloak discovery document, Keycloak JWKS endpoint, and Spring `/health` response. It requires the discovery issuer and JWKS URI to match the configured local `banking-lab` realm, the authorization-code endpoint to be present, at least one JWKS signing key, and Spring `/health` to return `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`. It still does not prove non-synthetic passkey operations because no real platform-authenticator or hardware-security-key ceremony has been completed.
+
 ## Manual Runbook Boundary
 
 The future non-synthetic run should use the same Compose stack shape as the existing WebAuthn smoke, but the browser interaction must be manual or use only ordinary browser automation that does not install a virtual authenticator. The operator should sign in as `manager-webauthn01`, complete Keycloak passkey registration with a real authenticator, return to `staff-terminal`, and confirm the staff panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event ID.

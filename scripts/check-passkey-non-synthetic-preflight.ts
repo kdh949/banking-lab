@@ -42,6 +42,7 @@ const gatePath = "docs/migration/node-retirement-gate.json";
 const evidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
 const preparePath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
 const readinessPath = "scripts/check-passkey-manual-readiness.ts";
+const liveReadinessPath = "scripts/check-passkey-live-platform-readiness.ts";
 const recorderPath = "scripts/record-passkey-non-synthetic-evidence.ts";
 const verifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const preflightPath = "scripts/check-passkey-non-synthetic-preflight.ts";
@@ -52,6 +53,7 @@ const recorderTestPath = "tests/passkeyEvidenceRecorder.test.mjs";
 const verifierTestPath = "tests/passkeyEvidenceVerifier.test.mjs";
 const prepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
 const readinessTestPath = "tests/passkeyManualReadiness.test.mjs";
+const liveReadinessTestPath = "tests/passkeyLivePlatformReadiness.test.mjs";
 const preflightTestPath = "tests/passkeyEvidencePreflight.test.mjs";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -114,6 +116,7 @@ for (const path of [
   evidenceDocPath,
   preparePath,
   readinessPath,
+  liveReadinessPath,
   recorderPath,
   verifierPath,
   preflightPath,
@@ -122,6 +125,7 @@ for (const path of [
   staffWebAuthnSpecPath,
   prepareTestPath,
   readinessTestPath,
+  liveReadinessTestPath,
   recorderTestPath,
   verifierTestPath,
   preflightTestPath
@@ -146,6 +150,9 @@ if (packageJson?.scripts?.["passkey:evidence:prepare"] !== `node --experimental-
 if (packageJson?.scripts?.["passkey:evidence:readiness"] !== `node --experimental-strip-types ${readinessPath}`) {
   errors.push("package.json must expose passkey:evidence:readiness for prepared manual-run template readiness.");
 }
+if (packageJson?.scripts?.["passkey:evidence:live-readiness"] !== `node --experimental-strip-types ${liveReadinessPath}`) {
+  errors.push("package.json must expose passkey:evidence:live-readiness for local platform readiness.");
+}
 if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${verifierPath}`) {
   errors.push("package.json must expose passkey:evidence:verify for strict artifact verification.");
 }
@@ -162,11 +169,13 @@ if (!passkeyGate) {
   evidenceIncludes(passkeyGate, evidenceDocPath);
   evidenceIncludes(passkeyGate, preparePath);
   evidenceIncludes(passkeyGate, readinessPath);
+  evidenceIncludes(passkeyGate, liveReadinessPath);
   evidenceIncludes(passkeyGate, recorderPath);
   evidenceIncludes(passkeyGate, verifierPath);
   evidenceIncludes(passkeyGate, preflightPath);
   evidenceIncludes(passkeyGate, prepareTestPath);
   evidenceIncludes(passkeyGate, readinessTestPath);
+  evidenceIncludes(passkeyGate, liveReadinessTestPath);
   evidenceIncludes(passkeyGate, recorderTestPath);
   evidenceIncludes(passkeyGate, verifierTestPath);
   evidenceIncludes(passkeyGate, preflightTestPath);
@@ -178,11 +187,13 @@ if (!evidenceRefreshGate) {
   evidenceIncludes(evidenceRefreshGate, evidenceDocPath);
   evidenceIncludes(evidenceRefreshGate, preparePath);
   evidenceIncludes(evidenceRefreshGate, readinessPath);
+  evidenceIncludes(evidenceRefreshGate, liveReadinessPath);
   evidenceIncludes(evidenceRefreshGate, recorderPath);
   evidenceIncludes(evidenceRefreshGate, verifierPath);
   evidenceIncludes(evidenceRefreshGate, preflightPath);
   evidenceIncludes(evidenceRefreshGate, prepareTestPath);
   evidenceIncludes(evidenceRefreshGate, readinessTestPath);
+  evidenceIncludes(evidenceRefreshGate, liveReadinessTestPath);
   evidenceIncludes(evidenceRefreshGate, recorderTestPath);
   evidenceIncludes(evidenceRefreshGate, verifierTestPath);
   evidenceIncludes(evidenceRefreshGate, preflightTestPath);
@@ -201,6 +212,7 @@ matches(evidenceDoc, /not non-synthetic passkey evidence/i, "Passkey evidence do
 includes(evidenceDoc, "manual-live-passkey", "Passkey evidence doc must name manual-live-passkey as the future evidence kind.");
 includes(evidenceDoc, "npm run passkey:evidence:prepare", "Passkey evidence doc must describe the template preparation command.");
 includes(evidenceDoc, "npm run passkey:evidence:readiness", "Passkey evidence doc must describe the manual readiness command.");
+includes(evidenceDoc, "npm run passkey:evidence:live-readiness", "Passkey evidence doc must describe the live platform readiness command.");
 includes(evidenceDoc, "npm run passkey:evidence:record", "Passkey evidence doc must keep the recorder command in the manual runbook.");
 includes(evidenceDoc, "npm run passkey:evidence:preflight", "Passkey evidence doc must describe the preflight command.");
 for (const envName of [
@@ -244,6 +256,7 @@ for (const commandMarker of [
 const recorder = await readFile(recorderPath, "utf8").catch(() => "");
 const prepare = await readFile(preparePath, "utf8").catch(() => "");
 const readiness = await readFile(readinessPath, "utf8").catch(() => "");
+const liveReadiness = await readFile(liveReadinessPath, "utf8").catch(() => "");
 for (const prepareMarker of [
   "redacted-commands.template.json",
   "redacted-staff-panel.template.txt",
@@ -277,6 +290,21 @@ for (const readinessMarker of [
   "does not prove non-synthetic passkey operations"
 ]) {
   includes(readiness, readinessMarker, `Passkey readiness script must keep validation marker ${readinessMarker}.`);
+}
+
+for (const liveReadinessMarker of [
+  "BANKING_LAB_PASSKEY_LIVE_KEYCLOAK_BASE_URL",
+  "BANKING_LAB_PASSKEY_LIVE_CORE_BASE_URL",
+  "http://localhost:18127",
+  "http://127.0.0.1:18126",
+  ".well-known/openid-configuration",
+  "protocol/openid-connect/certs",
+  "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false",
+  "syntheticOnly must be true",
+  "auditHashChainValid must be true",
+  "does not prove non-synthetic passkey operations"
+]) {
+  includes(liveReadiness, liveReadinessMarker, `Passkey live readiness script must keep validation marker ${liveReadinessMarker}.`);
 }
 
 for (const recorderMarker of [
