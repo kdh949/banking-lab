@@ -28,6 +28,7 @@
   "targetCommands": [
     "./gradlew :services:core-banking:test",
     "./gradlew :services:core-banking:integrationTest",
+    "npm run test:screen-engine",
     "npm run typecheck",
     "npm run test:e2e"
   ],
@@ -76,8 +77,8 @@
     {
       "nodeSuite": "tests/manifest.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../ScreenManifestContractTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "packages/screen-engine/test/manifest-parity.test.ts; scripts/validate-manifests.ts",
+      "targetStatus": "pass",
       "controls": [
         "manifest",
         "maker-checker",
@@ -151,6 +152,16 @@
     {
       "name": "manifest-contract",
       "command": "node --experimental-strip-types scripts/validate-manifests.ts",
+      "controls": [
+        "manifest",
+        "audit",
+        "masking",
+        "maker-checker"
+      ]
+    },
+    {
+      "name": "target-screen-engine-manifest-parity",
+      "command": "npm run test:screen-engine",
       "controls": [
         "manifest",
         "audit",

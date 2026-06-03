@@ -1273,3 +1273,21 @@ Remaining blockers:
 
 - `tests/audit.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Target Screen Manifest Parity Slice
+
+Changes completed:
+
+- Added `packages/screen-engine/test/manifest-parity.test.ts` to mirror `tests/manifest.test.mjs` against the TypeScript target screen-engine package.
+- Added `npm run test:screen-engine` and wired it into `npm run parity`.
+- Covered six-channel manifest coverage, high-risk staff maker-checker metadata, staff PII masking/reason policy, and ledger/audit/outbox source-of-truth schema table declarations.
+- Updated the parity scenario map, migration foundation evidence, parity coverage matrix, evidence gap report, QA recommendation, and retirement gate evidence list while keeping Node retirement blocked.
+
+Verification:
+
+- `npm run test:screen-engine` passed 4/4 target screen-engine manifest parity tests.
+
+Remaining blockers:
+
+- `tests/manifest.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.

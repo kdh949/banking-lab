@@ -94,7 +94,8 @@ console.log(`[parity] Required controls: ${parityMap.requiredControls.join(", ")
 
 await runStep("Node reference tests", process.execPath, ["--test", ...testFiles]);
 await runStep("Screen manifest validation", process.execPath, ["--experimental-strip-types", "scripts/validate-manifests.ts"]);
+await runStep("Target screen-engine manifest parity tests", "npm", ["run", "test:screen-engine"]);
 await runStep("Evidence pack generation", process.execPath, ["scripts/generate-evidence-pack.mjs"]);
 
-console.log("\n[parity] Reference parity checks passed.");
+console.log("\n[parity] Reference and target manifest parity checks passed.");
 console.log("[parity] Node reference runtime remains required until docs/migration/node-retirement-gate.json is ready.");
