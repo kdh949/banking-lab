@@ -120,6 +120,12 @@ requirements.push(runCheck(
   "Generated artifact boundary audit: pass"
 ));
 
+requirements.push(runCheck(
+  "retirement-ready-state-simulation",
+  ["--experimental-strip-types", "scripts/check-node-retirement-ready-simulation.ts"],
+  "Node retirement ready-state simulation: pass"
+));
+
 const mappedScenarioCount = paritySuites.reduce((sum, suite) => sum + numberValue(suite.scenarioCount), 0);
 const parityPass = parity?.nodeReferenceTestCount === 42
   && mappedScenarioCount === 42
