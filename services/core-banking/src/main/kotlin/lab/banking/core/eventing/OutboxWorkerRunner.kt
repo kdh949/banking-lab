@@ -14,7 +14,8 @@ import org.springframework.stereotype.Component
 class OutboxWorkerRunner(
     private val publisher: OutboxPublisherPort,
     private val properties: OutboxWorkerProperties,
-    private val metrics: OutboxWorkerMetrics
+    private val metrics: OutboxWorkerMetrics,
+    private val traceLogger: OutboxWorkerTraceLogger
 ) : SmartLifecycle {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val running = AtomicBoolean(false)
@@ -75,6 +76,7 @@ class OutboxWorkerRunner(
     fun runOneBatch(): KafkaOutboxPublishBatchResult {
         val result = publisher.publishAvailable(properties.publisherConfig(), properties.worker.batchSize)
         metrics.recordBatch(result)
+        traceLogger.recordBatch(properties.topic, properties.worker.clientId, result)
         if (result.attempted > 0) {
             logger.info(
                 "observability.outbox.worker event=batch topic={} clientId={} attempted={} published={} failed={} deadLettered={} syntheticOnly=true",
@@ -94,6 +96,7 @@ class OutboxWorkerRunner(
             runOneBatch()
         } catch (error: RuntimeException) {
             metrics.recordBatchFailure()
+            traceLogger.recordBatchFailure(properties.topic, properties.worker.clientId, error)
             logger.error(
                 "observability.outbox.worker event=batch-failed topic={} clientId={} error={} syntheticOnly=true",
                 properties.topic,

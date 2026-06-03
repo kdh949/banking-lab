@@ -95,6 +95,97 @@ class LiveOutboxWorkerSmokeIntegrationTest {
     }
 
     @Test
+    fun `live outbox worker batch logs carry trace and span ids after publish`() {
+        val composeProject = System.getenv("BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT")
+        assumeTrue(
+            !composeProject.isNullOrBlank(),
+            "set BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT to run live outbox trace log drill"
+        )
+
+        val topic = System.getenv("BANKING_LAB_OUTBOX_TOPIC") ?: "banking.lab.domain-events"
+        val databaseUrl = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_URL")
+            ?: "jdbc:postgresql://127.0.0.1:${System.getenv("BANKING_LAB_POSTGRES_PORT") ?: "5432"}/banking_lab"
+        val databaseUser = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_USER") ?: "banking_lab"
+        val databasePassword = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_PASSWORD") ?: "banking_lab"
+        val bootstrapServers = System.getenv("BANKING_LAB_LIVE_OUTBOX_BOOTSTRAP_SERVERS")
+            ?: "127.0.0.1:${System.getenv("BANKING_LAB_REDPANDA_PORT") ?: "9092"}"
+        val workerService = System.getenv("BANKING_LAB_LIVE_OUTBOX_WORKER_SERVICE") ?: "core-banking-outbox-worker"
+        val composeEnv = composeEnvironment(
+            topic = topic,
+            tracingEnabled = "true",
+            otlpTracingExportEnabled = "false"
+        )
+        val outboxEventId = "OBX-TRACE-LIVE-${UUID.randomUUID().toString().uppercase()}"
+        val aggregateId = "TX-LIVE-OUTBOX-TRACE-${UUID.randomUUID().toString().uppercase()}"
+        val idempotencyKey = "IDEMP-LIVE-OUTBOX-TRACE-${UUID.randomUUID().toString().uppercase()}"
+
+        waitForOutboxSchema(databaseUrl, databaseUser, databasePassword, Duration.ofSeconds(60))
+        createTopic(bootstrapServers, topic)
+
+        var workerKilled = false
+        try {
+            runDockerCompose(composeProject, composeEnv, "kill", workerService)
+            workerKilled = true
+
+            insertPendingOutboxEvent(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                aggregateId = aggregateId,
+                idempotencyKey = idempotencyKey,
+                drill = "compose-outbox-worker-trace-log"
+            )
+
+            runDockerCompose(
+                composeProject,
+                composeEnv,
+                "up",
+                "-d",
+                "--force-recreate",
+                "--no-deps",
+                workerService
+            )
+            workerKilled = false
+
+            waitForOutboxStatus(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                expectedStatus = "PUBLISHED",
+                timeout = Duration.ofSeconds(90)
+            )
+            waitForKafkaRecords(
+                bootstrapServers,
+                topic,
+                outboxEventId,
+                expectedCount = 1,
+                timeout = Duration.ofSeconds(60)
+            )
+
+            val traceLog = waitForWorkerTraceLog(
+                composeProject = composeProject,
+                composeEnv = composeEnv,
+                workerService = workerService,
+                outboxEventId = outboxEventId,
+                timeout = Duration.ofSeconds(60)
+            )
+            assertTrue(traceLog.contains("observability.outbox.worker"), traceLog)
+            assertTrue(traceLog.contains("event=batch"), traceLog)
+            assertTrue(traceLog.contains("topic=$topic"), traceLog)
+            assertTrue(traceLog.contains(outboxEventId), traceLog)
+            assertTrue(Regex("""traceId=[a-f0-9]{32}""").containsMatchIn(traceLog), traceLog)
+            assertTrue(Regex("""spanId=[a-f0-9]{16}""").containsMatchIn(traceLog), traceLog)
+            assertTrue(traceLog.contains("syntheticOnly=true"), traceLog)
+        } finally {
+            if (workerKilled) {
+                runCatching { runDockerCompose(composeProject!!, composeEnv, "up", "-d", "--no-deps", workerService) }
+            }
+        }
+    }
+
+    @Test
     fun `live outbox worker replays after broker ack crash before published mark`() {
         val composeProject = System.getenv("BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT")
         assumeTrue(
@@ -467,7 +558,46 @@ class LiveOutboxWorkerSmokeIntegrationTest {
         return CommandResult(process.exitValue(), output)
     }
 
-    private fun composeEnvironment(topic: String, crashAfterAckEventId: String? = null): Map<String, String> =
+    private fun waitForWorkerTraceLog(
+        composeProject: String,
+        composeEnv: Map<String, String>,
+        workerService: String,
+        outboxEventId: String,
+        timeout: Duration
+    ): String {
+        val deadline = System.nanoTime() + timeout.toNanos()
+        var lastOutput = ""
+        while (System.nanoTime() < deadline) {
+            val result = runDockerComposeResult(
+                composeProject = composeProject,
+                extraEnvironment = composeEnv,
+                args = listOf("logs", "--no-color", "--tail=240", workerService),
+                timeout = Duration.ofSeconds(10)
+            )
+            lastOutput = result.output
+            val matchingLine = lastOutput
+                .lineSequence()
+                .lastOrNull {
+                    it.contains("observability.outbox.worker") &&
+                        it.contains("event=batch") &&
+                        it.contains(outboxEventId) &&
+                        Regex("""traceId=[a-f0-9]{32}""").containsMatchIn(it) &&
+                        Regex("""spanId=[a-f0-9]{16}""").containsMatchIn(it)
+                }
+            if (matchingLine != null) {
+                return matchingLine
+            }
+            Thread.sleep(500)
+        }
+        return fail("outbox worker trace log for $outboxEventId was not found:\n$lastOutput")
+    }
+
+    private fun composeEnvironment(
+        topic: String,
+        crashAfterAckEventId: String? = null,
+        tracingEnabled: String? = null,
+        otlpTracingExportEnabled: String? = null
+    ): Map<String, String> =
         buildMap {
             put("BANKING_LAB_OUTBOX_TOPIC", topic)
             put("BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EVENT_ID", crashAfterAckEventId ?: "")
@@ -476,10 +606,18 @@ class LiveOutboxWorkerSmokeIntegrationTest {
             copyEnvironmentIfPresent("BANKING_LAB_REDPANDA_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_REDPANDA_ADMIN_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_REDPANDA_ADVERTISE_HOST")
-            copyEnvironmentIfPresent("BANKING_LAB_TRACING_ENABLED")
-            copyEnvironmentIfPresent("BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED")
+            putOrCopyEnvironment("BANKING_LAB_TRACING_ENABLED", tracingEnabled)
+            putOrCopyEnvironment("BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED", otlpTracingExportEnabled)
             copyEnvironmentIfPresent("BANKING_LAB_OTLP_TRACES_ENDPOINT")
         }
+
+    private fun MutableMap<String, String>.putOrCopyEnvironment(name: String, value: String?) {
+        if (value != null) {
+            put(name, value)
+        } else {
+            copyEnvironmentIfPresent(name)
+        }
+    }
 
     private fun MutableMap<String, String>.copyEnvironmentIfPresent(name: String) {
         val value = System.getenv(name)

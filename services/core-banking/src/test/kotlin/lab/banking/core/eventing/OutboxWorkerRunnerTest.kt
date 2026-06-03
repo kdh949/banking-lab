@@ -36,7 +36,7 @@ class OutboxWorkerRunnerTest {
             )
         )
         val metrics = OutboxWorkerMetrics(registry, "banking.lab.outbox.test", "test-outbox-worker")
-        val runner = OutboxWorkerRunner(publisher, properties, metrics)
+        val runner = OutboxWorkerRunner(publisher, properties, metrics, OutboxWorkerTraceLogger())
 
         val result = runner.runOneBatch()
 
@@ -62,7 +62,8 @@ class OutboxWorkerRunnerTest {
         val runner = OutboxWorkerRunner(
             RecordingOutboxPublisher(KafkaOutboxPublishBatchResult(0, 0, 0, 0, emptyList())),
             OutboxWorkerProperties(worker = OutboxWorkerProperties.Worker(enabled = false)),
-            OutboxWorkerMetrics(registry, "banking.lab.domain-events", "core-banking-outbox-worker")
+            OutboxWorkerMetrics(registry, "banking.lab.domain-events", "core-banking-outbox-worker"),
+            OutboxWorkerTraceLogger()
         )
 
         runner.start()
