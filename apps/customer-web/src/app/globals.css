@@ -139,6 +139,30 @@ main {
   color: var(--danger);
 }
 
+.api-panel {
+  margin-top: 18px;
+  background: #fbfcfd;
+}
+
+.api-panel dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.api-panel dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.api-panel dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
 @media (max-width: 760px) {
   main {
     padding: 16px;
@@ -150,6 +174,10 @@ main {
   }
 
   .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .api-panel dl {
     grid-template-columns: 1fr;
   }
 }

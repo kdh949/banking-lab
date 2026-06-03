@@ -1,3 +1,4 @@
+import { ApiBackedCustomerPanel } from "../components/ApiBackedCustomerPanel";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
 export default async function CustomerWebPage() {
@@ -31,6 +32,8 @@ export default async function CustomerWebPage() {
             </div>
           </dl>
         </section>
+
+        <ApiBackedCustomerPanel />
 
         <section className="grid" aria-label="Customer web manifest workbench">
           <aside className="panel">

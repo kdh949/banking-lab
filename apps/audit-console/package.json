@@ -7,9 +7,11 @@
     "dev": "next dev --port 3005",
     "build": "next build",
     "start": "next start --port 3005",
-    "typecheck": "tsc --noEmit --allowJs --checkJs --jsx react-jsx --module esnext --moduleResolution bundler --target es2022 --lib dom,dom.iterable,es2022 src/**/*.js src/**/*.jsx"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@banking-lab/api-client": "0.1.0",
+    "@banking-lab/auth-client": "0.1.0",
     "next": "^16.2.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

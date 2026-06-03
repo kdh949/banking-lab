@@ -94,3 +94,12 @@ data class ApprovalAuditEvent(
     val payload: Map<String, Any?>,
     val createdAt: OffsetDateTime
 )
+
+interface ApprovalServicePort {
+    fun submit(command: SubmitApprovalCommand): OperatorApproval
+    fun approve(approvalId: String, command: ApproveApprovalCommand): OperatorApproval
+    fun reject(approvalId: String, command: RejectApprovalCommand): OperatorApproval
+    fun approval(approvalId: String): OperatorApproval
+    fun list(): List<OperatorApproval>
+    fun auditEvents(): List<ApprovalAuditEvent>
+}

@@ -99,7 +99,7 @@ npm audit --omit=dev
 
 ## Migration Sequence
 
-1. Keep `runtime`, `packages/*/*.mjs`, static app shells, and current Node tests intact.
+1. Keep `runtime`, Node oracle helper modules under `legacy-node-reference/packages`, legacy static app shells under `legacy-node-reference/apps`, and current Node tests intact.
 2. Add Spring Boot/Kotlin scaffold under `services/core-banking` while preserving the Node reference entrypoint.
 3. Wire Flyway to `db/migrations/V001__foundation.sql` and following `V...` migrations; use Testcontainers for integration tests.
 4. Port domain behavior in order: ledger, idempotency, audit/masking, maker-checker, workflow, complaint, FDS/AML, reconciliation.
@@ -122,7 +122,7 @@ Frontend:
 
 - One Next.js shell renders manifest metadata for `customer-web`.
 - No one-off business screen logic is introduced before the shared manifest renderer exists.
-- Keep `apps/customer-web/public/index.html` until Node reference retirement is approved.
+- Keep the legacy customer-web shell under `legacy-node-reference/apps/customer-web/public/index.html` until Node reference retirement is approved.
 
 Parity:
 
@@ -135,8 +135,9 @@ Do not remove or rewrite these reference assets until the retirement gate is rea
 
 - `runtime/server.mjs`
 - `runtime/labApp.mjs`
-- current `.mjs` domain packages
-- static app shells under `apps/*/public`
+- Node oracle helper modules under `legacy-node-reference/packages`
+- static app shells under `legacy-node-reference/apps`
+- legacy static UI assets under `legacy-node-reference/ui/public`
 - `tests/*.test.mjs`
 - evidence scripts under `scripts/generate-*.mjs`
 

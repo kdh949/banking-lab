@@ -60,4 +60,4 @@ Spring Boot LedgerController
 
 ## Current Persistence Boundary
 
-The Node reference still keeps its command state in memory for oracle parity. The target Spring service now maps the first ledger command semantics onto PostgreSQL, Flyway, idempotency rows, locked balance projections, and durable outbox rows. Full Node retirement remains blocked until every parity suite is covered.
+The Node reference still keeps its command state in memory for oracle parity. The target Spring service now maps the first ledger command semantics onto PostgreSQL, Flyway, idempotency rows, locked balance projections, and durable outbox rows. Full Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.

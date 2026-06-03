@@ -1,26 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import type { ScreenManifest } from "../../../../packages/screen-engine/src/types";
 
-export type CustomerWebManifest = {
-  screenId: string;
-  title: string;
-  app: "customer-web";
-  type: string;
-  domain: string;
-  requiredRoles: string[];
-  audit: {
-    reasonRequired: boolean;
-    maskingPolicy: string;
-  };
-  approval?: {
-    required: boolean;
-    makerChecker?: boolean;
-  };
-  workflow?: {
-    name: string;
-    states: string[];
-  };
-};
+export type CustomerWebManifest = ScreenManifest & { app: "customer-web" };
 
 const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(process.cwd(), "../..");
 

@@ -1,0 +1,81 @@
+# Final Retirement Review Verifier
+
+Date: 2026-06-04
+
+Status: pass
+
+## Scope
+
+This evidence boundary defines the machine-verifiable artifact required before the final Node retirement review gate can pass. The generated artifact now verifies and supports the ready gate; it does not remove the Node reference oracle from archived reference/oracle use.
+
+## Command
+
+After non-synthetic passkey evidence exists and the final review has been performed, record the generated review artifact with:
+
+```bash
+npm run retirement:final-review:record
+```
+
+Then verify it with:
+
+```bash
+npm run retirement:final-review:verify
+```
+
+The default artifact path is:
+
+```text
+docs/test-evidence/generated/final-node-retirement-review.json
+```
+
+Both the recorder and verifier run the strict passkey evidence verifier first. The default passkey artifact path is:
+
+```text
+docs/test-evidence/generated/passkey-non-synthetic-evidence.json
+```
+
+For isolated test fixtures, `BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT` may point to a redacted passkey evidence artifact, and the final review artifact must reference the same path.
+
+The referenced passkey artifact must include the strict manual ceremony boundary from `docs/test-evidence/passkey-non-synthetic-operations.md`: local `http://localhost` staff-terminal origin, local Keycloak issuer for the `banking-lab` realm, RP ID `localhost`, synthetic `manager-webauthn01`, Authorization Code + PKCE, and `ordinary-browser-no-virtual-authenticator`.
+
+## Required Artifact
+
+The final review artifact must have:
+
+- `schemaVersion: 1`;
+- `status: "pass"`;
+- `evidenceKind: "final-node-retirement-review"`;
+- `passkeyEvidenceArtifact: "docs/test-evidence/generated/passkey-non-synthetic-evidence.json"` for the committed review artifact;
+- an empty `remainingBlockers` array;
+- passing command evidence for `npm run parity`, `npm test`, `npm run validate:manifests`, `npm run evidence:pack`, `npm run retirement:audit`, `npm run retirement:stack-audit`, `npm run retirement:generated-boundary`, `npm run retirement:ready-simulate`, `npm run passkey:evidence:preflight`, `npm run retirement:review-preflight`, and `npm run passkey:evidence:verify`;
+- each command marked as run after passkey evidence was recorded;
+- true control attestations for ledger balanced postings, balance projections, idempotency, append-only finalized transactions, reason-required audit, default PII masking, maker-checker separation, workflow durability, outbox durability, balanced reconciliation adjustments, target areas without disallowed stack, ignored generated artifacts, synthetic-only data, and absence of Node-only critical dependencies.
+
+The verifier rejects obvious reusable tokens, cookies, credential IDs, attestation objects, passwords, passkey artifacts, JWTs, and unmasked synthetic phone output.
+
+## Recorder Inputs
+
+The recorder requires:
+
+- `BANKING_LAB_FINAL_REVIEW_CONFIRMED=true`;
+- `BANKING_LAB_FINAL_REVIEW_PASSKEY_ARTIFACT_VERIFIED=true`;
+- `BANKING_LAB_FINAL_REVIEW_REVIEWER`;
+- `BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE`, containing a redacted JSON array of command evidence;
+- an existing passkey evidence artifact that passes `npm run passkey:evidence:verify`;
+- true environment attestations for every required control, including ledger, idempotency, audit, masking, maker-checker, workflow, outbox, reconciliation, target stack, generated artifact, synthetic-only, and Node-only dependency controls.
+
+Each command evidence array entry must be an object with `command`, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty `summary`. The recorder and verifier reject duplicate commands, non-object entries, and any extra command evidence item that is not passing.
+
+## Current Result
+
+Pass. `docs/test-evidence/generated/final-node-retirement-review.json` exists, references `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`, carries post-passkey command evidence for all required commands, records all required control attestations as true, and passes:
+
+```text
+npm run retirement:final-review:verify
+Final retirement review verification: pass
+Verified final retirement review artifact: docs/test-evidence/generated/final-node-retirement-review.json
+```
+
+## Retirement Impact
+
+`npm run retirement:review-preflight`, `npm run goal:completion-audit`, and `npm run node:retirement-gate` now require this verifier to pass because `retirement-review` is marked `pass`. This keeps the final retirement claim tied to a concrete review artifact that passes schema, command, and control checks.

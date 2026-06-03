@@ -1,0 +1,13 @@
+workflows:
+  complaintAnswerApproval:
+    taskQueue: banking-lab-complaints
+    syntheticOnly: true
+  fdsTransferReview:
+    taskQueue: banking-lab-risk
+    syntheticOnly: true
+  amlCaseClosure:
+    taskQueue: banking-lab-risk
+    syntheticOnly: true
+  reconciliationAdjustment:
+    taskQueue: banking-lab-ops
+    syntheticOnly: true

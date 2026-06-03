@@ -5,6 +5,7 @@ import java.util.UUID
 import lab.banking.core.common.BankingLabDomainException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.servlet.resource.NoResourceFoundException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.server.ResponseStatusException
@@ -48,6 +49,23 @@ class StructuredApiErrorHandler {
             )
         )
     }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun noResource(error: NoResourceFoundException, request: HttpServletRequest): ResponseEntity<StructuredApiErrorEnvelope> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            StructuredApiErrorEnvelope(
+                error = StructuredApiError(
+                    code = "RESOURCE_NOT_FOUND",
+                    message = error.message ?: "resource not found",
+                    statusCode = 404,
+                    domain = "resource",
+                    cause = "The Spring Boot migration scaffold could not find a matching route or static resource.",
+                    fix = "Check the API route, screen manifest, and structured error contract.",
+                    requestId = requestId(request),
+                    route = request.requestURI
+                )
+            )
+        )
 
     @ExceptionHandler(Exception::class)
     fun internal(error: Exception, request: HttpServletRequest): ResponseEntity<StructuredApiErrorEnvelope> =

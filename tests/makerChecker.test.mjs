@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApprovalStore, AuditLog } from "../packages/banking-domain/src/index.mjs";
+import { ApprovalStore, AuditLog } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 
 test("high-risk operation requires maker-checker approval data", () => {
   const approvals = new ApprovalStore({ auditLog: new AuditLog() });

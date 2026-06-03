@@ -67,7 +67,7 @@ Repository facts to respect:
 - Node `.mjs` runtime is still the executable reference.
 - Kotlin/Spring Boot and TypeScript/Next.js migration is in progress.
 - Current tests and evidence scripts are the proof baseline.
-- Do not delete runtime/server.mjs, runtime/labApp.mjs, current packages/*.mjs code, static app shells under apps/*/public, tests/*.test.mjs, or scripts/generate-*.mjs unless the node retirement gate is explicitly ready and evidence is updated.
+- Do not delete runtime/server.mjs, runtime/labApp.mjs, current packages/*.mjs code, static app shells under legacy-node-reference/apps, legacy static UI assets under legacy-node-reference/ui/public, tests/*.test.mjs, or scripts/generate-*.mjs unless the node retirement gate is explicitly ready and evidence is updated.
 
 Start by reading:
 1. README.md
@@ -114,7 +114,7 @@ Allowed write paths:
 - docs/architecture/core-api-ledger-*.md
 Read-only reference:
 - runtime/**
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 - tests/ledger*.test.mjs
 - tests/runtime.test.mjs
 - docs/migration/**
@@ -139,7 +139,7 @@ Allowed write paths:
 - db/migrations/V007__*.sql only
 - docs/architecture/workflow-cases-*.md
 Read-only reference:
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 - tests/complaintWorkflow.test.mjs
 - tests/fdsAmlReconciliation.test.mjs
 - tests/makerChecker.test.mjs
@@ -151,7 +151,7 @@ Role: screen manifest, form engine, screen generation, and manifest validation o
 Allowed write paths:
 - packages/screen-engine/**
 - packages/form-engine/**
-- packages/banking-domain/src/screen*.mjs only if strictly necessary and backwards compatible
+- legacy-node-reference/packages/banking-domain/src/screen*.mjs only if strictly necessary and backwards compatible
 - screen-manifests/**
 - packages/screen-engine/manifests/**
 - docs/screen-manifests/**
@@ -160,7 +160,7 @@ Allowed write paths:
 Read-only reference:
 - apps/**
 - tests/manifest.test.mjs
-- scripts/validate-manifests.mjs
+- scripts/validate-manifests.ts
 Objective:
 Add manifest conventions and reusable definitions for many bank screens without hand-coding each screen. Expand screen coverage for staff terminal, customer web, complaint portal, ops console, audit console, and FDS/AML console. Preserve manifest-declared roles, audit, masking, workflow, and approval metadata. Do not edit app UI files directly.
 
@@ -177,7 +177,7 @@ Allowed write paths:
 - apps/*/package.json only for app-local dependencies/scripts, not root package.json
 - docs/architecture/frontend-channels-*.md
 Read-only reference:
-- apps/*/public/**
+- legacy-node-reference/apps/**
 - packages/screen-engine/**
 - packages/form-engine/**
 - docs/migration/**
@@ -330,10 +330,10 @@ These are read-only until the retirement gate is ready:
 ```text
 runtime/server.mjs
 runtime/labApp.mjs
-packages/banking-domain/src/**/*.mjs
-packages/screen-engine/src/**/*.mjs
-packages/form-engine/src/**/*.mjs
-apps/*/public/**
+legacy-node-reference/packages/banking-domain/src/**/*.mjs
+legacy-node-reference/packages/screen-engine/src/**/*.mjs
+legacy-node-reference/packages/form-engine/src/**/*.mjs
+legacy-node-reference/apps/**
 tests/*.test.mjs
 scripts/generate-*.mjs
 ```
@@ -370,7 +370,7 @@ Read first:
 - tests/ledgerCore.test.mjs
 - tests/runtime.test.mjs
 - runtime/**
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 
 Allowed write paths:
 - services/core-banking/src/main/kotlin/lab/banking/core/api/**
@@ -413,7 +413,7 @@ Read first:
 - tests/makerChecker.test.mjs
 - tests/complaintWorkflow.test.mjs
 - tests/fdsAmlReconciliation.test.mjs
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 
 Allowed write paths:
 - services/core-banking/src/main/kotlin/lab/banking/core/workflow/**
@@ -449,7 +449,7 @@ Expand the manifest-driven screen system so the repo can scale to many bank scre
 Read first:
 - README.md
 - tests/manifest.test.mjs
-- scripts/validate-manifests.mjs
+- scripts/validate-manifests.ts
 - packages/screen-engine/**
 - packages/form-engine/**
 - docs/migration/parity-scenarios.json
@@ -485,7 +485,7 @@ Read first:
 - docs/migration/kotlin-next-playbook.md
 - docs/architecture/next-customer-web-foundation.md if present
 - apps/customer-web/src/**
-- apps/*/public/**
+- legacy-node-reference/apps/**
 - packages/screen-engine/**
 - packages/form-engine/**
 
@@ -501,7 +501,7 @@ Allowed write paths:
 - docs/architecture/frontend-channels-*.md
 - docs/codex/coordination-notes/d-frontend-channels.md if shared changes are needed
 
-Do not edit packages/screen-engine or packages/form-engine. Do not delete apps/*/public static shells. Do not edit root package.json.
+Do not edit packages/screen-engine or packages/form-engine. Do not delete legacy-node-reference/apps static shells. Do not edit root package.json.
 
 Deliver:
 - Manifest-rendered shells for customer web, staff terminal, complaint portal, ops console, audit console, and FDS/AML console.

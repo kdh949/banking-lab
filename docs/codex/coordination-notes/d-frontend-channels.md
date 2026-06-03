@@ -3,14 +3,14 @@
 ## Completed In Scope
 
 - Added manifest-rendered Next App Router shells for `staff-terminal`, `complaint-portal`, `ops-console`, `audit-console`, and `fds-aml-console`.
-- Kept `apps/*/public/index.html` static Node reference shells unchanged.
+- Kept static Node reference shells unchanged during the original app-shell work; coordinator follow-up later moved them from `apps/*/public/index.html` to `legacy-node-reference/apps/*/public/index.html` so target Next app directories contain only target frontend assets.
 - Did not edit `packages/screen-engine`, `packages/form-engine`, root shared files, `runtime/**`, or root workspace scripts.
 
 ## Coordinator-Owned Changes Requested
 
 - Add root package scripts for the new channel apps, for example `next:staff-terminal:typecheck`, `next:staff-terminal:build`, and equivalent scripts for the other four apps.
 - Update `package-lock.json` for the new app workspaces after coordinator approval, since Agent D scope allowed app-local `package.json` only.
-- Add app-local `tsconfig.json`, `next.config.mjs`, and generated `next-env.d.ts` files for the new channels if the project wants strict TypeScript parity with `customer-web`.
+- Add app-local `tsconfig.json`, `next.config.ts`, and generated `next-env.d.ts` files for the channels when strict TypeScript parity with `customer-web` is required.
 - Add Playwright configuration and route wiring once the coordinator decides whether these shells are served independently by Next or through a shared BFF gateway.
 
 ## Validation Run By Agent D

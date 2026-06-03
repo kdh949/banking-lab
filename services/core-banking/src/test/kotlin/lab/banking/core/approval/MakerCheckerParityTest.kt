@@ -47,14 +47,19 @@ class MakerCheckerParityTest {
                 ApproveApprovalCommand(approvedBy = "branch01", approvedByRole = "BRANCH_STAFF")
             )
         }
+        assertEquals("MAKER_CHECKER_SELF_APPROVAL_REJECTED", selfApproval.code)
+        assertEquals("MAKER_CHECKER_SEPARATION_OF_DUTIES", selfApproval.policy)
+        assertEquals(ApprovalStatus.PENDING, approvals.approval(approval.approvalId).status)
+        assertEquals(1, approvals.auditEvents().size)
+        assertEquals("COMMAND_REQUESTED", approvals.auditEvents().single().eventType)
+
         val approved = approvals.approve(
             approval.approvalId,
             ApproveApprovalCommand(approvedBy = "manager01", approvedByRole = "BRANCH_MANAGER")
         )
 
-        assertEquals("MAKER_CHECKER_SELF_APPROVAL_REJECTED", selfApproval.code)
-        assertEquals("MAKER_CHECKER_SEPARATION_OF_DUTIES", selfApproval.policy)
         assertEquals(ApprovalStatus.APPROVED, approved.status)
+        assertEquals(2, approvals.auditEvents().size)
         assertTrue(approvals.auditEvents().any { it.eventType == "COMMAND_REQUESTED" })
         assertTrue(approvals.auditEvents().any { it.eventType == "COMMAND_APPROVED" })
     }

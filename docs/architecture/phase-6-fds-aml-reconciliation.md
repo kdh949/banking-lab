@@ -31,7 +31,10 @@ Ops EOD
 
 ## Runtime APIs
 
+- `POST /api/customer/transfers`
+- `GET /api/customer/transfers`
 - `GET /api/staff/fds-cases`
+- `GET /api/staff/fds-cases/{caseId}`
 - `POST /api/staff/fds-cases/{caseId}/assign`
 - `POST /api/staff/fds-cases/{caseId}/release-requests`
 - `POST /api/staff/fds-cases/{caseId}/block-requests`
@@ -46,7 +49,9 @@ Ops EOD
 
 ## Invariants
 
+- Customer transfer FDS risk signals are synthetic-only flags such as `newDevice` and `firstTimeBeneficiary`.
 - Held FDS transfers do not create ledger postings.
+- FDS assignment moves only `HELD` cases into `INVESTIGATING`.
 - FDS release posts exactly one ledger transfer after approval.
 - FDS block never creates a ledger posting.
 - AML case closure requires approval.

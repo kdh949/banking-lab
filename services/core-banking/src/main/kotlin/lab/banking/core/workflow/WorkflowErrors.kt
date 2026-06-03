@@ -46,6 +46,17 @@ object WorkflowErrors {
             fix = "Submit approval with a different checker actor who has the required approval role."
         )
 
+    fun authorizationViolation(message: String): BankingLabDomainException =
+        BankingLabDomainException(
+            code = "AUTHORIZATION_POLICY_VIOLATION",
+            status = HttpStatus.FORBIDDEN,
+            domain = "auth",
+            policy = "RBAC_ABAC_POLICY_REQUIRED",
+            message = message,
+            causeText = "The actor role, ownership context, or approval context does not satisfy the modeled access policy.",
+            fix = "Retry with an authorized synthetic role and the required business context."
+        )
+
     fun stateViolation(message: String): BankingLabDomainException =
         BankingLabDomainException(
             code = "WORKFLOW_STATE_VIOLATION",

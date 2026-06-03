@@ -22,12 +22,13 @@
   ],
   "currentReferenceCommands": [
     "node --test tests/*.test.mjs",
-    "node scripts/validate-manifests.mjs",
+    "node --experimental-strip-types scripts/validate-manifests.ts",
     "node scripts/generate-evidence-pack.mjs"
   ],
   "targetCommands": [
     "./gradlew :services:core-banking:test",
     "./gradlew :services:core-banking:integrationTest",
+    "npm run test:screen-engine",
     "npm run typecheck",
     "npm run test:e2e"
   ],
@@ -35,8 +36,8 @@
     {
       "nodeSuite": "tests/ledger.test.mjs",
       "scenarioCount": 5,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/ledger/domain/LedgerInvariantsTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency"
@@ -46,7 +47,7 @@
       "nodeSuite": "tests/ledgerCore.test.mjs",
       "scenarioCount": 7,
       "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/application/LedgerCommandServiceIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",
@@ -56,8 +57,8 @@
     {
       "nodeSuite": "tests/audit.test.mjs",
       "scenarioCount": 3,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../AuditMaskingParityTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/audit/AuditMaskingParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff/StaffAccessApiParityIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "audit",
         "masking"
@@ -66,8 +67,8 @@
     {
       "nodeSuite": "tests/makerChecker.test.mjs",
       "scenarioCount": 2,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/approval/PersistentApprovalServiceIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/approval/ApprovalApiParityIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "maker-checker",
         "audit"
@@ -76,8 +77,8 @@
     {
       "nodeSuite": "tests/manifest.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/.../ScreenManifestContractTest.kt",
-      "targetStatus": "planned",
+      "targetSuite": "packages/screen-engine/test/manifest-parity.test.ts; scripts/validate-manifests.ts",
+      "targetStatus": "pass",
       "controls": [
         "manifest",
         "maker-checker",
@@ -88,7 +89,7 @@
       "nodeSuite": "tests/runtime.test.mjs",
       "scenarioCount": 4,
       "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
-      "targetStatus": "in-progress",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",
@@ -99,8 +100,8 @@
     {
       "nodeSuite": "tests/customerWeb.test.mjs",
       "scenarioCount": 5,
-      "targetSuite": "apps/customer-web/e2e/customer-web-parity.spec.ts",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerAccountApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer/CustomerTransferApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintEntryApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintConfirmApiParityIntegrationTest.kt; apps/customer-web/e2e/customer-web-parity.spec.ts; packages/screen-engine/test/manifest-parity.test.ts",
+      "targetStatus": "pass",
       "controls": [
         "ledger",
         "idempotency",
@@ -112,8 +113,8 @@
     {
       "nodeSuite": "tests/staffTerminal.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff/StaffAccessApiParityIntegrationTest.kt; apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
+      "targetStatus": "pass",
       "controls": [
         "audit",
         "masking",
@@ -124,8 +125,8 @@
     {
       "nodeSuite": "tests/complaintWorkflow.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/complaint/ComplaintWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintEntryApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/ComplaintCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/complaint/CustomerComplaintConfirmApiParityIntegrationTest.kt; packages/screen-engine/test/manifest-parity.test.ts; apps/complaint-portal/e2e/complaint-portal-parity.spec.ts; apps/customer-web/e2e/customer-web-parity.spec.ts",
+      "targetStatus": "pass",
       "controls": [
         "workflow",
         "complaint",
@@ -136,8 +137,8 @@
     {
       "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/fds/FdsCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/aml/AmlCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/reconciliation/ReconciliationOpsApiParityIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "fds-aml",
         "reconciliation",
@@ -150,7 +151,17 @@
   "commandChecks": [
     {
       "name": "manifest-contract",
-      "command": "node scripts/validate-manifests.mjs",
+      "command": "node --experimental-strip-types scripts/validate-manifests.ts",
+      "controls": [
+        "manifest",
+        "audit",
+        "masking",
+        "maker-checker"
+      ]
+    },
+    {
+      "name": "target-screen-engine-manifest-parity",
+      "command": "npm run test:screen-engine",
       "controls": [
         "manifest",
         "audit",

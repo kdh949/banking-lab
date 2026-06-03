@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-core-banking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-core-banking
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-core-banking
+    spec:
+      containers:
+        - name: core-banking
+          image: {{ .Values.coreBanking.image | quote }}
+          ports:
+            - containerPort: {{ .Values.coreBanking.port }}
+          env:
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: {{ .Values.syntheticOnly | quote }}

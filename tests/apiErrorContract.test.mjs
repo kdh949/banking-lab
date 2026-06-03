@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { API_ERROR_CONTRACT_VERSION, inferApiError } from "../packages/banking-domain/src/index.mjs";
+import { API_ERROR_CONTRACT_VERSION, inferApiError } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 import { createLabHttpServer, createLabState } from "../runtime/labApp.mjs";
 
 async function withServer(fn) {

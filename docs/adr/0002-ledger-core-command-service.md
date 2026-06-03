@@ -10,7 +10,7 @@ Phase 2 requires customer/account/ledger/posting/balance behavior plus deposit, 
 
 ## Decision
 
-Introduce `LedgerCore` in `services/core-banking/src/ledgerCore.mjs`.
+Introduce the Node reference `LedgerCore` under `legacy-node-reference/services/core-banking/src/ledgerCore.mjs` and keep the target core-banking implementation in Kotlin/Spring under `services/core-banking/src/main/kotlin`.
 
 The service owns:
 
@@ -22,23 +22,23 @@ The service owns:
 - Closed business day mutation guard.
 - Invariant validation after each successful command.
 
-The service still uses the domain primitives from `packages/banking-domain` for transaction construction and balance projection.
+The Node reference still uses the domain primitives from `legacy-node-reference/packages/banking-domain` for transaction construction and balance projection. The target Spring service uses PostgreSQL/Flyway-backed ledger command paths and must not add Node business modules under `services/`.
 
 ## Consequences
 
 Positive:
 
-- Runtime handlers now delegate ledger rules to one command path.
+- Runtime handlers now delegate legacy oracle ledger rules to one command path.
 - Concurrent withdrawal tests can assert no overdraw.
 - Reversal and idempotency semantics are testable outside HTTP.
 
 Tradeoffs:
 
 - The Phase 2 command lock is intentionally conservative and serializes all in-memory ledger commands.
-- Persistence remains an adapter concern for a later slice.
+- The Node reference remains in-memory until retirement; persistence is handled by the Spring target service.
 
 ## Follow-up
 
-- Add PostgreSQL transaction boundaries and row-level locking.
+- Keep PostgreSQL transaction boundaries and row-level locking in the Spring target service.
 - Add property-based random command sequences.
 - Add account hold and available-balance integration.

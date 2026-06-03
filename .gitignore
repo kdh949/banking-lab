@@ -1,9 +1,13 @@
 node_modules/
 .DS_Store
+.idea/
 .env
 .env.*
 *.log
+__pycache__/
+*.pyc
 coverage/
+test-results/
 .nyc_output/
 dist/
 build/

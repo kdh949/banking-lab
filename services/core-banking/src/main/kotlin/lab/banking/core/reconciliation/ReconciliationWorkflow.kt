@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApprovalStatus
-import lab.banking.core.approval.ApprovalStore
+import lab.banking.core.approval.ApprovalServicePort
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.ledger.application.AdjustmentCommand
@@ -58,7 +58,7 @@ data class ReconciliationAdjustmentExecution(
     val ledgerCommand: AdjustmentCommand
 )
 
-class ReconciliationWorkflow(private val approvalStore: ApprovalStore, private val clock: Clock = Clock.systemUTC()) {
+class ReconciliationWorkflow(private val approvalStore: ApprovalServicePort, private val clock: Clock = Clock.systemUTC()) {
     private var nextItemNumber = 1
 
     fun createMismatch(

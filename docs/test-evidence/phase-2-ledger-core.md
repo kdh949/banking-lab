@@ -11,6 +11,7 @@
 - Closed business day rejects direct posting commands.
 - Runtime withdrawal and reversal endpoints preserve invariants.
 - Kotlin/Spring `LedgerCommandService` persists deposits, withdrawals, transfers, reversals, adjustments, daily closings, idempotency replay, and outbox rows through PostgreSQL/Testcontainers.
+- Redpanda Testcontainers verifies publish-after-durable-outbox-insert, inbox idempotency on replay, broker failure retry, and DLQ transition.
 - REPEATABLE READ and SERIALIZABLE tests verify concurrent withdrawals do not overdraw; serialization conflicts may reject extra attempts until retry policy is added.
 
 ## Commands

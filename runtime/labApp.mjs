@@ -12,8 +12,8 @@ import {
   loginMockUser,
   maskAccount,
   maskCustomer
-} from "../packages/banking-domain/src/index.mjs";
-import { LedgerCore } from "../services/core-banking/src/index.mjs";
+} from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
+import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
 import {
   assignComplaint,
   classifyComplaint,
@@ -22,7 +22,7 @@ import {
   markComplaintAnswered,
   receiveComplaint,
   startComplaintReview
-} from "../services/complaint-service/src/index.mjs";
+} from "../legacy-node-reference/services/complaint-service/src/index.mjs";
 import {
   assignFdsCase,
   createFdsCase,
@@ -30,7 +30,7 @@ import {
   markFdsBlocked,
   markFdsReleased,
   requestFdsDecision
-} from "../services/fds-service/src/index.mjs";
+} from "../legacy-node-reference/services/fds-service/src/index.mjs";
 import {
   addAmlComment,
   assignAmlCase,
@@ -39,14 +39,14 @@ import {
   deriveAmlRisk,
   evaluateAmlRules,
   requestAmlClosure
-} from "../services/aml-service/src/index.mjs";
+} from "../legacy-node-reference/services/aml-service/src/index.mjs";
 import {
   markReconciliationAdjusted,
   requestReconciliationAdjustment,
   runDailyReconciliation
-} from "../services/reconciliation-service/src/index.mjs";
-import { simulateExternalInstitutionFile } from "../services/external-simulators/src/index.mjs";
-import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
+} from "../legacy-node-reference/services/reconciliation-service/src/index.mjs";
+import { simulateExternalInstitutionFile } from "../legacy-node-reference/services/external-simulators/src/index.mjs";
+import { filterManifestsByApp, loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = join(__dirname, "..");
@@ -672,7 +672,7 @@ export async function createLabHandler(state) {
 
       if (pathname === "/assets/app.js" || pathname === "/assets/lab.css") {
         const fileName = pathname.endsWith(".js") ? "app.js" : "lab.css";
-        const content = await readFile(join(repoRoot, "packages", "ui", "public", fileName), "utf8");
+        const content = await readFile(join(repoRoot, "legacy-node-reference", "ui", "public", fileName), "utf8");
         response.writeHead(200, { "content-type": MIME_TYPES.get(extname(fileName)) });
         response.end(content);
         return;
@@ -680,7 +680,7 @@ export async function createLabHandler(state) {
 
       const app = routeAppPath(pathname);
       if (app) {
-        const content = await readFile(join(repoRoot, "apps", app, "public", "index.html"), "utf8");
+        const content = await readFile(join(repoRoot, "legacy-node-reference", "apps", app, "public", "index.html"), "utf8");
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         response.end(content);
         return;

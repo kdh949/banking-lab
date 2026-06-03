@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
   TEMPLATE_CONVENTIONS,
   loadExpandedManifests
-} from "../packages/screen-engine/src/index.mjs";
+} from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
 
 test("template conventions define reusable banking screen contracts", () => {
   for (const type of ["INQUIRY", "COMMAND", "CASE", "PARAMETER"]) {

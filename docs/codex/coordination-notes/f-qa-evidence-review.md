@@ -25,7 +25,7 @@ These items require owners outside the QA evidence slice because they touch impl
 - `docs/test-evidence/structured-error-contract-gap-report.md`
 - `docs/failure-drills/target-stack-gap-drill-additions.md`
 - `docs/architecture/qa-evidence-node-retirement-recommendation.md`
-- `scripts/check-qa-evidence-review.mjs`
+- `scripts/check-qa-evidence-review.ts`
 - `tests/qaEvidenceCodexPlan.test.mjs`
 
 ## Retirement Position

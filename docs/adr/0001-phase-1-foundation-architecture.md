@@ -14,7 +14,7 @@ Use a no-dependency Node runtime for Phase 1. Keep the core domain in reusable p
 
 Foundation boundaries:
 
-- `packages/banking-domain` owns double-entry transaction creation, balance projection, idempotency, reversal, audit hash chain, masking, maker-checker, workflow, and synthetic data.
+- `legacy-node-reference/packages/banking-domain` owns double-entry transaction creation, balance projection, idempotency, reversal, audit hash chain, masking, maker-checker, workflow, and synthetic data.
 - `packages/screen-engine` validates screen manifests before runtime use.
 - `runtime` serves static app shells and mock APIs backed by in-memory state.
 - `db/migrations/V001__foundation.sql` and follow-up Flyway migrations define the intended PostgreSQL schema and append-only guards for target-stack persistence.

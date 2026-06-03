@@ -23,3 +23,13 @@ schema_config:
       index:
         prefix: index_
         period: 24h
+
+ruler:
+  enable_api: true
+  evaluation_interval: 5s
+  poll_interval: 5s
+  rule_path: /loki/ruler-tmp
+  storage:
+    type: local
+    local:
+      directory: /etc/loki/rules

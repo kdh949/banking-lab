@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: Banking Lab Synthetic Event Backbone
+  version: 0.1.0
+channels:
+  ledger.transaction.posted:
+    address: ledger.transaction.posted
+    messages:
+      LedgerTransactionPosted:
+        payload:
+          $ref: ../events/ledger-transaction-posted.schema.json
+operations:
+  publishLedgerTransactionPosted:
+    action: send
+    channel:
+      $ref: '#/channels/ledger.transaction.posted'
