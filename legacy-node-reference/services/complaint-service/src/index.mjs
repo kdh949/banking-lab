@@ -1,4 +1,4 @@
-import { transitionComplaint } from "../../../../packages/banking-domain/src/index.mjs";
+import { transitionComplaint } from "../../../packages/banking-domain/src/index.mjs";
 
 function nowIso() {
   return new Date().toISOString();

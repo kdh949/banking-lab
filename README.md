@@ -36,7 +36,7 @@ The implementation prioritizes bank-grade controls over UI breadth:
 ```text
 apps/*                  TypeScript/Next.js target channel apps
 legacy-node-reference   Node runtime, service oracle, and static reference shells
-packages/banking-domain ledger, audit, masking, auth, maker-checker
+legacy-node-reference/packages/banking-domain ledger, audit, masking, auth, maker-checker
 packages/screen-engine  screen manifest loader and validator
 packages/form-engine    reusable validation helpers
 services/core-banking   ledger command service

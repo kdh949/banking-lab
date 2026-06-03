@@ -5,7 +5,7 @@ This mapping is scoped to the current synthetic local lab. It is not a certifica
 | ASVS area | Current lab control | Evidence |
 | --- | --- | --- |
 | V1 Architecture | service boundaries, manifest-driven screens, ADRs | `docs/architecture`, `docs/adr` |
-| V2 Authentication | mock role-shaped sessions plus Spring signed JWT/JWKS Bearer token enforcement with simulator fallback coverage and live Keycloak realm smoke | `packages/banking-domain/src/auth.mjs`, Phase 1 tests, `SecurityAuthorizationIntegrationTest`, `JwksAuthorizationIntegrationTest`, `LiveKeycloakRealmIntegrationTest` |
+| V2 Authentication | mock role-shaped sessions plus Spring signed JWT/JWKS Bearer token enforcement with simulator fallback coverage and live Keycloak realm smoke | `legacy-node-reference/packages/banking-domain/src/auth.mjs`, Phase 1 tests, `SecurityAuthorizationIntegrationTest`, `JwksAuthorizationIntegrationTest`, `LiveKeycloakRealmIntegrationTest` |
 | V3 Session Management | local mock session id only | `loginMockUser` |
 | V4 Access Control | role declarations in screen manifests, Spring route role gates, customer ownership check, manager-only approval policy | `screen-manifests`, manifest validation, `SecurityAuthorizationIntegrationTest` |
 | V5 Validation | reusable form validation helpers and ledger command validation | `packages/form-engine`, ledger tests |

@@ -2,7 +2,7 @@
 
 | Control | Implementation | Automated evidence |
 | --- | --- | --- |
-| Double-entry posting balance | `packages/banking-domain/src/ledger.mjs` | `tests/ledger.test.mjs`, Phase 2 evidence |
+| Double-entry posting balance | `legacy-node-reference/packages/banking-domain/src/ledger.mjs` | `tests/ledger.test.mjs`, Phase 2 evidence |
 | Balance projection from postings | `projectBalances` | ledger tests |
 | Idempotent transfer commands | `IdempotencyStore`, transfer result store | customer/runtime tests |
 | Reversal instead of mutation | `createReversalTransaction` | ledger core tests |

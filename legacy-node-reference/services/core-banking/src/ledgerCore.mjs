@@ -5,7 +5,7 @@ import {
   createLedgerTransaction,
   createReversalTransaction,
   projectBalances
-} from "../../../../packages/banking-domain/src/index.mjs";
+} from "../../../packages/banking-domain/src/index.mjs";
 
 const BANK_SUSPENSE_ACCOUNT_ID = "BANK-SUSPENSE";
 

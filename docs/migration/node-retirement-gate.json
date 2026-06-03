@@ -10,7 +10,7 @@
       "legacy-node-reference/services",
       "legacy-node-reference/ui/public",
       "legacy-node-reference/apps",
-      "packages/banking-domain/src",
+      "legacy-node-reference/packages/banking-domain/src",
       "packages/screen-engine/src",
       "packages/form-engine/src",
       "tests"
@@ -151,7 +151,7 @@
         "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorParityProbeController.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/api/StructuredApiErrorContractIntegrationTest.kt",
         "services/core-banking/src/integrationTest/kotlin/lab/banking/core/ledger/api/LedgerRuntimeApiParityIntegrationTest.kt",
-        "packages/banking-domain/src/apiErrors.mjs",
+        "legacy-node-reference/packages/banking-domain/src/apiErrors.mjs",
         "tests/apiErrorContract.test.mjs"
       ]
     },

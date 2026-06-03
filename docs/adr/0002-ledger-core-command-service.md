@@ -22,7 +22,7 @@ The service owns:
 - Closed business day mutation guard.
 - Invariant validation after each successful command.
 
-The Node reference still uses the domain primitives from `packages/banking-domain` for transaction construction and balance projection. The target Spring service uses PostgreSQL/Flyway-backed ledger command paths and must not add Node business modules under `services/`.
+The Node reference still uses the domain primitives from `legacy-node-reference/packages/banking-domain` for transaction construction and balance projection. The target Spring service uses PostgreSQL/Flyway-backed ledger command paths and must not add Node business modules under `services/`.
 
 ## Consequences
 

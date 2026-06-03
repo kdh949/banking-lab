@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { generateSyntheticDataset } from "../packages/banking-domain/src/index.mjs";
+import { generateSyntheticDataset } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
 
 const outputDir = "docs/test-evidence/generated";

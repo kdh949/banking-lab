@@ -61,7 +61,6 @@ const allowedMjsPrefixes = [
   "scripts/",
   "tests/",
   "legacy-node-reference/",
-  "packages/banking-domain/src/",
   "packages/screen-engine/src/",
   "packages/form-engine/src/"
 ];
@@ -70,9 +69,23 @@ const requiredReferencePaths = [
   "runtime/server.mjs",
   "runtime/labApp.mjs",
   "legacy-node-reference/services",
+  "legacy-node-reference/packages/banking-domain/src",
   "legacy-node-reference/apps",
   "legacy-node-reference/ui/public",
   "tests"
+];
+
+const disallowedTargetReferencePaths = [
+  "packages/banking-domain/package.json",
+  "packages/banking-domain/src/apiErrors.mjs",
+  "packages/banking-domain/src/audit.mjs",
+  "packages/banking-domain/src/auth.mjs",
+  "packages/banking-domain/src/index.mjs",
+  "packages/banking-domain/src/ledger.mjs",
+  "packages/banking-domain/src/makerChecker.mjs",
+  "packages/banking-domain/src/masking.mjs",
+  "packages/banking-domain/src/syntheticData.mjs",
+  "packages/banking-domain/src/workflow.mjs"
 ];
 
 const disallowedTargetStaticShellPaths = [
@@ -188,6 +201,17 @@ for (const targetStaticShellPath of disallowedTargetStaticShellPaths) {
 if (targetStaticShells.length > 0) {
   errors.push("Target app/package directories contain legacy static Node shells:");
   errors.push(...targetStaticShells.map((file) => `  - ${file}`));
+}
+
+const targetReferenceFiles: string[] = [];
+for (const targetReferencePath of disallowedTargetReferencePaths) {
+  if (await exists(targetReferencePath)) {
+    targetReferenceFiles.push(targetReferencePath);
+  }
+}
+if (targetReferenceFiles.length > 0) {
+  errors.push("Target package directories contain legacy Node domain oracle files:");
+  errors.push(...targetReferenceFiles.map((file) => `  - ${file}`));
 }
 
 const staleServiceImports: string[] = [];

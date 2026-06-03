@@ -1778,6 +1778,38 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Legacy Domain Oracle Boundary Isolation
+
+Changes completed:
+
+- Moved the legacy Node domain oracle package from `packages/banking-domain` to `legacy-node-reference/packages/banking-domain`.
+- Updated the Node reference runtime, legacy service oracle modules, Node oracle tests, and evidence generators to import the domain primitives from the legacy reference boundary.
+- Removed the stale `@banking-lab/banking-domain` workspace lockfile entries so the target `packages/` workspace only contains target shared packages.
+- Strengthened `npm run retirement:audit` so `packages/banking-domain` fails the audit if legacy Node domain oracle files return to the target package tree.
+- Updated the retirement gate, migration playbook, ADRs, and regulatory mapping docs while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed targeted Node runtime test run passed 18 tests and failed 6 runtime-server tests because the sandbox blocked `listen(127.0.0.1)`.
+- The same targeted Node runtime test command passed 24/24 tests under the approved execution path.
+- `npm run scripts:typecheck` passed.
+- `npm run packages:typecheck` passed.
+- `npm run retirement:audit` passed with blocked status and the same remaining incomplete gates.
+- `npm run node:retirement-gate` passed with blocked status.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run parity` passed 73 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Target `packages/` no longer carries the legacy Node banking-domain oracle package.
+- The executable Node oracle remains intact under `legacy-node-reference`.
+- The retirement boundary audit now guards against reintroducing the legacy domain oracle into target package directories.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Admin Console Target Surface
 
 Changes completed:

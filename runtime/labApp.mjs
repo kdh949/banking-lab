@@ -12,7 +12,7 @@ import {
   loginMockUser,
   maskAccount,
   maskCustomer
-} from "../packages/banking-domain/src/index.mjs";
+} from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
 import {
   assignComplaint,

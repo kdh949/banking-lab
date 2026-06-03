@@ -99,7 +99,7 @@ npm audit --omit=dev
 
 ## Migration Sequence
 
-1. Keep `runtime`, `packages/*/*.mjs`, legacy static app shells under `legacy-node-reference/apps`, and current Node tests intact.
+1. Keep `runtime`, Node oracle domain modules under `legacy-node-reference/packages/banking-domain`, legacy static app shells under `legacy-node-reference/apps`, and current Node tests intact.
 2. Add Spring Boot/Kotlin scaffold under `services/core-banking` while preserving the Node reference entrypoint.
 3. Wire Flyway to `db/migrations/V001__foundation.sql` and following `V...` migrations; use Testcontainers for integration tests.
 4. Port domain behavior in order: ledger, idempotency, audit/masking, maker-checker, workflow, complaint, FDS/AML, reconciliation.
@@ -135,7 +135,7 @@ Do not remove or rewrite these reference assets until the retirement gate is rea
 
 - `runtime/server.mjs`
 - `runtime/labApp.mjs`
-- current `.mjs` domain packages
+- Node oracle domain modules under `legacy-node-reference/packages/banking-domain`
 - static app shells under `legacy-node-reference/apps`
 - legacy static UI assets under `legacy-node-reference/ui/public`
 - `tests/*.test.mjs`

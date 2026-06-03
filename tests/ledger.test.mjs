@@ -7,7 +7,7 @@ import {
   createLedgerTransaction,
   createReversalTransaction,
   projectBalances
-} from "../packages/banking-domain/src/index.mjs";
+} from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 
 test("internal transfer creates balanced double-entry postings", () => {
   const transaction = createInternalTransfer({

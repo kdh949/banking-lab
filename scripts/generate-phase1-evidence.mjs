@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { readFile } from "node:fs/promises";
 import { createLabState } from "../runtime/labApp.mjs";
-import { assertTransactionBalanced, projectBalances } from "../packages/banking-domain/src/index.mjs";
+import { assertTransactionBalanced, projectBalances } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
 import { loadManifests } from "../packages/screen-engine/src/index.mjs";
 
 const outputDir = "docs/test-evidence/generated";

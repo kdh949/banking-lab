@@ -114,7 +114,7 @@ Allowed write paths:
 - docs/architecture/core-api-ledger-*.md
 Read-only reference:
 - runtime/**
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 - tests/ledger*.test.mjs
 - tests/runtime.test.mjs
 - docs/migration/**
@@ -139,7 +139,7 @@ Allowed write paths:
 - db/migrations/V007__*.sql only
 - docs/architecture/workflow-cases-*.md
 Read-only reference:
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 - tests/complaintWorkflow.test.mjs
 - tests/fdsAmlReconciliation.test.mjs
 - tests/makerChecker.test.mjs
@@ -151,7 +151,7 @@ Role: screen manifest, form engine, screen generation, and manifest validation o
 Allowed write paths:
 - packages/screen-engine/**
 - packages/form-engine/**
-- packages/banking-domain/src/screen*.mjs only if strictly necessary and backwards compatible
+- legacy-node-reference/packages/banking-domain/src/screen*.mjs only if strictly necessary and backwards compatible
 - screen-manifests/**
 - packages/screen-engine/manifests/**
 - docs/screen-manifests/**
@@ -330,7 +330,7 @@ These are read-only until the retirement gate is ready:
 ```text
 runtime/server.mjs
 runtime/labApp.mjs
-packages/banking-domain/src/**/*.mjs
+legacy-node-reference/packages/banking-domain/src/**/*.mjs
 packages/screen-engine/src/**/*.mjs
 packages/form-engine/src/**/*.mjs
 legacy-node-reference/apps/**
@@ -370,7 +370,7 @@ Read first:
 - tests/ledgerCore.test.mjs
 - tests/runtime.test.mjs
 - runtime/**
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 
 Allowed write paths:
 - services/core-banking/src/main/kotlin/lab/banking/core/api/**
@@ -413,7 +413,7 @@ Read first:
 - tests/makerChecker.test.mjs
 - tests/complaintWorkflow.test.mjs
 - tests/fdsAmlReconciliation.test.mjs
-- packages/banking-domain/src/**
+- legacy-node-reference/packages/banking-domain/src/**
 
 Allowed write paths:
 - services/core-banking/src/main/kotlin/lab/banking/core/workflow/**
