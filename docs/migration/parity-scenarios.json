@@ -67,8 +67,8 @@
     {
       "nodeSuite": "tests/makerChecker.test.mjs",
       "scenarioCount": 2,
-      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt",
-      "targetStatus": "in-progress",
+      "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/approval/MakerCheckerParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/approval/PersistentApprovalServiceIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/approval/ApprovalApiParityIntegrationTest.kt",
+      "targetStatus": "pass",
       "controls": [
         "maker-checker",
         "audit"

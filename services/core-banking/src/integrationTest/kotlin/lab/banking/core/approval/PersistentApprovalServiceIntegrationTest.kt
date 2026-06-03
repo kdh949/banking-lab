@@ -87,6 +87,7 @@ class PersistentApprovalServiceIntegrationTest {
         assertEquals("MAKER_CHECKER_SELF_APPROVAL_REJECTED", selfApproval.code)
         assertEquals("MAKER_CHECKER_SEPARATION_OF_DUTIES", selfApproval.policy)
         assertEquals(ApprovalStatus.PENDING, approvals.approval(approval.approvalId).status)
+        assertEquals(1, countRows("audit_events"))
 
         val approved = approvals.approve(
             approval.approvalId,

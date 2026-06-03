@@ -95,6 +95,9 @@ class ApprovalApiParityIntegrationTest {
             .andExpect(jsonPath("$.error.requestId").value("REQ-APPROVAL-SELF"))
             .andExpect(jsonPath("$.error.route").value("/api/approvals/$approvalId/approve"))
 
+        assertEquals("PENDING", approvalStatus(approvalId))
+        assertEquals(1, countRows("audit_events"))
+
         mockMvc.perform(
             post("/api/approvals/$approvalId/approve")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -153,6 +156,13 @@ class ApprovalApiParityIntegrationTest {
             emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
+
+    private fun approvalStatus(approvalId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM operator_approvals WHERE approval_id = :approvalId",
+            mapOf("approvalId" to approvalId),
+            String::class.java
+        )
 
     companion object {
         @Container

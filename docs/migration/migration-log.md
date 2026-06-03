@@ -1309,3 +1309,21 @@ Remaining blockers:
 
 - `tests/staffTerminal.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Maker-Checker Target Parity Slice
+
+Changes completed:
+
+- Strengthened `MakerCheckerParityTest`, `PersistentApprovalServiceIntegrationTest`, and `ApprovalApiParityIntegrationTest` for the two `tests/makerChecker.test.mjs` oracle scenarios.
+- Added no-side-effect assertions for missing high-risk approval reason and maker self-approval rejection before valid checker approval.
+- Updated the parity scenario map, parity coverage matrix, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests 'lab.banking.core.approval.MakerCheckerParityTest'` passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.approval.PersistentApprovalServiceIntegrationTest' --tests 'lab.banking.core.approval.ApprovalApiParityIntegrationTest'` passed.
+
+Remaining blockers:
+
+- `tests/makerChecker.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
