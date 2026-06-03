@@ -6,7 +6,7 @@ Review date: 2026-06-03
 
 This drill verifies the live Docker Compose Spring API path when the `core-banking` process dies after a customer transfer has durably committed ledger, projection, customer-transfer result, and outbox state, but before the HTTP response is returned to the caller.
 
-The drill uses synthetic accounts and a synthetic customer only. It does not use the Node reference runtime and does not claim host crash recovery, multi-node failover, outbox trace correlation, or production deployment readiness.
+The drill uses synthetic accounts and a synthetic customer only. It does not use the Node reference runtime and does not claim host crash recovery, multi-node failover, or production deployment readiness. Outbox worker trace/log correlation is recorded separately in `docs/test-evidence/outbox-trace-log-correlation.md`.
 
 ## Failure Injected
 
@@ -42,4 +42,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the API process crash after durable ledger/outbox commit blocker for the current synthetic customer-transfer path. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the API process crash after durable ledger/outbox commit blocker for the current synthetic customer-transfer path. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

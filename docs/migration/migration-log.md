@@ -1631,3 +1631,36 @@ Remaining blockers:
 - Node retirement remains blocked.
 - The API process crash after durable ledger/outbox commit path is now proven for the current synthetic Compose customer-transfer drill.
 - Host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Outbox Worker Trace Log Correlation Drill
+
+Changes completed:
+
+- Added `OutboxWorkerTraceLogger` to create Micrometer tracing spans for outbox worker batch and batch-failure events.
+- Wired `OutboxWorkerRunner` to record trace/log correlation after each non-empty outbox publish batch and on scheduled batch failures.
+- Added `OutboxWorkerTraceLogIntegrationTest` for deterministic captured-log verification.
+- Extended `LiveOutboxWorkerSmokeIntegrationTest` with an env-gated live Compose outbox trace-log drill that verifies a published outbox event ID appears in worker logs with trace/span IDs.
+- Added `docs/test-evidence/outbox-trace-log-correlation.md` and updated evidence/gate docs while keeping Node retirement blocked.
+
+Verification:
+
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.eventing.OutboxWorkerRunnerTest` passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.observability.OutboxWorkerTraceLogIntegrationTest` passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest` passed without live outbox env, proving compile and env-gated skip behavior.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:bootJar` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-trace-drill BANKING_LAB_POSTGRES_PORT=15500 BANKING_LAB_REDPANDA_PORT=19100 BANKING_LAB_REDPANDA_ADMIN_PORT=19700 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-trace-drill BANKING_LAB_TRACING_ENABLED=true BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda core-banking-outbox-worker` passed.
+- `env BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT=banking-lab-outbox-trace-drill BANKING_LAB_POSTGRES_PORT=15500 BANKING_LAB_REDPANDA_PORT=19100 BANKING_LAB_REDPANDA_ADMIN_PORT=19700 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-trace-drill BANKING_LAB_TRACING_ENABLED=true BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.eventing.LiveOutboxWorkerSmokeIntegrationTest.live outbox worker batch logs carry trace and span ids after publish'` passed.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-trace-drill docker compose logs --no-color --tail=220 core-banking-outbox-worker` showed an `observability.outbox.worker event=batch` log line with a synthetic outbox event ID, `traceId=c6493c63802a9c590d3c1c697db53c15`, and `spanId=8840ed5ce947119a`.
+- `env COMPOSE_PROJECT_NAME=banking-lab-outbox-trace-drill BANKING_LAB_POSTGRES_PORT=15500 BANKING_LAB_REDPANDA_PORT=19100 BANKING_LAB_REDPANDA_ADMIN_PORT=19700 BANKING_LAB_OUTBOX_TOPIC=banking.lab.outbox-trace-drill BANKING_LAB_TRACING_ENABLED=true BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v` removed the temporary stack and volumes.
+
+Result:
+
+- Outbox worker batches now create tracing spans tagged with topic, client ID, attempted/published/failed/dead-lettered counts, and synthetic-only scope.
+- Captured integration logs prove 32-character lowercase hex trace IDs and 16-character lowercase hex span IDs.
+- The live Compose drill proved the deployed worker logs the published outbox event ID with trace/span correlation after durable publish to Redpanda.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Outbox worker trace/log correlation is now proven for the current synthetic target-stack outbox publish path.
+- Host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.

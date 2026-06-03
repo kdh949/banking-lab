@@ -15,7 +15,7 @@ This smoke verifies the local target-stack observability path for Spring Boot an
 - Promtail
 - Tempo
 
-This does not claim external alert routing, non-local alert notification delivery, or full Temporal/container worker failure recovery. Basic Spring HTTP trace/log correlation is covered separately in `docs/test-evidence/opentelemetry-trace-log-correlation.md`, and Temporal workflow trace/log correlation is covered in `docs/test-evidence/temporal-workflow-trace-log-correlation.md`.
+This does not claim external alert routing, non-local alert notification delivery, or full Temporal/container worker failure recovery. Basic Spring HTTP trace/log correlation is covered separately in `docs/test-evidence/opentelemetry-trace-log-correlation.md`, Temporal workflow trace/log correlation is covered in `docs/test-evidence/temporal-workflow-trace-log-correlation.md`, and outbox worker trace/log correlation is covered in `docs/test-evidence/outbox-trace-log-correlation.md`.
 
 ## Commands
 
@@ -115,4 +115,4 @@ curl --retry 10 --retry-delay 5 --retry-all-errors -fsS http://127.0.0.1:13101/p
 
 ## Retirement Impact
 
-This closes the local observability readiness, Prometheus scrape, Loki ingestion, Loki ruler alert, and Grafana dashboard validation blockers for the target stack. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the local observability readiness, Prometheus scrape, Loki ingestion, Loki ruler alert, and Grafana dashboard validation blockers for the target stack. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

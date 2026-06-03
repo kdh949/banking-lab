@@ -6,7 +6,7 @@ Review date: 2026-06-03
 
 This drill verifies that live Temporal workflows survive actual Docker Compose `temporal` server container restarts before checker approval is completed. It uses an external Compose Temporal server backed by PostgreSQL, a unique task queue, starts the Spring Boot `core-banking-temporal-worker`, starts each current synthetic workflow case type, waits for `WAITING_APPROVAL`, kills the `temporal` container, restarts the same service on the same host port, waits for Temporal health to return `SERVING`, sends the approval signal, and verifies completion through Temporal history replay.
 
-This proves one target-stack process crash shape for the Temporal server container across all current workflow case types while PostgreSQL remains healthy. It does not claim host crash recovery, PostgreSQL/database crash recovery, multi-node Temporal failover, external alert routing, Loki ingestion, dashboard validation, or outbox trace correlation. API post-commit crash coverage is recorded separately in `docs/test-evidence/api-process-crash-drill.md`.
+This proves one target-stack process crash shape for the Temporal server container across all current workflow case types while PostgreSQL remains healthy. It does not claim host crash recovery, PostgreSQL/database crash recovery, multi-node Temporal failover, external alert routing, Loki ingestion, or dashboard validation. API post-commit crash coverage is recorded separately in `docs/test-evidence/api-process-crash-drill.md`, and outbox worker trace/log correlation is recorded separately in `docs/test-evidence/outbox-trace-log-correlation.md`.
 
 ## Commands
 
@@ -97,4 +97,4 @@ An earlier representative drill attempt failed because the test-managed `docker 
 
 ## Retirement Impact
 
-This closes live Compose Temporal server process restart coverage for all current synthetic Temporal workflow contracts. The PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes live Compose Temporal server process restart coverage for all current synthetic Temporal workflow contracts. The PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

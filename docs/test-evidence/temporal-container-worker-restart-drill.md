@@ -283,4 +283,4 @@ The first live FDS rerun after adding the second case passed, but the restarted 
 
 ## Retirement Impact
 
-This closes the live Compose worker container restart drill for all current synthetic Temporal workflow contracts: complaint answer, FDS release, FDS block, AML closure, reconciliation adjustment, account hold, and account release. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes the live Compose worker container restart drill for all current synthetic Temporal workflow contracts: complaint answer, FDS release, FDS block, AML closure, reconciliation adjustment, account hold, and account release. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

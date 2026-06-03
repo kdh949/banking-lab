@@ -6,7 +6,7 @@ Review date: 2026-06-03
 
 This smoke verifies the target Spring Boot service emits an OpenTelemetry trace to Tempo and logs the same trace ID for the same synthetic HTTP request.
 
-It covers the `core-banking` HTTP `/health` path. Temporal workflow trace/log correlation is covered separately in `docs/test-evidence/temporal-workflow-trace-log-correlation.md`. This document does not claim Loki ingestion, alert routing, or dashboard validation.
+It covers the `core-banking` HTTP `/health` path. Temporal workflow trace/log correlation is covered separately in `docs/test-evidence/temporal-workflow-trace-log-correlation.md`, and outbox worker trace/log correlation is covered in `docs/test-evidence/outbox-trace-log-correlation.md`. This document does not claim Loki ingestion, alert routing, or dashboard validation.
 
 ## Commands
 
@@ -62,4 +62,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes basic OpenTelemetry trace/log correlation evidence for the Spring `core-banking` HTTP path. Node retirement remains blocked until host crash shapes, outbox tracing, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
+This closes basic OpenTelemetry trace/log correlation evidence for the Spring `core-banking` HTTP path. Node retirement remains blocked until host crash shapes, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.
