@@ -29,6 +29,7 @@ npm run goal:completion-audit -- --require-complete
 Passing items:
 
 - Area-based stack retirement audit is passing.
+- Generated artifact boundary audit is passing.
 - The parity scenario map covers 42 mapped Node reference scenarios with target `pass` status.
 - Current target-stack evidence gates for Spring health, structured errors, Next manifest rendering, API-backed channel parity, and evidence refresh are passing.
 

@@ -29,6 +29,9 @@ const qaRecommendationPath = "docs/architecture/qa-evidence-node-retirement-reco
 const stackAreaAuditDocPath = "docs/test-evidence/stack-retirement-area-audit.md";
 const stackAreaAuditScriptPath = "scripts/check-stack-retirement-by-area.ts";
 const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
+const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary.md";
+const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
+const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -60,6 +63,7 @@ const stalePatterns = [
 const requiredCommands = [
   "npm run passkey:evidence:preflight",
   "npm run retirement:stack-audit",
+  "npm run retirement:generated-boundary",
   "npm run goal:completion-audit",
   "npm run evidence:pack",
   "npm run retirement:audit",
@@ -132,6 +136,9 @@ for (const path of [
   stackAreaAuditDocPath,
   stackAreaAuditScriptPath,
   stackAreaAuditTestPath,
+  generatedBoundaryDocPath,
+  generatedBoundaryScriptPath,
+  generatedBoundaryTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -169,6 +176,9 @@ if (!evidenceRefreshGate) {
     stackAreaAuditDocPath,
     stackAreaAuditScriptPath,
     stackAreaAuditTestPath,
+    generatedBoundaryDocPath,
+    generatedBoundaryScriptPath,
+    generatedBoundaryTestPath,
     goalCompletionAuditDocPath,
     goalCompletionAuditScriptPath,
     goalCompletionAuditTestPath,

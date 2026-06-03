@@ -26,6 +26,12 @@ Run the area-specific stack audit directly when reviewing the "no disallowed sta
 npm run retirement:stack-audit
 ```
 
+Run the generated artifact boundary audit when `.next` or build output exists locally:
+
+```bash
+npm run retirement:generated-boundary
+```
+
 Run the completion audit before any final completion claim:
 
 ```bash
@@ -46,7 +52,7 @@ Not ready. The final review cannot be marked passed until:
 
 - non-synthetic passkey operations are proven with a real platform authenticator or hardware security key;
 - `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes `npm run passkey:evidence:verify` plus the retirement gate validation;
-- the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, and retirement gate commands after passkey evidence exists;
+- the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, and retirement gate commands after passkey evidence exists;
 - `npm run goal:completion-audit -- --require-complete` passes after all retirement blockers are resolved;
 - the final reviewer confirms no critical behavior depends on Node-only code.
 
@@ -62,7 +68,7 @@ Not ready. The final review cannot be marked passed until:
 - Workflow state is durable in target-stack storage and Temporal/state-machine evidence.
 - Events use durable outbox persistence before publication.
 - Reconciliation corrections use balanced adjustments.
-- Target `apps/`, `services/`, `packages/`, `analytics/`, `infra/`, `contracts/`, and `db/` do not depend on legacy Node runtime or `.mjs` reference code outside the approved oracle/support paths.
+- Target `apps/`, `services/`, `packages/`, `analytics/`, `infra/`, `contracts/`, and `db/` do not depend on legacy Node runtime or `.mjs` reference code outside the approved oracle/support paths; generated `.next`/`build` output remains ignored and untracked.
 
 ## Retirement Impact
 

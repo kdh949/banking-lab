@@ -26,6 +26,9 @@ const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const stackAreaAuditDocPath = "docs/test-evidence/stack-retirement-area-audit.md";
 const stackAreaAuditScriptPath = "scripts/check-stack-retirement-by-area.ts";
 const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
+const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary.md";
+const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
+const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -68,6 +71,16 @@ const delegatedChecks = [
       "Node retirement gate: blocked"
     ],
     forbiddenOutput: ["Stack retirement area audit: failed"]
+  },
+  {
+    name: "generated artifact boundary audit",
+    args: ["--experimental-strip-types", generatedBoundaryScriptPath],
+    requiredOutput: [
+      "Generated artifact boundary audit: pass",
+      "Tracked target legacy/static extension files: 0",
+      "Untracked source-like legacy/static extension files: 0"
+    ],
+    forbiddenOutput: ["Generated artifact boundary audit: failed"]
   },
   {
     name: "evidence refresh check",
@@ -151,6 +164,9 @@ for (const path of [
   stackAreaAuditDocPath,
   stackAreaAuditScriptPath,
   stackAreaAuditTestPath,
+  generatedBoundaryDocPath,
+  generatedBoundaryScriptPath,
+  generatedBoundaryTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath
@@ -174,6 +190,9 @@ if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-s
 }
 if (packageJson?.scripts?.["retirement:stack-audit"] !== `node --experimental-strip-types ${stackAreaAuditScriptPath}`) {
   errors.push("package.json must expose retirement:stack-audit before final retirement review.");
+}
+if (packageJson?.scripts?.["retirement:generated-boundary"] !== `node --experimental-strip-types ${generatedBoundaryScriptPath}`) {
+  errors.push("package.json must expose retirement:generated-boundary before final retirement review.");
 }
 if (packageJson?.scripts?.["goal:completion-audit"] !== `node --experimental-strip-types ${goalCompletionAuditScriptPath}`) {
   errors.push("package.json must expose goal:completion-audit before final retirement review.");
@@ -209,6 +228,9 @@ for (const path of [
   stackAreaAuditDocPath,
   stackAreaAuditScriptPath,
   stackAreaAuditTestPath,
+  generatedBoundaryDocPath,
+  generatedBoundaryScriptPath,
+  generatedBoundaryTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -225,6 +247,7 @@ requireIncludes(reviewDoc, "Status: blocked", "Retirement review doc must remain
 requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement review doc must avoid claiming readiness.");
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
 requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review doc must include the stack area audit command.");
+requireIncludes(reviewDoc, "npm run retirement:generated-boundary", "Retirement review doc must include the generated artifact boundary command.");
 requireIncludes(reviewDoc, "npm run goal:completion-audit", "Retirement review doc must include the goal completion audit command.");
 requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
 requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
@@ -265,5 +288,5 @@ if (errors.length > 0) {
 }
 
 console.log("Node retirement review preflight: pass");
-console.log("Boundary, stack area, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
+console.log("Boundary, stack area, generated artifact, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
 console.log("This does not mark Node retirement ready; non-synthetic passkey operations and final retirement review remain pending.");

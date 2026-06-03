@@ -18,6 +18,7 @@ test("goal completion audit reports current blockers without marking the objecti
   assert.equal(stderr, "");
   assert.match(stdout, /Goal completion audit: not complete/);
   assert.match(stdout, /stack-retirement-by-area: pass/);
+  assert.match(stdout, /generated-artifact-boundary: pass/);
   assert.match(stdout, /mapped-parity: pass/);
   assert.match(stdout, /gate:non-synthetic-passkey-operations: blocked/);
   assert.match(stdout, /gate:retirement-review: blocked/);

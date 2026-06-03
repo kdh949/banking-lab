@@ -27,11 +27,15 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
 
   assert.equal(packageJson.scripts["evidence:refresh-check"], `node --experimental-strip-types ${script}`);
   assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
+  assert.equal(packageJson.scripts["retirement:generated-boundary"], "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts");
   assert.equal(evidenceRefresh?.status, "pass");
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/evidence-refresh-review.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-stack-retirement-by-area.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/stackRetirementAreaAudit.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated-artifact-boundary.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-generated-artifact-boundary.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/generatedArtifactBoundary.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));

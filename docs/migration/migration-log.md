@@ -2227,3 +2227,41 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
+## 2026-06-03: Generated Artifact Boundary Audit
+
+Changes completed:
+
+- Added `scripts/check-generated-artifact-boundary.ts` and `npm run retirement:generated-boundary`.
+- Added `tests/generatedArtifactBoundary.test.mjs` to prove ignored `.next`, `build`, `dist`, and other generated directories are not mistaken for target source.
+- Added `docs/test-evidence/generated-artifact-boundary.md` with the current generated-artifact boundary result.
+- Wired the generated-artifact boundary document, script, and test into `evidence-refresh`, `retirement-review`, `goal:completion-audit`, and `retirement:review-preflight`.
+- Optimized the checker to validate ignored generated directory boundaries instead of running `git check-ignore` against every generated `.js` and `.html` file.
+
+Verification:
+
+- `npm run retirement:generated-boundary` passed with zero tracked target legacy/static extension files, zero untracked source-like legacy/static extension files, and 10 ignored generated directories.
+- `node --test tests/generatedArtifactBoundary.test.mjs tests/goalCompletionAudit.test.mjs tests/evidenceRefresh.test.mjs tests/retirementReviewPreflight.test.mjs` passed 9 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run retirement:stack-audit` passed.
+- `npm run retirement:audit` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm test` passed 93 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- `git diff --check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 93 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Target implementation areas now have a dedicated guard that distinguishes ignored generated output from checked-in target source.
+- The completion and final-review preflights include this guard before any future Node retirement claim.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
