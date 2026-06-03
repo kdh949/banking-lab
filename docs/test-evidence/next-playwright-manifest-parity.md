@@ -29,6 +29,8 @@ The default specs validate manifest-rendered metadata:
 - absence of app-router one-off business screen routes;
 - absence of direct business API fetch calls in the shell page.
 
+The structural Next scaffold tests also assert that target app directories no longer contain tracked legacy `public/index.html` static shells; those reference assets now live under `legacy-node-reference/apps`.
+
 When `BANKING_LAB_E2E_API_BASE_URL` is set, the specs additionally prove a read-model API-backed smoke through the shared TypeScript API/auth clients:
 
 - `customer-web` loads the synthetic owned account detail from Spring and displays a masked account number.

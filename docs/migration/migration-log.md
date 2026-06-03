@@ -18,7 +18,7 @@ Changes started:
 Current migration status:
 
 - Backend target scaffold: in progress. Gradle/Kotlin files and `/health` source are present, but local Java/Gradle execution is not available in this environment.
-- Next.js target scaffold: in progress for `customer-web`; the static shell remains for Node reference parity.
+- Next.js target scaffold: in progress for `customer-web`; the static shell is preserved for Node reference parity and later moved under `legacy-node-reference/apps`.
 - Node reference parity map: in progress.
 - Node retirement: blocked by design.
 
@@ -1853,3 +1853,35 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Evidence-refresh completion and final retirement review remain incomplete.
+
+## 2026-06-03: Legacy Static Shell Boundary Isolation
+
+Changes completed:
+
+- Moved tracked legacy static app shells from `apps/*/public/index.html` to `legacy-node-reference/apps/*/public/index.html`.
+- Moved the legacy static UI assets from `packages/ui/public` to `legacy-node-reference/ui/public`.
+- Updated the Node reference runtime to serve app HTML and `/assets/*` from `legacy-node-reference` instead of target app/package directories.
+- Strengthened `npm run retirement:audit` so target app/package directories fail the audit if legacy static shells return.
+- Updated scaffold tests and docs so target Next apps are treated as TypeScript/Next.js surfaces, not legacy static HTML hosts.
+
+Verification:
+
+- `node --test tests/nextScaffold.test.mjs tests/migrationFoundation.test.mjs tests/retirementBoundaryAudit.test.mjs` passed 11 tests.
+- `node --check legacy-node-reference/ui/public/app.js` passed.
+- `npm run scripts:typecheck` passed.
+- `npm run retirement:audit` passed with blocked status and the same remaining incomplete gates.
+- `npm run node:retirement-gate` passed with blocked status.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run parity` passed 73 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+- `npm run test:e2e` passed 14 manifest shell tests with 32 API/Keycloak-dependent tests skipped because no API/Keycloak URL was configured.
+
+Result:
+
+- Target `apps/*` directories no longer carry tracked legacy `public/index.html` shells.
+- Target `packages/ui` no longer carries the legacy static UI bundle.
+- The executable Node oracle remains intact behind `legacy-node-reference`.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.

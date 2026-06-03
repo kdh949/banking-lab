@@ -12,7 +12,7 @@ Browser
        -> Spring Boot core-banking service
 ```
 
-The existing static `apps/customer-web/public/index.html` remains the Node reference shell until frontend parity passes.
+The existing static customer-web shell now lives at `legacy-node-reference/apps/customer-web/public/index.html` as a Node reference asset. The target `apps/customer-web` directory is reserved for the TypeScript/Next.js channel.
 
 ## Current Scaffold
 

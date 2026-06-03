@@ -34,7 +34,7 @@ PLAN.md > AGENTS.md > BANKING_LAB_CODEX_PROMPT.md > docs/migration/* > architect
 
 - Do not expand the Node.js `.mjs` MVP as the final system.
 - Do not delete or rewrite Node reference assets.
-- Treat `runtime/server.mjs`, `runtime/labApp.mjs`, current `.mjs` domain packages, static app shells under `apps/*/public`, `tests/*.test.mjs`, and evidence scripts as legacy oracle assets.
+- Treat `runtime/server.mjs`, `runtime/labApp.mjs`, current `.mjs` domain packages, static app shells under `legacy-node-reference/apps`, legacy static UI assets under `legacy-node-reference/ui/public`, `tests/*.test.mjs`, and evidence scripts as legacy oracle assets.
 - Do not claim Node retirement readiness until the retirement gate says it is ready with evidence.
 - Do not directly mutate balances.
 - Do not publish domain events without durable Outbox persistence.

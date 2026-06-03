@@ -9,7 +9,7 @@
 - Spring Boot/Kotlin scaffold declares `/health`, structured error DTOs, PostgreSQL, Flyway, and Testcontainers dependencies.
 - Kotlin/Spring ledger commands now persist source-of-truth transactions and postings through PostgreSQL/Flyway.
 - Testcontainers verifies idempotency replay/conflict, outbox row insertion, closed-day rejection, reversal, and REPEATABLE READ/SERIALIZABLE concurrent withdrawal safety.
-- Customer-web Next scaffold renders from existing manifests and preserves the static Node reference shell.
+- Customer-web Next scaffold renders from existing manifests while the static Node reference shell is preserved under `legacy-node-reference/apps`.
 - Next dependency lock resolves `postcss` to the fixed override version.
 - Node retirement gate remains blocked until Kotlin/Next parity evidence exists.
 

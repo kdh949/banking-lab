@@ -672,7 +672,7 @@ export async function createLabHandler(state) {
 
       if (pathname === "/assets/app.js" || pathname === "/assets/lab.css") {
         const fileName = pathname.endsWith(".js") ? "app.js" : "lab.css";
-        const content = await readFile(join(repoRoot, "packages", "ui", "public", fileName), "utf8");
+        const content = await readFile(join(repoRoot, "legacy-node-reference", "ui", "public", fileName), "utf8");
         response.writeHead(200, { "content-type": MIME_TYPES.get(extname(fileName)) });
         response.end(content);
         return;
@@ -680,7 +680,7 @@ export async function createLabHandler(state) {
 
       const app = routeAppPath(pathname);
       if (app) {
-        const content = await readFile(join(repoRoot, "apps", app, "public", "index.html"), "utf8");
+        const content = await readFile(join(repoRoot, "legacy-node-reference", "apps", app, "public", "index.html"), "utf8");
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         response.end(content);
         return;

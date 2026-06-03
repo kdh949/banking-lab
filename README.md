@@ -34,7 +34,8 @@ The implementation prioritizes bank-grade controls over UI breadth:
 ## 3. Overall Architecture
 
 ```text
-apps/*                  static app shells
+apps/*                  TypeScript/Next.js target channel apps
+legacy-node-reference   Node runtime, service oracle, and static reference shells
 packages/banking-domain ledger, audit, masking, auth, maker-checker
 packages/screen-engine  screen manifest loader and validator
 packages/form-engine    reusable validation helpers
@@ -181,7 +182,7 @@ gradle :services:core-banking:test
 gradle :services:core-banking:bootRun
 ```
 
-Initial Next.js scaffold files live under `apps/customer-web/src`. The static `apps/customer-web/public/index.html` shell remains for the Node reference runtime. Verify the target frontend with:
+Initial Next.js scaffold files live under `apps/customer-web/src`. Legacy static app shells now live under `legacy-node-reference/apps` for the Node reference runtime, not under the target Next app directories. Verify the target frontend with:
 
 ```bash
 npm run next:customer-web:typecheck

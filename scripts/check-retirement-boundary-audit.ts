@@ -70,7 +70,21 @@ const requiredReferencePaths = [
   "runtime/server.mjs",
   "runtime/labApp.mjs",
   "legacy-node-reference/services",
+  "legacy-node-reference/apps",
+  "legacy-node-reference/ui/public",
   "tests"
+];
+
+const disallowedTargetStaticShellPaths = [
+  "apps/admin-console/public/index.html",
+  "apps/audit-console/public/index.html",
+  "apps/complaint-portal/public/index.html",
+  "apps/customer-web/public/index.html",
+  "apps/fds-aml-console/public/index.html",
+  "apps/ops-console/public/index.html",
+  "apps/staff-terminal/public/index.html",
+  "packages/ui/public/app.js",
+  "packages/ui/public/lab.css"
 ];
 
 const targetAnchors = [
@@ -163,6 +177,17 @@ const serviceMjsFiles = mjsFiles.filter((file) => file.startsWith("services/"));
 if (serviceMjsFiles.length > 0) {
   errors.push("Target service directories contain Node business modules:");
   errors.push(...serviceMjsFiles.map((file) => `  - ${file}`));
+}
+
+const targetStaticShells: string[] = [];
+for (const targetStaticShellPath of disallowedTargetStaticShellPaths) {
+  if (await exists(targetStaticShellPath)) {
+    targetStaticShells.push(targetStaticShellPath);
+  }
+}
+if (targetStaticShells.length > 0) {
+  errors.push("Target app/package directories contain legacy static Node shells:");
+  errors.push(...targetStaticShells.map((file) => `  - ${file}`));
 }
 
 const staleServiceImports: string[] = [];

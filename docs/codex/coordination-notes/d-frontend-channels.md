@@ -3,7 +3,7 @@
 ## Completed In Scope
 
 - Added manifest-rendered Next App Router shells for `staff-terminal`, `complaint-portal`, `ops-console`, `audit-console`, and `fds-aml-console`.
-- Kept `apps/*/public/index.html` static Node reference shells unchanged.
+- Kept static Node reference shells unchanged during the original app-shell work; coordinator follow-up later moved them from `apps/*/public/index.html` to `legacy-node-reference/apps/*/public/index.html` so target Next app directories contain only target frontend assets.
 - Did not edit `packages/screen-engine`, `packages/form-engine`, root shared files, `runtime/**`, or root workspace scripts.
 
 ## Coordinator-Owned Changes Requested

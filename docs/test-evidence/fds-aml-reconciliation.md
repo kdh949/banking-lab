@@ -10,7 +10,7 @@ Phase 6 covers FDS rule evaluation, transaction hold/release/block, AML case sim
 npm test
 npm run validate:manifests
 npm run evidence:phase6
-node --check packages/ui/public/app.js
+node --check legacy-node-reference/ui/public/app.js
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests 'lab.banking.core.fds.FdsAmlReconciliationWorkflowParityTest'
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.fds.FdsCaseApiParityIntegrationTest' --tests 'lab.banking.core.aml.AmlCaseApiParityIntegrationTest' --tests 'lab.banking.core.reconciliation.ReconciliationOpsApiParityIntegrationTest'
 ```

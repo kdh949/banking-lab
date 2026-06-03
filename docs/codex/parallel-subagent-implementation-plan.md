@@ -67,7 +67,7 @@ Repository facts to respect:
 - Node `.mjs` runtime is still the executable reference.
 - Kotlin/Spring Boot and TypeScript/Next.js migration is in progress.
 - Current tests and evidence scripts are the proof baseline.
-- Do not delete runtime/server.mjs, runtime/labApp.mjs, current packages/*.mjs code, static app shells under apps/*/public, tests/*.test.mjs, or scripts/generate-*.mjs unless the node retirement gate is explicitly ready and evidence is updated.
+- Do not delete runtime/server.mjs, runtime/labApp.mjs, current packages/*.mjs code, static app shells under legacy-node-reference/apps, legacy static UI assets under legacy-node-reference/ui/public, tests/*.test.mjs, or scripts/generate-*.mjs unless the node retirement gate is explicitly ready and evidence is updated.
 
 Start by reading:
 1. README.md
@@ -177,7 +177,7 @@ Allowed write paths:
 - apps/*/package.json only for app-local dependencies/scripts, not root package.json
 - docs/architecture/frontend-channels-*.md
 Read-only reference:
-- apps/*/public/**
+- legacy-node-reference/apps/**
 - packages/screen-engine/**
 - packages/form-engine/**
 - docs/migration/**
@@ -333,7 +333,7 @@ runtime/labApp.mjs
 packages/banking-domain/src/**/*.mjs
 packages/screen-engine/src/**/*.mjs
 packages/form-engine/src/**/*.mjs
-apps/*/public/**
+legacy-node-reference/apps/**
 tests/*.test.mjs
 scripts/generate-*.mjs
 ```
@@ -485,7 +485,7 @@ Read first:
 - docs/migration/kotlin-next-playbook.md
 - docs/architecture/next-customer-web-foundation.md if present
 - apps/customer-web/src/**
-- apps/*/public/**
+- legacy-node-reference/apps/**
 - packages/screen-engine/**
 - packages/form-engine/**
 
@@ -501,7 +501,7 @@ Allowed write paths:
 - docs/architecture/frontend-channels-*.md
 - docs/codex/coordination-notes/d-frontend-channels.md if shared changes are needed
 
-Do not edit packages/screen-engine or packages/form-engine. Do not delete apps/*/public static shells. Do not edit root package.json.
+Do not edit packages/screen-engine or packages/form-engine. Do not delete legacy-node-reference/apps static shells. Do not edit root package.json.
 
 Deliver:
 - Manifest-rendered shells for customer web, staff terminal, complaint portal, ops console, audit console, and FDS/AML console.

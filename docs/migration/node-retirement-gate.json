@@ -8,12 +8,11 @@
       "runtime/server.mjs",
       "runtime/labApp.mjs",
       "legacy-node-reference/services",
+      "legacy-node-reference/ui/public",
+      "legacy-node-reference/apps",
       "packages/banking-domain/src",
       "packages/screen-engine/src",
       "packages/form-engine/src",
-      "packages/ui/public",
-      "apps/customer-web/public/index.html",
-      "apps/staff-terminal/public/index.html",
       "tests"
     ]
   },
