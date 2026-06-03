@@ -1346,3 +1346,24 @@ Remaining blockers:
 
 - `tests/runtime.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Ledger Domain Target Parity Slice
+
+Changes completed:
+
+- Strengthened `LedgerInvariantsTest` for the five `tests/ledger.test.mjs` oracle scenarios.
+- Added target coverage for balanced internal transfer postings, balance projection from postings, reversal restoring projected balances, unbalanced transaction rejection, and malformed posting rejection.
+- Mapped durable idempotency replay to the existing PostgreSQL-backed `LedgerCommandServiceIntegrationTest`.
+- Updated the parity scenario map, parity coverage matrix, and evidence gap report while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests 'lab.banking.core.ledger.domain.LedgerInvariantsTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same unit test command passed under the approved execution path.
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest'` failed before test execution for the same Gradle file-lock socket reason.
+- The same integration test command passed under the approved execution path.
+
+Remaining blockers:
+
+- `tests/ledger.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
