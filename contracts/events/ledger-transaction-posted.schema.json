@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/ledger-transaction-posted.schema.json",
+  "title": "LedgerTransactionPosted",
+  "type": "object",
+  "required": ["eventId", "ledgerTransactionId", "transactionType", "businessDate", "syntheticOnly"],
+  "properties": {
+    "eventId": { "type": "string" },
+    "ledgerTransactionId": { "type": "string" },
+    "transactionType": { "type": "string" },
+    "businessDate": { "type": "string", "format": "date" },
+    "syntheticOnly": { "const": true }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,8 @@
+syntheticOnly: true
+
+coreBanking:
+  image: banking-lab/core-banking-service:local
+  port: 8081
+
+analytics:
+  image: banking-lab/aml-fds-python:local

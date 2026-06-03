@@ -1,6 +1,7 @@
 {
   "realm": "banking-lab",
   "enabled": true,
+  "sslRequired": "none",
   "displayName": "Synthetic Banking Lab",
   "roles": {
     "realm": [
@@ -14,6 +15,7 @@
       { "name": "OPS_OPERATOR" },
       { "name": "AUDITOR" },
       { "name": "COMPLIANCE_MANAGER" },
+      { "name": "PASSKEY_RECOVERY_ADMIN" },
       { "name": "SYSTEM" }
     ]
   },
@@ -23,14 +25,146 @@
       "enabled": true,
       "publicClient": true,
       "protocol": "openid-connect",
-      "redirectUris": ["http://localhost:3000/*"]
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "synthetic-customer-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "banking_lab_customer_id",
+            "claim.name": "banking_lab_customer_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
     },
     {
       "clientId": "staff-terminal",
       "enabled": true,
       "publicClient": true,
       "protocol": "openid-connect",
-      "redirectUris": ["http://localhost:3002/*"]
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3002/*"],
+      "webOrigins": ["http://localhost:3002"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "complaint-portal",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3003/*"],
+      "webOrigins": ["http://localhost:3003"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "ops-console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3004/*"],
+      "webOrigins": ["http://localhost:3004"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "audit-console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3005/*"],
+      "webOrigins": ["http://localhost:3005"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "fds-aml-console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3006/*"],
+      "webOrigins": ["http://localhost:3006"],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     },
     {
       "clientId": "admin-console",
@@ -45,6 +179,227 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "serviceAccountsEnabled": true
+    }
+  ],
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyLookAheadWindow": 1,
+  "webAuthnPolicyRpEntityName": "Synthetic Banking Lab",
+  "webAuthnPolicyRpId": "localhost",
+  "webAuthnPolicySignatureAlgorithms": ["ES256"],
+  "webAuthnPolicyAttestationConveyancePreference": "none",
+  "webAuthnPolicyAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyRequireResidentKey": "not specified",
+  "webAuthnPolicyUserVerificationRequirement": "required",
+  "webAuthnPolicyCreateTimeout": 60,
+  "webAuthnPolicyAvoidSameAuthenticatorRegister": true,
+  "webAuthnPolicyAcceptableAaguids": [],
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 10
+    },
+    {
+      "alias": "webauthn-register",
+      "name": "WebAuthn Register",
+      "providerId": "webauthn-register",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 20
+    }
+  ],
+  "users": [
+    {
+      "username": "branch01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "Branch",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "branch01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_STAFF"]
+    },
+    {
+      "username": "manager01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_MANAGER"]
+    },
+    {
+      "username": "complaint01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "ComplaintHandler",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "complaint01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["COMPLAINT_HANDLER"]
+    },
+    {
+      "username": "ops01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "OpsOperator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ops01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["OPS_OPERATOR"]
+    },
+    {
+      "username": "auditor01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "Auditor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "auditor01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["AUDITOR"]
+    },
+    {
+      "username": "risk01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "RiskReviewer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "risk01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["FDS_REVIEWER", "AML_REVIEWER"]
+    },
+    {
+      "username": "compliance01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "ComplianceManager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "compliance01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_MANAGER", "COMPLIANCE_MANAGER"]
+    },
+    {
+      "username": "customer01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "Customer",
+      "attributes": {
+        "banking_lab_customer_id": ["SYN-CUS-001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["CUSTOMER"]
+    },
+    {
+      "username": "manager-mfa01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "MfaManager",
+      "requiredActions": ["CONFIGURE_TOTP"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager-mfa01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_MANAGER"]
+    },
+    {
+      "username": "manager-webauthn01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "WebAuthnManager",
+      "requiredActions": ["webauthn-register"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager-webauthn01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_MANAGER"]
+    },
+    {
+      "username": "manager-webauthn-block01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "WebAuthnBlockManager",
+      "requiredActions": ["webauthn-register"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager-webauthn-block01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BRANCH_MANAGER"]
+    },
+    {
+      "username": "security-admin01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "PasskeyRecoveryAdmin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "security-admin01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["COMPLIANCE_MANAGER", "AUDITOR", "PASSKEY_RECOVERY_ADMIN"]
     }
   ]
 }

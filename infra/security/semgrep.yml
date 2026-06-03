@@ -1,0 +1,14 @@
+rules:
+  - id: banking-lab-no-real-financial-network
+    message: Do not integrate real financial institution or payment network endpoints in this synthetic lab.
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: "https://(api\\.)?(visa|mastercard|swift|fedwire|ach)\\."
+  - id: banking-lab-no-raw-balance-mutation
+    message: Balances must be projections from ledger postings, not directly mutated as source of truth.
+    severity: ERROR
+    languages: [generic]
+    pattern-regex: "UPDATE\\s+account_balance_projections\\s+SET\\s+(ledger_balance_minor|available_balance_minor)\\s*="
+    paths:
+      exclude:
+        - services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt

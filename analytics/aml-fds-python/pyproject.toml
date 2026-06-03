@@ -1,0 +1,18 @@
+[project]
+name = "banking-lab-aml-fds"
+version = "0.1.0"
+description = "Synthetic AML/FDS analytics service for Banking Lab"
+requires-python = ">=3.11"
+dependencies = [
+  "duckdb>=1.2.0",
+  "scikit-learn>=1.6.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

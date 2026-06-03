@@ -1,0 +1,8 @@
+scan:
+  skip-dirs:
+    - node_modules
+    - .gradle
+    - services/core-banking/build
+severity:
+  - CRITICAL
+  - HIGH

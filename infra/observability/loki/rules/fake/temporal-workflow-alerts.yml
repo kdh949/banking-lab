@@ -1,0 +1,15 @@
+groups:
+  - name: temporal-workflow-alerts
+    interval: 5s
+    rules:
+      - alert: TemporalWorkflowFailed
+        expr: |
+          count_over_time({compose_service="core-banking-temporal-worker"} |= "observability.workflow" |= "event=failed" [5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          control: temporal-workflow
+          synthetic_only: "true"
+        annotations:
+          summary: Temporal workflow failure observed in synthetic banking lab
+          description: A core-banking Temporal worker emitted an observability.workflow failed event. Inspect Loki logs and Tempo traces before retrying or approving the case.
