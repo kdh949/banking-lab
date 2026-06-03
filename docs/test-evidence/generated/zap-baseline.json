@@ -53,13 +53,13 @@
 			"statistic": "4"
 		}
 	],
-	"site":[ 
+	"site":[
 		{
 			"@name": "http://host.docker.internal:18132",
 			"@host": "host.docker.internal",
 			"@port": "18132",
 			"@ssl": "false",
-			"alerts": [ 
+			"alerts": [
 				{
 					"pluginid": "10049",
 					"alertRef": "10049-1",
@@ -69,7 +69,7 @@
 					"confidence": "2",
 					"riskdesc": "Informational (Medium)",
 					"desc": "<p>The response contents are not storable by caching components such as proxy servers. If the response does not contain sensitive, personal or user-specific information, it may benefit from being stored and cached, to improve performance.</p>",
-					"instances":[ 
+					"instances":[
 						{
 							"id": "2",
 							"uri": "http://host.docker.internal:18132/",

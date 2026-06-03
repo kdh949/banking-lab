@@ -11,4 +11,3 @@ Generated at: 2026-06-02T23:30:35.306Z
 | dast-zap-baseline | pass | docs/test-evidence/generated/zap-baseline.log |  |
 
 Totals: 5 passed, 0 failed, 0 skipped.
-
