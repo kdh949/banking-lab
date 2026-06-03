@@ -7,6 +7,7 @@
     "paths": [
       "runtime/server.mjs",
       "runtime/labApp.mjs",
+      "legacy-node-reference/services",
       "packages/banking-domain/src",
       "packages/screen-engine/src",
       "packages/form-engine/src",
@@ -316,8 +317,10 @@
         "docs/test-evidence/temporal-platform-host-crash-drill.md",
         "docs/test-evidence/outbox-platform-host-crash-drill.md",
         "docs/test-evidence/passkey-non-synthetic-operations.md",
+        "legacy-node-reference/README.md",
         "scripts/record-passkey-non-synthetic-evidence.ts",
-        "tests/passkeyEvidenceRecorder.test.mjs"
+        "tests/passkeyEvidenceRecorder.test.mjs",
+        "tests/migrationFoundation.test.mjs"
       ]
     },
     {

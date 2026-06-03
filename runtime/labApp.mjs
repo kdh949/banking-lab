@@ -13,7 +13,7 @@ import {
   maskAccount,
   maskCustomer
 } from "../packages/banking-domain/src/index.mjs";
-import { LedgerCore } from "../services/core-banking/src/index.mjs";
+import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
 import {
   assignComplaint,
   classifyComplaint,
@@ -22,7 +22,7 @@ import {
   markComplaintAnswered,
   receiveComplaint,
   startComplaintReview
-} from "../services/complaint-service/src/index.mjs";
+} from "../legacy-node-reference/services/complaint-service/src/index.mjs";
 import {
   assignFdsCase,
   createFdsCase,
@@ -30,7 +30,7 @@ import {
   markFdsBlocked,
   markFdsReleased,
   requestFdsDecision
-} from "../services/fds-service/src/index.mjs";
+} from "../legacy-node-reference/services/fds-service/src/index.mjs";
 import {
   addAmlComment,
   assignAmlCase,
@@ -39,13 +39,13 @@ import {
   deriveAmlRisk,
   evaluateAmlRules,
   requestAmlClosure
-} from "../services/aml-service/src/index.mjs";
+} from "../legacy-node-reference/services/aml-service/src/index.mjs";
 import {
   markReconciliationAdjusted,
   requestReconciliationAdjustment,
   runDailyReconciliation
-} from "../services/reconciliation-service/src/index.mjs";
-import { simulateExternalInstitutionFile } from "../services/external-simulators/src/index.mjs";
+} from "../legacy-node-reference/services/reconciliation-service/src/index.mjs";
+import { simulateExternalInstitutionFile } from "../legacy-node-reference/services/external-simulators/src/index.mjs";
 import { filterManifestsByApp, loadManifests } from "../packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));

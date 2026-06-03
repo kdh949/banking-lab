@@ -1752,3 +1752,28 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Evidence-refresh completion and final retirement review remain incomplete.
+
+## 2026-06-03: Target Service Node Module Isolation
+
+Changes completed:
+
+- Moved Node service-shaped oracle modules from `services/*/src/*.mjs` to `legacy-node-reference/services/*/src/*.mjs`.
+- Updated `runtime/labApp.mjs` and `tests/ledgerCore.test.mjs` to use the legacy reference path so the executable Node oracle remains intact.
+- Added `legacy-node-reference/README.md` to mark that directory as reference-only and not a target service implementation area.
+- Added a migration foundation test that asserts target `services/` contains no `.mjs` business modules while the retirement gate remains blocked.
+- Updated ADR and regulatory mapping docs to distinguish legacy `LedgerCore` evidence from Spring/PostgreSQL target services.
+
+Verification:
+
+- `node --test tests/migrationFoundation.test.mjs tests/ledgerCore.test.mjs` should pass after the move.
+- `npm test`, `npm run node:retirement-gate`, and `npm run parity` should continue to pass before this cleanup is treated as evidence.
+
+Result:
+
+- The target service tree no longer contains Node business modules.
+- The Node oracle is still preserved under an explicit legacy reference boundary until the retirement gate is ready.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.

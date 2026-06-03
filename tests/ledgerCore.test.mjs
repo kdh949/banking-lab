@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { generateSyntheticDataset } from "../packages/banking-domain/src/index.mjs";
-import { LedgerCore } from "../services/core-banking/src/index.mjs";
+import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
 
 function seededCore() {
   const dataset = generateSyntheticDataset();

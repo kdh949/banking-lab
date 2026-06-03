@@ -16,7 +16,7 @@
 
 | Control area | Phase 2 evidence |
 | --- | --- |
-| Deposit/withdraw/transfer controls | `services/core-banking/src/ledgerCore.mjs`, `tests/ledgerCore.test.mjs` |
+| Deposit/withdraw/transfer controls | `legacy-node-reference/services/core-banking/src/ledgerCore.mjs`, `LedgerCommandService`, `tests/ledgerCore.test.mjs`, Spring ledger integration tests |
 | Concurrent withdrawal protection | `CommandLock`, concurrent withdrawal test |
 | Closed business day guard | `closeBusinessDay`, `assertBusinessDateOpen`, closed-day test |
 | Ledger idempotency replay | `LedgerCore` idempotency tests |

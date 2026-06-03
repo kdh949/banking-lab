@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 async function exists(filePath) {
   try {
@@ -9,6 +10,20 @@ async function exists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function listFiles(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listFiles(entryPath));
+    } else {
+      files.push(entryPath);
+    }
+  }
+  return files;
 }
 
 test("migration parity map covers every current Node reference test scenario", async () => {
@@ -62,6 +77,15 @@ test("Node retirement gate keeps reference runtime until parity evidence is read
   ]) {
     assert.equal(gateIds.has(required), true, `${required} retirement gate is missing`);
   }
+});
+
+test("target service directories do not contain Node business modules", async () => {
+  const serviceFiles = await listFiles("services");
+  const mjsFiles = serviceFiles.filter((filePath) => filePath.endsWith(".mjs"));
+  const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
+
+  assert.deepEqual(mjsFiles, []);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/services"), true);
 });
 
 test("migration playbook names parity command, structured error contract, and retirement gate", async () => {

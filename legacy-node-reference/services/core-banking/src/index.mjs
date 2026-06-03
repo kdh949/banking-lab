@@ -5,5 +5,5 @@ export {
   createLedgerTransaction,
   createReversalTransaction,
   projectBalances
-} from "../../../packages/banking-domain/src/index.mjs";
+} from "../../../../packages/banking-domain/src/index.mjs";
 export { LedgerCore } from "./ledgerCore.mjs";
