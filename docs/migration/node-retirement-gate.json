@@ -272,10 +272,12 @@
       "evidence": [
         "docs/test-evidence/passkey-non-synthetic-operations.md",
         "scripts/prepare-passkey-non-synthetic-evidence.ts",
+        "scripts/check-passkey-manual-readiness.ts",
         "scripts/record-passkey-non-synthetic-evidence.ts",
         "scripts/verify-passkey-non-synthetic-evidence.ts",
         "scripts/check-passkey-non-synthetic-preflight.ts",
         "tests/passkeyEvidencePrepare.test.mjs",
+        "tests/passkeyManualReadiness.test.mjs",
         "tests/passkeyEvidenceRecorder.test.mjs",
         "tests/passkeyEvidenceVerifier.test.mjs",
         "tests/passkeyEvidencePreflight.test.mjs"
@@ -340,6 +342,7 @@
         "docs/test-evidence/passkey-non-synthetic-operations.md",
         "legacy-node-reference/README.md",
         "scripts/prepare-passkey-non-synthetic-evidence.ts",
+        "scripts/check-passkey-manual-readiness.ts",
         "scripts/record-passkey-non-synthetic-evidence.ts",
         "scripts/verify-passkey-non-synthetic-evidence.ts",
         "scripts/check-passkey-non-synthetic-preflight.ts",
@@ -353,6 +356,7 @@
         "scripts/check-evidence-refresh.ts",
         "scripts/check-retirement-boundary-audit.ts",
         "tests/passkeyEvidencePrepare.test.mjs",
+        "tests/passkeyManualReadiness.test.mjs",
         "tests/passkeyEvidenceRecorder.test.mjs",
         "tests/passkeyEvidenceVerifier.test.mjs",
         "tests/passkeyEvidencePreflight.test.mjs",

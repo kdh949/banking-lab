@@ -28,13 +28,18 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   const preflight = await readFile(preflightScript, "utf8");
   const prepareScript = "scripts/prepare-passkey-non-synthetic-evidence.ts";
   const prepareTest = "tests/passkeyEvidencePrepare.test.mjs";
+  const readinessScript = "scripts/check-passkey-manual-readiness.ts";
+  const readinessTest = "tests/passkeyManualReadiness.test.mjs";
   const verifierScript = "scripts/verify-passkey-non-synthetic-evidence.ts";
   const verifierTest = "tests/passkeyEvidenceVerifier.test.mjs";
 
   assert.equal(packageJson.scripts["passkey:evidence:preflight"], `node --experimental-strip-types ${preflightScript}`);
   assert.equal(packageJson.scripts["passkey:evidence:prepare"], `node --experimental-strip-types ${prepareScript}`);
+  assert.equal(packageJson.scripts["passkey:evidence:readiness"], `node --experimental-strip-types ${readinessScript}`);
   assert.ok(passkeyGate?.evidence?.includes(prepareScript));
   assert.ok(passkeyGate?.evidence?.includes(prepareTest));
+  assert.ok(passkeyGate?.evidence?.includes(readinessScript));
+  assert.ok(passkeyGate?.evidence?.includes(readinessTest));
   assert.equal(packageJson.scripts["passkey:evidence:verify"], `node --experimental-strip-types ${verifierScript}`);
   assert.ok(passkeyGate?.evidence?.includes(verifierScript));
   assert.ok(passkeyGate?.evidence?.includes(verifierTest));
@@ -44,6 +49,8 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   assert.ok(evidenceRefresh?.evidence?.includes(verifierTest));
   assert.ok(evidenceRefresh?.evidence?.includes(prepareScript));
   assert.ok(evidenceRefresh?.evidence?.includes(prepareTest));
+  assert.ok(evidenceRefresh?.evidence?.includes(readinessScript));
+  assert.ok(evidenceRefresh?.evidence?.includes(readinessTest));
   assert.ok(evidenceRefresh?.evidence?.includes(preflightScript));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/passkeyEvidencePreflight.test.mjs"));
   assert.match(preflight, /manager-webauthn01/);

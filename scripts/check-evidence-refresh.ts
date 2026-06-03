@@ -33,7 +33,9 @@ const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary
 const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
 const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const passkeyPrepareScriptPath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
+const passkeyReadinessScriptPath = "scripts/check-passkey-manual-readiness.ts";
 const passkeyPrepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
+const passkeyReadinessTestPath = "tests/passkeyManualReadiness.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
 const finalReviewPrepareScriptPath = "scripts/prepare-final-retirement-review-evidence.ts";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
@@ -73,6 +75,7 @@ const stalePatterns = [
 
 const requiredCommands = [
   "npm run passkey:evidence:prepare",
+  "npm run passkey:evidence:readiness",
   "npm run retirement:final-review:prepare",
   "npm run passkey:evidence:preflight",
   "npm run retirement:stack-audit",
@@ -154,7 +157,9 @@ for (const path of [
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
   passkeyPrepareScriptPath,
+  passkeyReadinessScriptPath,
   passkeyPrepareTestPath,
+  passkeyReadinessTestPath,
   finalReviewVerifierDocPath,
   finalReviewPrepareScriptPath,
   finalReviewRecorderScriptPath,
@@ -205,7 +210,9 @@ if (!evidenceRefreshGate) {
     generatedBoundaryScriptPath,
     generatedBoundaryTestPath,
     passkeyPrepareScriptPath,
+    passkeyReadinessScriptPath,
     passkeyPrepareTestPath,
+    passkeyReadinessTestPath,
     finalReviewVerifierDocPath,
     finalReviewPrepareScriptPath,
     finalReviewRecorderScriptPath,

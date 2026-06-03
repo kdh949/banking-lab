@@ -33,6 +33,7 @@
     "passkey:evidence:verify": "node --experimental-strip-types scripts/verify-passkey-non-synthetic-evidence.ts",
     "passkey:evidence:preflight": "node --experimental-strip-types scripts/check-passkey-non-synthetic-preflight.ts",
     "passkey:evidence:prepare": "node --experimental-strip-types scripts/prepare-passkey-non-synthetic-evidence.ts",
+    "passkey:evidence:readiness": "node --experimental-strip-types scripts/check-passkey-manual-readiness.ts",
     "evidence:refresh-check": "node --experimental-strip-types scripts/check-evidence-refresh.ts",
     "retirement:review-preflight": "node --experimental-strip-types scripts/check-retirement-review-preflight.ts",
     "retirement:final-review:prepare": "node --experimental-strip-types scripts/prepare-final-retirement-review-evidence.ts",

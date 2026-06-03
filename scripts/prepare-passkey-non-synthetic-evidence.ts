@@ -37,8 +37,8 @@ function commandTemplate(command: string, summary: string): CommandEvidenceTempl
 
 function authenticatorSummary(kind: AuthenticatorKind): string {
   return kind === "hardware-security-key"
-    ? "Operator completed Keycloak WebAuthn required action using a real hardware security key."
-    : "Operator completed Keycloak WebAuthn required action using a real platform authenticator.";
+    ? "Replace this summary after the operator completes Keycloak WebAuthn required action using a real hardware security key."
+    : "Replace this summary after the operator completes Keycloak WebAuthn required action using a real platform authenticator.";
 }
 
 const composeCommand = [

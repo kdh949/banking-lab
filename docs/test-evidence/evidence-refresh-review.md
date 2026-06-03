@@ -13,24 +13,27 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 ## Commands
 
 - `npm run passkey:evidence:prepare` passed and generated ignored local TODO templates under `tmp/passkey-evidence-manual/`.
+- `npm run passkey:evidence:readiness` passed against the ignored local TODO templates under `tmp/passkey-evidence-manual/`.
 - `npm run retirement:final-review:prepare` passed and generated ignored local TODO templates under `tmp/final-retirement-review-manual/`.
 - `npm run passkey:evidence:preflight` passed.
+- `node --test tests/passkeyManualReadiness.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/passkeyEvidencePrepare.test.mjs tests/evidenceRefresh.test.mjs` passed 13 tests.
+- `node --test tests/passkeyManualReadiness.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/passkeyEvidencePrepare.test.mjs` initially failed because the manual-authenticator summary in the prepared template read like completed evidence; after changing it to a replacement instruction it passed 11 tests.
 - `node --test tests/passkeyEvidencePrepare.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 8 tests.
 - `node --test tests/finalRetirementReviewPrepare.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` initially failed because this review did not yet list `npm run retirement:final-review:prepare`; after the document was corrected it passed 7 tests.
 - `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/goalCompletionAudit.test.mjs` passed 34 tests.
 - `node --test tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 26 tests.
 - `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementBoundaryAudit.test.mjs tests/evidenceRefresh.test.mjs` passed 19 tests.
 - `npm run scripts:typecheck` passed.
-- `npm run retirement:audit` passed with blocked status, 62 approved-reference `.mjs` files, 37 target anchors, 324 evidence paths, and 42/42 mapped scenarios.
+- `npm run retirement:audit` passed with blocked status, 63 approved-reference `.mjs` files, 37 target anchors, 328 evidence paths, and 42/42 mapped scenarios.
 - `npm run retirement:stack-audit` passed.
 - `npm run retirement:generated-boundary` passed.
 - `npm run retirement:ready-simulate` passed.
 - `npm run goal:completion-audit` passed with `not complete` status and blocked passkey/final-review items.
 - `npm run node:retirement-gate` passed with blocked status.
-- `npm test` passed 122 tests.
+- `npm test` passed 127 tests.
 - `npm run validate:manifests` validated 28 manifests.
 - `git diff --check` passed.
-- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 122 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 127 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
 - `npm run evidence:pack` passed and regenerated the evidence pack summary.
 - `npm run evidence:refresh-check` passed.
 
@@ -44,6 +47,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `docs/test-evidence/generated-artifact-boundary.md` proves generated `.next`/`build` output is ignored and not tracked as target source.
 - `npm run retirement:ready-simulate` proves the future ready path with fixture passkey/final-review artifacts without changing the real blocked gate.
 - `npm run passkey:evidence:prepare` creates ignored local command, staff-panel, and recorder-command templates with TODO values so the future manual run starts from the required redaction format without accidentally producing pass evidence.
+- `npm run passkey:evidence:readiness` proves the prepared local templates align with the documented Compose ports, Keycloak issuer, simulator-token-disabled startup, Spring health URL, recorder command, and masked staff-panel markers without marking passkey evidence complete.
 - `npm run retirement:final-review:prepare` creates ignored local command and recorder-command templates with TODO values so the future post-passkey final review starts from the required command/control format without accidentally producing pass evidence.
 - Passkey recorder and verifier evidence now require structured passing command evidence with `command`, `status: "pass"`, `exitCode: 0`, a non-empty `summary`, no duplicate commands, live Compose startup, simulator-token-disabled Spring configuration, Keycloak discovery readiness, Spring `/health` readiness, a real platform/hardware authenticator attestation, structured manual ceremony evidence for `http://localhost` staff-terminal origin, `http://localhost/.../realms/banking-lab` issuer, RP ID `localhost`, synthetic `manager-webauthn01`, Authorization Code + PKCE, no browser virtual authenticator automation, and the recorder command before accepting future non-synthetic passkey evidence.
 - Final retirement review recorder and verifier now require the referenced passkey evidence artifact to pass the strict passkey verifier, then require post-passkey `retirement:ready-simulate`, `passkey:evidence:preflight`, and `retirement:review-preflight` command evidence in addition to parity, manifest, evidence pack, boundary, and passkey verifier commands.
