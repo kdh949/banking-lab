@@ -39,4 +39,7 @@ test("QA structured error gap report covers every required error family", async 
   ]) {
     assert.match(report, new RegExp(code));
   }
+  assert.match(report, /nine required families now have real Spring route coverage/i);
+  assert.match(report, /INTERNAL_RUNTIME_ERROR.*profile-only/i);
+  assert.doesNotMatch(report, /remaining probe-backed families/i);
 });

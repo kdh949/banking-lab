@@ -1492,3 +1492,23 @@ Remaining blockers:
 
 - The current API-backed channel parity gate is now closed, but Node retirement remains blocked.
 - Remaining blockers are host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review.
+
+## 2026-06-03: Structured Error Real Route Coverage Refresh
+
+Changes completed:
+
+- Replaced the structured-error contract integration test's non-ledger probe assertions with real Spring routes for reason-required staff detail, unauthorized staff unmask, maker-checker self-approval, complaint request validation, staff customer not-found, and complaint workflow state violation.
+- Kept `INTERNAL_RUNTIME_ERROR` on the `api-error-parity` probe only, because exposing a production-like endpoint that intentionally throws runtime errors would be unsafe.
+- Fixed staff customer lookup so missing synthetic customers map to structured `RESOURCE_NOT_FOUND` instead of leaking `EmptyResultDataAccessException` as HTTP 500.
+- Updated the structured-error evidence report, QA recommendation, evidence gap report, and parity coverage matrix to reflect real route coverage for nine required error families.
+
+Verification:
+
+- Initial approved `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.api.StructuredApiErrorContractIntegrationTest` failed because the new real not-found route exposed a staff customer lookup 500.
+- The same focused integration test failed a second time because the synthetic answered-complaint fixture used incomplete `answer_json`, which correctly avoided weakening production code with a fake runtime route.
+- After mapping staff missing-customer lookup to `WorkflowErrors.notFound` and narrowing the answered-complaint fixture, the same focused integration test passed under the approved execution path.
+
+Remaining blockers:
+
+- Structured error response-shape coverage now uses real Spring routes for all required families except profile-only `INTERNAL_RUNTIME_ERROR`.
+- Node retirement remains blocked by host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review.

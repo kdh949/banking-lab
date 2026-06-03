@@ -223,67 +223,167 @@ class StructuredApiErrorContractIntegrationTest {
     }
 
     @Test
-    fun `migration parity probe proves non-ledger structured error families through Spring handler`() {
-        listOf(
-            ExpectedError(
+    fun `real routes prove non-ledger structured error families through Spring handler`() {
+        seedAccount("CUS-ERR-STAFF", "ACC-ERR-STAFF", "LAB-ERR-000003")
+        seedAnsweredComplaint("CMP-ERR-ANSWERED", "CUS-ERR-STAFF")
+
+        assertStructuredError(
+            error = getError(
+                route = "/api/staff/customers/CUS-ERR-STAFF/detail",
+                requestId = "REQ-SPRING-POLICY-REASON",
+                expectedStatus = 400
+            ),
+            expected = ExpectedError(
                 code = "POLICY_REASON_REQUIRED",
                 statusCode = 400,
                 domain = "audit",
                 policy = "REASON_REQUIRED",
                 requestId = "REQ-SPRING-POLICY-REASON",
-                route = "/api/parity/structured-errors/POLICY_REASON_REQUIRED"
+                route = "/api/staff/customers/CUS-ERR-STAFF/detail"
+            )
+        )
+
+        assertStructuredError(
+            error = postJson(
+                route = "/api/staff/pii/unmask",
+                requestId = "REQ-SPRING-AUTHZ",
+                body = """
+                    {
+                      "customerId": "CUS-ERR-STAFF",
+                      "requestedBy": "branch01",
+                      "actorRole": "BRANCH_STAFF",
+                      "reason": "Synthetic unauthorized unmask error contract test",
+                      "screenId": "CST-002"
+                    }
+                """.trimIndent(),
+                expectedStatus = 403
             ),
-            ExpectedError(
+            expected = ExpectedError(
                 code = "AUTHORIZATION_POLICY_VIOLATION",
                 statusCode = 403,
                 domain = "auth",
-                policy = "RBAC_ABAC_REQUIRED",
+                policy = "RBAC_ABAC_POLICY_REQUIRED",
                 requestId = "REQ-SPRING-AUTHZ",
-                route = "/api/parity/structured-errors/AUTHORIZATION_POLICY_VIOLATION"
+                route = "/api/staff/pii/unmask"
+            )
+        )
+
+        val approval = postJson(
+            route = "/api/approvals",
+            requestId = "REQ-SPRING-APPROVAL-SUBMIT",
+            body = """
+                {
+                  "businessType": "ACCOUNT_HOLD",
+                  "businessReferenceId": "ACC-ERR-STAFF",
+                  "requestedBy": "branch01",
+                  "requestedByRole": "BRANCH_STAFF",
+                  "requestReason": "Synthetic self approval error contract test",
+                  "beforeSnapshot": { "status": "ACTIVE" },
+                  "afterSnapshot": { "status": "HOLD_REQUESTED" },
+                  "screenId": "ACC-103"
+                }
+            """.trimIndent(),
+            expectedStatus = 201
+        )
+        val approvalId = approval.path("approvalId").asText()
+        assertStructuredError(
+            error = postJson(
+                route = "/api/approvals/$approvalId/approve",
+                requestId = "REQ-SPRING-MAKER-CHECKER",
+                body = """
+                    {
+                      "approvedBy": "branch01",
+                      "approvedByRole": "BRANCH_STAFF",
+                      "screenId": "ACC-103"
+                    }
+                """.trimIndent(),
+                expectedStatus = 409
             ),
-            ExpectedError(
+            expected = ExpectedError(
                 code = "MAKER_CHECKER_SELF_APPROVAL_REJECTED",
                 statusCode = 409,
                 domain = "maker-checker",
                 policy = "MAKER_CHECKER_SEPARATION_OF_DUTIES",
                 requestId = "REQ-SPRING-MAKER-CHECKER",
-                route = "/api/parity/structured-errors/MAKER_CHECKER_SELF_APPROVAL_REJECTED"
+                route = "/api/approvals/$approvalId/approve"
+            )
+        )
+
+        assertStructuredError(
+            error = postJson(
+                route = "/api/staff/complaints/CMP-ERR-ANSWERED/answer-drafts",
+                requestId = "REQ-SPRING-VALIDATION",
+                body = """
+                    {
+                      "actorId": "complaint01",
+                      "reason": "Synthetic validation error contract test"
+                    }
+                """.trimIndent(),
+                expectedStatus = 400
             ),
-            ExpectedError(
+            expected = ExpectedError(
                 code = "REQUEST_VALIDATION_FAILED",
                 statusCode = 400,
                 domain = "validation",
                 requestId = "REQ-SPRING-VALIDATION",
-                route = "/api/parity/structured-errors/REQUEST_VALIDATION_FAILED"
+                route = "/api/staff/complaints/CMP-ERR-ANSWERED/answer-drafts"
+            )
+        )
+
+        assertStructuredError(
+            error = getError(
+                route = "/api/staff/customers/CUS-ERR-MISSING/detail?reason=Synthetic%20not%20found%20error%20contract%20test",
+                requestId = "REQ-SPRING-NOT-FOUND",
+                expectedStatus = 404
             ),
-            ExpectedError(
+            expected = ExpectedError(
                 code = "RESOURCE_NOT_FOUND",
                 statusCode = 404,
                 domain = "resource",
                 requestId = "REQ-SPRING-NOT-FOUND",
-                route = "/api/parity/structured-errors/RESOURCE_NOT_FOUND"
+                route = "/api/staff/customers/CUS-ERR-MISSING/detail"
+            )
+        )
+
+        assertStructuredError(
+            error = postJson(
+                route = "/api/staff/complaints/CMP-ERR-ANSWERED/answer-drafts",
+                requestId = "REQ-SPRING-WORKFLOW",
+                body = """
+                    {
+                      "actorId": "complaint01",
+                      "requestedByRole": "COMPLAINT_HANDLER",
+                      "reason": "Synthetic workflow error contract test",
+                      "body": "Synthetic answer should be rejected because this case is already answered."
+                    }
+                """.trimIndent(),
+                expectedStatus = 409
             ),
-            ExpectedError(
+            expected = ExpectedError(
                 code = "WORKFLOW_STATE_VIOLATION",
                 statusCode = 409,
                 domain = "workflow",
                 policy = "VALID_WORKFLOW_TRANSITION_REQUIRED",
                 requestId = "REQ-SPRING-WORKFLOW",
-                route = "/api/parity/structured-errors/WORKFLOW_STATE_VIOLATION"
-            ),
-            ExpectedError(
-                code = "INTERNAL_RUNTIME_ERROR",
-                statusCode = 500,
-                domain = "runtime",
-                requestId = "REQ-SPRING-INTERNAL",
-                route = "/api/parity/structured-errors/INTERNAL_RUNTIME_ERROR"
+                route = "/api/staff/complaints/CMP-ERR-ANSWERED/answer-drafts"
             )
-        ).forEach { expected ->
-            assertStructuredError(
-                error = getError(expected.route, expected.requestId, expected.statusCode),
-                expected = expected
-            )
-        }
+        )
+    }
+
+    @Test
+    fun `migration parity probe keeps internal runtime error profile-only`() {
+        val expected = ExpectedError(
+            code = "INTERNAL_RUNTIME_ERROR",
+            statusCode = 500,
+            domain = "runtime",
+            requestId = "REQ-SPRING-INTERNAL",
+            route = "/api/parity/structured-errors/INTERNAL_RUNTIME_ERROR"
+        )
+
+        assertStructuredError(
+            error = getError(expected.route, expected.requestId, expected.statusCode),
+            expected = expected
+        )
     }
 
     private fun getError(route: String, requestId: String, expectedStatus: Int): JsonNode {
@@ -362,6 +462,22 @@ class StructuredApiErrorContractIntegrationTest {
             VALUES (:accountId, :customerId, :accountNo, 'KRW', 'ACTIVE')
             """.trimIndent(),
             mapOf("accountId" to accountId, "customerId" to customerId, "accountNo" to accountNo)
+        )
+    }
+
+    private fun seedAnsweredComplaint(caseId: String, customerId: String) {
+        jdbc.update(
+            """
+            INSERT INTO complaint_cases (
+              complaint_case_id, customer_id, category, description, status,
+              sla_due_at, classification, owner_id
+            )
+            VALUES (
+              :caseId, :customerId, 'ACCOUNT_ACCESS', 'Synthetic already answered complaint',
+              'ANSWERED', now() + interval '7 days', 'ACCOUNT_ACCESS', 'complaint01'
+            )
+            """.trimIndent(),
+            mapOf("caseId" to caseId, "customerId" to customerId)
         )
     }
 

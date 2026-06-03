@@ -48,7 +48,6 @@ Evidence is adequate for keeping the migration moving, but not adequate for reti
 The next smallest safe evidence slice is workflow and operational hardening:
 
 1. Broaden workflow orchestration, retry, and operator exception paths as new workflow states are introduced.
-2. Replace structured-error probe routes with real staff/customer/workflow route failures.
-3. Broaden workflow/container failure drills beyond the current worker/server/PostgreSQL restart paths into host crash shapes and additional database/process-failure variants.
+2. Broaden workflow/container failure drills beyond the current worker/server/PostgreSQL restart paths into host crash shapes and additional database/process-failure variants.
 
 This would not retire Node by itself, but it would close the largest remaining control gaps after the health, structured-error, outbox-state, Redpanda delivery, signed-JWKS auth, workflow-state, live Temporal, and Next shell/API-backed command parity slices.

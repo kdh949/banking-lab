@@ -16,6 +16,7 @@ import lab.banking.core.fds.FdsCaseService
 import lab.banking.core.reconciliation.ReconciliationOpsService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
+import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.dao.PessimisticLockingFailureException
 import org.springframework.dao.TransientDataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -355,15 +356,19 @@ class StaffAccessService(
     }
 
     private fun customer(customerId: String): StaffCustomerRecord =
-        jdbc.queryForObject(
-            """
-            SELECT customer_id, customer_name, customer_phone, customer_address, customer_grade, risk_grade
-            FROM customers
-            WHERE customer_id = :customerId
-            """.trimIndent(),
-            mapOf("customerId" to customerId),
-            this::mapCustomer
-        ) ?: throw WorkflowErrors.notFound("customer not found: $customerId")
+        try {
+            jdbc.queryForObject(
+                """
+                SELECT customer_id, customer_name, customer_phone, customer_address, customer_grade, risk_grade
+                FROM customers
+                WHERE customer_id = :customerId
+                """.trimIndent(),
+                mapOf("customerId" to customerId),
+                this::mapCustomer
+            ) ?: throw WorkflowErrors.notFound("customer not found: $customerId")
+        } catch (_: EmptyResultDataAccessException) {
+            throw WorkflowErrors.notFound("customer not found: $customerId")
+        }
 
     private fun supportedCustomerInfoChange(afterSnapshot: Map<String, Any?>?): Map<String, Any?> {
         val allowed = linkedMapOf<String, Any?>()
