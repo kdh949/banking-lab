@@ -43,6 +43,7 @@ type PasskeyEvidenceRecord = {
   syntheticOnly?: unknown;
   redactionConfirmed?: unknown;
   commands?: unknown;
+  staffPanelAssertions?: unknown;
 };
 
 async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
@@ -87,6 +88,9 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
 
   const authenticatorKind = typeof evidence.authenticatorKind === "string" ? evidence.authenticatorKind : "";
   const commands = Array.isArray(evidence.commands) ? evidence.commands : [];
+  const staffPanelAssertions = evidence.staffPanelAssertions && typeof evidence.staffPanelAssertions === "object"
+    ? evidence.staffPanelAssertions as Record<string, unknown>
+    : {};
 
   if (evidence.schemaVersion !== 1) errors.push("Passkey evidence schemaVersion must be 1.");
   if (evidence.status !== "pass") errors.push("Passkey evidence status must be pass.");
@@ -103,6 +107,18 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
   if (commands.length === 0 || !commands.every((item) => typeof item === "string" && item.trim().length > 0)) {
     errors.push("Passkey evidence commands must include at least one non-empty command.");
+  }
+  for (const key of [
+    "webAuthnLoaded",
+    "managerSubjectObserved",
+    "bearerTokenTypeObserved",
+    "syntheticCustomerObserved",
+    "maskedPiiObserved",
+    "auditEventObserved"
+  ]) {
+    if (staffPanelAssertions[key] !== true) {
+      errors.push(`staffPanelAssertions.${key} must be true.`);
+    }
   }
 
   return errors;

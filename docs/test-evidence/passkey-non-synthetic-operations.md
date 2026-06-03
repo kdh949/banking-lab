@@ -46,7 +46,15 @@ When the gate is genuinely proven, create `docs/test-evidence/generated/passkey-
   "redactionConfirmed": true,
   "commands": [
     "commands actually run"
-  ]
+  ],
+  "staffPanelAssertions": {
+    "webAuthnLoaded": true,
+    "managerSubjectObserved": true,
+    "bearerTokenTypeObserved": true,
+    "syntheticCustomerObserved": true,
+    "maskedPiiObserved": true,
+    "auditEventObserved": true
+  }
 }
 ```
 
@@ -72,7 +80,27 @@ The Playwright command above uses a Chromium virtual authenticator by design, so
 
 The future non-synthetic run should use the same Compose stack shape as the existing WebAuthn smoke, but the browser interaction must be manual or use only ordinary browser automation that does not install a virtual authenticator. The operator should sign in as `manager-webauthn01`, complete Keycloak passkey registration with a real authenticator, return to `staff-terminal`, and confirm the staff panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event ID.
 
-After the run, update this document with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
+After the run, copy the redacted command list to a local text file and copy the relevant staff panel text to a redacted snapshot file. Then run:
+
+```bash
+env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \
+  BANKING_LAB_PASSKEY_AUTHENTICATOR_KIND=platform \
+  BANKING_LAB_PASSKEY_TEST_DATE=YYYY-MM-DD \
+  BANKING_LAB_PASSKEY_USED_BROWSER_VIRTUAL_AUTHENTICATOR=false \
+  BANKING_LAB_PASSKEY_USED_PLAYWRIGHT_CDP_WEBAUTHN=false \
+  BANKING_LAB_PASSKEY_SIMULATOR_TOKENS_ENABLED=false \
+  BANKING_LAB_PASSKEY_KEYCLOAK_REQUIRED_ACTION_COMPLETED=true \
+  BANKING_LAB_PASSKEY_SPRING_SIGNED_TOKEN_ACCEPTED=true \
+  BANKING_LAB_PASSKEY_SYNTHETIC_ONLY=true \
+  BANKING_LAB_PASSKEY_REDACTION_CONFIRMED=true \
+  BANKING_LAB_PASSKEY_COMMANDS_FILE=/path/to/redacted-commands.txt \
+  BANKING_LAB_PASSKEY_PANEL_SNAPSHOT_FILE=/path/to/redacted-staff-panel.txt \
+  npm run passkey:evidence:record
+```
+
+The recorder writes `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` only after confirming the run did not use virtual/CDP WebAuthn, simulator tokens were disabled, the panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event, and the inputs do not contain obvious reusable tokens, cookies, passwords, credential IDs, attestation objects, or unmasked phone output.
+
+After artifact generation, update this document with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
 
 ## Controls
 

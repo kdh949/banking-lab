@@ -1725,3 +1725,30 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations still require a manual or real-browser run with a platform authenticator or hardware security key.
 - Evidence-refresh completion and final retirement review remain incomplete.
+
+## 2026-06-03: Non-Synthetic Passkey Evidence Recorder
+
+Changes completed:
+
+- Added `scripts/record-passkey-non-synthetic-evidence.ts` to create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` after a real manual passkey run.
+- Added `npm run passkey:evidence:record`.
+- The recorder requires explicit confirmations that a real platform/hardware passkey was used, Playwright/CDP virtual WebAuthn was not used, simulator tokens were disabled, Keycloak required action completed, Spring accepted the signed token, evidence is synthetic-only, and redaction is confirmed.
+- The recorder validates a redacted staff panel snapshot for `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and `AUD-...`, and rejects obvious tokens, cookies, passwords, credential IDs, attestation objects, or unmasked phone output.
+- Extended the retirement gate checker to require those staff panel assertions if the passkey gate is ever marked `pass`.
+- Added `tests/passkeyEvidenceRecorder.test.mjs` for success, virtual/CDP rejection, and unredacted secret/unmasked PII rejection.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/passkeyEvidenceRecorder.test.mjs tests/qaEvidenceCodexPlan.test.mjs` passed 8 tests.
+
+Result:
+
+- The repo now has a repeatable artifact-generation path for the future real passkey run instead of relying on an unstructured manual note.
+- This does not prove non-synthetic passkey operations by itself; the actual platform or hardware authenticator run is still required.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations still require the real passkey run and generated artifact.
+- Evidence-refresh completion and final retirement review remain incomplete.

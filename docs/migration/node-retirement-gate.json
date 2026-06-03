@@ -259,7 +259,9 @@
       "status": "pending",
       "description": "A real browser passkey operation uses a non-virtual platform authenticator or hardware security key against the live Keycloak realm, Spring validates the signed token with simulator tokens disabled, and evidence proves no Playwright/CDP virtual authenticator was used. The lab data remains synthetic-only.",
       "evidence": [
-        "docs/test-evidence/passkey-non-synthetic-operations.md"
+        "docs/test-evidence/passkey-non-synthetic-operations.md",
+        "scripts/record-passkey-non-synthetic-evidence.ts",
+        "tests/passkeyEvidenceRecorder.test.mjs"
       ]
     },
     {
@@ -313,7 +315,9 @@
         "docs/architecture/qa-evidence-node-retirement-recommendation.md",
         "docs/test-evidence/temporal-platform-host-crash-drill.md",
         "docs/test-evidence/outbox-platform-host-crash-drill.md",
-        "docs/test-evidence/passkey-non-synthetic-operations.md"
+        "docs/test-evidence/passkey-non-synthetic-operations.md",
+        "scripts/record-passkey-non-synthetic-evidence.ts",
+        "tests/passkeyEvidenceRecorder.test.mjs"
       ]
     },
     {

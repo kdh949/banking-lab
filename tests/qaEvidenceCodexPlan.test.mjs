@@ -67,9 +67,13 @@ test("QA passkey evidence keeps Node retirement blocked until non-synthetic proo
 
   assert.equal(gate.status, "blocked");
   assert.equal(passkeyGate?.status, "pending");
+  assert.ok(passkeyGate?.evidence?.includes("scripts/record-passkey-non-synthetic-evidence.ts"));
+  assert.ok(passkeyGate?.evidence?.includes("tests/passkeyEvidenceRecorder.test.mjs"));
   assert.match(gate.statusReason, /non-synthetic passkey operations/i);
   assert.match(evidence, /Status:\s+blocked/i);
   assert.match(evidence, /Chromium CDP `WebAuthn\.enable`/);
   assert.match(evidence, /not non-synthetic passkey evidence/i);
   assert.match(evidence, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(evidence, /npm run passkey:evidence:record/);
+  assert.match(evidence, /staffPanelAssertions/);
 });
