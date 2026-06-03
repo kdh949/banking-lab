@@ -29,6 +29,7 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   const evidence = await readFile(reviewDoc, "utf8");
 
   assert.equal(packageJson.scripts["retirement:review-preflight"], `node --experimental-strip-types ${script}`);
+  assert.equal(packageJson.scripts["passkey:evidence:verify"], "node --experimental-strip-types scripts/verify-passkey-non-synthetic-evidence.ts");
   assert.equal(gate.status, "blocked");
   assert.equal(passkey?.status, "pending");
   assert.equal(retirementReview?.status, "pending");
@@ -37,5 +38,7 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.ok(retirementReview?.evidence?.includes("tests/retirementReviewPreflight.test.mjs"));
   assert.match(evidence, /Status:\s+blocked/i);
   assert.match(evidence, /npm run retirement:review-preflight/);
+  assert.match(evidence, /npm run passkey:evidence:verify/);
+  assert.match(evidence, /docs\/test-evidence\/generated\/passkey-non-synthetic-evidence\.json/);
   assert.match(evidence, /does not mark Node retirement ready/);
 });

@@ -41,11 +41,13 @@ const packageJsonPath = "package.json";
 const gatePath = "docs/migration/node-retirement-gate.json";
 const evidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
 const recorderPath = "scripts/record-passkey-non-synthetic-evidence.ts";
+const verifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const preflightPath = "scripts/check-passkey-non-synthetic-preflight.ts";
 const realmPath = "infra/keycloak/realm-banking-lab.json";
 const staffPanelPath = "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx";
 const staffWebAuthnSpecPath = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
 const recorderTestPath = "tests/passkeyEvidenceRecorder.test.mjs";
+const verifierTestPath = "tests/passkeyEvidenceVerifier.test.mjs";
 const preflightTestPath = "tests/passkeyEvidencePreflight.test.mjs";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -107,11 +109,13 @@ for (const path of [
   gatePath,
   evidenceDocPath,
   recorderPath,
+  verifierPath,
   preflightPath,
   realmPath,
   staffPanelPath,
   staffWebAuthnSpecPath,
   recorderTestPath,
+  verifierTestPath,
   preflightTestPath
 ]) {
   await validatePath(path);
@@ -128,6 +132,9 @@ const evidenceRefreshGate = requiredGates.find((item) => item.id === evidenceRef
 if (packageJson?.scripts?.["passkey:evidence:record"] !== `node --experimental-strip-types ${recorderPath}`) {
   errors.push("package.json must expose passkey:evidence:record for the manual evidence recorder.");
 }
+if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${verifierPath}`) {
+  errors.push("package.json must expose passkey:evidence:verify for strict artifact verification.");
+}
 if (packageJson?.scripts?.["passkey:evidence:preflight"] !== `node --experimental-strip-types ${preflightPath}`) {
   errors.push("package.json must expose passkey:evidence:preflight for static manual-run prerequisites.");
 }
@@ -140,8 +147,10 @@ if (!passkeyGate) {
   }
   evidenceIncludes(passkeyGate, evidenceDocPath);
   evidenceIncludes(passkeyGate, recorderPath);
+  evidenceIncludes(passkeyGate, verifierPath);
   evidenceIncludes(passkeyGate, preflightPath);
   evidenceIncludes(passkeyGate, recorderTestPath);
+  evidenceIncludes(passkeyGate, verifierTestPath);
   evidenceIncludes(passkeyGate, preflightTestPath);
 }
 
@@ -150,8 +159,10 @@ if (!evidenceRefreshGate) {
 } else {
   evidenceIncludes(evidenceRefreshGate, evidenceDocPath);
   evidenceIncludes(evidenceRefreshGate, recorderPath);
+  evidenceIncludes(evidenceRefreshGate, verifierPath);
   evidenceIncludes(evidenceRefreshGate, preflightPath);
   evidenceIncludes(evidenceRefreshGate, recorderTestPath);
+  evidenceIncludes(evidenceRefreshGate, verifierTestPath);
   evidenceIncludes(evidenceRefreshGate, preflightTestPath);
 }
 
@@ -202,6 +213,22 @@ for (const recorderMarker of [
 }
 matches(recorder, /maskedPiiObserved:\s*\/010-\\\*\{4\}-1001\//, "Passkey recorder must validate the masked synthetic phone value.");
 matches(recorder, /010-0000-1001/, "Passkey recorder must reject the unmasked synthetic phone value.");
+
+const verifier = await readFile(verifierPath, "utf8").catch(() => "");
+for (const verifierMarker of [
+  "BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT",
+  "manual-live-passkey",
+  "hardware-security-key",
+  "usedBrowserVirtualAuthenticator",
+  "usedPlaywrightCdpWebAuthn",
+  "simulatorTokensEnabled",
+  "maskedPiiObserved",
+  "auditEventObserved",
+  "assertNoReusableSecrets",
+  "010-0000-1001"
+]) {
+  includes(verifier, verifierMarker, `Passkey verifier must keep validation marker ${verifierMarker}.`);
+}
 
 const requiredActions = objectArray<KeycloakRequiredAction>(realm?.requiredActions);
 const webAuthnAction = requiredActions.find((item) => item.alias === "webauthn-register");

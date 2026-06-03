@@ -2118,3 +2118,38 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.
+
+## 2026-06-03: Strict Passkey Evidence Verifier
+
+Changes completed:
+
+- Added `scripts/verify-passkey-non-synthetic-evidence.ts` and `npm run passkey:evidence:verify`.
+- Added `tests/passkeyEvidenceVerifier.test.mjs` with fixture coverage for accepted manual-live-passkey artifacts, virtual/CDP rejection, secret/unmasked PII rejection, and strict missing-artifact failure.
+- Wired the verifier script/test into the non-synthetic passkey and evidence-refresh gate evidence lists.
+- Updated the passkey evidence boundary and final retirement review document so the future real passkey run must record and then verify `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`.
+- Strengthened `npm run node:retirement-gate` so a future `non-synthetic-passkey-operations` pass state also runs the strict verifier before the gate can become ready.
+
+Verification:
+
+- `node --test tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/retirementReviewPreflight.test.mjs` passed 11 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run retirement:audit` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run evidence:refresh-check` passed.
+- `npm test` passed 86 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `git diff --check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 86 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Passkey evidence now has a strict artifact verifier before the final Node retirement review path.
+- Missing real passkey evidence remains a hard blocker rather than a soft skip.
+- This does not create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` and does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.

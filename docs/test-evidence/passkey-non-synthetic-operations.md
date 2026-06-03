@@ -114,6 +114,14 @@ The recorder writes `docs/test-evidence/generated/passkey-non-synthetic-evidence
 
 After artifact generation, update this document with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
 
+Then verify the generated artifact before asking for final Node retirement review:
+
+```bash
+npm run passkey:evidence:verify
+```
+
+This strict verifier fails when `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` is missing, malformed, marked virtual/CDP/simulated, created with simulator tokens, missing required staff-panel assertions, or carrying obvious reusable tokens, cookies, credential IDs, attestation objects, passwords, or unmasked synthetic phone output.
+
 ## Controls
 
 - PII masking remains default for staff customer detail.

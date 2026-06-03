@@ -22,6 +22,7 @@ const gatePath = "docs/migration/node-retirement-gate.json";
 const reviewDocPath = "docs/test-evidence/node-retirement-review.md";
 const preflightPath = "scripts/check-retirement-review-preflight.ts";
 const preflightTestPath = "tests/retirementReviewPreflight.test.mjs";
+const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 
 const requiredPassingGateIds = [
   "kotlin-spring-health",
@@ -108,7 +109,7 @@ function requireIncludes(source: string, needle: string, message: string): void 
   }
 }
 
-for (const path of [packageJsonPath, gatePath, reviewDocPath, preflightPath, preflightTestPath]) {
+for (const path of [packageJsonPath, gatePath, reviewDocPath, preflightPath, preflightTestPath, passkeyVerifierPath]) {
   if (!await exists(path)) {
     errors.push(`Missing retirement review preflight path: ${path}`);
   }
@@ -122,6 +123,9 @@ const reviewGate = requiredGates.find((item) => item.id === "retirement-review")
 
 if (packageJson?.scripts?.["retirement:review-preflight"] !== `node --experimental-strip-types ${preflightPath}`) {
   errors.push("package.json must expose retirement:review-preflight.");
+}
+if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${passkeyVerifierPath}`) {
+  errors.push("package.json must expose passkey:evidence:verify before final retirement review.");
 }
 
 if (gate?.status !== "blocked") {
@@ -159,6 +163,8 @@ const reviewDoc = await readFile(reviewDocPath, "utf8").catch(() => "");
 requireIncludes(reviewDoc, "Status: blocked", "Retirement review doc must remain blocked.");
 requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement review doc must avoid claiming readiness.");
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
+requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
+requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
 requireIncludes(reviewDoc, "non-synthetic passkey operations", "Retirement review doc must name passkey as a remaining blocker.");
 requireIncludes(reviewDoc, "final retirement review", "Retirement review doc must name final review as pending.");
 

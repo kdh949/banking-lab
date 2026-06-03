@@ -17,6 +17,7 @@ type NodeRetirementGate = {
 
 const gatePath = "docs/migration/node-retirement-gate.json";
 const boundaryAuditPath = "scripts/check-retirement-boundary-audit.ts";
+const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const passkeyEvidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
 const passkeyEvidenceArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
@@ -80,6 +81,12 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
     return errors;
   }
 
+  const verifierErrors = runPasskeyEvidenceVerifier();
+  if (verifierErrors.length > 0) {
+    errors.push(...verifierErrors);
+    return errors;
+  }
+
   let evidence: PasskeyEvidenceRecord;
   try {
     evidence = JSON.parse(await readFile(passkeyEvidenceArtifactPath, "utf8")) as PasskeyEvidenceRecord;
@@ -124,6 +131,28 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   }
 
   return errors;
+}
+
+function runPasskeyEvidenceVerifier(): string[] {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", passkeyVerifierPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT: passkeyEvidenceArtifactPath
+    },
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return [];
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  return [
+    "Passkey evidence artifact must pass strict verification before the passkey gate can pass.",
+    output || result.error?.message || "Passkey evidence verifier failed without output."
+  ];
 }
 
 function runReadyBoundaryAudit(): string[] {

@@ -27,6 +27,7 @@
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",
     "retirement:audit": "node --experimental-strip-types scripts/check-retirement-boundary-audit.ts",
     "passkey:evidence:record": "node --experimental-strip-types scripts/record-passkey-non-synthetic-evidence.ts",
+    "passkey:evidence:verify": "node --experimental-strip-types scripts/verify-passkey-non-synthetic-evidence.ts",
     "passkey:evidence:preflight": "node --experimental-strip-types scripts/check-passkey-non-synthetic-preflight.ts",
     "evidence:refresh-check": "node --experimental-strip-types scripts/check-evidence-refresh.ts",
     "retirement:review-preflight": "node --experimental-strip-types scripts/check-retirement-review-preflight.ts",

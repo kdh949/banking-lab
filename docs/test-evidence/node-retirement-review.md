@@ -20,12 +20,20 @@ npm run retirement:review-preflight
 
 The preflight combines the current retirement boundary audit, evidence-refresh check, passkey evidence preflight, and retirement gate check. It verifies that target source directories stay free of legacy Node/runtime dependencies, current evidence is refreshed, current mapped parity remains target-backed, and the retirement gate is blocked only by non-synthetic passkey operations and final retirement review.
 
+After real passkey evidence is recorded and before this review is marked pass, run:
+
+```bash
+npm run passkey:evidence:verify
+```
+
+That verifier must pass against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`; a missing artifact is still a blocker.
+
 ## Current Result
 
 Not ready. The final review cannot be marked passed until:
 
 - non-synthetic passkey operations are proven with a real platform authenticator or hardware security key;
-- `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes the retirement gate validation;
+- `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes `npm run passkey:evidence:verify` plus the retirement gate validation;
 - the final reviewer reruns the full parity, manifest, evidence, retirement boundary, and retirement gate commands after passkey evidence exists;
 - the final reviewer confirms no critical behavior depends on Node-only code.
 
