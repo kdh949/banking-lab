@@ -33,6 +33,7 @@
     "passkey:evidence:preflight": "node --experimental-strip-types scripts/check-passkey-non-synthetic-preflight.ts",
     "evidence:refresh-check": "node --experimental-strip-types scripts/check-evidence-refresh.ts",
     "retirement:review-preflight": "node --experimental-strip-types scripts/check-retirement-review-preflight.ts",
+    "retirement:final-review:record": "node --experimental-strip-types scripts/record-final-retirement-review.ts",
     "retirement:final-review:verify": "node --experimental-strip-types scripts/verify-final-retirement-review.ts",
     "goal:completion-audit": "node --experimental-strip-types scripts/check-goal-completion-audit.ts",
     "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",

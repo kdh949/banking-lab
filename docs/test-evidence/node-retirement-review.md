@@ -46,7 +46,13 @@ npm run passkey:evidence:verify
 
 That verifier must pass against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`; a missing artifact is still a blocker.
 
-After the final reviewer reruns the required post-passkey commands and records the control decisions, verify the generated final review artifact:
+After the final reviewer reruns the required post-passkey commands and records the control decisions, generate the final review artifact:
+
+```bash
+npm run retirement:final-review:record
+```
+
+Then verify the generated final review artifact:
 
 ```bash
 npm run retirement:final-review:verify

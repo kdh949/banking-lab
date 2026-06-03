@@ -32,7 +32,7 @@ Passing items:
 - Generated artifact boundary audit is passing.
 - The parity scenario map covers 42 mapped Node reference scenarios with target `pass` status.
 - Current target-stack evidence gates for Spring health, structured errors, Next manifest rendering, API-backed channel parity, and evidence refresh are passing.
-- The Node retirement gate now requires strict final-review artifact verification if `retirement-review` is later marked `pass`.
+- The Node retirement gate now requires strict final-review artifact recording and verification if `retirement-review` is later marked `pass`.
 
 Failure-closed checks:
 

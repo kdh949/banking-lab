@@ -10,7 +10,13 @@ This evidence boundary defines the machine-verifiable artifact required before t
 
 ## Command
 
-After non-synthetic passkey evidence exists and the final review has been performed, verify the generated review artifact with:
+After non-synthetic passkey evidence exists and the final review has been performed, record the generated review artifact with:
+
+```bash
+npm run retirement:final-review:record
+```
+
+Then verify it with:
 
 ```bash
 npm run retirement:final-review:verify
@@ -36,6 +42,18 @@ The final review artifact must have:
 - true control attestations for ledger balanced postings, balance projections, idempotency, append-only finalized transactions, reason-required audit, default PII masking, maker-checker separation, workflow durability, outbox durability, balanced reconciliation adjustments, target areas without disallowed stack, ignored generated artifacts, synthetic-only data, and absence of Node-only critical dependencies.
 
 The verifier rejects obvious reusable tokens, cookies, credential IDs, attestation objects, passwords, passkey artifacts, JWTs, and unmasked synthetic phone output.
+
+## Recorder Inputs
+
+The recorder requires:
+
+- `BANKING_LAB_FINAL_REVIEW_CONFIRMED=true`;
+- `BANKING_LAB_FINAL_REVIEW_PASSKEY_ARTIFACT_VERIFIED=true`;
+- `BANKING_LAB_FINAL_REVIEW_REVIEWER`;
+- `BANKING_LAB_FINAL_REVIEW_COMMANDS_FILE`, containing a redacted JSON array of command evidence;
+- true environment attestations for every required control, including ledger, idempotency, audit, masking, maker-checker, workflow, outbox, reconciliation, target stack, generated artifact, synthetic-only, and Node-only dependency controls.
+
+Each command evidence item must include `command`, `status: "pass"`, `exitCode: 0`, `runAfterPasskeyEvidence: true`, and a non-empty `summary`.
 
 ## Current Result
 
