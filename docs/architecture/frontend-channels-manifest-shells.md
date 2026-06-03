@@ -74,6 +74,7 @@ The first API-backed slice covered read-model calls:
 - Ops-console also has live Keycloak Authorization Code + PKCE smoke for ops-operator reconciliation adjustment, manager approval, and adjusted-item workflow failure-state rendering through its Next BFF token exchange route.
 - Audit-console also has live Keycloak Authorization Code + PKCE smoke for auditor hash-chain read-model evidence through its Next BFF token exchange route.
 - FDS/AML-console also has live Keycloak Authorization Code + PKCE smoke for risk read-model access, FDS release/block approval, AML closure approval, and duplicate workflow failure-state rendering through its Next BFF token exchange route.
+- Admin-console also has live Keycloak Authorization Code + PKCE smoke for `security-admin01` platform-control summary access through its Next BFF token exchange route.
 - These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, FDS/AML-console, and admin-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review.
 
 Command-oriented browser smoke now runs in `customer-web`, `staff-terminal`, `complaint-portal`, `fds-aml-console`, and `ops-console`:
@@ -154,6 +155,7 @@ env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18110 BANKING_LAB_E2E_KEYCLOAK
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18112 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18113 npx playwright test apps/ops-console/e2e/ops-console-parity.spec.ts -g "interactive Keycloak"
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18114 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18115 npx playwright test apps/audit-console/e2e/audit-console-parity.spec.ts -g "interactive Keycloak"
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18124 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18125 npx playwright test apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts -g "interactive Keycloak"
+env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18090 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18091 npx playwright test apps/admin-console/e2e/admin-console-parity.spec.ts --project=chromium
 ```
 
 ## Next Work

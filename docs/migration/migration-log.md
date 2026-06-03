@@ -1798,12 +1798,12 @@ Verification:
 Result:
 
 - The target architecture now has an admin UI surface instead of leaving admin as a plan-only artifact.
-- Admin live browser API/Keycloak evidence still needs a refreshed environment run before final retirement review.
+- Admin live browser API/Keycloak evidence was refreshed in the follow-up admin-console live smoke entry.
 
 Remaining blockers:
 
 - Node retirement remains blocked.
-- Non-synthetic passkey operations, admin live browser evidence refresh, evidence-refresh completion, and final retirement review remain incomplete.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
 ## 2026-06-03: Node Retirement Boundary Audit
 
@@ -1825,7 +1825,31 @@ Result:
 - The repo now has an executable Node-independence boundary check for the current retirement scope.
 - Target `services/` remains free of Node business modules, and stale imports through the old service path are guarded.
 
+## 2026-06-03: Admin Console Live API/Keycloak Smoke
+
+Changes completed:
+
+- Refreshed the admin-console live evidence path against a fresh Compose stack with PostgreSQL, Keycloak, and Spring core-banking.
+- Rebuilt the Spring executable jar before recreating the Compose core-banking container so `/api/admin/platform/summary` was present in the image.
+- Confirmed the admin browser smoke can load the Spring platform-control summary and exchange a `security-admin01` Keycloak authorization code through the Next BFF token route.
+- Added Compose CORS default coverage for `http://localhost:3007` so the admin-console dev server is included by default.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh :services:core-banking:bootJar` failed before test execution because Gradle could not create its local file-lock socket; the same command passed under the approved execution path.
+- Initial admin-console live Playwright run failed with HTTP 404 because the Compose image still contained a stale `core-banking-*-migration.jar`.
+- `scripts/run-core-banking-tests.sh :services:core-banking:bootJar` passed under the approved execution path.
+- `env COMPOSE_PROJECT_NAME=banking-lab-admin-smoke BANKING_LAB_POSTGRES_PORT=15449 BANKING_LAB_CORE_BANKING_PORT=18090 BANKING_LAB_KEYCLOAK_PORT=18091 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18091/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_CORS_ALLOWED_ORIGINS=http://localhost:3007,http://127.0.0.1:3007 docker compose --profile platform up -d --build postgres keycloak core-banking` passed under the approved execution path.
+- `curl -fsS http://127.0.0.1:18090/actuator/health` returned `{"status":"UP"}`.
+- `curl -fsS http://localhost:18091/realms/banking-lab/.well-known/openid-configuration` returned issuer `http://localhost:18091/realms/banking-lab`.
+- `env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18090 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18091 npx playwright test apps/admin-console/e2e/admin-console-parity.spec.ts --project=chromium` passed 4 Chromium tests.
+
+Result:
+
+- Admin-console live browser API and Keycloak propagation evidence is no longer a separate evidence-refresh gap.
+- Node retirement remains blocked because non-synthetic passkey operations, evidence-refresh completion, and final retirement review are still incomplete.
+
 Remaining blockers:
 
-- Node retirement remains blocked.
-- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+- Non-synthetic passkey operations still require the real passkey run and generated artifact.
+- Evidence-refresh completion and final retirement review remain incomplete.
