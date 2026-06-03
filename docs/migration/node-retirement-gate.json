@@ -303,6 +303,7 @@
         "docs/test-evidence/outbox-trace-log-correlation.md",
         "docs/test-evidence/temporal-workflow-trace-log-correlation.md",
         "docs/test-evidence/api-backed-channel-smoke.md",
+        "docs/test-evidence/stack-retirement-area-audit.md",
         "docs/test-evidence/generated/security-evidence-summary.json",
         "docs/test-evidence/generated/security-evidence-summary.md",
         "docs/test-evidence/generated/semgrep.json",
@@ -336,11 +337,13 @@
         "scripts/record-passkey-non-synthetic-evidence.ts",
         "scripts/verify-passkey-non-synthetic-evidence.ts",
         "scripts/check-passkey-non-synthetic-preflight.ts",
+        "scripts/check-stack-retirement-by-area.ts",
         "scripts/check-evidence-refresh.ts",
         "scripts/check-retirement-boundary-audit.ts",
         "tests/passkeyEvidenceRecorder.test.mjs",
         "tests/passkeyEvidenceVerifier.test.mjs",
         "tests/passkeyEvidencePreflight.test.mjs",
+        "tests/stackRetirementAreaAudit.test.mjs",
         "tests/evidenceRefresh.test.mjs",
         "tests/retirementBoundaryAudit.test.mjs",
         "tests/nextScaffold.test.mjs",
@@ -353,7 +356,10 @@
       "description": "A final review confirms no ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, or evidence behavior depends on Node-only code.",
       "evidence": [
         "docs/test-evidence/node-retirement-review.md",
+        "docs/test-evidence/stack-retirement-area-audit.md",
+        "scripts/check-stack-retirement-by-area.ts",
         "scripts/check-retirement-review-preflight.ts",
+        "tests/stackRetirementAreaAudit.test.mjs",
         "tests/retirementReviewPreflight.test.mjs"
       ]
     }

@@ -16,11 +16,12 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidencePreflight.test.mjs` passed 5 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run retirement:audit` passed with blocked status.
+- `npm run retirement:stack-audit` passed.
 - `npm run node:retirement-gate` passed with blocked status.
-- `npm test` passed 80 tests.
+- `npm test` passed 88 tests.
 - `npm run validate:manifests` validated 28 manifests.
 - `git diff --check` passed.
-- `npm run parity` passed under the approved execution path with 80 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+- `npm run parity` passed under the approved execution path with 88 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
 - `npm run evidence:pack` passed and regenerated the evidence pack summary.
 - `npm run evidence:refresh-check` passed.
 
@@ -30,6 +31,7 @@ This review does not mark Node retirement ready. Node retirement remains blocked
 - `docs/test-evidence/parity-coverage-matrix.md` now reflects pass status for current mapped parity instead of stale partial status.
 - `docs/test-evidence/evidence-gap-report.md` keeps Node retirement blocked for passkey and Node-independence review without listing evidence-refresh as a remaining blocker.
 - `docs/architecture/qa-evidence-node-retirement-recommendation.md` marks evidence-refresh passed while keeping Node retirement blocked.
+- `docs/test-evidence/stack-retirement-area-audit.md` proves target implementation areas are free of legacy Node MVP stack source while preserving the approved Node oracle/support paths.
 - `docs/migration/node-retirement-gate.json` marks `evidence-refresh` passed and leaves `non-synthetic-passkey-operations` plus `retirement-review` incomplete.
 
 ## Remaining Blockers

@@ -2153,3 +2153,40 @@ Remaining blockers:
 
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
+## 2026-06-03: Area-Based Stack Retirement Audit
+
+Changes completed:
+
+- Added `scripts/check-stack-retirement-by-area.ts` and `npm run retirement:stack-audit`.
+- Added `tests/stackRetirementAreaAudit.test.mjs` to prove target implementation areas do not carry legacy Node MVP source outside the approved oracle/support paths.
+- Added `docs/test-evidence/stack-retirement-area-audit.md` with the current area-level stack audit result.
+- Wired the audit document, script, and test into `evidence-refresh` and `retirement-review` evidence.
+- Extended `npm run retirement:review-preflight` so final review preflight now delegates to the stack area audit.
+- Updated evidence-refresh and final-review docs to require the stack area audit.
+
+Verification:
+
+- Initial `npm run retirement:stack-audit` failed because the new checker pointed at the wrong analytics package anchor; corrected to `analytics/aml-fds-python/src/banking_lab_analytics/scoring.py`.
+- `node --test tests/stackRetirementAreaAudit.test.mjs tests/evidenceRefresh.test.mjs tests/retirementReviewPreflight.test.mjs` passed 6 tests.
+- `npm run retirement:stack-audit` passed.
+- `npm run scripts:typecheck` passed.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run retirement:audit` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm test` passed 88 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary.
+- `git diff --check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 88 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Target areas now have an explicit area-by-area stack audit covering core banking backend, frontend channels, shared packages, AML/FDS analytics, platform infra, and contracts/data.
+- The audit preserves approved Node oracle/support paths and does not claim Node retirement readiness.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.

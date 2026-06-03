@@ -26,6 +26,9 @@ const evidenceRefreshReviewPath = "docs/test-evidence/evidence-refresh-review.md
 const parityMatrixPath = "docs/test-evidence/parity-coverage-matrix.md";
 const evidenceGapReportPath = "docs/test-evidence/evidence-gap-report.md";
 const qaRecommendationPath = "docs/architecture/qa-evidence-node-retirement-recommendation.md";
+const stackAreaAuditDocPath = "docs/test-evidence/stack-retirement-area-audit.md";
+const stackAreaAuditScriptPath = "scripts/check-stack-retirement-by-area.ts";
+const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
 const checkScriptPath = "scripts/check-evidence-refresh.ts";
 const checkTestPath = "tests/evidenceRefresh.test.mjs";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -53,6 +56,7 @@ const stalePatterns = [
 
 const requiredCommands = [
   "npm run passkey:evidence:preflight",
+  "npm run retirement:stack-audit",
   "npm run evidence:pack",
   "npm run retirement:audit",
   "npm run node:retirement-gate",
@@ -121,6 +125,9 @@ for (const path of [
   parityMatrixPath,
   evidenceGapReportPath,
   qaRecommendationPath,
+  stackAreaAuditDocPath,
+  stackAreaAuditScriptPath,
+  stackAreaAuditTestPath,
   checkScriptPath,
   checkTestPath
 ]) {
@@ -150,7 +157,7 @@ if (!evidenceRefreshGate) {
   if (evidenceRefreshGate.status !== "pass") {
     errors.push("evidence-refresh gate must be pass after the current evidence review is refreshed.");
   }
-  for (const path of [evidenceRefreshReviewPath, checkScriptPath, checkTestPath]) {
+  for (const path of [evidenceRefreshReviewPath, stackAreaAuditDocPath, stackAreaAuditScriptPath, stackAreaAuditTestPath, checkScriptPath, checkTestPath]) {
     if (!stringArray(evidenceRefreshGate.evidence).includes(path)) {
       errors.push(`evidence-refresh evidence must include ${path}.`);
     }

@@ -26,8 +26,12 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   const matrix = await readFile("docs/test-evidence/parity-coverage-matrix.md", "utf8");
 
   assert.equal(packageJson.scripts["evidence:refresh-check"], `node --experimental-strip-types ${script}`);
+  assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
   assert.equal(evidenceRefresh?.status, "pass");
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/evidence-refresh-review.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-stack-retirement-by-area.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/stackRetirementAreaAudit.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes(script));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/evidenceRefresh.test.mjs"));
   assert.doesNotMatch(gate.statusReason, /evidence-refresh completion/i);

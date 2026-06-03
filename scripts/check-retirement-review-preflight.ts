@@ -23,6 +23,9 @@ const reviewDocPath = "docs/test-evidence/node-retirement-review.md";
 const preflightPath = "scripts/check-retirement-review-preflight.ts";
 const preflightTestPath = "tests/retirementReviewPreflight.test.mjs";
 const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
+const stackAreaAuditDocPath = "docs/test-evidence/stack-retirement-area-audit.md";
+const stackAreaAuditScriptPath = "scripts/check-stack-retirement-by-area.ts";
+const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
 
 const requiredPassingGateIds = [
   "kotlin-spring-health",
@@ -47,6 +50,21 @@ const delegatedChecks = [
       "- retirement-review: pending"
     ],
     forbiddenOutput: ["- evidence-refresh: in-progress", "- evidence-refresh: pending"]
+  },
+  {
+    name: "stack retirement area audit",
+    args: ["--experimental-strip-types", stackAreaAuditScriptPath],
+    requiredOutput: [
+      "Stack retirement area audit: pass",
+      "core-banking-backend",
+      "frontend-channels",
+      "shared-packages",
+      "analytics",
+      "platform-infra",
+      "contracts-and-data",
+      "Node retirement gate: blocked"
+    ],
+    forbiddenOutput: ["Stack retirement area audit: failed"]
   },
   {
     name: "evidence refresh check",
@@ -109,7 +127,7 @@ function requireIncludes(source: string, needle: string, message: string): void 
   }
 }
 
-for (const path of [packageJsonPath, gatePath, reviewDocPath, preflightPath, preflightTestPath, passkeyVerifierPath]) {
+for (const path of [packageJsonPath, gatePath, reviewDocPath, preflightPath, preflightTestPath, passkeyVerifierPath, stackAreaAuditDocPath, stackAreaAuditScriptPath, stackAreaAuditTestPath]) {
   if (!await exists(path)) {
     errors.push(`Missing retirement review preflight path: ${path}`);
   }
@@ -126,6 +144,9 @@ if (packageJson?.scripts?.["retirement:review-preflight"] !== `node --experiment
 }
 if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${passkeyVerifierPath}`) {
   errors.push("package.json must expose passkey:evidence:verify before final retirement review.");
+}
+if (packageJson?.scripts?.["retirement:stack-audit"] !== `node --experimental-strip-types ${stackAreaAuditScriptPath}`) {
+  errors.push("package.json must expose retirement:stack-audit before final retirement review.");
 }
 
 if (gate?.status !== "blocked") {
@@ -153,7 +174,7 @@ if (passkeyGate?.status !== "pending") {
 if (reviewGate?.status !== "pending") {
   errors.push("retirement-review must remain pending until passkey evidence exists and final review is actually performed.");
 }
-for (const path of [reviewDocPath, preflightPath, preflightTestPath]) {
+for (const path of [reviewDocPath, stackAreaAuditDocPath, stackAreaAuditScriptPath, stackAreaAuditTestPath, preflightPath, preflightTestPath]) {
   if (!stringArray(reviewGate?.evidence).includes(path)) {
     errors.push(`retirement-review evidence must include ${path}.`);
   }
@@ -163,6 +184,7 @@ const reviewDoc = await readFile(reviewDocPath, "utf8").catch(() => "");
 requireIncludes(reviewDoc, "Status: blocked", "Retirement review doc must remain blocked.");
 requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement review doc must avoid claiming readiness.");
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
+requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review doc must include the stack area audit command.");
 requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
 requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
 requireIncludes(reviewDoc, "non-synthetic passkey operations", "Retirement review doc must name passkey as a remaining blocker.");
@@ -202,5 +224,5 @@ if (errors.length > 0) {
 }
 
 console.log("Node retirement review preflight: pass");
-console.log("Boundary, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
+console.log("Boundary, stack area, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
 console.log("This does not mark Node retirement ready; non-synthetic passkey operations and final retirement review remain pending.");
