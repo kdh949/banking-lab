@@ -119,6 +119,8 @@ class StaffAccessApiParityIntegrationTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
             .andExpect(jsonPath("$.error.requestId").value("REQ-STAFF-DETAIL-REASON"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'CUSTOMER_DETAIL_VIEW'"))
+        assertEquals(0, countRows("masking_access_logs WHERE access_level = 'MASKED'"))
 
         mockMvc.perform(
             get("/api/staff/customers/SYN-CUS-001/detail")
@@ -157,6 +159,8 @@ class StaffAccessApiParityIntegrationTest {
             .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
             .andExpect(jsonPath("$.error.policy").value("RBAC_ABAC_POLICY_REQUIRED"))
             .andExpect(jsonPath("$.error.requestId").value("REQ-PII-DENIED"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'PII_UNMASK_REQUESTED'"))
+        assertEquals(0, countRows("masking_access_logs WHERE access_level = 'UNMASK_APPROVED'"))
 
         mockMvc.perform(
             post("/api/staff/pii/unmask")
@@ -187,6 +191,7 @@ class StaffAccessApiParityIntegrationTest {
         mockMvc.perform(get("/api/staff/accounts/search").queryParam("customerId", "SYN-CUS-001"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'ACCOUNT_VIEW'"))
 
         mockMvc.perform(
             get("/api/staff/accounts/search")
@@ -201,6 +206,7 @@ class StaffAccessApiParityIntegrationTest {
         mockMvc.perform(get("/api/staff/transactions/search").queryParam("accountId", "ACC-SYN-001-001"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'TRANSACTION_VIEW'"))
 
         mockMvc.perform(
             get("/api/staff/transactions/search")
@@ -239,6 +245,8 @@ class StaffAccessApiParityIntegrationTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
             .andExpect(jsonPath("$.error.requestId").value("REQ-CUSTOMER-CHANGE-REASON"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'CUSTOMER_INFO_CHANGE'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED'"))
 
         val requestResponse = mockMvc.perform(
             post("/api/staff/customers/SYN-CUS-001/change-requests")
@@ -284,6 +292,8 @@ class StaffAccessApiParityIntegrationTest {
             .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
             .andExpect(jsonPath("$.error.policy").value("MAKER_CHECKER_SEPARATION_OF_DUTIES"))
         assertEquals(beforePhone, customerPhone())
+        assertEquals("PENDING", approvalStatus(approvalId))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED'"))
 
         mockMvc.perform(
             post("/api/staff/approvals/$approvalId/approve")
@@ -305,6 +315,7 @@ class StaffAccessApiParityIntegrationTest {
 
         assertEquals("010-0000-1999", customerPhone())
         assertEquals("Seoul Synthetic Updated", customerAddress())
+        assertEquals("APPROVED", approvalStatus(approvalId))
         assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED'"))
         assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED'"))
         assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'CST-103'"))
@@ -328,6 +339,13 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.queryForObject(
             "SELECT customer_address FROM customers WHERE customer_id = 'SYN-CUS-001'",
             emptyMap<String, Any?>(),
+            String::class.java
+        )
+
+    private fun approvalStatus(approvalId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM operator_approvals WHERE approval_id = :approvalId",
+            mapOf("approvalId" to approvalId),
             String::class.java
         )
 

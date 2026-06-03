@@ -113,8 +113,8 @@
     {
       "nodeSuite": "tests/staffTerminal.test.mjs",
       "scenarioCount": 4,
-      "targetSuite": "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
-      "targetStatus": "planned",
+      "targetSuite": "services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff/StaffAccessApiParityIntegrationTest.kt; apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
+      "targetStatus": "pass",
       "controls": [
         "audit",
         "masking",

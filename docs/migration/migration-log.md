@@ -1291,3 +1291,21 @@ Remaining blockers:
 
 - `tests/manifest.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
 - Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
+
+## 2026-06-03: Staff Terminal Target Parity Slice
+
+Changes completed:
+
+- Strengthened `StaffAccessApiParityIntegrationTest` for the four `tests/staffTerminal.test.mjs` oracle scenarios.
+- Added no-side-effect assertions for missing-reason staff detail, unauthorized PII unmask, account/transaction inquiry denial, missing-reason customer-change request, and maker self-approval rejection.
+- Updated the parity scenario map, parity coverage matrix, evidence gap report, and Phase 3 staff terminal evidence while keeping Node retirement blocked.
+
+Verification:
+
+- Initial sandboxed `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests 'lab.banking.core.staff.StaffAccessApiParityIntegrationTest'` failed before test execution because Gradle could not create its local file-lock socket.
+- The same command passed under the approved execution path.
+
+Remaining blockers:
+
+- `tests/staffTerminal.test.mjs` now has direct target-stack parity coverage, but Node retirement remains blocked.
+- Full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review remain incomplete.
