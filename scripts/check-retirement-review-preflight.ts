@@ -26,6 +26,9 @@ const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const stackAreaAuditDocPath = "docs/test-evidence/stack-retirement-area-audit.md";
 const stackAreaAuditScriptPath = "scripts/check-stack-retirement-by-area.ts";
 const stackAreaAuditTestPath = "tests/stackRetirementAreaAudit.test.mjs";
+const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
+const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
+const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
 
 const requiredPassingGateIds = [
   "kotlin-spring-health",
@@ -71,6 +74,17 @@ const delegatedChecks = [
     args: ["--experimental-strip-types", "scripts/check-evidence-refresh.ts"],
     requiredOutput: ["Evidence refresh check: pass"],
     forbiddenOutput: ["Evidence refresh check: failed"]
+  },
+  {
+    name: "goal completion audit",
+    args: ["--experimental-strip-types", goalCompletionAuditScriptPath],
+    requiredOutput: [
+      "Goal completion audit: not complete",
+      "gate:non-synthetic-passkey-operations: blocked",
+      "gate:retirement-review: blocked",
+      "node-retirement-gate: blocked"
+    ],
+    forbiddenOutput: ["Goal completion audit: complete"]
   },
   {
     name: "passkey evidence preflight",
@@ -127,7 +141,20 @@ function requireIncludes(source: string, needle: string, message: string): void 
   }
 }
 
-for (const path of [packageJsonPath, gatePath, reviewDocPath, preflightPath, preflightTestPath, passkeyVerifierPath, stackAreaAuditDocPath, stackAreaAuditScriptPath, stackAreaAuditTestPath]) {
+for (const path of [
+  packageJsonPath,
+  gatePath,
+  reviewDocPath,
+  preflightPath,
+  preflightTestPath,
+  passkeyVerifierPath,
+  stackAreaAuditDocPath,
+  stackAreaAuditScriptPath,
+  stackAreaAuditTestPath,
+  goalCompletionAuditDocPath,
+  goalCompletionAuditScriptPath,
+  goalCompletionAuditTestPath
+]) {
   if (!await exists(path)) {
     errors.push(`Missing retirement review preflight path: ${path}`);
   }
@@ -147,6 +174,9 @@ if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-s
 }
 if (packageJson?.scripts?.["retirement:stack-audit"] !== `node --experimental-strip-types ${stackAreaAuditScriptPath}`) {
   errors.push("package.json must expose retirement:stack-audit before final retirement review.");
+}
+if (packageJson?.scripts?.["goal:completion-audit"] !== `node --experimental-strip-types ${goalCompletionAuditScriptPath}`) {
+  errors.push("package.json must expose goal:completion-audit before final retirement review.");
 }
 
 if (gate?.status !== "blocked") {
@@ -174,7 +204,17 @@ if (passkeyGate?.status !== "pending") {
 if (reviewGate?.status !== "pending") {
   errors.push("retirement-review must remain pending until passkey evidence exists and final review is actually performed.");
 }
-for (const path of [reviewDocPath, stackAreaAuditDocPath, stackAreaAuditScriptPath, stackAreaAuditTestPath, preflightPath, preflightTestPath]) {
+for (const path of [
+  reviewDocPath,
+  stackAreaAuditDocPath,
+  stackAreaAuditScriptPath,
+  stackAreaAuditTestPath,
+  goalCompletionAuditDocPath,
+  goalCompletionAuditScriptPath,
+  goalCompletionAuditTestPath,
+  preflightPath,
+  preflightTestPath
+]) {
   if (!stringArray(reviewGate?.evidence).includes(path)) {
     errors.push(`retirement-review evidence must include ${path}.`);
   }
@@ -185,6 +225,7 @@ requireIncludes(reviewDoc, "Status: blocked", "Retirement review doc must remain
 requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement review doc must avoid claiming readiness.");
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
 requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review doc must include the stack area audit command.");
+requireIncludes(reviewDoc, "npm run goal:completion-audit", "Retirement review doc must include the goal completion audit command.");
 requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
 requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
 requireIncludes(reviewDoc, "non-synthetic passkey operations", "Retirement review doc must name passkey as a remaining blocker.");

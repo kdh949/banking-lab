@@ -32,6 +32,9 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-stack-retirement-by-area.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/stackRetirementAreaAudit.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes(script));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/evidenceRefresh.test.mjs"));
   assert.doesNotMatch(gate.statusReason, /evidence-refresh completion/i);
