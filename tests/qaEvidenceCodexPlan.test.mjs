@@ -60,20 +60,22 @@ test("QA Temporal restart evidence reflects all-current-case server and PostgreS
   assert.doesNotMatch(gate.statusReason, /broader database\/process-failure variants/i);
 });
 
-test("QA passkey evidence keeps Node retirement blocked until non-synthetic proof exists", async () => {
+test("QA passkey evidence keeps Node retirement blocked until final review exists", async () => {
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
   const evidence = await readFile("docs/test-evidence/passkey-non-synthetic-operations.md", "utf8");
   const passkeyGate = gate.requiredGates.find((item) => item.id === "non-synthetic-passkey-operations");
 
   assert.equal(gate.status, "blocked");
-  assert.equal(passkeyGate?.status, "pending");
+  assert.equal(passkeyGate?.status, "pass");
+  assert.ok(passkeyGate?.evidence?.includes("docs/test-evidence/generated/passkey-non-synthetic-evidence.json"));
   assert.ok(passkeyGate?.evidence?.includes("scripts/record-passkey-non-synthetic-evidence.ts"));
   assert.ok(passkeyGate?.evidence?.includes("tests/passkeyEvidenceRecorder.test.mjs"));
-  assert.match(gate.statusReason, /non-synthetic passkey operations/i);
-  assert.match(evidence, /Status:\s+blocked/i);
+  assert.match(gate.statusReason, /final retirement review/i);
+  assert.match(evidence, /Status:\s+pass/i);
   assert.match(evidence, /Chromium CDP `WebAuthn\.enable`/);
   assert.match(evidence, /not non-synthetic passkey evidence/i);
   assert.match(evidence, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
   assert.match(evidence, /npm run passkey:evidence:record/);
+  assert.match(evidence, /Passkey non-synthetic evidence verification: pass/);
   assert.match(evidence, /staffPanelAssertions/);
 });

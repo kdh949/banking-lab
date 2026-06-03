@@ -19,8 +19,8 @@ test("retirement boundary audit passes while keeping current gate blocked", asyn
   assert.match(stdout, /Target stack anchors: pass/);
   assert.match(stdout, /Evidence paths: pass/);
   assert.match(stdout, /Parity map: pass \(42\/42 mapped scenarios\)/);
-  assert.match(stdout, /non-synthetic-passkey-operations: pending/);
   assert.match(stdout, /retirement-review: pending/);
+  assert.doesNotMatch(stdout, /non-synthetic-passkey-operations: pending/);
 });
 
 test("retirement boundary audit is wired into the package scripts and gate evidence", async () => {

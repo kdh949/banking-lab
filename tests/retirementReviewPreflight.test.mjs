@@ -19,7 +19,7 @@ test("retirement review preflight passes while keeping final retirement blocked"
   assert.match(stdout, /Node retirement review preflight: pass/);
   assert.match(stdout, /Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, strict final review verifier, and retirement gate checks are consistent/);
   assert.match(stdout, /does not mark Node retirement ready/);
-  assert.match(stdout, /non-synthetic passkey operations and final retirement review remain pending/);
+  assert.match(stdout, /final retirement review remains pending/);
 });
 
 test("retirement review gate keeps preflight evidence but remains pending", async () => {
@@ -40,8 +40,9 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(packageJson.scripts["goal:completion-audit"], "node --experimental-strip-types scripts/check-goal-completion-audit.ts");
   assert.equal(gate.status, "blocked");
-  assert.equal(passkey?.status, "pending");
+  assert.equal(passkey?.status, "pass");
   assert.equal(retirementReview?.status, "pending");
+  assert.ok(passkey?.evidence?.includes("docs/test-evidence/generated/passkey-non-synthetic-evidence.json"));
   assert.ok(retirementReview?.evidence?.includes(reviewDoc));
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/check-stack-retirement-by-area.ts"));
@@ -79,4 +80,5 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.match(evidence, /docs\/test-evidence\/generated\/final-node-retirement-review\.json/);
   assert.match(evidence, /strict final retirement review verifier/i);
   assert.match(evidence, /does not mark Node retirement ready/);
+  assert.match(evidence, /final retirement review/i);
 });

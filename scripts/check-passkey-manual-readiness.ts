@@ -47,6 +47,7 @@ const realmPath = "infra/keycloak/realm-banking-lab.json";
 const readinessPath = "scripts/check-passkey-manual-readiness.ts";
 const readinessTestPath = "tests/passkeyManualReadiness.test.mjs";
 const errors: string[] = [];
+let passkeyGatePassed = false;
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -135,8 +136,11 @@ function validateGateAndScripts(packageJson: PackageJson | undefined, gate: Node
       errors.push(`Missing required gate ${gateId}.`);
       continue;
     }
-    if (gateId === "non-synthetic-passkey-operations" && requiredGate.status !== "pending") {
-      errors.push("non-synthetic-passkey-operations must remain pending after readiness checks.");
+    if (gateId === "non-synthetic-passkey-operations" && requiredGate.status === "pass") {
+      passkeyGatePassed = true;
+    }
+    if (gateId === "non-synthetic-passkey-operations" && requiredGate.status !== "pending" && requiredGate.status !== "pass") {
+      errors.push("non-synthetic-passkey-operations must be pending before manual evidence or pass after verified manual-live-passkey evidence.");
     }
     for (const evidencePath of [readinessPath, readinessTestPath]) {
       if (!stringArray(requiredGate.evidence).includes(evidencePath)) {
@@ -206,14 +210,18 @@ function validatePreparedCommands(source: string): void {
     if (typeof command.command !== "string" || command.command.trim().length === 0) {
       errors.push("Every passkey command template item must include a non-empty command.");
     }
-    if (command.status !== "TODO_REPLACE_WITH_pass") {
-      errors.push(`${String(command.command)} status must remain TODO_REPLACE_WITH_pass before the real run.`);
-    }
-    if (command.exitCode !== "TODO_REPLACE_WITH_0") {
-      errors.push(`${String(command.command)} exitCode must remain TODO_REPLACE_WITH_0 before the real run.`);
-    }
-    if (typeof command.summary !== "string" || !/Replace this summary/.test(command.summary)) {
-      errors.push(`${String(command.command)} summary must be a replacement instruction before the real run.`);
+    const isTodoTemplate = command.status === "TODO_REPLACE_WITH_pass"
+      && command.exitCode === "TODO_REPLACE_WITH_0"
+      && typeof command.summary === "string"
+      && /Replace this summary/.test(command.summary);
+    const isRecordedPass = command.status === "pass"
+      && command.exitCode === 0
+      && typeof command.summary === "string"
+      && command.summary.trim().length > 0
+      && !/Replace this summary/.test(command.summary);
+
+    if (!isTodoTemplate && !(passkeyGatePassed && isRecordedPass)) {
+      errors.push(`${String(command.command)} must remain a TODO template before the real run, or be recorded as pass after the passkey gate is verified.`);
     }
   }
 }

@@ -24,8 +24,8 @@ test("stack retirement area audit proves target areas do not use legacy Node MVP
   assert.match(stdout, /platform-infra: Docker Compose, Kubernetes, Terraform, Helm, Argo CD/);
   assert.match(stdout, /contracts-and-data: OpenAPI\/AsyncAPI\/Temporal contracts and PostgreSQL\/Flyway migrations/);
   assert.match(stdout, /Node retirement gate: blocked/);
-  assert.match(stdout, /non-synthetic-passkey-operations: pending/);
   assert.match(stdout, /retirement-review: pending/);
+  assert.doesNotMatch(stdout, /non-synthetic-passkey-operations: pending/);
 });
 
 test("stack retirement area audit is wired into scripts and retirement evidence", async () => {

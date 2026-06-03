@@ -22,7 +22,7 @@ test("goal completion audit reports current blockers without marking the objecti
   assert.match(stdout, /retirement-ready-state-simulation: pass/);
   assert.match(stdout, /passkey-non-synthetic-preflight: pass/);
   assert.match(stdout, /mapped-parity: pass/);
-  assert.match(stdout, /gate:non-synthetic-passkey-operations: blocked/);
+  assert.match(stdout, /gate:non-synthetic-passkey-operations: pass/);
   assert.match(stdout, /gate:retirement-review: blocked/);
   assert.match(stdout, /node-retirement-gate: blocked/);
 });
@@ -37,7 +37,7 @@ test("goal completion audit fails closed when completion is required", () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stdout, /Goal completion audit: not complete/);
   assert.match(result.stderr, /Goal completion is still blocked/);
-  assert.match(result.stderr, /gate:non-synthetic-passkey-operations/);
+  assert.doesNotMatch(result.stderr, /gate:non-synthetic-passkey-operations/);
   assert.match(result.stderr, /gate:retirement-review/);
 });
 

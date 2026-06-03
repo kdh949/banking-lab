@@ -167,8 +167,8 @@ test("passkey evidence verifier rejects failed or duplicate command evidence", a
   assert.match(result.stderr, /status must be pass|duplicate command/);
 });
 
-test("passkey evidence verifier fails strictly when the default artifact is missing", () => {
-  const result = runVerifier();
+test("passkey evidence verifier fails strictly when an explicit artifact is missing", () => {
+  const result = runVerifier(join(tmpdir(), "banking-lab-missing-passkey-evidence.json"));
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Could not read passkey evidence artifact/);

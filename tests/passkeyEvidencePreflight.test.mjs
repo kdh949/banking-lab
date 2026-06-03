@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const preflightScript = "scripts/check-passkey-non-synthetic-preflight.ts";
 
-test("passkey evidence preflight validates static manual-run prerequisites without proving the gate", async () => {
+test("passkey evidence preflight validates manual-run prerequisites and recorded artifact", async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
     ["--experimental-strip-types", preflightScript],
@@ -16,8 +16,8 @@ test("passkey evidence preflight validates static manual-run prerequisites witho
 
   assert.equal(stderr, "");
   assert.match(stdout, /Passkey non-synthetic evidence preflight: pass/);
-  assert.match(stdout, /does not prove non-synthetic passkey operations/);
-  assert.match(stdout, /manual-live-passkey evidence/);
+  assert.match(stdout, /Manual-live-passkey evidence artifact is recorded and strict verification passed/);
+  assert.match(stdout, /manual-live-passkey evidence/i);
 });
 
 test("passkey evidence preflight is wired into scripts and retirement evidence", async () => {
@@ -36,6 +36,7 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   const staffWebAuthnSpec = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
   const verifierScript = "scripts/verify-passkey-non-synthetic-evidence.ts";
   const verifierTest = "tests/passkeyEvidenceVerifier.test.mjs";
+  const artifact = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 
   assert.equal(packageJson.scripts["passkey:evidence:preflight"], `node --experimental-strip-types ${preflightScript}`);
   assert.equal(packageJson.scripts["passkey:evidence:prepare"], `node --experimental-strip-types ${prepareScript}`);
@@ -52,10 +53,12 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   assert.equal(packageJson.scripts["passkey:evidence:verify"], `node --experimental-strip-types ${verifierScript}`);
   assert.ok(passkeyGate?.evidence?.includes(verifierScript));
   assert.ok(passkeyGate?.evidence?.includes(verifierTest));
+  assert.ok(passkeyGate?.evidence?.includes(artifact));
   assert.ok(passkeyGate?.evidence?.includes(preflightScript));
   assert.ok(passkeyGate?.evidence?.includes("tests/passkeyEvidencePreflight.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes(verifierScript));
   assert.ok(evidenceRefresh?.evidence?.includes(verifierTest));
+  assert.ok(evidenceRefresh?.evidence?.includes(artifact));
   assert.ok(evidenceRefresh?.evidence?.includes(prepareScript));
   assert.ok(evidenceRefresh?.evidence?.includes(prepareTest));
   assert.ok(evidenceRefresh?.evidence?.includes(readinessScript));

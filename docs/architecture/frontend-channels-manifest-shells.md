@@ -160,6 +160,6 @@ env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18090 BANKING_LAB_E2E_KEYCLOAK
 
 ## Next Work
 
-Broaden remaining workflow, retry, and operator exception flows beyond the first API-backed command/failure-state smokes. WebAuthn required-action browser evidence and synthetic WebAuthn policy/recovery role segregation now exist for the staff-terminal/local lab path; non-synthetic passkey operations are not claimed.
+Broaden remaining workflow, retry, and operator exception flows beyond the first API-backed command/failure-state smokes. WebAuthn required-action browser evidence, synthetic WebAuthn policy/recovery role segregation, and generated non-synthetic passkey operations evidence now exist for the staff-terminal/local lab path.
 
 Latest customer-web API-backed coverage includes complaint entry and answered-complaint confirmation through the shared client, with Spring writing customer ownership-checked state, timeline, and audit evidence. The Keycloak browser slice currently covers all current customer-web API-backed paths.
