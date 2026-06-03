@@ -1,10 +1,7 @@
-import type { ScreenManifest } from "../../../../packages/screen-engine/src/types";
 import { ApiBackedStaffPanel } from "../components/ApiBackedStaffPanel";
 import {
-  DenseTable,
-  Panel,
-  StatusBar,
   TaskTabs,
+  TerminalIcon,
   TerminalMiniSidebar,
   TerminalTopbar,
   TerminalTreeSidebar,
@@ -33,184 +30,192 @@ const sideTools = [
 
 const taskTabs = ["업무포털", "신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"] as const;
 
-const noticeRows = [
-  ["No.", "제목", "담당부서", "게시일"],
-  ["5", ">>> [LAB차세대] 통합단말 시행관련 문서 <<<", "채널운영", "2026.06.04"],
-  ["4", "전자금융 통제 및 고객확인 시뮬레이션 안내", "고객업무", "2026.06.03"],
-  ["3", "내부통제 점검 화면 reason-code 입력 기준", "감사", "2026.06.02"],
-  ["2", "업무포털 주요 공지: 합성 데이터 운영 원칙", "IT기획", "2026.06.01"],
-  ["1", "개인정보 마스킹 기본 적용 및 승인 절차", "보안", "2026.05.31"]
+const treeGroups = [
+  {
+    label: "수신",
+    children: [
+      { code: "11", label: "수신기본(신규,해지)" },
+      { code: "15", label: "계약공통" },
+      { code: "21", label: "수신기본(입출금)" },
+      { code: "23", label: "수표/어음", selected: true },
+      { code: "24", label: "자기앞수표" },
+      { code: "25", label: "기타별단" }
+    ]
+  },
+  { label: "여신", open: false, children: [] },
+  { label: "외환", open: false, children: [] }
 ] as const;
 
-const faqRows = [
-  ["5", "[수신] 통합단말 조회에서 마스킹 해제 승인 요청"],
-  ["4", "[고객] 고객상세 화면 업무사유 입력 방법"],
-  ["3", "[원장] 거래내역 재처리와 역분개 확인 절차"],
-  ["2", "[민원] 답변 승인 반려 시 재상신 흐름"],
-  ["1", "[FDS] 의심거래 보류 해제 시 체크리스트"]
+const quickMenuItems = [
+  "11. 수신기본(신규,해지,조회,기타)",
+  "15. 계약공통",
+  "21. 수신기본(입출금,조회,기타)거래",
+  "24. 자기앞수표",
+  "25. 기타별단",
+  "S2. 수신정산"
 ] as const;
 
-const manualRows = [
-  ["업무매뉴얼", "계좌개설 사후점검 화면 사용법"],
-  ["업무매뉴얼", "통합고객조회 표준 처리 기준"],
-  ["상품설명서", "합성 예금상품 약관 예시"],
-  ["업무매뉴얼", "감사 로그 확인 및 증적 제출"],
-  ["업무매뉴얼", "승인함 maker-checker 운영"]
+const notices = [
+  [">>> [POST차세대] POST 차세도시행관련 문서 <<<", "IT금융개발부", "2014-09-25", true],
+  ["일부 급여이체 기업의 타행이체 고객 적극 유치", "개인고객부", "2014-09-30"],
+  ["「주택청약(종합)저축」 금리변경 안내 <시행일 14. 10. 1>", "개인고객부", "2014-09-30"],
+  ["국민주택기금 대출고객에 대한 해피콜 실시 요청", "개인고객부", "2014-09-30"],
+  ["「POST차세대시스템」전환 시 개인고객 응대 유의사항", "개인고객부", "2014-09-30"]
 ] as const;
 
-const newScreenRows = [
-  ["S5801", "외환이자수수료 조회", "반영"],
-  ["CST002", "마스킹 고객상세", "반영"],
-  ["APR001", "승인함", "반영"],
-  ["FDS201", "이상거래 케이스", "검토"],
-  ["CMP201", "민원 답변", "검토"]
+const manuals = [
+  "[POST차세대 변경업무 메뉴얼] 수신업무",
+  "[POST차세대 시스템 화면구성] 이렇게 좋아져요~!(수신)"
 ] as const;
 
-const insideProducts = [
-  "합성 예금 패키지",
-  "디지털 입출금 계좌",
-  "비대면 예금 전환",
-  "수표/어음 처리 시뮬레이터"
+const newScreens = [
+  ["[23601]", "수표어음교부"],
+  ["[23602]", "수표어음사고등록"],
+  ["[23608]", "당좌/가당 부도등록"],
+  ["[23805]", "어음발행정보조회"],
+  ["[23808]", "수표어음 교부계좌 조회"],
+  ["[23809]", "수표어음 적정교부량조회"]
 ] as const;
-
-const workflowEvents = [
-  "CST-002 masked customer detail loaded",
-  "APR-001 declared maker-checker approval",
-  "FDS case routed to workflow timeline",
-  "Exception/retry panel ready"
-] as const;
-
-function domainLabel(domain: string): string {
-  const labels: Record<string, string> = {
-    account: "계좌",
-    approval: "승인",
-    audit: "감사",
-    complaint: "민원",
-    customer: "고객",
-    ledger: "원장",
-    "staff-workstation": "통합단말"
-  };
-  return labels[domain] ?? domain;
-}
-
-function typeLabel(type: ScreenManifest["type"]): string {
-  const labels: Record<ScreenManifest["type"], string> = {
-    CASE: "Case",
-    COMMAND: "Command",
-    DASHBOARD: "Dashboard",
-    INQUIRY: "Inquiry",
-    PARAMETER: "Parameter"
-  };
-  return labels[type];
-}
-
-function endpointOf(manifest: ScreenManifest): string {
-  return manifest.query?.endpoint || manifest.api?.command || manifest.actions?.[0]?.target || "declared in workflow";
-}
-
-function buildSourceTree(manifests: ScreenManifest[], activeManifest: ScreenManifest | undefined) {
-  const syntheticFolders = [
-    {
-      label: "수신",
-      children: [
-        { code: "11", label: "수신기본(신규,해지)" },
-        { code: "15", label: "계약공통" },
-        { code: "21", label: "수신기본(입출금)" },
-        { code: "23", label: "수표/어음", selected: true },
-        { code: "31", label: "제신고" }
-      ]
-    },
-    {
-      label: "통합단말",
-      children: manifests
-        .filter((manifest) => ["staff-workstation", "customer", "approval"].includes(manifest.domain))
-        .slice(0, 6)
-        .map((manifest) => ({
-          code: manifest.transactionCode ?? manifest.screenId,
-          label: manifest.title,
-          selected: manifest.screenId === activeManifest?.screenId
-        }))
-    },
-    {
-      label: "감사/리스크",
-      children: manifests
-        .filter((manifest) => ["audit", "complaint", "ledger"].includes(manifest.domain))
-        .slice(0, 5)
-        .map((manifest) => ({
-          code: manifest.transactionCode ?? manifest.screenId,
-          label: manifest.title,
-          selected: false
-        }))
-    }
-  ];
-
-  return syntheticFolders;
-}
 
 export default async function StaffTerminalPage() {
   const manifests = await loadChannelManifests();
   const reasonRequired = manifests.filter((manifest) => manifest.audit.reasonRequired).length;
   const makerChecker = manifests.filter((manifest) => manifest.approval?.required).length;
-  const piiScreens = manifests.filter((manifest) => manifest.audit.piiAccess).length;
-  const activeManifest = manifests.find((manifest) => manifest.screenId === "CST-002") ?? manifests[0];
-  const manifestRows = manifests.slice(0, 6).map((manifest) => [
-    manifest.transactionCode ?? manifest.screenId,
-    domainLabel(manifest.domain),
-    typeLabel(manifest.type),
-    endpointOf(manifest)
-  ]);
 
   return (
     <main className="bank-terminal">
       <TerminalTopbar brand="INZENT Banking" modules={topModules} />
       <div className="terminal-frame">
         <TerminalMiniSidebar tools={sideTools} />
-        <TerminalTreeSidebar
-          groups={buildSourceTree(manifests, activeManifest)}
-          operator={{ initials: "BL", name: "branch01", role: "BRANCH_STAFF", branch: "Synthetic Branch" }}
-        />
+        <TerminalTreeSidebar groups={treeGroups} />
 
         <section className="workspace">
-          <WorkspaceTabs
-            activeTitle="[20000] 수신_네비게이션"
-            secondaryTitle={`[${activeManifest?.transactionCode ?? "S5801"}] ${
-              activeManifest?.title ?? "외환이자수수료"
-            }`}
-          />
+          <WorkspaceTabs activeTitle="[20000] 수신_네비게이션" secondaryTitle="[S5801] 외환이자수수료" />
           <TaskTabs tabs={taskTabs} />
 
           <div className="terminal-body">
             <section className="main-canvas" aria-label="Manifest-driven integrated terminal">
               <div className="source-bento">
-                <Panel title="수신업무" icon="account_balance_wallet" className="panel-quick">
-                  <div className="quick-grid">
-                    {["신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서"].map((label) => (
-                      <button type="button" key={label}>
-                        {label}
-                      </button>
-                    ))}
+                <article className="terminal-panel panel-quick">
+                  <div className="panel-header">
+                    <strong>
+                      <TerminalIcon name="grid_view" />
+                      수신업무
+                    </strong>
                   </div>
-                  <DenseTable
-                    columns={["거래코드", "업무", "유형", "API"]}
-                    rows={manifestRows}
-                  />
-                </Panel>
+                  <div className="quick-menu-body">
+                    <div className="quick-menu-box">
+                      <div className="quick-menu-title">
+                        <TerminalIcon name="play_arrow" />
+                        수신업무 중간화면
+                      </div>
+                      {quickMenuItems.slice(0, 3).map((item) => (
+                        <button type="button" key={item}>
+                          {item}
+                        </button>
+                      ))}
+                      <button className="is-current" type="button">
+                        <span>23. 수표/어음</span>
+                        <TerminalIcon name="arrow_forward" />
+                      </button>
+                      {quickMenuItems.slice(3).map((item) => (
+                        <button type="button" key={item}>
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="number-select">
+                      <span>번호선택</span>
+                      <input aria-label="번호선택" />
+                    </div>
+                  </div>
+                </article>
 
-                <Panel title="수신_중요공지" icon="article" className="panel-notice">
-                  <DenseTable columns={noticeRows[0]} rows={noticeRows.slice(1)} />
-                </Panel>
+                <article className="terminal-panel panel-notice">
+                  <div className="panel-header split">
+                    <strong>
+                      <TerminalIcon name="campaign" />
+                      수신_중요공지
+                    </strong>
+                    <button type="button">더보기 &gt;</button>
+                  </div>
+                  <div className="notice-body">
+                    <div className="notice-title">
+                      <TerminalIcon name="play_arrow" />
+                      수신업무 공지사항
+                    </div>
+                    <div className="notice-table" role="table" aria-label="수신업무 공지사항">
+                      <div className="notice-row notice-head" role="row">
+                        <div>순번</div>
+                        <div>제목</div>
+                        <div>등록부서</div>
+                        <div>등록일시</div>
+                      </div>
+                      {notices.map(([title, department, date, featured], index) => (
+                        <div className={index % 2 === 0 ? "notice-row" : "notice-row is-alt"} role="row" key={title}>
+                          <div>{index + 1}</div>
+                          <div className={featured ? "is-featured" : ""}>{title}</div>
+                          <div>{department}</div>
+                          <div>{date}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </article>
 
-                <Panel title="FAQ BEST 5" icon="support_agent" className="panel-small">
-                  <DenseTable columns={["No.", "질문"]} rows={faqRows} />
-                </Panel>
+                <article className="terminal-panel panel-small">
+                  <div className="panel-header tertiary">
+                    <strong>
+                      <TerminalIcon name="help" />
+                      자주묻는 질문
+                    </strong>
+                  </div>
+                  <div className="simple-panel-body">
+                    <div className="simple-title">제 목</div>
+                    <div className="empty-message">등록된 게시물이 없습니다.</div>
+                  </div>
+                </article>
 
-                <Panel title="매뉴얼" icon="description" className="panel-small">
-                  <DenseTable columns={["구분", "제목"]} rows={manualRows} />
-                </Panel>
+                <article className="terminal-panel panel-small">
+                  <div className="panel-header tertiary">
+                    <strong>
+                      <TerminalIcon name="menu_book" />
+                      알면 편한 단말 메뉴얼
+                    </strong>
+                  </div>
+                  <div className="simple-panel-body">
+                    <div className="simple-title">제 목</div>
+                    <div className="manual-list">
+                      {manuals.map((manual) => (
+                        <button type="button" key={manual}>
+                          {manual}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </article>
 
-                <Panel title="신규화면/개선사항" icon="leaderboard" className="panel-small">
-                  <DenseTable columns={["코드", "화면명", "상태"]} rows={newScreenRows} />
-                </Panel>
+                <article className="terminal-panel panel-small panel-new-screen">
+                  <div className="panel-header split">
+                    <strong>
+                      <TerminalIcon name="fiber_new" />
+                      신규화면 공지
+                    </strong>
+                    <span>포스트차세대</span>
+                  </div>
+                  <div className="new-screen-body">
+                    <table>
+                      <tbody>
+                        {newScreens.map(([code, label]) => (
+                          <tr key={code}>
+                            <td>{code}</td>
+                            <td>{label}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
 
                 <section className="manifest-evidence-strip" aria-label="Staff terminal control evidence">
                   <h1>Transaction-code workspace</h1>
@@ -242,75 +247,103 @@ export default async function StaffTerminalPage() {
             <aside className="inside-view" aria-label="Inside view and API smoke">
               <div className="inside-header">
                 <strong>인사이드뷰</strong>
-                <span>MY INFO</span>
+                <button type="button" aria-label="Close inside view">
+                  <TerminalIcon name="close" />
+                </button>
               </div>
-              <div className="inside-tabs" role="tablist" aria-label="Inside view tabs">
-                {["특이사항", "거래성향", "메모"].map((tab, index) => (
-                  <button className={index === 0 ? "is-active" : ""} type="button" key={tab}>
-                    {tab}
-                  </button>
-                ))}
+              <div className="inside-summary">
+                <div className="inside-stat-grid">
+                  {["여신연체", "카드연체", "자점손실", "전점손실"].map((label) => (
+                    <button type="button" key={label}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="inside-quick-tabs">
+                  {["특이사항", "거래성향", "메모"].map((label) => (
+                    <button type="button" key={label}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <Panel title="고객/거래 통제" compact>
-                <dl className="compact-definition">
-                  <div>
-                    <dt>Masking</dt>
-                    <dd>기본 마스킹</dd>
+              <div className="inside-panel-stack">
+                <div className="inside-mini-panel">
+                  <div className="inside-mini-header">
+                    <strong>
+                      <TerminalIcon name="inventory_2" />
+                      내상품
+                    </strong>
+                    <span>
+                      <button type="button">상담</button>
+                      <button className="is-primary" type="button">
+                        상세
+                      </button>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Reason</dt>
-                    <dd>업무사유 필수</dd>
+                  <div className="inside-select-row">
+                    <select defaultValue="우측 클릭 후 선택하세요" aria-label="내상품">
+                      <option>우측 클릭 후 선택하세요</option>
+                    </select>
                   </div>
-                  <div>
-                    <dt>Approval</dt>
-                    <dd>Maker-checker</dd>
+                </div>
+                <div className="inside-mini-panel recommendation">
+                  <div className="inside-mini-header">
+                    <strong>
+                      <TerminalIcon name="thumb_up" />
+                      추천상품
+                    </strong>
+                    <span>
+                      <button type="button">상세</button>
+                      <button type="button">탐색</button>
+                    </span>
                   </div>
-                </dl>
-              </Panel>
-              <Panel title="상품추천" compact>
-                <ul className="inside-list">
-                  {insideProducts.map((product) => (
-                    <li key={product}>{product}</li>
-                  ))}
-                </ul>
-              </Panel>
-              <Panel title="Audit log panel" compact>
-                <dl className="compact-definition">
-                  <div>
-                    <dt>PII screens</dt>
-                    <dd>{piiScreens}</dd>
+                  <div className="inside-table-title">추천상품명</div>
+                  <div className="inside-fill" />
+                </div>
+                <div className="inside-mini-panel marketing">
+                  <div className="inside-mini-header">
+                    <strong>
+                      <TerminalIcon name="campaign" />
+                      수행마케팅
+                    </strong>
+                    <span>
+                      <button type="button">반응등록</button>
+                    </span>
                   </div>
-                  <div>
-                    <dt>reason-required</dt>
-                    <dd>{reasonRequired}</dd>
-                  </div>
-                </dl>
-              </Panel>
-              <Panel title="Workflow timeline" compact>
-                <ol className="timeline">
-                  {workflowEvents.map((event) => (
-                    <li key={event}>{event}</li>
-                  ))}
-                </ol>
-              </Panel>
-              <Panel title="Exception/retry panel" compact>
-                <DenseTable
-                  columns={["상태", "처리"]}
-                  rows={[
-                    ["SERIALIZABLE retry", "ready"],
-                    ["Duplicate idempotency key", "guarded"],
-                    ["PII unmask step-up", "manager"]
-                  ]}
-                />
-              </Panel>
+                  <div className="inside-table-title">마케팅내용</div>
+                  <div className="inside-fill" />
+                </div>
+              </div>
             </aside>
           </div>
+
+          <footer className="status-bar">
+            <div>
+              <span>
+                <TerminalIcon name="computer" />
+                10.1.91.174
+              </span>
+              <span className="status-chip">정상 연결</span>
+            </div>
+            <div>
+              <span>
+                <TerminalIcon name="print" />
+                프린터
+              </span>
+              <span>
+                <TerminalIcon name="keyboard" />
+                핀패드
+              </span>
+              <span>
+                <TerminalIcon name="receipt" />
+                즉발기
+              </span>
+              <strong>2023-10-24 13:37:24</strong>
+            </div>
+          </footer>
         </section>
       </div>
-      <StatusBar
-        left="화면명: 수신_네비게이션 | 합성 데이터 전용"
-        right={`screens ${manifests.length} / reason ${reasonRequired} / approvals ${makerChecker}`}
-      />
     </main>
   );
 }

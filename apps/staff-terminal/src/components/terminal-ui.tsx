@@ -4,27 +4,42 @@ type IconName =
   | "account_balance_wallet"
   | "account_tree"
   | "arrow_drop_down"
+  | "arrow_forward"
+  | "arrow_right"
   | "article"
   | "business_center"
   | "calendar_today"
+  | "campaign"
   | "close"
+  | "computer"
   | "credit_card"
   | "currency_exchange"
   | "description"
   | "event"
+  | "fiber_new"
+  | "folder"
   | "folder_open"
+  | "grid_view"
   | "group"
+  | "help"
+  | "inventory_2"
+  | "keyboard"
   | "leaderboard"
   | "logout"
   | "menu"
+  | "menu_book"
   | "notifications"
   | "person"
+  | "play_arrow"
+  | "print"
   | "push_pin"
   | "real_estate_agent"
+  | "receipt"
   | "search"
   | "settings"
   | "star"
-  | "support_agent";
+  | "support_agent"
+  | "thumb_up";
 
 type NavItem = {
   label: string;
@@ -41,7 +56,7 @@ type TreeItem = {
 type TreeGroup = {
   label: string;
   open?: boolean;
-  children: TreeItem[];
+  children: readonly TreeItem[];
 };
 
 type TableRow = readonly ReactNode[];
@@ -87,6 +102,7 @@ export function TerminalTopbar({
         <button type="button" aria-label="Settings">
           <TerminalIcon name="settings" />
         </button>
+        <div className="top-action-separator" aria-hidden="true" />
         <button className="finish-button" type="button">
           <TerminalIcon name="logout" />
           완료
@@ -114,7 +130,7 @@ export function TerminalTreeSidebar({
   operator
 }: {
   groups: readonly TreeGroup[];
-  operator: { initials: string; name: string; role: string; branch: string };
+  operator?: { initials: string; name: string; role: string; branch: string };
 }) {
   return (
     <aside className="context-sidebar" aria-label="Role-aware menu">
@@ -122,25 +138,29 @@ export function TerminalTreeSidebar({
         <strong>업무 메뉴 트리</strong>
         <TerminalIcon name="push_pin" />
       </div>
-      <div className="operator-card">
-        <div className="operator-avatar" aria-hidden="true">
-          {operator.initials}
-        </div>
-        <div>
-          <strong>{operator.name}</strong>
-          <span>{operator.role}</span>
-          <span>{operator.branch}</span>
-        </div>
-      </div>
-      <button className="operator-button" type="button">
-        내 권한 보기
-      </button>
+      {operator ? (
+        <>
+          <div className="operator-card">
+            <div className="operator-avatar" aria-hidden="true">
+              {operator.initials}
+            </div>
+            <div>
+              <strong>{operator.name}</strong>
+              <span>{operator.role}</span>
+              <span>{operator.branch}</span>
+            </div>
+          </div>
+          <button className="operator-button" type="button">
+            내 권한 보기
+          </button>
+        </>
+      ) : null}
       <div className="tree-list">
         {groups.map((group) => (
           <div className="tree-group" key={group.label}>
-            <div className="tree-folder">
-              <TerminalIcon name="arrow_drop_down" />
-              <TerminalIcon name="folder_open" className="folder-icon" />
+            <div className={group.open === false ? "tree-folder is-closed" : "tree-folder"}>
+              <TerminalIcon name={group.open === false ? "arrow_right" : "arrow_drop_down"} />
+              <TerminalIcon name={group.open === false ? "folder" : "folder_open"} className="folder-icon" />
               {group.label}
             </div>
             {group.open !== false ? (
@@ -148,7 +168,7 @@ export function TerminalTreeSidebar({
                 {group.children.map((item) => (
                   <div className={item.selected ? "tree-item is-selected" : "tree-item"} key={`${group.label}-${item.code}`}>
                     <TerminalIcon name="description" />
-                    <span>{item.code}</span>
+                    <span>{item.code}.</span>
                     <strong>{item.label}</strong>
                   </div>
                 ))}
