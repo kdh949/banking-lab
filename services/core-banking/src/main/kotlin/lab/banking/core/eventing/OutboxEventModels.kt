@@ -56,7 +56,9 @@ data class KafkaOutboxPublisherConfig(
     val clientId: String = "core-banking-outbox-publisher",
     val publishTimeoutMillis: Long = 5_000,
     val deadLetterThreshold: Int = 3,
-    val retryDelaySeconds: Long = 60
+    val retryDelaySeconds: Long = 60,
+    val crashAfterBrokerAckEventId: String? = null,
+    val crashAfterBrokerAckExitCode: Int = 88
 )
 
 data class KafkaOutboxPublishResult(

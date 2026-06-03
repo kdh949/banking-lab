@@ -15,6 +15,7 @@ import org.apache.kafka.common.errors.TopicExistsException
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -77,12 +78,128 @@ class LiveOutboxWorkerSmokeIntegrationTest {
 
             val publishedAt = outboxPublishedAt(databaseUrl, databaseUser, databasePassword, outboxEventId)
             assertNotNull(publishedAt)
-            val kafkaValue = waitForKafkaRecord(bootstrapServers, topic, outboxEventId, Duration.ofSeconds(60))
+            val kafkaValue = waitForKafkaRecords(
+                bootstrapServers,
+                topic,
+                outboxEventId,
+                expectedCount = 1,
+                timeout = Duration.ofSeconds(60)
+            ).first()
             assertTrue(kafkaValue.contains(outboxEventId))
             assertTrue(kafkaValue.contains("\"syntheticOnly\":true"))
         } finally {
             if (workerKilled) {
                 runCatching { runDockerCompose(composeProject!!, composeEnv, "up", "-d", "--no-deps", workerService) }
+            }
+        }
+    }
+
+    @Test
+    fun `live outbox worker replays after broker ack crash before published mark`() {
+        val composeProject = System.getenv("BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT")
+        assumeTrue(
+            !composeProject.isNullOrBlank(),
+            "set BANKING_LAB_LIVE_OUTBOX_COMPOSE_PROJECT to run live outbox post-ack crash drill"
+        )
+
+        val topic = System.getenv("BANKING_LAB_OUTBOX_TOPIC") ?: "banking.lab.domain-events"
+        val databaseUrl = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_URL")
+            ?: "jdbc:postgresql://127.0.0.1:${System.getenv("BANKING_LAB_POSTGRES_PORT") ?: "5432"}/banking_lab"
+        val databaseUser = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_USER") ?: "banking_lab"
+        val databasePassword = System.getenv("BANKING_LAB_LIVE_OUTBOX_DATABASE_PASSWORD") ?: "banking_lab"
+        val bootstrapServers = System.getenv("BANKING_LAB_LIVE_OUTBOX_BOOTSTRAP_SERVERS")
+            ?: "127.0.0.1:${System.getenv("BANKING_LAB_REDPANDA_PORT") ?: "9092"}"
+        val workerService = System.getenv("BANKING_LAB_LIVE_OUTBOX_WORKER_SERVICE") ?: "core-banking-outbox-worker"
+        val outboxEventId = "OBX-ACK-CRASH-${UUID.randomUUID().toString().uppercase()}"
+        val aggregateId = "TX-LIVE-OUTBOX-ACK-CRASH-${UUID.randomUUID().toString().uppercase()}"
+        val idempotencyKey = "IDEMP-LIVE-OUTBOX-ACK-CRASH-${UUID.randomUUID().toString().uppercase()}"
+        val baseComposeEnv = composeEnvironment(topic)
+        val faultComposeEnv = composeEnvironment(topic, crashAfterAckEventId = outboxEventId)
+
+        waitForOutboxSchema(databaseUrl, databaseUser, databasePassword, Duration.ofSeconds(60))
+        createTopic(bootstrapServers, topic)
+
+        try {
+            runDockerCompose(composeProject, baseComposeEnv, "kill", workerService)
+
+            insertPendingOutboxEvent(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                aggregateId = aggregateId,
+                idempotencyKey = idempotencyKey,
+                drill = "compose-outbox-worker-post-ack-crash"
+            )
+            assertEquals(
+                "PENDING",
+                outboxStatus(databaseUrl, databaseUser, databasePassword, outboxEventId)
+            )
+
+            runDockerCompose(
+                composeProject,
+                faultComposeEnv,
+                "up",
+                "-d",
+                "--force-recreate",
+                "--no-deps",
+                workerService
+            )
+            assertEquals(
+                88,
+                waitForWorkerContainerExit(composeProject, faultComposeEnv, workerService, Duration.ofSeconds(90))
+            )
+            assertEquals(
+                "PENDING",
+                outboxStatus(databaseUrl, databaseUser, databasePassword, outboxEventId)
+            )
+            assertNull(outboxPublishedAt(databaseUrl, databaseUser, databasePassword, outboxEventId))
+            val firstBrokerRecord = waitForKafkaRecords(
+                bootstrapServers,
+                topic,
+                outboxEventId,
+                expectedCount = 1,
+                timeout = Duration.ofSeconds(60)
+            ).first()
+            assertTrue(firstBrokerRecord.contains(outboxEventId))
+
+            runDockerCompose(
+                composeProject,
+                baseComposeEnv,
+                "up",
+                "-d",
+                "--force-recreate",
+                "--no-deps",
+                workerService
+            )
+            waitForOutboxStatus(
+                databaseUrl = databaseUrl,
+                databaseUser = databaseUser,
+                databasePassword = databasePassword,
+                outboxEventId = outboxEventId,
+                expectedStatus = "PUBLISHED",
+                timeout = Duration.ofSeconds(90)
+            )
+            assertNotNull(outboxPublishedAt(databaseUrl, databaseUser, databasePassword, outboxEventId))
+            val replayedRecords = waitForKafkaRecords(
+                bootstrapServers,
+                topic,
+                outboxEventId,
+                expectedCount = 2,
+                timeout = Duration.ofSeconds(60)
+            )
+            assertEquals(2, replayedRecords.size)
+        } finally {
+            runCatching {
+                runDockerCompose(
+                    composeProject!!,
+                    baseComposeEnv,
+                    "up",
+                    "-d",
+                    "--force-recreate",
+                    "--no-deps",
+                    workerService
+                )
             }
         }
     }
@@ -120,7 +237,8 @@ class LiveOutboxWorkerSmokeIntegrationTest {
         databasePassword: String,
         outboxEventId: String,
         aggregateId: String,
-        idempotencyKey: String
+        idempotencyKey: String,
+        drill: String = "compose-outbox-worker-restart"
     ) {
         connection(databaseUrl, databaseUser, databasePassword).use { conn ->
             conn.prepareStatement(
@@ -143,7 +261,7 @@ class LiveOutboxWorkerSmokeIntegrationTest {
                 stmt.setString(3, idempotencyKey)
                 stmt.setString(
                     4,
-                    """{"ledgerTransactionId":"$aggregateId","syntheticOnly":true,"drill":"compose-outbox-worker-restart"}"""
+                    """{"ledgerTransactionId":"$aggregateId","syntheticOnly":true,"drill":"$drill"}"""
                 )
                 stmt.setString(
                     5,
@@ -227,12 +345,13 @@ class LiveOutboxWorkerSmokeIntegrationTest {
         }
     }
 
-    private fun waitForKafkaRecord(
+    private fun waitForKafkaRecords(
         bootstrapServers: String,
         topic: String,
         outboxEventId: String,
+        expectedCount: Int,
         timeout: Duration
-    ): String {
+    ): List<String> {
         val props = Properties().apply {
             put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
             put(ConsumerConfig.GROUP_ID_CONFIG, "live-outbox-worker-drill-${UUID.randomUUID()}")
@@ -245,18 +364,23 @@ class LiveOutboxWorkerSmokeIntegrationTest {
         KafkaConsumer<String, String>(props).use { consumer ->
             consumer.subscribe(listOf(topic))
             val deadline = System.nanoTime() + timeout.toNanos()
+            val matches = mutableListOf<String>()
             while (System.nanoTime() < deadline) {
                 val records = consumer.poll(Duration.ofMillis(500))
-                val matching = records.firstOrNull { record ->
-                    record.value().contains(outboxEventId) ||
+                for (record in records) {
+                    if (
+                        record.value().contains(outboxEventId) ||
                         record.headers().lastHeader("outboxEventId")?.value()?.toString(Charsets.UTF_8) == outboxEventId
+                    ) {
+                        matches += record.value()
+                    }
                 }
-                if (matching != null) {
-                    return matching.value()
+                if (matches.size >= expectedCount) {
+                    return matches
                 }
             }
         }
-        return fail("Kafka record for $outboxEventId was not consumed from $topic")
+        return fail("Expected $expectedCount Kafka records for $outboxEventId from $topic")
     }
 
     private fun connection(databaseUrl: String, databaseUser: String, databasePassword: String): Connection =
@@ -296,9 +420,58 @@ class LiveOutboxWorkerSmokeIntegrationTest {
         return CommandResult(process.exitValue(), output)
     }
 
-    private fun composeEnvironment(topic: String): Map<String, String> =
+    private fun waitForWorkerContainerExit(
+        composeProject: String,
+        extraEnvironment: Map<String, String>,
+        workerService: String,
+        timeout: Duration
+    ): Int {
+        val containerId = runDockerComposeResult(
+            composeProject = composeProject,
+            extraEnvironment = extraEnvironment,
+            args = listOf("ps", "-q", workerService),
+            timeout = Duration.ofSeconds(10)
+        ).output.trim()
+        assertTrue(containerId.isNotBlank(), "container id for $workerService must exist")
+
+        val deadline = System.nanoTime() + timeout.toNanos()
+        var lastOutput = ""
+        while (System.nanoTime() < deadline) {
+            val result = runDockerCommandResult(
+                listOf("inspect", "--format", "{{.State.Status}} {{.State.ExitCode}}", containerId),
+                timeout = Duration.ofSeconds(5)
+            )
+            lastOutput = result.output.trim()
+            val parts = lastOutput.split(" ")
+            if (result.exitCode == 0 && parts.size >= 2 && parts[0] == "exited") {
+                return parts[1].toInt()
+            }
+            Thread.sleep(500)
+        }
+        return fail("$workerService did not exit within ${timeout.seconds}s: $lastOutput")
+    }
+
+    private fun runDockerCommandResult(args: List<String>, timeout: Duration): CommandResult {
+        val process = ProcessBuilder(listOf("docker") + args)
+            .directory(java.nio.file.Paths.get(System.getProperty("user.dir")).toFile())
+            .redirectErrorStream(true)
+            .start()
+        if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+            process.destroyForcibly()
+            return CommandResult(
+                exitCode = -1,
+                output = "docker ${args.joinToString(" ")} timed out after ${timeout.seconds}s"
+            )
+        }
+        val output = process.inputStream.bufferedReader().readText()
+        return CommandResult(process.exitValue(), output)
+    }
+
+    private fun composeEnvironment(topic: String, crashAfterAckEventId: String? = null): Map<String, String> =
         buildMap {
             put("BANKING_LAB_OUTBOX_TOPIC", topic)
+            put("BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EVENT_ID", crashAfterAckEventId ?: "")
+            put("BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EXIT_CODE", "88")
             copyEnvironmentIfPresent("BANKING_LAB_POSTGRES_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_REDPANDA_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_REDPANDA_ADMIN_PORT")

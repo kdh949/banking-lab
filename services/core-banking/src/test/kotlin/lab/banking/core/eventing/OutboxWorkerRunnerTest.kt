@@ -29,6 +29,10 @@ class OutboxWorkerRunnerTest {
                 publishTimeoutMillis = 9_000,
                 deadLetterThreshold = 5,
                 retryDelaySeconds = 3
+            ),
+            fault = OutboxWorkerProperties.Fault(
+                crashAfterBrokerAckEventId = "OBX-FAULT-001",
+                crashAfterBrokerAckExitCode = 91
             )
         )
         val metrics = OutboxWorkerMetrics(registry, "banking.lab.outbox.test", "test-outbox-worker")
@@ -44,6 +48,8 @@ class OutboxWorkerRunnerTest {
         assertEquals(9_000, publisher.lastConfig?.publishTimeoutMillis)
         assertEquals(5, publisher.lastConfig?.deadLetterThreshold)
         assertEquals(3, publisher.lastConfig?.retryDelaySeconds)
+        assertEquals("OBX-FAULT-001", publisher.lastConfig?.crashAfterBrokerAckEventId)
+        assertEquals(91, publisher.lastConfig?.crashAfterBrokerAckExitCode)
         assertCounter(registry, "banking.lab.outbox.worker.batches", 1.0)
         assertCounter(registry, "banking.lab.outbox.worker.events.attempted", 3.0)
         assertCounter(registry, "banking.lab.outbox.worker.events.published", 2.0)

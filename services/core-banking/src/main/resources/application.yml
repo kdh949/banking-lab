@@ -25,6 +25,9 @@ banking-lab:
   outbox:
     bootstrap-servers: ${BANKING_LAB_OUTBOX_BOOTSTRAP_SERVERS:127.0.0.1:9092}
     topic: ${BANKING_LAB_OUTBOX_TOPIC:banking.lab.domain-events}
+    fault:
+      crash-after-broker-ack-event-id: ${BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EVENT_ID:}
+      crash-after-broker-ack-exit-code: ${BANKING_LAB_OUTBOX_FAULT_CRASH_AFTER_ACK_EXIT_CODE:88}
     worker:
       enabled: ${BANKING_LAB_OUTBOX_WORKER_ENABLED:false}
       client-id: ${BANKING_LAB_OUTBOX_WORKER_CLIENT_ID:core-banking-outbox-worker}

@@ -6,7 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class OutboxWorkerProperties(
     val bootstrapServers: String = "127.0.0.1:9092",
     val topic: String = "banking.lab.domain-events",
-    val worker: Worker = Worker()
+    val worker: Worker = Worker(),
+    val fault: Fault = Fault()
 ) {
     data class Worker(
         val enabled: Boolean = false,
@@ -18,6 +19,11 @@ data class OutboxWorkerProperties(
         val retryDelaySeconds: Long = 60
     )
 
+    data class Fault(
+        val crashAfterBrokerAckEventId: String? = null,
+        val crashAfterBrokerAckExitCode: Int = 88
+    )
+
     fun publisherConfig(): KafkaOutboxPublisherConfig =
         KafkaOutboxPublisherConfig(
             bootstrapServers = bootstrapServers,
@@ -25,6 +31,8 @@ data class OutboxWorkerProperties(
             clientId = worker.clientId,
             publishTimeoutMillis = worker.publishTimeoutMillis,
             deadLetterThreshold = worker.deadLetterThreshold,
-            retryDelaySeconds = worker.retryDelaySeconds
+            retryDelaySeconds = worker.retryDelaySeconds,
+            crashAfterBrokerAckEventId = fault.crashAfterBrokerAckEventId?.takeIf { it.isNotBlank() },
+            crashAfterBrokerAckExitCode = fault.crashAfterBrokerAckExitCode
         )
 }

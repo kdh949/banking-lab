@@ -10,6 +10,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.serialization.StringSerializer
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -21,6 +22,7 @@ class KafkaOutboxPublisher(
     private val objectMapper: ObjectMapper,
     transactionManager: PlatformTransactionManager
 ) : OutboxPublisherPort {
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val transactions = TransactionTemplate(transactionManager)
 
     override fun publishAvailable(config: KafkaOutboxPublisherConfig, limit: Int): KafkaOutboxPublishBatchResult {
@@ -63,6 +65,16 @@ class KafkaOutboxPublisher(
             val metadata = producer
                 .send(record)
                 .get(config.publishTimeoutMillis, TimeUnit.MILLISECONDS)
+            if (config.crashAfterBrokerAckEventId == event.outboxEventId) {
+                logger.error(
+                    "observability.outbox.publisher event=fault-crash-after-broker-ack outboxEventId={} topic={} partition={} offset={} syntheticOnly=true",
+                    event.outboxEventId,
+                    metadata.topic(),
+                    metadata.partition(),
+                    metadata.offset()
+                )
+                Runtime.getRuntime().halt(config.crashAfterBrokerAckExitCode)
+            }
             val published = outboxService.markPublished(event.outboxEventId)
             KafkaOutboxPublishResult(
                 outboxEventId = published.outboxEventId,
