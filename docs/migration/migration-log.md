@@ -2119,6 +2119,45 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Passkey Manual Ceremony Evidence Guard
+
+Changes completed:
+
+- Extended `scripts/record-passkey-non-synthetic-evidence.ts` so future passkey evidence artifacts must include a structured manual ceremony boundary.
+- Extended `scripts/verify-passkey-non-synthetic-evidence.ts` and `scripts/check-node-retirement-gate.ts` so passkey evidence must identify the local staff-terminal browser origin, local Keycloak issuer, RP ID `localhost`, synthetic `manager-webauthn01`, Authorization Code + PKCE, ordinary browser automation without a virtual authenticator, and real platform/hardware authenticator operator confirmation.
+- Updated `scripts/check-node-retirement-ready-simulation.ts` and final-review test fixtures so the fixture passkey artifact satisfies the stricter future-ready path.
+- Updated passkey recorder/verifier tests to cover accepted manual ceremony evidence and reject mismatched origin/RP/operator confirmation values.
+- Updated the passkey evidence boundary, final-review verifier doc, evidence-refresh review, and preflight guard to document and enforce the new manual ceremony fields.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidenceVerifier.test.mjs tests/passkeyEvidencePreflight.test.mjs tests/finalRetirementReviewRecorder.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/goalCompletionAudit.test.mjs` passed 34 tests.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run retirement:ready-simulate` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm test` passed 115 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run retirement:audit` passed with blocked status, 60 approved-reference `.mjs` files, 37 target anchors, 316 evidence paths, and 42/42 mapped scenarios.
+- `npm run retirement:stack-audit` passed.
+- `npm run retirement:generated-boundary` passed.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- `npm run evidence:refresh-check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 115 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- Future non-synthetic passkey evidence now records the concrete WebAuthn ceremony boundary instead of relying only on free-form command summaries.
+- The ready-state simulation proves the stricter passkey artifact can still satisfy the future ready gate.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Strict Passkey Evidence Verifier
 
 Changes completed:

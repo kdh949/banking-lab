@@ -13,6 +13,7 @@ type PasskeyEvidenceRecord = {
   springSignedTokenAccepted?: unknown;
   syntheticOnly?: unknown;
   redactionConfirmed?: unknown;
+  manualCeremony?: unknown;
   commands?: unknown;
   staffPanelAssertions?: unknown;
 };
@@ -59,6 +60,68 @@ function commandEvidenceArray(value: unknown): CommandEvidence[] {
     : [];
 }
 
+function objectRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function validateLocalhostOrigin(value: unknown, field: string): string[] {
+  const errors: string[] = [];
+  if (typeof value !== "string") {
+    return [`${field} must be a string.`];
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    return [`${field} must be a valid URL origin: ${(error as Error).message}`];
+  }
+  if (url.protocol !== "http:" || url.hostname !== "localhost" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    errors.push(`${field} must be an http://localhost origin without path, credentials, query, or fragment.`);
+  }
+  return errors;
+}
+
+function validateLocalhostIssuer(value: unknown, field: string): string[] {
+  const errors: string[] = [];
+  if (typeof value !== "string") {
+    return [`${field} must be a string.`];
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    return [`${field} must be a valid Keycloak issuer URL: ${(error as Error).message}`];
+  }
+  if (url.protocol !== "http:" || url.hostname !== "localhost" || url.username || url.password || url.pathname !== "/realms/banking-lab" || url.search || url.hash) {
+    errors.push(`${field} must be an http://localhost Keycloak issuer ending in /realms/banking-lab without credentials, query, or fragment.`);
+  }
+  return errors;
+}
+
+function validateManualCeremony(value: unknown): string[] {
+  const errors: string[] = [];
+  const ceremony = objectRecord(value);
+  if (Object.keys(ceremony).length === 0) {
+    return ["manualCeremony must be an object with the local WebAuthn ceremony boundary."];
+  }
+  errors.push(...validateLocalhostOrigin(ceremony.browserOrigin, "manualCeremony.browserOrigin"));
+  errors.push(...validateLocalhostIssuer(ceremony.keycloakIssuer, "manualCeremony.keycloakIssuer"));
+  if (ceremony.rpId !== "localhost") errors.push("manualCeremony.rpId must be localhost.");
+  if (ceremony.username !== "manager-webauthn01") errors.push("manualCeremony.username must be manager-webauthn01.");
+  if (ceremony.authorizationFlow !== "authorization-code-pkce") {
+    errors.push("manualCeremony.authorizationFlow must be authorization-code-pkce.");
+  }
+  if (ceremony.browserAutomation !== "ordinary-browser-no-virtual-authenticator") {
+    errors.push("manualCeremony.browserAutomation must be ordinary-browser-no-virtual-authenticator.");
+  }
+  if (ceremony.operatorConfirmation !== "real-platform-or-hardware-authenticator-used") {
+    errors.push("manualCeremony.operatorConfirmation must be real-platform-or-hardware-authenticator-used.");
+  }
+  return errors;
+}
+
 function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): string[] {
   const errors: string[] = [...assertNoReusableSecrets(source)];
   const authenticatorKind = typeof evidence.authenticatorKind === "string" ? evidence.authenticatorKind : "";
@@ -88,6 +151,7 @@ function validateEvidence(evidence: PasskeyEvidenceRecord, source: string): stri
   if (evidence.springSignedTokenAccepted !== true) errors.push("springSignedTokenAccepted must be true.");
   if (evidence.syntheticOnly !== true) errors.push("syntheticOnly must be true.");
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
+  errors.push(...validateManualCeremony(evidence.manualCeremony));
   if (!Array.isArray(evidence.commands) || commands.length !== evidence.commands.length) {
     errors.push("commands must be an array of command evidence objects.");
   }

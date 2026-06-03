@@ -44,6 +44,15 @@ When the gate is genuinely proven, create `docs/test-evidence/generated/passkey-
   "springSignedTokenAccepted": true,
   "syntheticOnly": true,
   "redactionConfirmed": true,
+  "manualCeremony": {
+    "browserOrigin": "http://localhost:3002",
+    "keycloakIssuer": "http://localhost:18127/realms/banking-lab",
+    "rpId": "localhost",
+    "username": "manager-webauthn01",
+    "authorizationFlow": "authorization-code-pkce",
+    "browserAutomation": "ordinary-browser-no-virtual-authenticator",
+    "operatorConfirmation": "real-platform-or-hardware-authenticator-used"
+  },
   "commands": [
     {
       "command": "env COMPOSE_PROJECT_NAME=banking-lab-passkey-manual BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false docker compose --profile platform up -d --build postgres keycloak core-banking",
@@ -127,6 +136,13 @@ After the run, copy the redacted command evidence to a local JSON file and copy 
 env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \
   BANKING_LAB_PASSKEY_AUTHENTICATOR_KIND=platform \
   BANKING_LAB_PASSKEY_TEST_DATE=YYYY-MM-DD \
+  BANKING_LAB_PASSKEY_BROWSER_ORIGIN=http://localhost:3002 \
+  BANKING_LAB_PASSKEY_KEYCLOAK_ISSUER=http://localhost:18127/realms/banking-lab \
+  BANKING_LAB_PASSKEY_RP_ID=localhost \
+  BANKING_LAB_PASSKEY_USERNAME=manager-webauthn01 \
+  BANKING_LAB_PASSKEY_AUTHORIZATION_FLOW=authorization-code-pkce \
+  BANKING_LAB_PASSKEY_BROWSER_AUTOMATION=ordinary-browser-no-virtual-authenticator \
+  BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION=real-platform-or-hardware-authenticator-used \
   BANKING_LAB_PASSKEY_USED_BROWSER_VIRTUAL_AUTHENTICATOR=false \
   BANKING_LAB_PASSKEY_USED_PLAYWRIGHT_CDP_WEBAUTHN=false \
   BANKING_LAB_PASSKEY_SIMULATOR_TOKENS_ENABLED=false \
@@ -139,7 +155,7 @@ env BANKING_LAB_PASSKEY_EVIDENCE_CONFIRMED=true \
   npm run passkey:evidence:record
 ```
 
-The recorder writes `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` only after confirming the run did not use virtual/CDP WebAuthn, simulator tokens were disabled, the panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event, and the inputs do not contain obvious reusable tokens, cookies, passwords, credential IDs, attestation objects, or unmasked phone output.
+The recorder writes `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` only after confirming the run did not use virtual/CDP WebAuthn, simulator tokens were disabled, the browser origin was an `http://localhost` staff-terminal origin, the Keycloak issuer was an `http://localhost` `banking-lab` realm issuer, the RP ID was `localhost`, the synthetic WebAuthn user was `manager-webauthn01`, the flow used Authorization Code + PKCE, `BANKING_LAB_PASSKEY_BROWSER_AUTOMATION=ordinary-browser-no-virtual-authenticator`, `BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION=real-platform-or-hardware-authenticator-used`, the panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event, and the inputs do not contain obvious reusable tokens, cookies, passwords, credential IDs, attestation objects, or unmasked phone output.
 
 After artifact generation, update this document with the exact commands and attach the generated JSON artifact above. Keep all screenshots and logs redacted before committing.
 

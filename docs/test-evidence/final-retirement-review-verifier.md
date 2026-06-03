@@ -36,6 +36,8 @@ docs/test-evidence/generated/passkey-non-synthetic-evidence.json
 
 For isolated test fixtures, `BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT` may point to a redacted passkey evidence artifact, and the final review artifact must reference the same path.
 
+The referenced passkey artifact must include the strict manual ceremony boundary from `docs/test-evidence/passkey-non-synthetic-operations.md`: local `http://localhost` staff-terminal origin, local Keycloak issuer for the `banking-lab` realm, RP ID `localhost`, synthetic `manager-webauthn01`, Authorization Code + PKCE, and `ordinary-browser-no-virtual-authenticator`.
+
 ## Required Artifact
 
 The final review artifact must have:

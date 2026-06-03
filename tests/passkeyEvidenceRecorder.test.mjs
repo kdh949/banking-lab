@@ -55,6 +55,13 @@ function baseEnv(fixture) {
     BANKING_LAB_PASSKEY_SPRING_SIGNED_TOKEN_ACCEPTED: "true",
     BANKING_LAB_PASSKEY_SYNTHETIC_ONLY: "true",
     BANKING_LAB_PASSKEY_REDACTION_CONFIRMED: "true",
+    BANKING_LAB_PASSKEY_BROWSER_ORIGIN: "http://localhost:3002",
+    BANKING_LAB_PASSKEY_KEYCLOAK_ISSUER: "http://localhost:18127/realms/banking-lab",
+    BANKING_LAB_PASSKEY_RP_ID: "localhost",
+    BANKING_LAB_PASSKEY_USERNAME: "manager-webauthn01",
+    BANKING_LAB_PASSKEY_AUTHORIZATION_FLOW: "authorization-code-pkce",
+    BANKING_LAB_PASSKEY_BROWSER_AUTOMATION: "ordinary-browser-no-virtual-authenticator",
+    BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION: "real-platform-or-hardware-authenticator-used",
     BANKING_LAB_PASSKEY_COMMANDS_FILE: fixture.commandsFile,
     BANKING_LAB_PASSKEY_PANEL_SNAPSHOT_FILE: fixture.panelFile,
     BANKING_LAB_PASSKEY_EVIDENCE_OUTPUT: fixture.outputFile
@@ -86,6 +93,13 @@ test("passkey evidence recorder writes a validated non-synthetic artifact", asyn
   assert.equal(artifact.springSignedTokenAccepted, true);
   assert.equal(artifact.syntheticOnly, true);
   assert.equal(artifact.redactionConfirmed, true);
+  assert.equal(artifact.manualCeremony.browserOrigin, "http://localhost:3002");
+  assert.equal(artifact.manualCeremony.keycloakIssuer, "http://localhost:18127/realms/banking-lab");
+  assert.equal(artifact.manualCeremony.rpId, "localhost");
+  assert.equal(artifact.manualCeremony.username, "manager-webauthn01");
+  assert.equal(artifact.manualCeremony.authorizationFlow, "authorization-code-pkce");
+  assert.equal(artifact.manualCeremony.browserAutomation, "ordinary-browser-no-virtual-authenticator");
+  assert.equal(artifact.manualCeremony.operatorConfirmation, "real-platform-or-hardware-authenticator-used");
   assert.equal(artifact.staffPanelAssertions.maskedPiiObserved, true);
   assert.equal(artifact.staffPanelAssertions.auditEventObserved, true);
   assert.equal(artifact.commands.length, 5);
@@ -140,6 +154,19 @@ test("passkey evidence recorder rejects incomplete live command evidence", async
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /live Docker Compose platform startup|live Keycloak discovery readiness check/);
+  assert.equal(existsSync(fixture.outputFile), false);
+});
+
+test("passkey evidence recorder rejects incomplete manual ceremony boundary", async () => {
+  const fixture = await fixtureDir();
+  const result = runRecorder({
+    ...baseEnv(fixture),
+    BANKING_LAB_PASSKEY_BROWSER_ORIGIN: "http://127.0.0.1:3002",
+    BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION: "virtual-authenticator-used"
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /BROWSER_ORIGIN must be an http:\/\/localhost origin|OPERATOR_CONFIRMATION must be real-platform-or-hardware-authenticator-used/);
   assert.equal(existsSync(fixture.outputFile), false);
 });
 

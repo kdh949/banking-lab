@@ -36,6 +36,15 @@ function validArtifact(overrides = {}) {
     springSignedTokenAccepted: true,
     syntheticOnly: true,
     redactionConfirmed: true,
+    manualCeremony: {
+      browserOrigin: "http://localhost:3002",
+      keycloakIssuer: "http://localhost:18127/realms/banking-lab",
+      rpId: "localhost",
+      username: "manager-webauthn01",
+      authorizationFlow: "authorization-code-pkce",
+      browserAutomation: "ordinary-browser-no-virtual-authenticator",
+      operatorConfirmation: "real-platform-or-hardware-authenticator-used"
+    },
     commands: commandEvidence(),
     staffPanelAssertions: {
       webAuthnLoaded: true,
@@ -118,6 +127,24 @@ test("passkey evidence verifier rejects incomplete live command evidence", async
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /live Docker Compose platform startup|live Keycloak discovery readiness check/);
+});
+
+test("passkey evidence verifier rejects missing or mismatched manual ceremony boundary", async () => {
+  const artifactPath = await artifactFile(validArtifact({
+    manualCeremony: {
+      browserOrigin: "http://127.0.0.1:3002",
+      keycloakIssuer: "http://localhost:18127/realms/banking-lab",
+      rpId: "127.0.0.1",
+      username: "manager-webauthn01",
+      authorizationFlow: "authorization-code-pkce",
+      browserAutomation: "ordinary-browser-no-virtual-authenticator",
+      operatorConfirmation: "virtual-authenticator-used"
+    }
+  }));
+  const result = runVerifier(artifactPath);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /manualCeremony\.browserOrigin|manualCeremony\.rpId|manualCeremony\.operatorConfirmation/);
 });
 
 test("passkey evidence verifier rejects failed or duplicate command evidence", async () => {

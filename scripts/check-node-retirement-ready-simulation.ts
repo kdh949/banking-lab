@@ -89,6 +89,15 @@ function passkeyArtifact() {
     springSignedTokenAccepted: true,
     syntheticOnly: true,
     redactionConfirmed: true,
+    manualCeremony: {
+      browserOrigin: "http://localhost:3002",
+      keycloakIssuer: "http://localhost:18127/realms/banking-lab",
+      rpId: "localhost",
+      username: "manager-webauthn01",
+      authorizationFlow: "authorization-code-pkce",
+      browserAutomation: "ordinary-browser-no-virtual-authenticator",
+      operatorConfirmation: "real-platform-or-hardware-authenticator-used"
+    },
     commands: requiredPasskeyCommands.map((command) => ({
       command,
       status: "pass",

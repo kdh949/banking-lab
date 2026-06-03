@@ -12,6 +12,16 @@ type StaffPanelAssertions = {
   auditEventObserved: boolean;
 };
 
+type ManualCeremonyEvidence = {
+  browserOrigin: string;
+  keycloakIssuer: string;
+  rpId: "localhost";
+  username: "manager-webauthn01";
+  authorizationFlow: "authorization-code-pkce";
+  browserAutomation: "ordinary-browser-no-virtual-authenticator";
+  operatorConfirmation: "real-platform-or-hardware-authenticator-used";
+};
+
 type CommandEvidence = {
   command?: unknown;
   status?: unknown;
@@ -32,6 +42,7 @@ type PasskeyEvidenceRecord = {
   springSignedTokenAccepted: true;
   syntheticOnly: true;
   redactionConfirmed: true;
+  manualCeremony: ManualCeremonyEvidence;
   commands: Array<Required<CommandEvidence>>;
   staffPanelAssertions: StaffPanelAssertions;
 };
@@ -77,6 +88,67 @@ function parseTestDate(): string {
     throw new Error("BANKING_LAB_PASSKEY_TEST_DATE must be YYYY-MM-DD.");
   }
   return value;
+}
+
+function parseLocalhostOrigin(name: string): string {
+  const value = requireEnv(name);
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new Error(`${name} must be a valid URL origin: ${(error as Error).message}`);
+  }
+  if (url.protocol !== "http:" || url.hostname !== "localhost" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error(`${name} must be an http://localhost origin without path, credentials, query, or fragment.`);
+  }
+  return url.origin;
+}
+
+function parseLocalhostIssuer(name: string): string {
+  const value = requireEnv(name);
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new Error(`${name} must be a valid Keycloak issuer URL: ${(error as Error).message}`);
+  }
+  if (url.protocol !== "http:" || url.hostname !== "localhost" || url.username || url.password || url.pathname !== "/realms/banking-lab" || url.search || url.hash) {
+    throw new Error(`${name} must be an http://localhost Keycloak issuer ending in /realms/banking-lab without credentials, query, or fragment.`);
+  }
+  return url.toString().replace(/\/$/u, "");
+}
+
+function parseManualCeremony(): ManualCeremonyEvidence {
+  const rpId = requireEnv("BANKING_LAB_PASSKEY_RP_ID");
+  if (rpId !== "localhost") {
+    throw new Error("BANKING_LAB_PASSKEY_RP_ID must be localhost for the local non-synthetic passkey run.");
+  }
+  const username = requireEnv("BANKING_LAB_PASSKEY_USERNAME");
+  if (username !== "manager-webauthn01") {
+    throw new Error("BANKING_LAB_PASSKEY_USERNAME must be manager-webauthn01.");
+  }
+  const authorizationFlow = requireEnv("BANKING_LAB_PASSKEY_AUTHORIZATION_FLOW");
+  if (authorizationFlow !== "authorization-code-pkce") {
+    throw new Error("BANKING_LAB_PASSKEY_AUTHORIZATION_FLOW must be authorization-code-pkce.");
+  }
+  const browserAutomation = requireEnv("BANKING_LAB_PASSKEY_BROWSER_AUTOMATION");
+  if (browserAutomation !== "ordinary-browser-no-virtual-authenticator") {
+    throw new Error("BANKING_LAB_PASSKEY_BROWSER_AUTOMATION must be ordinary-browser-no-virtual-authenticator.");
+  }
+  const operatorConfirmation = requireEnv("BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION");
+  if (operatorConfirmation !== "real-platform-or-hardware-authenticator-used") {
+    throw new Error("BANKING_LAB_PASSKEY_OPERATOR_CONFIRMATION must be real-platform-or-hardware-authenticator-used.");
+  }
+
+  return {
+    browserOrigin: parseLocalhostOrigin("BANKING_LAB_PASSKEY_BROWSER_ORIGIN"),
+    keycloakIssuer: parseLocalhostIssuer("BANKING_LAB_PASSKEY_KEYCLOAK_ISSUER"),
+    rpId,
+    username,
+    authorizationFlow,
+    browserAutomation,
+    operatorConfirmation
+  };
 }
 
 function parseCommands(source: string): Array<Required<CommandEvidence>> {
@@ -211,11 +283,13 @@ async function main(): Promise<void> {
 
   const authenticatorKind = parseAuthenticatorKind();
   const testDate = parseTestDate();
+  const manualCeremony = parseManualCeremony();
   const commandsSource = await readFile(commandsFile, "utf8");
   const snapshot = await readFile(panelSnapshotFile, "utf8");
   const commands = parseCommands(commandsSource);
 
   assertNoReusableSecrets("commands file", commandsSource);
+  assertNoReusableSecrets("manual ceremony", JSON.stringify(manualCeremony));
   assertRequiredPasskeyCommandEvidence(commands);
   assertNoReusableSecrets("staff panel snapshot", snapshot);
   const assertions = staffPanelAssertions(snapshot);
@@ -234,6 +308,7 @@ async function main(): Promise<void> {
     springSignedTokenAccepted: true,
     syntheticOnly: true,
     redactionConfirmed: true,
+    manualCeremony,
     commands,
     staffPanelAssertions: assertions
   };

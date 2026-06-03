@@ -51,6 +51,7 @@ type PasskeyEvidenceRecord = {
   springSignedTokenAccepted?: unknown;
   syntheticOnly?: unknown;
   redactionConfirmed?: unknown;
+  manualCeremony?: unknown;
   commands?: unknown;
   staffPanelAssertions?: unknown;
 };
@@ -61,6 +62,12 @@ type PasskeyCommandEvidence = {
   exitCode?: unknown;
   summary?: unknown;
 };
+
+function objectRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
 
 async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   const errors: string[] = [];
@@ -115,6 +122,7 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   const staffPanelAssertions = evidence.staffPanelAssertions && typeof evidence.staffPanelAssertions === "object"
     ? evidence.staffPanelAssertions as Record<string, unknown>
     : {};
+  const manualCeremony = objectRecord(evidence.manualCeremony);
 
   if (evidence.schemaVersion !== 1) errors.push("Passkey evidence schemaVersion must be 1.");
   if (evidence.status !== "pass") errors.push("Passkey evidence status must be pass.");
@@ -129,6 +137,20 @@ async function validateNonSyntheticPasskeyGate(): Promise<string[]> {
   if (evidence.springSignedTokenAccepted !== true) errors.push("springSignedTokenAccepted must be true.");
   if (evidence.syntheticOnly !== true) errors.push("syntheticOnly must be true.");
   if (evidence.redactionConfirmed !== true) errors.push("redactionConfirmed must be true.");
+  if (Object.keys(manualCeremony).length === 0) {
+    errors.push("Passkey evidence manualCeremony must be present.");
+  }
+  if (manualCeremony.rpId !== "localhost") errors.push("Passkey evidence manualCeremony.rpId must be localhost.");
+  if (manualCeremony.username !== "manager-webauthn01") errors.push("Passkey evidence manualCeremony.username must be manager-webauthn01.");
+  if (manualCeremony.authorizationFlow !== "authorization-code-pkce") {
+    errors.push("Passkey evidence manualCeremony.authorizationFlow must be authorization-code-pkce.");
+  }
+  if (manualCeremony.browserAutomation !== "ordinary-browser-no-virtual-authenticator") {
+    errors.push("Passkey evidence manualCeremony.browserAutomation must be ordinary-browser-no-virtual-authenticator.");
+  }
+  if (manualCeremony.operatorConfirmation !== "real-platform-or-hardware-authenticator-used") {
+    errors.push("Passkey evidence manualCeremony.operatorConfirmation must be real-platform-or-hardware-authenticator-used.");
+  }
   if (!Array.isArray(evidence.commands) || commands.length !== evidence.commands.length) {
     errors.push("Passkey evidence commands must be an array of command evidence objects.");
   }
