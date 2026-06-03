@@ -152,11 +152,11 @@ services:
       - "0"
       - --check=false
       - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
+      - INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
       - --advertise-kafka-addr
-      - PLAINTEXT://127.0.0.1:9092
+      - INTERNAL://redpanda:9092,EXTERNAL://${BANKING_LAB_REDPANDA_ADVERTISE_HOST:-127.0.0.1}:${BANKING_LAB_REDPANDA_PORT:-9092}
     ports:
-      - "${BANKING_LAB_REDPANDA_PORT:-9092}:9092"
+      - "${BANKING_LAB_REDPANDA_PORT:-9092}:29092"
       - "${BANKING_LAB_REDPANDA_ADMIN_PORT:-9644}:9644"
     volumes:
       - redpanda-data:/var/lib/redpanda/data
