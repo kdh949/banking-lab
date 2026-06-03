@@ -1,5 +1,6 @@
 package lab.banking.core.customer
 
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -12,11 +13,15 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/customer/transfers")
 class CustomerTransferController(
-    private val customerTransferService: CustomerTransferService
+    private val customerTransferService: CustomerTransferService,
+    private val faultProperties: CustomerTransferFaultProperties
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @PostMapping
     fun transfer(@RequestBody command: CustomerTransferCommand): ResponseEntity<CustomerTransferResponse> {
         val result = customerTransferService.transfer(command)
+        crashAfterDurableCommitIfConfigured(result)
         val status = when {
             result.replayed -> HttpStatus.OK
             result.item.status == "HELD" -> HttpStatus.ACCEPTED
@@ -24,6 +29,20 @@ class CustomerTransferController(
             else -> HttpStatus.CREATED
         }
         return ResponseEntity.status(status).body(result)
+    }
+
+    private fun crashAfterDurableCommitIfConfigured(result: CustomerTransferResponse) {
+        if (!faultProperties.shouldCrashAfterCommit(result.item.idempotencyKey, result.replayed)) {
+            return
+        }
+        logger.error(
+            "observability.customer.transfer event=fault-crash-after-durable-commit idempotencyKey={} resultId={} transactionId={} status={} syntheticOnly=true",
+            result.item.idempotencyKey,
+            result.item.resultId,
+            result.item.transactionId,
+            result.item.status
+        )
+        Runtime.getRuntime().halt(faultProperties.crashAfterCommitExitCode)
     }
 
     @GetMapping

@@ -14,6 +14,10 @@ banking-lab:
       audience: ${BANKING_LAB_SECURITY_AUDIENCE:}
   synthetic-seed:
     enabled: ${BANKING_LAB_SYNTHETIC_SEED_ENABLED:false}
+  customer-transfer:
+    fault:
+      crash-after-commit-idempotency-key: ${BANKING_LAB_CUSTOMER_TRANSFER_FAULT_CRASH_AFTER_COMMIT_IDEMPOTENCY_KEY:}
+      crash-after-commit-exit-code: ${BANKING_LAB_CUSTOMER_TRANSFER_FAULT_CRASH_AFTER_COMMIT_EXIT_CODE:89}
   cors:
     allowed-origins: ${BANKING_LAB_CORS_ALLOWED_ORIGINS:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006}
   temporal:
