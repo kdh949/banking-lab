@@ -32,6 +32,8 @@ const gatePath = "docs/migration/node-retirement-gate.json";
 const parityPath = "docs/migration/parity-scenarios.json";
 const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
+const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
+const finalReviewVerifierPath = "scripts/verify-final-retirement-review.ts";
 const nodeRetirementGatePath = "scripts/check-node-retirement-gate.ts";
 
 async function exists(path: string): Promise<boolean> {
@@ -184,11 +186,26 @@ if (passkeyGate?.status === "pass" && passkeyArtifactExists) {
 }
 
 const reviewGate = requiredGates.find((item) => item.id === "retirement-review");
-requirements.push({
-  id: "gate:retirement-review",
-  status: reviewGate?.status === "pass" ? "pass" : "blocked",
-  detail: `retirement-review: ${stringValue(reviewGate?.status) || "missing"}`
-});
+const finalReviewArtifactExists = await exists(finalReviewArtifactPath);
+if (reviewGate?.status === "pass" && finalReviewArtifactExists) {
+  const verifier = runCommand("final retirement review verifier", [
+    "--experimental-strip-types",
+    finalReviewVerifierPath
+  ]);
+  requirements.push({
+    id: "gate:retirement-review",
+    status: verifier.status === 0 && verifier.output.includes("Final retirement review verification: pass") ? "pass" : "failed",
+    detail: verifier.status === 0
+      ? "final retirement review artifact exists and verifies"
+      : "final retirement review artifact failed strict verification"
+  });
+} else {
+  requirements.push({
+    id: "gate:retirement-review",
+    status: "blocked",
+    detail: "final retirement review artifact is missing or gate is not pass"
+  });
+}
 
 const nodeRetirementGate = runCommand("node retirement gate", [
   "--experimental-strip-types",

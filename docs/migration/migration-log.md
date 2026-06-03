@@ -2154,6 +2154,39 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Goal Completion Final Review Artifact Guard
+
+Changes completed:
+
+- Strengthened `scripts/check-goal-completion-audit.ts` so `retirement-review: pass` is accepted only when `docs/test-evidence/generated/final-node-retirement-review.json` exists and `scripts/verify-final-retirement-review.ts` reports pass.
+- Updated `tests/goalCompletionAudit.test.mjs` to prove the completion audit is wired to the strict final retirement review verifier.
+- Updated `docs/test-evidence/goal-completion-audit.md` to document the final review artifact guard and the missing generated review artifact blocker.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `node --test tests/goalCompletionAudit.test.mjs tests/finalRetirementReviewVerifier.test.mjs tests/nodeRetirementReadySimulation.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 14 tests.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`; it now reports `gate:retirement-review` blocked because the final review artifact is missing or the gate is not pass.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:review-preflight` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run retirement:audit` passed with blocked status, 60 approved-reference `.mjs` files, 37 target anchors, 316 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 107 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 107 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The active-goal completion audit now independently verifies final retirement review evidence instead of relying only on the retirement gate status.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Final Retirement Review Verifier
 
 Changes completed:

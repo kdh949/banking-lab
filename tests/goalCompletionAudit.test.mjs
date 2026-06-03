@@ -52,6 +52,7 @@ test("goal completion audit is wired into scripts and retirement evidence", asyn
   assert.equal(packageJson.scripts["goal:completion-audit"], `node --experimental-strip-types ${script}`);
   assert.match(auditScript, /check-node-retirement-ready-simulation\.ts/);
   assert.match(auditScript, /check-passkey-non-synthetic-preflight\.ts/);
+  assert.match(auditScript, /verify-final-retirement-review\.ts/);
   assert.ok(evidenceRefresh?.evidence?.includes(doc));
   assert.ok(evidenceRefresh?.evidence?.includes(script));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
@@ -62,5 +63,6 @@ test("goal completion audit is wired into scripts and retirement evidence", asyn
   assert.match(evidenceDoc, /Goal completion audit: not complete/);
   assert.match(evidenceDoc, /ready-state simulation/i);
   assert.match(evidenceDoc, /passkey preflight/i);
+  assert.match(evidenceDoc, /strict final retirement review verifier/i);
   assert.match(evidenceDoc, /does not mark Node retirement ready/);
 });
