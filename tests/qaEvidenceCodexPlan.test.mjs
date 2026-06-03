@@ -43,3 +43,19 @@ test("QA structured error gap report covers every required error family", async 
   assert.match(report, /INTERNAL_RUNTIME_ERROR.*profile-only/i);
   assert.doesNotMatch(report, /remaining probe-backed families/i);
 });
+
+test("QA Temporal restart evidence reflects all-current-case server and PostgreSQL drills", async () => {
+  const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
+  const server = await readFile("docs/test-evidence/temporal-server-restart-drill.md", "utf8");
+  const postgres = await readFile("docs/test-evidence/temporal-postgres-restart-drill.md", "utf8");
+  const matrix = await readFile("docs/test-evidence/parity-coverage-matrix.md", "utf8");
+
+  assert.match(gate.statusReason, /Temporal server restart drill evidence for all current Temporal workflow case types/i);
+  assert.match(gate.statusReason, /PostgreSQL restart drill evidence for all current Temporal workflow case types/i);
+  assert.match(server, /all current workflow case types/i);
+  assert.match(postgres, /all current workflow case types/i);
+  assert.match(matrix, /live Compose Temporal server restart drills for all current Temporal case types/i);
+  assert.match(matrix, /live Compose PostgreSQL restart drills for all current Temporal case types/i);
+  assert.doesNotMatch(gate.statusReason, /representative live Compose Temporal server restart/i);
+  assert.doesNotMatch(gate.statusReason, /broader database\/process-failure variants/i);
+});

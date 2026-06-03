@@ -396,12 +396,132 @@ class LiveTemporalWorkerSmokeIntegrationTest {
     }
 
     @Test
+    fun `live FDS release workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.FDS_RELEASE,
+            businessReferenceId = "FDS-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "LEDGER_TRANSFER_HANDOFF",
+            approvalReason = "Synthetic FDS release approval after Temporal server container restart"
+        )
+    }
+
+    @Test
+    fun `live FDS block workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.FDS_BLOCK,
+            businessReferenceId = "FDS-BLOCK-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "NO_LEDGER_POSTING",
+            approvalReason = "Synthetic FDS block approval after Temporal server container restart"
+        )
+    }
+
+    @Test
+    fun `live AML closure workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.AML_CLOSURE,
+            businessReferenceId = "AML-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "STR_SIMULATION_CLOSURE",
+            approvalReason = "Synthetic AML closure approval after Temporal server container restart"
+        )
+    }
+
+    @Test
+    fun `live reconciliation adjustment workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.RECONCILIATION_ADJUSTMENT,
+            businessReferenceId = "REC-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "BALANCED_ADJUSTMENT_HANDOFF",
+            approvalReason = "Synthetic reconciliation adjustment approval after Temporal server container restart"
+        )
+    }
+
+    @Test
+    fun `live account hold workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.ACCOUNT_HOLD,
+            businessReferenceId = "HOLD-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "AVAILABLE_BALANCE_HOLD",
+            approvalReason = "Synthetic account hold approval after Temporal server container restart"
+        )
+    }
+
+    @Test
+    fun `live account release workflow survives Compose Temporal server restart before approval completion`() {
+        runComposeTemporalServerRestartDrill(
+            caseType = TemporalBankingCaseType.ACCOUNT_RELEASE,
+            businessReferenceId = "RELEASE-LIVE-TEMPORAL-SERVER-RESTART",
+            expectedControlEffect = "HOLD_RELEASE_HANDOFF",
+            approvalReason = "Synthetic account release approval after Temporal server container restart"
+        )
+    }
+
+    @Test
     fun `live Temporal workflow survives Compose PostgreSQL restart before approval completion`() {
         runComposePostgresRestartDrill(
             caseType = TemporalBankingCaseType.COMPLAINT_ANSWER,
             businessReferenceId = "COMPLAINT-LIVE-TEMPORAL-POSTGRES-RESTART",
             expectedControlEffect = "CUSTOMER_ANSWER_VISIBLE",
             approvalReason = "Synthetic approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live FDS release workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.FDS_RELEASE,
+            businessReferenceId = "FDS-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "LEDGER_TRANSFER_HANDOFF",
+            approvalReason = "Synthetic FDS release approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live FDS block workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.FDS_BLOCK,
+            businessReferenceId = "FDS-BLOCK-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "NO_LEDGER_POSTING",
+            approvalReason = "Synthetic FDS block approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live AML closure workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.AML_CLOSURE,
+            businessReferenceId = "AML-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "STR_SIMULATION_CLOSURE",
+            approvalReason = "Synthetic AML closure approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live reconciliation adjustment workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.RECONCILIATION_ADJUSTMENT,
+            businessReferenceId = "REC-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "BALANCED_ADJUSTMENT_HANDOFF",
+            approvalReason = "Synthetic reconciliation adjustment approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live account hold workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.ACCOUNT_HOLD,
+            businessReferenceId = "HOLD-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "AVAILABLE_BALANCE_HOLD",
+            approvalReason = "Synthetic account hold approval after PostgreSQL container restart"
+        )
+    }
+
+    @Test
+    fun `live account release workflow survives Compose PostgreSQL restart before approval completion`() {
+        runComposePostgresRestartDrill(
+            caseType = TemporalBankingCaseType.ACCOUNT_RELEASE,
+            businessReferenceId = "RELEASE-LIVE-TEMPORAL-POSTGRES-RESTART",
+            expectedControlEffect = "HOLD_RELEASE_HANDOFF",
+            approvalReason = "Synthetic account release approval after PostgreSQL container restart"
         )
     }
 
