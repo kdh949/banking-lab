@@ -14,6 +14,7 @@
   "audit": {
     "enabled": true,
     "reasonRequired": true,
+    "eventTypes": ["CUSTOMER_DETAIL_VIEW"],
     "piiAccess": true,
     "maskingPolicy": "CUSTOMER_PII"
   },

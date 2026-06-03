@@ -1,0 +1,51 @@
+{
+  "screenId": "WRK-001",
+  "transactionCode": "WRK001",
+  "title": "Integrated Workstation Dashboard",
+  "app": "staff-terminal",
+  "type": "DASHBOARD",
+  "domain": "staff-workstation",
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER", "AUDITOR"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "widgets": [
+    "transactionCodeWorkspace",
+    "roleAwareMenu",
+    "customerContext",
+    "reasonRequiredLookupSummary",
+    "approvalInbox",
+    "auditLogPanel",
+    "workflowTimeline",
+    "exceptionRetryPanel",
+    "apiBackedSmokePanel"
+  ],
+  "actions": [
+    {
+      "id": "openCustomerSearch",
+      "label": "Open Customer Search",
+      "type": "navigate",
+      "target": "CST-001"
+    },
+    {
+      "id": "openApprovalInbox",
+      "label": "Open Approval Inbox",
+      "type": "navigate",
+      "target": "APR-001"
+    },
+    {
+      "id": "openAuditLog",
+      "label": "Open Audit Log",
+      "type": "navigate",
+      "target": "AUD-001"
+    }
+  ]
+}

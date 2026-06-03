@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { loadExpandedManifests, loadManifests } from "../src/manifest.ts";
+import { loadExpandedManifests, loadManifests, validateManifest } from "../src/manifest.ts";
 
 const manifestRoot = "../../screen-manifests";
 const repositoryRoot = "../..";
@@ -78,10 +78,37 @@ test("target staff PII inquiries require reason and non-empty masking policy", a
   assert.equal(staffPiiScreens.length >= 2, true);
   for (const manifest of staffPiiScreens) {
     assert.equal(manifest.audit.reasonRequired, true, `${manifest.screenId} must require a reason`);
+    if (manifest.type === "INQUIRY") {
+      assert.equal((manifest.audit.eventTypes || []).length > 0, true, `${manifest.screenId} must declare audit events`);
+      assert.equal(manifest.controlMetadata.audit.eventTypes.length > 0, true);
+    }
     assert.notEqual(manifest.audit.maskingPolicy, "NONE", `${manifest.screenId} must mask PII by default`);
     assert.equal(manifest.controlMetadata.masking.defaultMasked, true);
     assert.notEqual(manifest.controlMetadata.masking.policy, "NONE");
   }
+});
+
+test("target staff customer search declares reason and customer search audit event", async () => {
+  const manifests = await loadExpandedManifests(manifestRoot);
+  const customerSearch = manifests.find((manifest) => manifest.screenId === "CST-001");
+  const fields = customerSearch?.formContract.fields || [];
+
+  assert.equal(customerSearch?.transactionCode, "CST001");
+  assert.equal(customerSearch?.audit.eventTypes?.includes("CUSTOMER_SEARCH"), true);
+  assert.equal(customerSearch?.controlMetadata.audit.eventTypes.includes("CUSTOMER_SEARCH"), true);
+  assert.equal(fields.some((field) => field.name === "reason" && field.required === true), true);
+  assert.equal(customerSearch?.formContract.reasonFieldNames.includes("reason"), true);
+});
+
+test("target staff PII inquiry validation fails without audit event declaration", async () => {
+  const manifests = await loadManifests(manifestRoot);
+  const customerSearch = manifests.find((manifest) => manifest.screenId === "CST-001");
+  assert.ok(customerSearch);
+
+  assert.throws(
+    () => validateManifest({ ...customerSearch, audit: { ...customerSearch.audit, eventTypes: [] } }),
+    /CST-001 staff PII inquiry must declare audit\.eventTypes/
+  );
 });
 
 test("target schema migrations contain ledger source-of-truth and control tables", async () => {
