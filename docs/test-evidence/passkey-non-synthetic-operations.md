@@ -76,6 +76,18 @@ env COMPOSE_PROJECT_NAME=banking-lab-webauthn-smoke docker compose --profile pla
 
 The Playwright command above uses a Chromium virtual authenticator by design, so it is not non-synthetic passkey evidence.
 
+## Preflight Check
+
+Before scheduling the future manual run, use:
+
+```bash
+npm run passkey:evidence:preflight
+```
+
+This checks that the retirement gate is still blocked, the passkey evidence runbook still requires `manual-live-passkey`, the recorder rejects virtual/CDP WebAuthn and simulator-token evidence, the Keycloak realm still contains `webauthn-register` for `manager-webauthn01`, `security-admin01` remains segregated from customer/branch roles, and the staff terminal still exposes the masked/audited WebAuthn manager flow.
+
+The preflight command does not create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`, does not prove non-synthetic passkey operations, and must not be used to mark this gate passed.
+
 ## Manual Runbook Boundary
 
 The future non-synthetic run should use the same Compose stack shape as the existing WebAuthn smoke, but the browser interaction must be manual or use only ordinary browser automation that does not install a virtual authenticator. The operator should sign in as `manager-webauthn01`, complete Keycloak passkey registration with a real authenticator, return to `staff-terminal`, and confirm the staff panel shows `Keycloak WebAuthn manager loaded`, `manager-webauthn01`, `Bearer`, `SYN-CUS-001`, masked phone output, and an `AUD-...` audit event ID.

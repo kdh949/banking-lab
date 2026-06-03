@@ -2022,3 +2022,34 @@ Remaining blockers:
 
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
+## 2026-06-03: Passkey Evidence Preflight Guard
+
+Changes completed:
+
+- Added `scripts/check-passkey-non-synthetic-preflight.ts` and `npm run passkey:evidence:preflight`.
+- The preflight verifies that the passkey gate remains pending, the evidence runbook still requires `manual-live-passkey`, the recorder still rejects virtual/CDP WebAuthn and simulator-token evidence, the Keycloak realm keeps `webauthn-register` for `manager-webauthn01`, and `security-admin01` remains segregated from customer/branch roles.
+- Added `tests/passkeyEvidencePreflight.test.mjs` and wired the preflight script/test into the non-synthetic passkey and evidence-refresh gate evidence lists.
+- Updated the passkey evidence boundary to document the preflight as a manual-run readiness check, not as passing non-synthetic passkey evidence.
+
+Verification:
+
+- `npm run passkey:evidence:preflight` passed.
+- `node --test tests/passkeyEvidenceRecorder.test.mjs tests/passkeyEvidencePreflight.test.mjs` passed 5 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run retirement:audit` passed with blocked status and the same incomplete gates.
+- `npm run node:retirement-gate` passed with blocked status and the same incomplete gates.
+- `npm test` passed 78 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `git diff --check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 78 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The project now has a repeatable static preflight for the future real platform/hardware passkey run.
+- This does not create `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` and does not prove non-synthetic passkey operations.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real passkey run and generated artifact.
+- Evidence-refresh completion and final retirement review remain incomplete.
