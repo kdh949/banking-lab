@@ -1778,6 +1778,32 @@ Remaining blockers:
 - Node retirement remains blocked.
 - Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
 
+## 2026-06-03: Target Source Stack Boundary Audit Hardening
+
+Changes completed:
+
+- Strengthened `npm run retirement:audit` to fail on any `.mjs`, `.cjs`, `.js`, or `.html` file under target `apps/`, `services/`, or `packages/` source directories, excluding generated build output directories.
+- Added migration foundation coverage proving target `apps/`, `services/`, and `packages/` source trees do not contain Node/static-shell source files.
+- Updated retirement-boundary audit tests so the generic target source extension policy remains wired into the audit script.
+- Kept Node reference assets under `legacy-node-reference`, `runtime`, `scripts`, and `tests` until the retirement gate is genuinely ready.
+
+Verification:
+
+- `node --test tests/retirementBoundaryAudit.test.mjs tests/migrationFoundation.test.mjs` passed 7 tests.
+- `npm run retirement:audit` passed with blocked status, 37 target anchors checked, and the same remaining incomplete gates.
+- `npm run scripts:typecheck` passed.
+- `find apps services packages \( -path '*/.next/*' -o -path '*/build/*' -o -path '*/node_modules/*' \) -prune -o -type f \( -name '*.mjs' -o -name '*.cjs' -o -name '*.js' -o -name '*.html' \) -print | sort` returned no target source files.
+
+Result:
+
+- The target source boundary now has a generic guard against reintroducing Node/static-shell source files, not only hard-coded legacy paths.
+- Node retirement remains blocked by explicit evidence gates, not by target source contamination.
+
+Remaining blockers:
+
+- Node retirement remains blocked.
+- Non-synthetic passkey operations, evidence-refresh completion, and final retirement review remain incomplete.
+
 ## 2026-06-03: Legacy Screen/Form Oracle Boundary Isolation
 
 Changes completed:

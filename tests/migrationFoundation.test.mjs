@@ -3,6 +3,16 @@ import test from "node:test";
 import { access, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+const ignoredDirs = new Set([
+  ".next",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results"
+]);
+
 async function exists(filePath) {
   try {
     await access(filePath);
@@ -18,6 +28,9 @@ async function listFiles(dir) {
   for (const entry of entries) {
     const entryPath = join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (ignoredDirs.has(entry.name)) {
+        continue;
+      }
       files.push(...await listFiles(entryPath));
     } else {
       files.push(entryPath);
@@ -86,6 +99,18 @@ test("target service directories do not contain Node business modules", async ()
 
   assert.deepEqual(mjsFiles, []);
   assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/services"), true);
+});
+
+test("target source directories do not contain Node or static shell source files", async () => {
+  const files = (await Promise.all(["apps", "services", "packages"].map((root) => listFiles(root)))).flat();
+  const disallowedSourceFiles = files.filter((filePath) => /\.(mjs|cjs|js|html)$/.test(filePath));
+  const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
+
+  assert.deepEqual(disallowedSourceFiles, []);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/apps"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/banking-domain/src"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/screen-engine/src"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/form-engine/src"), true);
 });
 
 test("migration playbook names parity command, structured error contract, and retirement gate", async () => {

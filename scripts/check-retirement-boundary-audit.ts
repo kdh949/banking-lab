@@ -104,6 +104,19 @@ const disallowedTargetStaticShellPaths = [
   "packages/ui/public/lab.css"
 ];
 
+const targetSourceRoots = [
+  "apps",
+  "services",
+  "packages"
+];
+
+const disallowedTargetSourceExtensions = [
+  ".mjs",
+  ".cjs",
+  ".js",
+  ".html"
+];
+
 const targetAnchors = [
   "services/core-banking/build.gradle.kts",
   "services/core-banking/src/main/kotlin/lab/banking/core/CoreBankingApplication.kt",
@@ -199,6 +212,15 @@ const serviceMjsFiles = mjsFiles.filter((file) => file.startsWith("services/"));
 if (serviceMjsFiles.length > 0) {
   errors.push("Target service directories contain Node business modules:");
   errors.push(...serviceMjsFiles.map((file) => `  - ${file}`));
+}
+
+const disallowedTargetSourceFiles = files.filter((file) => (
+  targetSourceRoots.some((root) => file.startsWith(`${root}/`)) &&
+  disallowedTargetSourceExtensions.some((extension) => file.endsWith(extension))
+));
+if (disallowedTargetSourceFiles.length > 0) {
+  errors.push("Target source directories contain disallowed Node/static source files:");
+  errors.push(...disallowedTargetSourceFiles.map((file) => `  - ${file}`));
 }
 
 const targetStaticShells: string[] = [];

@@ -35,4 +35,7 @@ test("retirement boundary audit is wired into the package scripts and gate evide
   assert.match(script, /legacy-node-reference\/services/);
   assert.match(script, /services\/core-banking\/src\/main\/kotlin/);
   assert.ok(script.includes("(?:\\.\\.\\/)+services\\/[^\"']+\\.mjs"));
+  assert.match(script, /targetSourceRoots/);
+  assert.match(script, /disallowedTargetSourceExtensions/);
+  assert.match(script, /Target source directories contain disallowed Node\/static source files/);
 });
