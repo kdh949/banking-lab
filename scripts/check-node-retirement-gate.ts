@@ -15,15 +15,18 @@ type NodeRetirementGate = {
   requiredGates: RequiredGate[];
 };
 
-const gatePath = "docs/migration/node-retirement-gate.json";
+const gatePath = process.env.BANKING_LAB_NODE_RETIREMENT_GATE_PATH
+  ?? "docs/migration/node-retirement-gate.json";
 const boundaryAuditPath = "scripts/check-retirement-boundary-audit.ts";
 const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const finalReviewVerifierPath = "scripts/verify-final-retirement-review.ts";
 const passkeyGateId = "non-synthetic-passkey-operations";
 const finalReviewGateId = "retirement-review";
 const passkeyEvidenceDocPath = "docs/test-evidence/passkey-non-synthetic-operations.md";
-const passkeyEvidenceArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
-const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
+const passkeyEvidenceArtifactPath = process.env.BANKING_LAB_PASSKEY_EVIDENCE_ARTIFACT
+  ?? "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
+const finalReviewArtifactPath = process.env.BANKING_LAB_FINAL_REVIEW_ARTIFACT
+  ?? "docs/test-evidence/generated/final-node-retirement-review.json";
 const gate = JSON.parse(await readFile(gatePath, "utf8")) as NodeRetirementGate;
 
 async function exists(path: string): Promise<boolean> {
@@ -205,6 +208,10 @@ function runFinalReviewVerifier(): string[] {
 function runReadyBoundaryAudit(): string[] {
   const result = spawnSync(process.execPath, ["--experimental-strip-types", boundaryAuditPath], {
     encoding: "utf8",
+    env: {
+      ...process.env,
+      BANKING_LAB_NODE_RETIREMENT_GATE_PATH: gatePath
+    },
     maxBuffer: 1024 * 1024
   });
   if (result.status === 0) {

@@ -25,6 +25,7 @@
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",
+    "retirement:ready-simulate": "node --experimental-strip-types scripts/check-node-retirement-ready-simulation.ts",
     "retirement:audit": "node --experimental-strip-types scripts/check-retirement-boundary-audit.ts",
     "retirement:stack-audit": "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts",
     "retirement:generated-boundary": "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts",

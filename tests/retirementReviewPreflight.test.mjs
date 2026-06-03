@@ -17,7 +17,7 @@ test("retirement review preflight passes while keeping final retirement blocked"
 
   assert.equal(stderr, "");
   assert.match(stdout, /Node retirement review preflight: pass/);
-  assert.match(stdout, /Boundary, stack area, generated artifact, evidence refresh, passkey preflight, and retirement gate checks are consistent/);
+  assert.match(stdout, /Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, and retirement gate checks are consistent/);
   assert.match(stdout, /does not mark Node retirement ready/);
   assert.match(stdout, /non-synthetic passkey operations and final retirement review remain pending/);
 });
@@ -33,6 +33,7 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.equal(packageJson.scripts["passkey:evidence:verify"], "node --experimental-strip-types scripts/verify-passkey-non-synthetic-evidence.ts");
   assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
   assert.equal(packageJson.scripts["retirement:generated-boundary"], "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts");
+  assert.equal(packageJson.scripts["retirement:ready-simulate"], "node --experimental-strip-types scripts/check-node-retirement-ready-simulation.ts");
   assert.equal(packageJson.scripts["retirement:final-review:record"], "node --experimental-strip-types scripts/record-final-retirement-review.ts");
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(packageJson.scripts["goal:completion-audit"], "node --experimental-strip-types scripts/check-goal-completion-audit.ts");
@@ -49,8 +50,10 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/final-retirement-review-verifier.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/record-final-retirement-review.ts"));
   assert.ok(retirementReview?.evidence?.includes("scripts/verify-final-retirement-review.ts"));
+  assert.ok(retirementReview?.evidence?.includes("scripts/check-node-retirement-ready-simulation.ts"));
   assert.ok(retirementReview?.evidence?.includes("tests/finalRetirementReviewRecorder.test.mjs"));
   assert.ok(retirementReview?.evidence?.includes("tests/finalRetirementReviewVerifier.test.mjs"));
+  assert.ok(retirementReview?.evidence?.includes("tests/nodeRetirementReadySimulation.test.mjs"));
   assert.ok(retirementReview?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
   assert.ok(retirementReview?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
   assert.ok(retirementReview?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
@@ -60,6 +63,7 @@ test("retirement review gate keeps preflight evidence but remains pending", asyn
   assert.match(evidence, /npm run retirement:review-preflight/);
   assert.match(evidence, /npm run retirement:stack-audit/);
   assert.match(evidence, /npm run retirement:generated-boundary/);
+  assert.match(evidence, /npm run retirement:ready-simulate/);
   assert.match(evidence, /npm run retirement:final-review:record/);
   assert.match(evidence, /npm run retirement:final-review:verify/);
   assert.match(evidence, /npm run goal:completion-audit/);

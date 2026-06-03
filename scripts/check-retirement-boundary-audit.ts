@@ -27,7 +27,8 @@ type ParityScenarioMap = {
   suites: ParitySuite[];
 };
 
-const gatePath = "docs/migration/node-retirement-gate.json";
+const gatePath = process.env.BANKING_LAB_NODE_RETIREMENT_GATE_PATH
+  ?? "docs/migration/node-retirement-gate.json";
 const parityPath = "docs/migration/parity-scenarios.json";
 const ignoredDirs = new Set([
   ".git",

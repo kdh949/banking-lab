@@ -28,6 +28,7 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.equal(packageJson.scripts["evidence:refresh-check"], `node --experimental-strip-types ${script}`);
   assert.equal(packageJson.scripts["retirement:stack-audit"], "node --experimental-strip-types scripts/check-stack-retirement-by-area.ts");
   assert.equal(packageJson.scripts["retirement:generated-boundary"], "node --experimental-strip-types scripts/check-generated-artifact-boundary.ts");
+  assert.equal(packageJson.scripts["retirement:ready-simulate"], "node --experimental-strip-types scripts/check-node-retirement-ready-simulation.ts");
   assert.equal(packageJson.scripts["retirement:final-review:record"], "node --experimental-strip-types scripts/record-final-retirement-review.ts");
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
   assert.equal(evidenceRefresh?.status, "pass");
@@ -41,8 +42,10 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/final-retirement-review-verifier.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/record-final-retirement-review.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/verify-final-retirement-review.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-node-retirement-ready-simulation.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/finalRetirementReviewRecorder.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/finalRetirementReviewVerifier.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/nodeRetirementReadySimulation.test.mjs"));
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));

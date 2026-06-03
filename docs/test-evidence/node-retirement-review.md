@@ -32,6 +32,12 @@ Run the generated artifact boundary audit when `.next` or build output exists lo
 npm run retirement:generated-boundary
 ```
 
+Run the ready-state simulation to verify the future passkey/final-review artifact path without changing the real blocked gate:
+
+```bash
+npm run retirement:ready-simulate
+```
+
 Run the completion audit before any final completion claim:
 
 ```bash
@@ -67,7 +73,7 @@ Not ready. The final review cannot be marked passed until:
 - non-synthetic passkey operations are proven with a real platform authenticator or hardware security key;
 - `docs/test-evidence/generated/passkey-non-synthetic-evidence.json` exists and passes `npm run passkey:evidence:verify` plus the retirement gate validation;
 - `docs/test-evidence/generated/final-node-retirement-review.json` exists and passes `npm run retirement:final-review:verify`;
-- the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, and retirement gate commands after passkey evidence exists;
+- the final reviewer reruns the full parity, manifest, evidence, retirement boundary, stack area, generated artifact boundary, ready-state simulation, and retirement gate commands after passkey evidence exists;
 - `npm run goal:completion-audit -- --require-complete` passes after all retirement blockers are resolved;
 - the final reviewer confirms no critical behavior depends on Node-only code.
 

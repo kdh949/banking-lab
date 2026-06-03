@@ -32,8 +32,10 @@ const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
+const readySimulationScriptPath = "scripts/check-node-retirement-ready-simulation.ts";
 const finalReviewRecorderTestPath = "tests/finalRetirementReviewRecorder.test.mjs";
 const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
+const readySimulationTestPath = "tests/nodeRetirementReadySimulation.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -122,6 +124,15 @@ const delegatedChecks = [
       "- retirement-review: pending"
     ],
     forbiddenOutput: ["- evidence-refresh: in-progress", "- evidence-refresh: pending", "Node reference retirement gate: ready"]
+  },
+  {
+    name: "node retirement ready-state simulation",
+    args: ["--experimental-strip-types", readySimulationScriptPath],
+    requiredOutput: [
+      "Node retirement ready-state simulation: pass",
+      "Fixture gate and redacted synthetic evidence artifacts can satisfy the ready gate path."
+    ],
+    forbiddenOutput: ["Node retirement ready-state simulation: failed"]
   }
 ];
 
@@ -175,8 +186,10 @@ for (const path of [
   finalReviewVerifierDocPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
+  readySimulationScriptPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
+  readySimulationTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath
@@ -209,6 +222,9 @@ if (packageJson?.scripts?.["retirement:final-review:record"] !== `node --experim
 }
 if (packageJson?.scripts?.["retirement:final-review:verify"] !== `node --experimental-strip-types ${finalReviewVerifierScriptPath}`) {
   errors.push("package.json must expose retirement:final-review:verify before final retirement review.");
+}
+if (packageJson?.scripts?.["retirement:ready-simulate"] !== `node --experimental-strip-types ${readySimulationScriptPath}`) {
+  errors.push("package.json must expose retirement:ready-simulate before final retirement review.");
 }
 if (packageJson?.scripts?.["goal:completion-audit"] !== `node --experimental-strip-types ${goalCompletionAuditScriptPath}`) {
   errors.push("package.json must expose goal:completion-audit before final retirement review.");
@@ -250,8 +266,10 @@ for (const path of [
   finalReviewVerifierDocPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
+  readySimulationScriptPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
+  readySimulationTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -271,6 +289,7 @@ requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review 
 requireIncludes(reviewDoc, "npm run retirement:generated-boundary", "Retirement review doc must include the generated artifact boundary command.");
 requireIncludes(reviewDoc, "npm run retirement:final-review:record", "Retirement review doc must include the final review recorder command.");
 requireIncludes(reviewDoc, "npm run retirement:final-review:verify", "Retirement review doc must include the final review verifier command.");
+requireIncludes(reviewDoc, "npm run retirement:ready-simulate", "Retirement review doc must include the ready-state simulation command.");
 requireIncludes(reviewDoc, "npm run goal:completion-audit", "Retirement review doc must include the goal completion audit command.");
 requireIncludes(reviewDoc, "npm run passkey:evidence:verify", "Retirement review doc must include the strict passkey artifact verifier command.");
 requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-evidence.json", "Retirement review doc must name the generated passkey evidence artifact.");
@@ -312,5 +331,5 @@ if (errors.length > 0) {
 }
 
 console.log("Node retirement review preflight: pass");
-console.log("Boundary, stack area, generated artifact, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
+console.log("Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, and retirement gate checks are consistent.");
 console.log("This does not mark Node retirement ready; non-synthetic passkey operations and final retirement review remain pending.");

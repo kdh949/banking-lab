@@ -35,8 +35,10 @@ const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
+const readySimulationScriptPath = "scripts/check-node-retirement-ready-simulation.ts";
 const finalReviewRecorderTestPath = "tests/finalRetirementReviewRecorder.test.mjs";
 const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
+const readySimulationTestPath = "tests/nodeRetirementReadySimulation.test.mjs";
 const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md";
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
@@ -69,6 +71,7 @@ const requiredCommands = [
   "npm run passkey:evidence:preflight",
   "npm run retirement:stack-audit",
   "npm run retirement:generated-boundary",
+  "npm run retirement:ready-simulate",
   "npm run goal:completion-audit",
   "npm run evidence:pack",
   "npm run retirement:audit",
@@ -147,8 +150,10 @@ for (const path of [
   finalReviewVerifierDocPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
+  readySimulationScriptPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
+  readySimulationTestPath,
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
@@ -192,8 +197,10 @@ if (!evidenceRefreshGate) {
     finalReviewVerifierDocPath,
     finalReviewRecorderScriptPath,
     finalReviewVerifierScriptPath,
+    readySimulationScriptPath,
     finalReviewRecorderTestPath,
     finalReviewVerifierTestPath,
+    readySimulationTestPath,
     goalCompletionAuditDocPath,
     goalCompletionAuditScriptPath,
     goalCompletionAuditTestPath,
