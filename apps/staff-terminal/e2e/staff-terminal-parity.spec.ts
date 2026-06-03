@@ -39,16 +39,16 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await expect(page.getByText("INZENT Banking")).toBeVisible();
   await expect(page.getByText("[20000] 수신_네비게이션")).toBeVisible();
   await expect(page.getByRole("button", { name: "업무포털" })).toBeVisible();
-  await expect(page.getByText("수신업무")).toBeVisible();
+  await expect(page.locator(".panel-header").filter({ hasText: "수신업무" })).toBeVisible();
   await expect(page.getByText("수신_중요공지")).toBeVisible();
   await expect(page.getByText("수신업무 중간화면")).toBeVisible();
   await expect(page.getByText("수신업무 공지사항")).toBeVisible();
   await expect(page.getByText("자주묻는 질문")).toBeVisible();
   await expect(page.getByText("알면 편한 단말 메뉴얼")).toBeVisible();
   await expect(page.getByText("신규화면 공지")).toBeAttached();
-  await expect(page.getByText("내상품")).toBeVisible();
-  await expect(page.getByText("추천상품")).toBeVisible();
-  await expect(page.getByText("수행마케팅")).toBeVisible();
+  await expect(page.locator(".inside-mini-header").filter({ hasText: "내상품" })).toBeVisible();
+  await expect(page.locator(".inside-mini-header").filter({ hasText: "추천상품" })).toBeVisible();
+  await expect(page.locator(".inside-mini-header").filter({ hasText: "수행마케팅" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Transaction-code workspace" })).toBeAttached();
   await expect(page.getByLabel("Transaction code")).toHaveValue(screens[0].transactionCode);
   await expect(page.locator(".metric", { hasText: String(reasonRequired) })).toBeAttached();
@@ -66,11 +66,19 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
+  const componentDir = path.join(repoRoot, "apps", app, "src", "components");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
+  const screenSource = readFileSync(path.join(componentDir, "terminal-screens.tsx"), "utf8");
+  const uiSource = readFileSync(path.join(componentDir, "terminal-ui.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
   expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
   expect(pageSource).toContain("loadChannelManifests");
+  expect(pageSource).toContain("TerminalNavigationWorkbench");
+  expect(screenSource).toContain("TerminalPortalDashboard");
+  expect(screenSource).toContain("TerminalShell");
+  expect(uiSource).toContain("TerminalField");
+  expect(uiSource).toContain("TerminalButton");
   expect(pageSource).not.toContain("fetch(\"/api/staff");
   expect(pageSource).not.toContain("fetch('/api/staff");
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
