@@ -52,6 +52,19 @@ npm run passkey:evidence:verify
 
 That verifier must pass against `docs/test-evidence/generated/passkey-non-synthetic-evidence.json`; a missing artifact is still a blocker.
 
+Prepare the final review command evidence template before rerunning the post-passkey review commands:
+
+```bash
+npm run retirement:final-review:prepare
+```
+
+This writes ignored local templates under `tmp/final-retirement-review-manual/`:
+
+- `redacted-final-review-commands.template.json`
+- `record-final-review-command.template.sh`
+
+The generated template keeps `status`, `exitCode`, `runAfterPasskeyEvidence`, and control attestations as `TODO_REPLACE_WITH_*` values. These TODO values must be replaced only after the reviewer reruns the required commands after verified non-synthetic passkey evidence exists; unchanged templates are rejected by the final review recorder and do not mark Node retirement ready.
+
 After the final reviewer reruns the required post-passkey commands and records the control decisions, generate the final review artifact:
 
 ```bash

@@ -30,10 +30,12 @@ const generatedBoundaryDocPath = "docs/test-evidence/generated-artifact-boundary
 const generatedBoundaryScriptPath = "scripts/check-generated-artifact-boundary.ts";
 const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
+const finalReviewPrepareScriptPath = "scripts/prepare-final-retirement-review-evidence.ts";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
 const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
 const readySimulationScriptPath = "scripts/check-node-retirement-ready-simulation.ts";
+const finalReviewPrepareTestPath = "tests/finalRetirementReviewPrepare.test.mjs";
 const finalReviewRecorderTestPath = "tests/finalRetirementReviewRecorder.test.mjs";
 const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
 const readySimulationTestPath = "tests/nodeRetirementReadySimulation.test.mjs";
@@ -204,9 +206,11 @@ for (const path of [
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
   finalReviewVerifierDocPath,
+  finalReviewPrepareScriptPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
   readySimulationScriptPath,
+  finalReviewPrepareTestPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
   readySimulationTestPath,
@@ -227,6 +231,9 @@ const reviewGate = requiredGates.find((item) => item.id === "retirement-review")
 
 if (packageJson?.scripts?.["retirement:review-preflight"] !== `node --experimental-strip-types ${preflightPath}`) {
   errors.push("package.json must expose retirement:review-preflight.");
+}
+if (packageJson?.scripts?.["retirement:final-review:prepare"] !== `node --experimental-strip-types ${finalReviewPrepareScriptPath}`) {
+  errors.push("package.json must expose retirement:final-review:prepare before final retirement review.");
 }
 if (packageJson?.scripts?.["passkey:evidence:verify"] !== `node --experimental-strip-types ${passkeyVerifierPath}`) {
   errors.push("package.json must expose passkey:evidence:verify before final retirement review.");
@@ -285,9 +292,11 @@ for (const path of [
   generatedBoundaryScriptPath,
   generatedBoundaryTestPath,
   finalReviewVerifierDocPath,
+  finalReviewPrepareScriptPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
   readySimulationScriptPath,
+  finalReviewPrepareTestPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
   readySimulationTestPath,
@@ -306,6 +315,7 @@ const reviewDoc = await readFile(reviewDocPath, "utf8").catch(() => "");
 requireIncludes(reviewDoc, "Status: blocked", "Retirement review doc must remain blocked.");
 requireIncludes(reviewDoc, "does not mark Node retirement ready", "Retirement review doc must avoid claiming readiness.");
 requireIncludes(reviewDoc, "npm run retirement:review-preflight", "Retirement review doc must include the preflight command.");
+requireIncludes(reviewDoc, "npm run retirement:final-review:prepare", "Retirement review doc must include the final review prepare command.");
 requireIncludes(reviewDoc, "npm run retirement:stack-audit", "Retirement review doc must include the stack area audit command.");
 requireIncludes(reviewDoc, "npm run retirement:generated-boundary", "Retirement review doc must include the generated artifact boundary command.");
 requireIncludes(reviewDoc, "npm run retirement:final-review:record", "Retirement review doc must include the final review recorder command.");
@@ -317,6 +327,21 @@ requireIncludes(reviewDoc, "docs/test-evidence/generated/passkey-non-synthetic-e
 requireIncludes(reviewDoc, "docs/test-evidence/generated/final-node-retirement-review.json", "Retirement review doc must name the generated final review evidence artifact.");
 requireIncludes(reviewDoc, "non-synthetic passkey operations", "Retirement review doc must name passkey as a remaining blocker.");
 requireIncludes(reviewDoc, "final retirement review", "Retirement review doc must name final review as pending.");
+
+const finalReviewPrepareScript = await readFile(finalReviewPrepareScriptPath, "utf8").catch(() => "");
+for (const marker of [
+  "redacted-final-review-commands.template.json",
+  "record-final-review-command.template.sh",
+  "TODO_REPLACE_WITH_pass",
+  "TODO_REPLACE_WITH_0",
+  "TODO_REPLACE_WITH_true",
+  "npm run passkey:evidence:verify",
+  "npm run retirement:final-review:record",
+  "BANKING_LAB_FINAL_REVIEW_PASSKEY_ARTIFACT_VERIFIED",
+  "BANKING_LAB_FINAL_REVIEW_NODE_ONLY_CRITICAL_DEPENDENCY_REMOVED"
+]) {
+  requireIncludes(finalReviewPrepareScript, marker, `Final review prepare script must include marker: ${marker}.`);
+}
 
 for (const check of delegatedChecks) {
   const result = spawnSync(process.execPath, check.args, {

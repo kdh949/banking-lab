@@ -35,9 +35,11 @@ const generatedBoundaryTestPath = "tests/generatedArtifactBoundary.test.mjs";
 const passkeyPrepareScriptPath = "scripts/prepare-passkey-non-synthetic-evidence.ts";
 const passkeyPrepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
 const finalReviewVerifierDocPath = "docs/test-evidence/final-retirement-review-verifier.md";
+const finalReviewPrepareScriptPath = "scripts/prepare-final-retirement-review-evidence.ts";
 const finalReviewRecorderScriptPath = "scripts/record-final-retirement-review.ts";
 const finalReviewVerifierScriptPath = "scripts/verify-final-retirement-review.ts";
 const readySimulationScriptPath = "scripts/check-node-retirement-ready-simulation.ts";
+const finalReviewPrepareTestPath = "tests/finalRetirementReviewPrepare.test.mjs";
 const finalReviewRecorderTestPath = "tests/finalRetirementReviewRecorder.test.mjs";
 const finalReviewVerifierTestPath = "tests/finalRetirementReviewVerifier.test.mjs";
 const readySimulationTestPath = "tests/nodeRetirementReadySimulation.test.mjs";
@@ -71,6 +73,7 @@ const stalePatterns = [
 
 const requiredCommands = [
   "npm run passkey:evidence:prepare",
+  "npm run retirement:final-review:prepare",
   "npm run passkey:evidence:preflight",
   "npm run retirement:stack-audit",
   "npm run retirement:generated-boundary",
@@ -153,9 +156,11 @@ for (const path of [
   passkeyPrepareScriptPath,
   passkeyPrepareTestPath,
   finalReviewVerifierDocPath,
+  finalReviewPrepareScriptPath,
   finalReviewRecorderScriptPath,
   finalReviewVerifierScriptPath,
   readySimulationScriptPath,
+  finalReviewPrepareTestPath,
   finalReviewRecorderTestPath,
   finalReviewVerifierTestPath,
   readySimulationTestPath,
@@ -202,9 +207,11 @@ if (!evidenceRefreshGate) {
     passkeyPrepareScriptPath,
     passkeyPrepareTestPath,
     finalReviewVerifierDocPath,
+    finalReviewPrepareScriptPath,
     finalReviewRecorderScriptPath,
     finalReviewVerifierScriptPath,
     readySimulationScriptPath,
+    finalReviewPrepareTestPath,
     finalReviewRecorderTestPath,
     finalReviewVerifierTestPath,
     readySimulationTestPath,

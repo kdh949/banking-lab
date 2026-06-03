@@ -35,6 +35,7 @@
     "passkey:evidence:prepare": "node --experimental-strip-types scripts/prepare-passkey-non-synthetic-evidence.ts",
     "evidence:refresh-check": "node --experimental-strip-types scripts/check-evidence-refresh.ts",
     "retirement:review-preflight": "node --experimental-strip-types scripts/check-retirement-review-preflight.ts",
+    "retirement:final-review:prepare": "node --experimental-strip-types scripts/prepare-final-retirement-review-evidence.ts",
     "retirement:final-review:record": "node --experimental-strip-types scripts/record-final-retirement-review.ts",
     "retirement:final-review:verify": "node --experimental-strip-types scripts/verify-final-retirement-review.ts",
     "goal:completion-audit": "node --experimental-strip-types scripts/check-goal-completion-audit.ts",

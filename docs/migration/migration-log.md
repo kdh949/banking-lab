@@ -2119,6 +2119,49 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real passkey run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Final Review Evidence Template Preparation Guard
+
+Changes completed:
+
+- Added `scripts/prepare-final-retirement-review-evidence.ts` and `npm run retirement:final-review:prepare`.
+- The prepare script writes ignored local templates under `tmp/final-retirement-review-manual/` for post-passkey command evidence and the final-review recorder command.
+- The generated command template intentionally uses `TODO_REPLACE_WITH_pass`, `TODO_REPLACE_WITH_0`, and `TODO_REPLACE_WITH_true`, so it cannot be recorded as passing final-review evidence before the reviewer reruns the commands after verified non-synthetic passkey evidence exists.
+- Added `tests/finalRetirementReviewPrepare.test.mjs` to prove the templates include every required final-review command, passkey-verifier dependency, reviewer/date metadata, control attestation placeholders, and fail-closed recorder behavior.
+- Wired the prepare script/test into the `retirement-review` gate, `evidence-refresh` gate, final-review preflight, and evidence-refresh checker.
+- Updated `docs/test-evidence/node-retirement-review.md` and `docs/test-evidence/evidence-refresh-review.md` with the prepare command and current verification boundary.
+
+Verification:
+
+- `npm run scripts:typecheck` passed.
+- `npm run retirement:final-review:prepare` passed and generated ignored TODO templates under `tmp/final-retirement-review-manual/`.
+- `node --test tests/finalRetirementReviewPrepare.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` initially failed because the evidence-refresh review did not yet list `npm run retirement:final-review:prepare`; the document was corrected before rerunning.
+- `node --test tests/finalRetirementReviewPrepare.test.mjs tests/retirementReviewPreflight.test.mjs tests/evidenceRefresh.test.mjs` passed 7 tests after the evidence-refresh review update.
+- `npm run retirement:review-preflight` passed.
+- `npm run evidence:refresh-check` passed.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+- `npm run retirement:ready-simulate` passed.
+- `npm run retirement:stack-audit` passed.
+- `npm run retirement:generated-boundary` passed.
+- `npm run retirement:audit` passed with blocked status, 62 approved-reference `.mjs` files, 37 target anchors, 324 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 122 tests.
+- `npm run validate:manifests` validated 28 manifests.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary without tracked changes.
+- `git diff --check` passed.
+- Initial sandboxed `npm run parity` failed because Node reference tests could not bind `127.0.0.1` (`listen EPERM`). The same command passed under the approved execution path with 122 Node reference/structural tests, 28 manifest validations, 6 screen-engine tests, and evidence pack generation.
+
+Result:
+
+- The future final Node-independence review now has a standardized local evidence-input template path before artifact recording.
+- The template path is machine-checked but remains fail-closed because untouched templates cannot satisfy the final-review recorder.
+- The real Node retirement gate remains blocked until non-synthetic passkey evidence and final retirement review artifacts exist and pass verification.
+- This does not mark Node retirement ready.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Passkey Evidence Template Preparation Guard
 
 Changes completed:
