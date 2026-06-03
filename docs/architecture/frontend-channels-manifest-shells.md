@@ -70,7 +70,7 @@ The first API-backed slice covered read-model calls:
 - Ops-console also has live Keycloak Authorization Code + PKCE smoke for ops-operator reconciliation adjustment, manager approval, and adjusted-item workflow failure-state rendering through its Next BFF token exchange route.
 - Audit-console also has live Keycloak Authorization Code + PKCE smoke for auditor hash-chain read-model evidence through its Next BFF token exchange route.
 - FDS/AML-console also has live Keycloak Authorization Code + PKCE smoke for risk read-model access, FDS release/block approval, AML closure approval, and duplicate workflow failure-state rendering through its Next BFF token exchange route.
-- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, and FDS/AML-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations or full channel workflow parity.
+- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, and FDS/AML-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review.
 
 Command-oriented browser smoke now runs in `customer-web`, `staff-terminal`, `complaint-portal`, `fds-aml-console`, and `ops-console`:
 
@@ -86,6 +86,7 @@ Command-oriented browser smoke now runs in `customer-web`, `staff-terminal`, `co
 - The `customer_transfer_results` read model now exposes channel-visible `POSTED`, `HELD`, `FAILED`, and `BLOCKED` outcomes while keeping ledger postings as the balance source of truth.
 - The staff terminal uses the shared API client to call `POST /api/staff/customers/SYN-CUS-CMD-001/change-requests`.
 - It also calls `POST /api/staff/pii/unmask`, proves a branch-staff denial is visible to the browser as `AUTHORIZATION_POLICY_VIOLATION`, and then renders manager-approved `UNMASKED_TIMEBOXED` synthetic PII with a 300 second TTL.
+- The privileged unmask command now uses the bounded SERIALIZABLE staff-access retry path so parallel browser channel smoke does not leak transient audit hash-chain conflicts as HTTP 500s.
 - It attempts self-approval with the maker actor and verifies `MAKER_CHECKER_SELF_APPROVAL_REJECTED`.
 - It then approves the generated `APR-...` approval through `POST /api/staff/approvals/{approvalId}/approve` with a separate manager actor.
 - The Playwright assertion verifies `SYN-CUS-CMD-001` returns a masked updated phone and executed status.

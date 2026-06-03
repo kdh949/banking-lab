@@ -54,6 +54,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - FDS decision request creation and AML closure request creation now use the same bounded SERIALIZABLE retry policy for browser command-smoke concurrency.
 - Reconciliation adjustment request creation uses the same bounded SERIALIZABLE retry policy for browser command-smoke concurrency.
 - Staff masked customer detail uses bounded SERIALIZABLE retry so reason-required audited inquiry smoke does not leak transient audit hash-chain lock conflicts as HTTP 500s.
+- Staff privileged unmask uses bounded SERIALIZABLE retry so branch-denial plus manager-approved unmask browser smoke does not leak transient audit hash-chain lock conflicts as HTTP 500s during parallel channel runs.
 - Customer transfer commands use bounded SERIALIZABLE retry so parallel browser transfer smokes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint entry uses bounded SERIALIZABLE retry so parallel browser audit writes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint confirmation uses the same bounded SERIALIZABLE retry and writes a customer `COMMAND_EXECUTED` audit event while preserving customer ownership checks.
@@ -284,6 +285,13 @@ curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18130/
 env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18131 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "interactive Keycloak"
 curl -fsS http://127.0.0.1:18130/health
 env COMPOSE_PROJECT_NAME=banking-lab-staff-unmask-smoke docker compose --profile platform down -v
+scripts/run-core-banking-tests.sh :services:core-banking:bootJar
+env COMPOSE_PROJECT_NAME=banking-lab-channel-gate-smoke BANKING_LAB_POSTGRES_PORT=15480 BANKING_LAB_CORE_BANKING_PORT=18132 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres core-banking
+curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18132/health
+env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "privileged unmask"
+env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npm run test:e2e
+curl -fsS http://127.0.0.1:18132/health
+env COMPOSE_PROJECT_NAME=banking-lab-channel-gate-smoke docker compose --profile platform down -v
 ```
 
 ## Result
@@ -337,9 +345,11 @@ The targeted staff-terminal WebAuthn browser smoke passed 1 Chromium Playwright 
 
 The follow-up passkey policy/recovery segregation smoke passed through `KeycloakRealmPolicyTest`, `LiveKeycloakRealmIntegrationTest`, and the same targeted WebAuthn browser smoke against a fresh stack on ports `15478`, `18128`, and `18129`. It verifies the local WebAuthn policy, `PASSKEY_RECOVERY_ADMIN` role, segregated `security-admin01` token roles, Spring JWKS validation with simulator tokens disabled, and unchanged WebAuthn required-action blocking for direct grants.
 
+The 2026-06-03 API-backed channel gate closure run passed `scripts/run-core-banking-tests.sh :services:core-banking:bootJar`, started a fresh synthetic Compose stack on PostgreSQL `15480` and core-banking `18132`, and returned `/health` with `auditHashChainValid=true`. The targeted staff-terminal privileged unmask smoke then passed 1 Chromium Playwright test, proving branch-role denial and manager `UNMASKED_TIMEBOXED` approval after moving the unmask command onto the bounded SERIALIZABLE staff-access retry path. The full API-backed Playwright suite then passed 35 tests with 7 Keycloak-dependent tests skipped because `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` was intentionally unset for this simulator-token run. Post-smoke `/health` still returned `auditHashChainValid=true`.
+
 ## Remaining Gaps
 
 - Current customer-web API-backed smoke paths, the staff-terminal masked lookup/privileged unmask/customer-change approval/WebAuthn path, the complaint-portal answer approval/workflow failure-state path, the ops-console reconciliation adjustment/workflow failure-state path, the audit-console hash-chain read-model path, and the FDS/AML risk read-model/release/block/closure/failure-state paths have live interactive Keycloak browser login evidence.
 - WebAuthn required-action completion is proven with a local virtual authenticator, and the imported synthetic realm now has explicit local WebAuthn policy plus `PASSKEY_RECOVERY_ADMIN` role segregation evidence. Non-synthetic passkey operations, hardware attestation policy, enterprise recovery runbooks, and production deployment evidence remain out of scope for this lab slice.
-- Customer transfer retry/failure, customer transfer history/held-status, customer held/failed status parity, customer complaint entry, customer complaint confirmation, staff customer change approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and the first complaint/FDS/AML/reconciliation workflow failure-states have browser evidence; complaint answer/failure, ops reconciliation adjustment/failure, audit hash-chain read-model, and FDS/AML risk command/failure paths have live Keycloak evidence. Temporal workflow orchestration still needs broader browser evidence.
-- Node retirement remains blocked until all mapped parity scenarios and final review gates pass.
+- Customer transfer retry/failure, customer transfer history/held-status, customer held/failed status parity, customer complaint entry, customer complaint confirmation, staff privileged unmask, staff customer change approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states have browser evidence; complaint answer/failure, ops reconciliation adjustment/failure, audit hash-chain read-model, and FDS/AML risk command/failure paths also have live Keycloak evidence.
+- Node retirement remains blocked by host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review.

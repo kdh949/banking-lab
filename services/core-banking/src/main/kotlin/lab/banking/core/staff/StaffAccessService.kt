@@ -172,8 +172,12 @@ class StaffAccessService(
         return StaffAccessListResponse(auditEventId = auditEventId, items = transactions)
     }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
-    fun unmaskCustomer(command: PiiUnmaskCommand): StaffUnmaskResponse {
+    fun unmaskCustomer(command: PiiUnmaskCommand): StaffUnmaskResponse =
+        runSerializableStaffAccess {
+            unmaskCustomerInTransaction(command)
+        }
+
+    private fun unmaskCustomerInTransaction(command: PiiUnmaskCommand): StaffUnmaskResponse {
         BankingLabAuthContext.requireActor(command.requestedBy, command.actorRole)
         requireReason(command.reason, "PII_UNMASK_REQUESTED requires a business reason")
         val customer = customer(command.customerId)

@@ -34,4 +34,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the durable outbox crash-before-mark-published failure drill for the current Redpanda-backed event path. Node retirement remains blocked until full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes and broader database/process-failure variants, non-synthetic passkey operations, and final retirement review are complete.
+This closes the durable outbox crash-before-mark-published failure drill for the current Redpanda-backed event path. Node retirement remains blocked until host crash shapes and broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

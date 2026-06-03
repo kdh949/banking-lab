@@ -7,6 +7,7 @@ test("QA evidence review keeps Node retirement blocked until target parity is pr
   const recommendation = await readFile("docs/architecture/qa-evidence-node-retirement-recommendation.md", "utf8");
 
   assert.equal(gate.status, "blocked");
+  assert.equal(gate.requiredGates.find((item) => item.id === "api-backed-channel-parity")?.status, "pass");
   assert.match(recommendation, /Keep the Node reference runtime/);
   assert.match(recommendation, /All 42 mapped parity scenarios pass/);
 });

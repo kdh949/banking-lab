@@ -93,4 +93,4 @@ The first live server restart attempt failed because the test-managed `docker co
 
 ## Retirement Impact
 
-This closes a representative live Compose Temporal server process restart drill for the synthetic complaint-answer workflow contract. The later PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`. Node retirement remains blocked until full Node reference parity, remaining workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review are complete.
+This closes a representative live Compose Temporal server process restart drill for the synthetic complaint-answer workflow contract. The later PostgreSQL restart drill is recorded in `docs/test-evidence/temporal-postgres-restart-drill.md`. Node retirement remains blocked until host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review are complete.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T21:32:41.380Z",
+  "generatedAt": "2026-06-03T04:25:23.549Z",
   "scope": "Bank-grade Core Banking Lab Evidence Pack",
   "syntheticOnly": true,
   "totalChecks": 38,
@@ -54,7 +54,7 @@
     {
       "phase": "Phase 6",
       "scope": "Phase 6 FDS AML Reconciliation",
-      "generatedAt": "2026-06-01T21:32:41.380Z",
+      "generatedAt": "2026-06-03T04:25:23.549Z",
       "totalChecks": 8,
       "passedChecks": 8,
       "failedChecks": [],

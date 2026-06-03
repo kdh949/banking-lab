@@ -1466,3 +1466,29 @@ Remaining blockers:
 
 - All direct Node reference suites are now target-backed, but Node retirement remains blocked.
 - Remaining blockers are broader workflow/failure-state channel parity, host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, and final retirement review.
+
+## 2026-06-03: API-backed Channel Parity Gate Closure
+
+Changes completed:
+
+- Moved staff privileged unmask onto the bounded SERIALIZABLE staff-access retry path so parallel API-backed channel smoke does not leak transient audit hash-chain conflicts as HTTP 500s.
+- Re-ran the targeted staff-terminal privileged unmask smoke against a fresh Spring/PostgreSQL Compose stack.
+- Re-ran the full API-backed six-channel Playwright suite against the same fresh Spring API.
+- Updated the Node retirement gate, QA recommendation, API-backed channel evidence, evidence gap report, parity coverage matrix, and frontend channel notes to close the `api-backed-channel-parity` gate while keeping Node retirement blocked.
+- Added a QA evidence regression assertion so the channel gate cannot drift back to `in-progress` without a test failure.
+
+Verification:
+
+- Initial sandboxed `env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npm run test:e2e` failed before test execution because the sandbox blocked local Next.js listener creation on port `3001`.
+- The approved full API-backed Playwright run initially exposed a staff-terminal privileged unmask HTTP 500 under parallel channel load, while a direct branch denial plus manager unmask API call still returned expected 403/200 responses.
+- `scripts/run-core-banking-tests.sh :services:core-banking:bootJar` passed under the approved execution path after the retry fix.
+- `env COMPOSE_PROJECT_NAME=banking-lab-channel-gate-smoke BANKING_LAB_POSTGRES_PORT=15480 BANKING_LAB_CORE_BANKING_PORT=18132 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres core-banking` passed with a fresh seed DB.
+- `curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18132/health` returned `status=ok`, `syntheticOnly=true`, and `auditHashChainValid=true`.
+- `env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "privileged unmask"` passed 1 Chromium Playwright test.
+- `env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npm run test:e2e` passed 35 tests with 7 Keycloak-dependent tests skipped because no Keycloak URL was configured for this simulator-token run.
+- Post-smoke `curl -fsS http://127.0.0.1:18132/health` returned `auditHashChainValid=true`.
+
+Remaining blockers:
+
+- The current API-backed channel parity gate is now closed, but Node retirement remains blocked.
+- Remaining blockers are host crash shapes, broader database/process-failure variants, non-synthetic passkey operations, evidence-refresh completion, and final retirement review.
