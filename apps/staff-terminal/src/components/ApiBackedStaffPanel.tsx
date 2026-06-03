@@ -17,6 +17,7 @@ type ApiState =
   | { readonly status: "failed"; readonly message: string };
 
 type CommandState =
+  | { readonly status: "disabled" }
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | {
@@ -28,6 +29,7 @@ type CommandState =
   | { readonly status: "failed"; readonly message: string };
 
 type UnmaskState =
+  | { readonly status: "disabled" }
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | {
@@ -100,6 +102,7 @@ type OidcIntent = "staff" | "checker" | "webauthn";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
+const simulatorTokenSmokesEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED !== "false";
 const reason = "API-backed channel parity smoke";
 const changeCustomerId = "SYN-CUS-CMD-001";
 const oidcStateKey = "bankingLabStaffOidcState";
@@ -109,9 +112,15 @@ const oidcIntentKey = "bankingLabStaffOidcIntent";
 const storedStaffLoginKey = "bankingLabStaffKeycloakLogin";
 
 export function ApiBackedStaffPanel() {
-  const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
-  const [commandState, setCommandState] = useState<CommandState>({ status: "idle" });
-  const [unmaskState, setUnmaskState] = useState<UnmaskState>({ status: "idle" });
+  const [state, setState] = useState<ApiState>(() =>
+    apiBaseUrl && simulatorTokenSmokesEnabled ? { status: "loading" } : { status: "offline" }
+  );
+  const [commandState, setCommandState] = useState<CommandState>(() =>
+    simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
+  const [unmaskState, setUnmaskState] = useState<UnmaskState>(() =>
+    simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
   const [keycloakStaffState, setKeycloakStaffState] = useState<StaffKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -125,7 +134,7 @@ export function ApiBackedStaffPanel() {
   const [keycloakUnmaskState, setKeycloakUnmaskState] = useState<KeycloakUnmaskState>({ status: "idle" });
 
   useEffect(() => {
-    if (!apiBaseUrl) {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
       return;
     }
     let cancelled = false;
@@ -334,7 +343,7 @@ export function ApiBackedStaffPanel() {
   };
 
   const runCustomerChangeSmoke = async () => {
-    if (!apiBaseUrl || commandState.status === "running") {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || commandState.status === "running") {
       return;
     }
     setCommandState({ status: "running" });
@@ -402,7 +411,7 @@ export function ApiBackedStaffPanel() {
   };
 
   const runUnmaskSmoke = async () => {
-    if (!apiBaseUrl || unmaskState.status === "running") {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || unmaskState.status === "running") {
       return;
     }
     setUnmaskState({ status: "running" });
@@ -570,7 +579,11 @@ export function ApiBackedStaffPanel() {
         </div>
       </dl>
       <div className="api-actions" data-testid="api-backed-staff-change-command">
-        <button type="button" onClick={runCustomerChangeSmoke} disabled={!apiBaseUrl || commandState.status === "running"}>
+        <button
+          type="button"
+          onClick={runCustomerChangeSmoke}
+          disabled={!apiBaseUrl || !simulatorTokenSmokesEnabled || commandState.status === "running"}
+        >
           Run customer change smoke
         </button>
         <dl>
@@ -611,7 +624,11 @@ export function ApiBackedStaffPanel() {
         </dl>
       </div>
       <div className="api-actions" data-testid="api-backed-staff-unmask-command">
-        <button type="button" onClick={runUnmaskSmoke} disabled={!apiBaseUrl || unmaskState.status === "running"}>
+        <button
+          type="button"
+          onClick={runUnmaskSmoke}
+          disabled={!apiBaseUrl || !simulatorTokenSmokesEnabled || unmaskState.status === "running"}
+        >
           Run privileged unmask smoke
         </button>
         <dl>
@@ -877,7 +894,7 @@ export function ApiBackedStaffPanel() {
 
 function statusLabel(state: ApiState): string {
   if (state.status === "offline") {
-    return "API URL not configured";
+    return apiBaseUrl && !simulatorTokenSmokesEnabled ? "simulator token smoke disabled" : "API URL not configured";
   }
   if (state.status === "loading") {
     return "loading";
@@ -889,6 +906,9 @@ function statusLabel(state: ApiState): string {
 }
 
 function commandLabel(state: CommandState): string {
+  if (state.status === "disabled") {
+    return "simulator token smoke disabled";
+  }
   if (state.status === "idle") {
     return "ready";
   }
@@ -902,6 +922,9 @@ function commandLabel(state: CommandState): string {
 }
 
 function unmaskLabel(state: UnmaskState): string {
+  if (state.status === "disabled") {
+    return "simulator token smoke disabled";
+  }
   if (state.status === "idle") {
     return "ready";
   }

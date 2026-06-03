@@ -32,6 +32,8 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   const readinessTest = "tests/passkeyManualReadiness.test.mjs";
   const liveReadinessScript = "scripts/check-passkey-live-platform-readiness.ts";
   const liveReadinessTest = "tests/passkeyLivePlatformReadiness.test.mjs";
+  const staffPanel = "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx";
+  const staffWebAuthnSpec = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
   const verifierScript = "scripts/verify-passkey-non-synthetic-evidence.ts";
   const verifierTest = "tests/passkeyEvidenceVerifier.test.mjs";
 
@@ -45,6 +47,8 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   assert.ok(passkeyGate?.evidence?.includes(readinessTest));
   assert.ok(passkeyGate?.evidence?.includes(liveReadinessScript));
   assert.ok(passkeyGate?.evidence?.includes(liveReadinessTest));
+  assert.ok(passkeyGate?.evidence?.includes(staffPanel));
+  assert.ok(passkeyGate?.evidence?.includes(staffWebAuthnSpec));
   assert.equal(packageJson.scripts["passkey:evidence:verify"], `node --experimental-strip-types ${verifierScript}`);
   assert.ok(passkeyGate?.evidence?.includes(verifierScript));
   assert.ok(passkeyGate?.evidence?.includes(verifierTest));
@@ -58,10 +62,14 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   assert.ok(evidenceRefresh?.evidence?.includes(readinessTest));
   assert.ok(evidenceRefresh?.evidence?.includes(liveReadinessScript));
   assert.ok(evidenceRefresh?.evidence?.includes(liveReadinessTest));
+  assert.ok(evidenceRefresh?.evidence?.includes(staffPanel));
+  assert.ok(evidenceRefresh?.evidence?.includes(staffWebAuthnSpec));
   assert.ok(evidenceRefresh?.evidence?.includes(preflightScript));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/passkeyEvidencePreflight.test.mjs"));
   assert.match(preflight, /manager-webauthn01/);
   assert.match(preflight, /security-admin01/);
   assert.match(preflight, /PASSKEY_RECOVERY_ADMIN/);
+  assert.match(preflight, /NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED/);
+  assert.match(preflight, /simulator token smoke disabled/);
   assert.match(preflight, /Sign in WebAuthn manager with Keycloak/);
 });

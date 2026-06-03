@@ -173,6 +173,8 @@ if (!passkeyGate) {
   evidenceIncludes(passkeyGate, recorderPath);
   evidenceIncludes(passkeyGate, verifierPath);
   evidenceIncludes(passkeyGate, preflightPath);
+  evidenceIncludes(passkeyGate, staffPanelPath);
+  evidenceIncludes(passkeyGate, staffWebAuthnSpecPath);
   evidenceIncludes(passkeyGate, prepareTestPath);
   evidenceIncludes(passkeyGate, readinessTestPath);
   evidenceIncludes(passkeyGate, liveReadinessTestPath);
@@ -191,6 +193,8 @@ if (!evidenceRefreshGate) {
   evidenceIncludes(evidenceRefreshGate, recorderPath);
   evidenceIncludes(evidenceRefreshGate, verifierPath);
   evidenceIncludes(evidenceRefreshGate, preflightPath);
+  evidenceIncludes(evidenceRefreshGate, staffPanelPath);
+  evidenceIncludes(evidenceRefreshGate, staffWebAuthnSpecPath);
   evidenceIncludes(evidenceRefreshGate, prepareTestPath);
   evidenceIncludes(evidenceRefreshGate, readinessTestPath);
   evidenceIncludes(evidenceRefreshGate, liveReadinessTestPath);
@@ -215,6 +219,8 @@ includes(evidenceDoc, "npm run passkey:evidence:readiness", "Passkey evidence do
 includes(evidenceDoc, "npm run passkey:evidence:live-readiness", "Passkey evidence doc must describe the live platform readiness command.");
 includes(evidenceDoc, "npm run passkey:evidence:record", "Passkey evidence doc must keep the recorder command in the manual runbook.");
 includes(evidenceDoc, "npm run passkey:evidence:preflight", "Passkey evidence doc must describe the preflight command.");
+includes(evidenceDoc, "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false", "Passkey evidence doc must disable staff-terminal simulator-token smoke calls for the manual ceremony.");
+includes(evidenceDoc, "simulator token smoke disabled", "Passkey evidence doc must require the staff terminal simulator-token disabled status.");
 for (const envName of [
   "BANKING_LAB_PASSKEY_BROWSER_ORIGIN=http://localhost:3002",
   "BANKING_LAB_PASSKEY_KEYCLOAK_ISSUER=http://localhost:18127/realms/banking-lab",
@@ -432,6 +438,9 @@ if (!securityAdmin) {
 
 const staffPanel = await readFile(staffPanelPath, "utf8").catch(() => "");
 for (const staffMarker of [
+  "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED",
+  "simulatorTokenSmokesEnabled",
+  "simulator token smoke disabled",
   "Sign in WebAuthn manager with Keycloak",
   "keycloakLoginHint",
   "manager-webauthn01",

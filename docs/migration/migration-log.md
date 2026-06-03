@@ -2309,6 +2309,44 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key ceremony and generated redacted artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-03: Staff Terminal Passkey Manual Mode
+
+Changes completed:
+
+- Added `NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false` support to the staff-terminal API-backed panel.
+- When simulator-token smokes are disabled, the staff-terminal no longer attempts the simulator Bearer-token masked lookup, customer-change smoke, or privileged-unmask smoke against a simulator-token-disabled Spring instance.
+- The Keycloak staff/checker/WebAuthn flows remain available; the WebAuthn manager button stays enabled for the real passkey ceremony.
+- Wired the staff-terminal source and WebAuthn Playwright spec into the passkey and evidence-refresh gate evidence lists, and extended passkey preflight to lock the simulator-token-disabled manual mode.
+- Updated passkey evidence boundary and evidence-refresh review with the manual staff-terminal server command and browser inspection result.
+
+Verification:
+
+- Initial sandboxed `NEXT_PUBLIC_BANKING_API_BASE_URL=http://127.0.0.1:18126 NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=http://localhost:18127 BANKING_LAB_KEYCLOAK_BASE_URL=http://localhost:18127 npm run next:staff-terminal` failed because the sandbox could not bind `0.0.0.0:3002`.
+- The same command passed under approved execution and exposed a problem: with Spring simulator tokens disabled, the default simulator-token staff lookup rendered `Banking API request failed with HTTP 401`.
+- `npm run next:staff-terminal:typecheck` passed after the simulator-token-disabled staff-terminal change.
+- `npm run packages:typecheck` passed.
+- `node --test tests/passkeyEvidencePreflight.test.mjs tests/evidenceRefresh.test.mjs` passed.
+- `NEXT_PUBLIC_BANKING_API_BASE_URL=http://127.0.0.1:18126 NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=http://localhost:18127 NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_KEYCLOAK_BASE_URL=http://localhost:18127 npm run next:staff-terminal` passed under approved execution.
+- Browser inspection of `http://localhost:3002` showed `simulator token smoke disabled` for the simulator-token panels and exactly one enabled `Sign in WebAuthn manager with Keycloak` button.
+- `npm run scripts:typecheck` passed.
+- `npm run next:staff-terminal:build` passed.
+- `npm run passkey:evidence:preflight` passed.
+- `npm run evidence:refresh-check` passed.
+- `npm run retirement:audit` passed with blocked status, 64 approved-reference `.mjs` files, 37 target anchors, 336 evidence paths, and 42/42 mapped scenarios.
+- `npm test` passed 131 tests.
+- `npm run node:retirement-gate` passed with blocked status and listed only `non-synthetic-passkey-operations` plus `retirement-review` as incomplete.
+- `npm run goal:completion-audit` passed with `Goal completion audit: not complete`.
+
+Result:
+
+- The future non-synthetic passkey run now has a cleaner staff-terminal manual mode that does not produce simulator-token 401 noise while simulator fallback is disabled.
+- This does not mark Node retirement ready, does not create a passkey artifact, and does not prove non-synthetic passkey operations.
+
+Remaining blockers:
+
+- Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key ceremony and generated redacted artifact.
+- Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
+
 ## 2026-06-03: Passkey Manual Ceremony Evidence Guard
 
 Changes completed:

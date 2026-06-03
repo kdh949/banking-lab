@@ -160,6 +160,14 @@ npm run passkey:evidence:live-readiness
 
 This checks the prepared command template against the live Keycloak discovery document, Keycloak JWKS endpoint, and Spring `/health` response. It requires the discovery issuer and JWKS URI to match the configured local `banking-lab` realm, the authorization-code endpoint to be present, at least one JWKS signing key, and Spring `/health` to return `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`. It still does not prove non-synthetic passkey operations because no real platform-authenticator or hardware-security-key ceremony has been completed.
 
+Start the staff terminal for the manual passkey ceremony with simulator-token smoke calls disabled:
+
+```bash
+NEXT_PUBLIC_BANKING_API_BASE_URL=http://127.0.0.1:18126 NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=http://localhost:18127 NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_KEYCLOAK_BASE_URL=http://localhost:18127 npm run next:staff-terminal
+```
+
+With this mode enabled, the simulator-token staff lookup, customer-change smoke, and privileged-unmask smoke show `simulator token smoke disabled` instead of attempting simulator Bearer tokens against Spring. The `Sign in WebAuthn manager with Keycloak` button remains enabled and is the intended entry point for the real authenticator ceremony.
+
 ## 2026-06-03 Live Platform Readiness Evidence
 
 The following commands were run against an isolated local Compose project before the manual browser ceremony:
@@ -173,6 +181,7 @@ curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18127/
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18126/health
 COMPOSE_PROJECT_NAME=banking-lab-passkey-manual docker compose --profile platform ps postgres keycloak core-banking
 npm run passkey:evidence:live-readiness
+NEXT_PUBLIC_BANKING_API_BASE_URL=http://127.0.0.1:18126 NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=http://localhost:18127 NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_KEYCLOAK_BASE_URL=http://localhost:18127 npm run next:staff-terminal
 ```
 
 Results:
@@ -182,6 +191,8 @@ Results:
 - Spring `/health` returned `status=ok`, `syntheticOnly=true`, `auditHashChainValid=true`, and `migrationTarget=kotlin-spring-boot`.
 - `COMPOSE_PROJECT_NAME=banking-lab-passkey-manual docker compose --profile platform ps postgres keycloak core-banking` showed all three services running, with Postgres healthy and ports `15477`, `18127`, and `18126` published.
 - The first sandboxed `npm run passkey:evidence:live-readiness` attempt failed because Node `fetch` could not reach loopback endpoints from the sandbox. The same command passed under the approved execution path against the live local endpoints.
+- The first sandboxed staff-terminal dev-server start failed because the sandbox could not bind `0.0.0.0:3002`. The approved execution path started `http://localhost:3002` with `NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=false`.
+- Browser inspection of `http://localhost:3002` showed `simulator token smoke disabled` for the simulator-token inquiry/change/unmask panels and exactly one enabled `Sign in WebAuthn manager with Keycloak` button.
 
 This is platform-readiness evidence only. It does not create the generated passkey evidence artifact, does not assert `manual-live-passkey`, and must not be used to mark `non-synthetic-passkey-operations` passed.
 
