@@ -5,13 +5,13 @@ import java.time.OffsetDateTime
 import java.util.LinkedHashMap
 import lab.banking.core.workflow.WorkflowErrors
 
-class ApprovalStore(private val clock: Clock = Clock.systemUTC()) {
+class ApprovalStore(private val clock: Clock = Clock.systemUTC()) : ApprovalServicePort {
     private val approvals = LinkedHashMap<String, OperatorApproval>()
     private val auditEvents = mutableListOf<ApprovalAuditEvent>()
     private var nextApprovalNumber = 1
     private var nextAuditNumber = 1
 
-    fun submit(command: SubmitApprovalCommand): OperatorApproval {
+    override fun submit(command: SubmitApprovalCommand): OperatorApproval {
         requireNonBlank(command.businessType, "businessType")
         requireNonBlank(command.businessReferenceId, "businessReferenceId")
         requireNonBlank(command.requestedBy, "requestedBy")
@@ -51,7 +51,7 @@ class ApprovalStore(private val clock: Clock = Clock.systemUTC()) {
         return approval
     }
 
-    fun approve(approvalId: String, command: ApproveApprovalCommand): OperatorApproval {
+    override fun approve(approvalId: String, command: ApproveApprovalCommand): OperatorApproval {
         requireNonBlank(command.approvedBy, "approvedBy")
         val approval = approval(approvalId)
         if (approval.status != ApprovalStatus.PENDING) {
@@ -78,7 +78,7 @@ class ApprovalStore(private val clock: Clock = Clock.systemUTC()) {
         return approved
     }
 
-    fun reject(approvalId: String, command: RejectApprovalCommand): OperatorApproval {
+    override fun reject(approvalId: String, command: RejectApprovalCommand): OperatorApproval {
         requireNonBlank(command.rejectedBy, "rejectedBy")
         requireNonBlank(command.rejectReason, "rejectReason")
         val approval = approval(approvalId)
@@ -104,12 +104,12 @@ class ApprovalStore(private val clock: Clock = Clock.systemUTC()) {
         return rejected
     }
 
-    fun approval(approvalId: String): OperatorApproval =
+    override fun approval(approvalId: String): OperatorApproval =
         approvals[approvalId] ?: throw WorkflowErrors.notFound("approval not found: $approvalId")
 
-    fun list(): List<OperatorApproval> = approvals.values.toList()
+    override fun list(): List<OperatorApproval> = approvals.values.toList()
 
-    fun auditEvents(): List<ApprovalAuditEvent> = auditEvents.toList()
+    override fun auditEvents(): List<ApprovalAuditEvent> = auditEvents.toList()
 
     private fun appendAudit(
         eventType: String,

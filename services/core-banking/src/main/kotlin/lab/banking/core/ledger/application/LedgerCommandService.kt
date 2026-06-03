@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 import lab.banking.core.approval.ApprovalBusinessTypes
+import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.common.BankingLabDomainException
 import lab.banking.core.ledger.domain.BANK_SUSPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.DailyClosingDto
@@ -27,7 +28,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class LedgerCommandService(
     private val jdbc: NamedParameterJdbcTemplate,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val auditEvents: AuditEventAppender
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun deposit(command: DepositCommand): LedgerCommandResult =
@@ -728,40 +730,16 @@ class LedgerCommandService(
         reason: String?,
         payload: Map<String, Any?>
     ) {
-        val payloadJson = objectMapper.writeValueAsString(payload)
-        val previousHash = jdbc.query(
-            """
-            SELECT payload_hash
-            FROM audit_events
-            ORDER BY created_at DESC, audit_event_id DESC
-            LIMIT 1
-            """.trimIndent(),
-            emptyMap<String, Any?>()
-        ) { rs, _ -> rs.getString("payload_hash") }.firstOrNull()
-        jdbc.update(
-            """
-            INSERT INTO audit_events (
-              audit_event_id, event_type, actor_type, actor_id, actor_role, screen_id,
-              business_reference_id, account_id, reason, payload_hash, previous_event_hash, payload_json
-            )
-            VALUES (
-              :auditEventId, :eventType, 'STAFF', :actorId, :actorRole, :screenId,
-              :businessReferenceId, :accountId, :reason, :payloadHash, :previousHash, CAST(:payload AS jsonb)
-            )
-            """.trimIndent(),
-            mapOf(
-                "auditEventId" to "AUD-${UUID.randomUUID()}",
-                "eventType" to eventType,
-                "actorId" to actorId,
-                "actorRole" to actorRole,
-                "screenId" to screenId,
-                "businessReferenceId" to businessReferenceId,
-                "accountId" to accountId,
-                "reason" to reason,
-                "payloadHash" to sha256("${previousHash.orEmpty()}:$payloadJson"),
-                "previousHash" to previousHash,
-                "payload" to payloadJson
-            )
+        auditEvents.append(
+            eventType = eventType,
+            actorType = "STAFF",
+            actorId = actorId,
+            actorRole = actorRole,
+            screenId = screenId,
+            businessReferenceId = businessReferenceId,
+            accountId = accountId,
+            reason = reason,
+            payload = payload
         )
     }
 

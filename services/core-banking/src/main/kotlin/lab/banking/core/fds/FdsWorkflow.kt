@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApprovalStatus
-import lab.banking.core.approval.ApprovalStore
+import lab.banking.core.approval.ApprovalServicePort
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.ledger.application.InternalTransferCommand
@@ -77,7 +77,7 @@ data class FdsBlockExecution(
     val transfer: HeldTransfer
 )
 
-class FdsWorkflow(private val approvalStore: ApprovalStore, private val clock: Clock = Clock.systemUTC()) {
+class FdsWorkflow(private val approvalStore: ApprovalServicePort, private val clock: Clock = Clock.systemUTC()) {
     private var nextCaseNumber = 1
 
     fun holdTransfer(

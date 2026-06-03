@@ -66,6 +66,23 @@ class OutboxEventRepository(
             this::mapOutboxEvent
         ) ?: throw IllegalArgumentException("outbox event not found: $outboxEventId")
 
+    fun findNextPublishableForUpdate(): OutboxEventRecord? =
+        jdbc.query(
+            """
+            SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+                   payload_json, headers_json, status, retry_count, next_retry_at,
+                   created_at, published_at, error_message
+            FROM outbox_events
+            WHERE status = 'PENDING'
+               OR (status = 'FAILED' AND (next_retry_at IS NULL OR next_retry_at <= now()))
+            ORDER BY created_at ASC, outbox_event_id ASC
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """.trimIndent(),
+            emptyMap<String, Any?>(),
+            this::mapOutboxEvent
+        ).firstOrNull()
+
     fun markPublished(outboxEventId: String) {
         jdbc.update(
             """

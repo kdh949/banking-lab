@@ -5,6 +5,23 @@ banking-lab:
   synthetic-only: true
   node-reference-runtime-retained: true
   migration-target: kotlin-spring-boot
+  security:
+    enabled: ${BANKING_LAB_SECURITY_ENABLED:false}
+    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:true}
+    jwt:
+      jwks-uri: ${BANKING_LAB_SECURITY_JWKS_URI:}
+      issuer: ${BANKING_LAB_SECURITY_ISSUER:}
+      audience: ${BANKING_LAB_SECURITY_AUDIENCE:}
+  synthetic-seed:
+    enabled: ${BANKING_LAB_SYNTHETIC_SEED_ENABLED:false}
+  cors:
+    allowed-origins: ${BANKING_LAB_CORS_ALLOWED_ORIGINS:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006}
+  temporal:
+    target: ${BANKING_LAB_TEMPORAL_TARGET:127.0.0.1:7233}
+    namespace: ${BANKING_LAB_TEMPORAL_NAMESPACE:default}
+    task-queue: ${BANKING_LAB_TEMPORAL_TASK_QUEUE:banking-case-workflows}
+    worker:
+      enabled: ${BANKING_LAB_TEMPORAL_WORKER_ENABLED:false}
 
 spring:
   application:
@@ -16,3 +33,28 @@ spring:
   flyway:
     enabled: true
     locations: ${BANKING_LAB_FLYWAY_LOCATIONS:filesystem:db/migrations,filesystem:../../db/migrations}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    enabled: ${BANKING_LAB_TRACING_ENABLED:false}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${BANKING_LAB_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      export:
+        enabled: ${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:false}
+      endpoint: ${BANKING_LAB_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${BANKING_LAB_OTEL_SERVICE_NAME:banking-lab-core-banking}
+      synthetic.only: "true"
+
+logging:
+  pattern:
+    correlation: "[trace_id=%X{traceId:-} span_id=%X{spanId:-}] "

@@ -27,9 +27,12 @@ export JAVA_HOME="${SELECTED_JAVA_HOME}"
 export PATH="${JAVA_HOME}/bin:${PATH}"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-${ROOT_DIR}/.gradle}"
 
-GRADLE_ARGS=("$@")
+GRADLE_ARGS=()
+if [[ "$#" -gt 0 ]]; then
+  GRADLE_ARGS=("$@")
+fi
 HAS_EXPLICIT_TASK="false"
-for ARG in "${GRADLE_ARGS[@]}"; do
+for ARG in "${GRADLE_ARGS[@]:-}"; do
   if [[ "${ARG}" == :* ]]; then
     HAS_EXPLICIT_TASK="true"
     break
@@ -37,7 +40,7 @@ for ARG in "${GRADLE_ARGS[@]}"; do
 done
 
 if [[ "$#" -eq 0 || "${HAS_EXPLICIT_TASK}" == "false" ]]; then
-  GRADLE_ARGS=(:services:core-banking:test :services:core-banking:integrationTest "${GRADLE_ARGS[@]}")
+  GRADLE_ARGS=(:services:core-banking:test :services:core-banking:integrationTest "${GRADLE_ARGS[@]:-}")
 fi
 
 echo "JAVA_HOME=${JAVA_HOME}"
