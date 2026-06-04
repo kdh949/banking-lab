@@ -18,6 +18,7 @@ import lab.banking.core.fds.FdsCaseService
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.application.ReversalCommand
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.product.DepositProductService
 import lab.banking.core.reconciliation.ReconciliationOpsService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
@@ -43,6 +44,7 @@ class StaffAccessService(
     private val amlCaseService: AmlCaseService,
     private val reconciliationOpsService: ReconciliationOpsService,
     private val ledgerCommandService: LedgerCommandService,
+    private val depositProductService: DepositProductService,
     private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -754,6 +756,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val depositRateChangeExecution = if (approval.businessType == ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE) {
+            depositProductService.applyApprovedRateChange(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -765,7 +772,8 @@ class StaffAccessService(
                 transferLimitExecution != null ||
                 kycExecution != null ||
                 feeWaiverExecution != null ||
-                transactionCorrectionExecution != null,
+                transactionCorrectionExecution != null ||
+                depositRateChangeExecution != null,
             customer = customer,
             account = accountHoldExecution?.second ?: feeWaiverExecution?.second ?: transactionCorrectionExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
@@ -775,6 +783,7 @@ class StaffAccessService(
             kycReviewRequest = kycExecution?.first,
             feeWaiverRequest = feeWaiverExecution?.first,
             transactionCorrectionRequest = transactionCorrectionExecution?.first,
+            depositRateChangeRequest = depositRateChangeExecution,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
@@ -800,7 +809,8 @@ class StaffAccessService(
         }
         if (
             pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER &&
-            pendingApproval.businessType != ApprovalBusinessTypes.TRANSACTION_CORRECTION
+            pendingApproval.businessType != ApprovalBusinessTypes.TRANSACTION_CORRECTION &&
+            pendingApproval.businessType != ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
         }
@@ -831,11 +841,17 @@ class StaffAccessService(
         } else {
             null
         }
+        val depositRateChangeRequest = if (pendingApproval.businessType == ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE) {
+            depositProductService.rejectRateChange(approval)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
             feeWaiverRequest = feeWaiverRequest,
-            transactionCorrectionRequest = transactionCorrectionRequest
+            transactionCorrectionRequest = transactionCorrectionRequest,
+            depositRateChangeRequest = depositRateChangeRequest
         )
     }
 
@@ -916,6 +932,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW -> CUSTOMER_KYC_REVIEW_CHECKER_ROLES
             ApprovalBusinessTypes.FEE_WAIVER -> FEE_WAIVER_CHECKER_ROLES
             ApprovalBusinessTypes.TRANSACTION_CORRECTION -> TRANSACTION_CORRECTION_CHECKER_ROLES
+            ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE -> PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -2590,5 +2607,6 @@ class StaffAccessService(
         val FEE_WAIVER_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val TRANSACTION_CORRECTION_REQUEST_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER")
         val TRANSACTION_CORRECTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+        val PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

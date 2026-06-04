@@ -8,6 +8,7 @@ import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.complaint.ComplaintCaseDto
 import lab.banking.core.fds.FdsCaseDto
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.product.DepositRateChangeRequestDto
 import lab.banking.core.reconciliation.ReconciliationItemDto
 
 data class StaffAccessItemResponse<T>(
@@ -284,6 +285,7 @@ data class StaffApprovalExecutionResponse(
     val kycReviewRequest: CustomerKycReviewRequestDto?,
     val feeWaiverRequest: FeeWaiverRequestDto?,
     val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
+    val depositRateChangeRequest: DepositRateChangeRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
@@ -295,7 +297,8 @@ data class StaffApprovalRejectionResponse(
     val item: OperatorApproval,
     val rejected: Boolean,
     val feeWaiverRequest: FeeWaiverRequestDto?,
-    val transactionCorrectionRequest: TransactionCorrectionRequestDto?
+    val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
+    val depositRateChangeRequest: DepositRateChangeRequestDto?
 )
 
 data class StaffCustomerRecord(

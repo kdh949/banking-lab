@@ -7,6 +7,8 @@ import {
   type AccountHoldRequestResponse,
   type AuditEventDto,
   type CustomerKycReviewRequestResponse,
+  type DepositProductListResponse,
+  type DepositRateChangeRequestResponse,
   type FeeWaiverRequestResponse,
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
@@ -127,6 +129,18 @@ type TransactionCorrectionApiState =
       readonly execution: StaffApprovalExecutionResponse;
     }
   | { readonly status: "failed"; readonly message: string };
+type DepositProductApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly products: DepositProductListResponse;
+      readonly request: DepositRateChangeRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
 
 const dashboardScreenId = "WRK-001";
 const fallbackReasonField: ManifestField = {
@@ -157,6 +171,8 @@ const sampleValues: Record<string, string> = {
   payloadHash: "hash:synthetic",
   posting: "balanced",
   previousEventHash: "hash:previous",
+  productId: "DP-SYN-SAVINGS",
+  requestedAnnualRateBps: "425",
   riskGrade: "LOW",
   status: "ACTIVE",
   transactionId: "TX-SYN-0001",
@@ -168,7 +184,9 @@ const apiBackedEndpointFragments = [
   "/api/approvals",
   "/api/staff/accounts/",
   "/api/staff/customers/",
+  "/api/staff/products/",
   "/api/staff/transactions/",
+  "/api/products/deposits",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
   "/api/staff/complaints",
@@ -766,6 +784,9 @@ function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   }
   if (manifest.screenId === "LED-103") {
     return <TransactionCorrectionCommandApiPanel manifest={manifest} />;
+  }
+  if (manifest.screenId === "PRD-102") {
+    return <DepositRateChangeCommandApiPanel manifest={manifest} />;
   }
   return null;
 }
@@ -1520,6 +1541,136 @@ function TransactionCorrectionCommandApiPanel({ manifest }: { readonly manifest:
   );
 }
 
+function DepositRateChangeCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<DepositProductApiState>(() => initialDepositProductApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    const effectiveFrom = new Date().toISOString().slice(0, 10);
+    try {
+      const makerClient = createStaffCommandClient("opsmanager01", ["OPS_MANAGER"]);
+      const selfCheckerClient = createStaffCommandClient("opsmanager01", ["OPS_MANAGER"]);
+      const checkerClient = createStaffCommandClient("compliance01", ["COMPLIANCE_MANAGER"]);
+      const products = await makerClient.depositProducts(effectiveFrom);
+      const productId = products.items[0]?.productId;
+      if (!productId) {
+        throw new Error("deposit product seed data is missing");
+      }
+      const request = await makerClient.requestDepositRateChange(productId, {
+        requestedBy: "opsmanager01",
+        actorRole: "OPS_MANAGER",
+        requestedAnnualRateBps: 425,
+        effectiveFrom,
+        reason: "Browser deposit rate parameter smoke",
+        idempotencyKey: `BROWSER-RATE-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(request.approval?.approvalId ?? "", {
+          approvedBy: "opsmanager01",
+          approvedByRole: "OPS_MANAGER",
+          screenId: "PRD-102"
+        });
+        throw new Error("deposit rate self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const execution = await checkerClient.approveStaffApproval(request.approval?.approvalId ?? "", {
+        approvedBy: "compliance01",
+        approvedByRole: "COMPLIANCE_MANAGER",
+        screenId: "PRD-102"
+      });
+
+      setState({
+        status: "completed",
+        products,
+        request,
+        selfApprovalCode,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Deposit Rate Parameter"
+      icon="settings"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-deposit-rate-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{depositProductStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs PRD102 product rate request and checker-approved version change against Spring APIs."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run deposit rate smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Products</dt>
+                <dd>{state.products.items.length}</dd>
+              </div>
+              <div>
+                <dt>Product</dt>
+                <dd>{state.request.item.productId}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.request.approval?.businessType ?? state.execution.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Request</dt>
+                <dd>{state.execution.depositRateChangeRequest?.status ?? state.request.item.status}</dd>
+              </div>
+              <div>
+                <dt>Rate bps</dt>
+                <dd>{state.execution.depositRateChangeRequest?.requestedAnnualRateBps ?? state.request.item.requestedAnnualRateBps}</dd>
+              </div>
+              <div>
+                <dt>Rate version</dt>
+                <dd>{state.execution.depositRateChangeRequest?.appliedRateVersionId ?? "pending"}</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "rate version applied" : "not executed"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
 export function CaseScreenRenderer({
   manifest,
   allManifests,
@@ -2197,6 +2348,16 @@ function initialTransactionCorrectionApiState(): TransactionCorrectionApiState {
   return { status: "idle" };
 }
 
+function initialDepositProductApiState(): DepositProductApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -2341,6 +2502,22 @@ function transactionCorrectionStatusLabel(state: TransactionCorrectionApiState):
     return "transaction correction API failed";
   }
   return "transaction correction reversed";
+}
+
+function depositProductStatusLabel(state: DepositProductApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "deposit product API ready";
+  }
+  if (state.status === "running") {
+    return "deposit product API running";
+  }
+  if (state.status === "failed") {
+    return "deposit product API failed";
+  }
+  return "deposit rate version applied";
 }
 
 function errorMessage(error: unknown): string {

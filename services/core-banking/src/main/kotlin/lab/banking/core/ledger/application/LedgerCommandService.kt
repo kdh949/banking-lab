@@ -234,6 +234,42 @@ class LedgerCommandService(
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun interestPosting(command: InterestPostingCommand): LedgerCommandResult =
+        postLedgerCommand("INTEREST_POSTING", command.idempotencyKey, command) {
+            requireNonBlank(command.reason, "reason")
+            if (command.credits.isEmpty()) {
+                throw ledgerValidation("credits must contain at least one account interest line")
+            }
+            val groupedCredits = command.credits
+                .groupBy { it.accountId }
+                .mapValues { (_, lines) -> lines.sumOf { it.amountMinor } }
+                .filterValues { it > 0 }
+                .toSortedMap()
+            if (groupedCredits.isEmpty()) {
+                throw ledgerValidation("credits must contain positive interest amountMinor values")
+            }
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankSuspenseAccount(command.currency)
+            lockActiveAccounts(listOf(BANK_SUSPENSE_ACCOUNT_ID) + groupedCredits.keys)
+            val totalInterestMinor = groupedCredits.values.sum()
+            createPostedTransaction(
+                transactionType = "INTEREST_POSTING",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.businessReferenceId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = listOf(
+                    LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.DEBIT, totalInterestMinor, command.currency, "INTEREST")
+                ) + groupedCredits.map { (accountId, amountMinor) ->
+                    LedgerPostingInput(accountId, PostingDirection.CREDIT, amountMinor, command.currency, "INTEREST")
+                }
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun closeBusinessDay(command: DailyClosingCommand): DailyClosingResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(command.idempotencyKey)
@@ -294,6 +330,10 @@ class LedgerCommandService(
             Int::class.java
         ) ?: 0
 
+    @Transactional(readOnly = true)
+    fun transaction(transactionId: String): LedgerTransactionDto? =
+        findTransaction(transactionId)
+
     private fun postLedgerCommand(commandType: String, idempotencyKey: String, command: Any, create: () -> String): LedgerCommandResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(idempotencyKey)
@@ -314,6 +354,7 @@ class LedgerCommandService(
             eventType = when (commandType) {
                 "REVERSAL" -> "LedgerTransactionReversed"
                 "ADJUSTMENT" -> "AdjustmentPosted"
+                "INTEREST_POSTING" -> "InterestPosted"
                 else -> "LedgerTransactionPosted"
             },
             idempotencyKey = idempotencyKey,
@@ -792,6 +833,7 @@ class LedgerCommandService(
             "INTERNAL_TRANSFER" -> "TX-TRF"
             "REVERSAL" -> "TX-REV"
             "ADJUSTMENT" -> "TX-ADJ"
+            "INTEREST_POSTING" -> "TX-INT"
             else -> "TX-LED"
         } + "-${UUID.randomUUID().toString().uppercase()}"
 

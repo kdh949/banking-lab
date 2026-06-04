@@ -116,7 +116,7 @@ Show:
 
 - API-backed, manifest-only, partial, and missing classifications
 - remaining product, analytics, formal, platform, and operations evidence gaps
-- product/fee/interest module gap
+- fee policy and fee posting gap after the first deposit product/interest slice
 - Python/DuckDB analytics gap
 - formal TLC gap
 - Kubernetes/Helm validation and load or backup/restore drill gap

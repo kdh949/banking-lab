@@ -69,6 +69,7 @@ class BankingLabAuthorizationFilter(
         val path = request.requestURI
         return when {
             path.startsWith("/api/customer/") -> setOf("CUSTOMER")
+            path.startsWith("/api/products/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -167,6 +168,10 @@ class BankingLabAuthorizationFilter(
     private fun screenId(path: String): String =
         when {
             path.startsWith("/api/staff/approvals") -> "APR-201"
+            path.startsWith("/api/products/deposits") -> "PRD-101"
+            path.startsWith("/api/staff/products/deposits") -> "PRD-102"
+            path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
+            path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"

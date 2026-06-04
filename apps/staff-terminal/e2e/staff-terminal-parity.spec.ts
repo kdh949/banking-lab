@@ -152,6 +152,12 @@ test("staff terminal renders command and maker-checker approval screens without 
   await expect(page.getByRole("heading", { name: "Transaction Correction Request" })).toBeVisible();
   await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
   await expect(page.getByTestId("manifest-transaction-correction-api-panel")).toBeAttached();
+
+  await page.getByLabel("Transaction code search").fill("PRD102");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Deposit Rate Change Request" })).toBeVisible();
+  await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
+  await expect(page.getByTestId("manifest-deposit-rate-api-panel")).toBeAttached();
 });
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
@@ -301,6 +307,22 @@ test("staff terminal LED103 executes Spring API-backed transaction correction re
   await expect(panel).toContainText("TX-SYN-CORR-001");
   await expect(panel).toContainText("REVERSAL");
   await expect(panel).toContainText("ledgerSourceRowsMutated=false");
+});
+
+test("staff terminal PRD102 executes Spring API-backed deposit rate change approval when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed deposit rate change command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=PRD-102`);
+
+  const panel = page.getByTestId("manifest-deposit-rate-api-panel");
+  await expect(panel).toContainText("deposit product API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run deposit rate smoke" }).click();
+  await expect(panel).toContainText("deposit rate version applied", { timeout: 20_000 });
+  await expect(panel).toContainText("PRODUCT_PARAMETER_CHANGE");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("DP-SYN-SAVINGS");
+  await expect(panel).toContainText("APPLIED");
 });
 
 test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {
