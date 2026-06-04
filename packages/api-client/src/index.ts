@@ -1054,6 +1054,85 @@ export interface CardLossReportCommand {
   readonly reason?: string | null;
 }
 
+export interface ParameterVersionDto {
+  readonly namespace: string;
+  readonly parameterVersionId: string;
+  readonly parameterKey: string;
+  readonly parameterValue: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly effectiveTo?: string | null;
+  readonly approvalId?: string | null;
+  readonly createdBy: string;
+  readonly approvedAt?: string | null;
+  readonly rollbackOfVersionId?: string | null;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterValueDto {
+  readonly namespace: string;
+  readonly parameterKey: string;
+  readonly currentValue: string;
+  readonly currentVersionId: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly scheduled: readonly ParameterVersionDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ParameterValueDto[];
+}
+
+export interface ParameterHistoryResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ParameterVersionDto[];
+}
+
+export interface ParameterChangeRequestCommand {
+  readonly parameterKey: string;
+  readonly scheduledValue?: unknown;
+  readonly effectiveFrom?: string | null;
+  readonly effectiveAt?: string | null;
+  readonly rollbackOfVersionId?: string | null;
+  readonly rollbackPlan: string;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface ParameterChangeRequestDto {
+  readonly requestId: string;
+  readonly namespace: string;
+  readonly parameterKey: string;
+  readonly businessType: string;
+  readonly approvalId: string;
+  readonly requestedValue: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly rollbackPlan: string;
+  readonly rollbackOfVersionId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly idempotencyKey: string;
+  readonly appliedVersionId?: string | null;
+  readonly appliedAt?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterChangeRequestResponse {
+  readonly item: ParameterChangeRequestDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -1282,6 +1361,14 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
   if (!fetchImpl) {
     throw new Error("A fetch implementation is required for Banking API calls.");
   }
+  const parameterQuery = (reason: string, asOf?: string): Record<string, string> =>
+    asOf ? { reason, asOf } : { reason };
+  const getParameters = (path: string, reason: string, asOf?: string) =>
+    request<ParameterListResponse>(fetchImpl, baseUrl, path, parameterQuery(reason, asOf), options.bearerToken);
+  const getParameterHistory = (path: string, reason: string) =>
+    request<ParameterHistoryResponse>(fetchImpl, baseUrl, path, { reason }, options.bearerToken);
+  const requestParameterChange = (path: string, command: ParameterChangeRequestCommand) =>
+    request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
 
   return {
     staffCustomerDetail(customerId: string, reason: string) {
@@ -1660,6 +1747,66 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         options.bearerToken,
         { method: "POST", body: command }
       );
+    },
+
+    reconciliationParameters(reason: string, asOf?: string) {
+      return getParameters("/api/ops/parameters/reconciliation", reason, asOf);
+    },
+
+    reconciliationParameterHistory(reason: string) {
+      return getParameterHistory("/api/ops/parameters/reconciliation/history", reason);
+    },
+
+    requestReconciliationParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/ops/parameters/reconciliation/change-requests", command);
+    },
+
+    auditParameters(reason: string, asOf?: string) {
+      return getParameters("/api/staff/audit-parameters", reason, asOf);
+    },
+
+    auditParameterHistory(reason: string) {
+      return getParameterHistory("/api/staff/audit-parameters/history", reason);
+    },
+
+    requestAuditParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/staff/audit-parameters/change-requests", command);
+    },
+
+    fdsParameters(reason: string, asOf?: string) {
+      return getParameters("/api/staff/fds-parameters", reason, asOf);
+    },
+
+    fdsParameterHistory(reason: string) {
+      return getParameterHistory("/api/staff/fds-parameters/history", reason);
+    },
+
+    requestFdsParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/staff/fds-parameters/change-requests", command);
+    },
+
+    securityParameters(reason: string, asOf?: string) {
+      return getParameters("/api/admin/platform/security-parameters", reason, asOf);
+    },
+
+    securityParameterHistory(reason: string) {
+      return getParameterHistory("/api/admin/platform/security-parameters/history", reason);
+    },
+
+    requestSecurityParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/admin/platform/security-parameters/change-requests", command);
+    },
+
+    authorizationParameters(reason: string, asOf?: string) {
+      return getParameters("/api/admin/platform/authorization-parameters", reason, asOf);
+    },
+
+    authorizationParameterHistory(reason: string) {
+      return getParameterHistory("/api/admin/platform/authorization-parameters/history", reason);
+    },
+
+    requestAuthorizationParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/admin/platform/authorization-parameters/change-requests", command);
     },
 
     unmaskStaffCustomer(command: PiiUnmaskCommand) {

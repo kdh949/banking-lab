@@ -20,6 +20,7 @@ import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.application.ReversalCommand
 import lab.banking.core.ledger.domain.LedgerCommandResult
 import lab.banking.core.loan.LoanService
+import lab.banking.core.parameters.ParameterAdminService
 import lab.banking.core.product.DepositProductService
 import lab.banking.core.product.FeePolicyService
 import lab.banking.core.reconciliation.ReconciliationOpsService
@@ -50,6 +51,7 @@ class StaffAccessService(
     private val loanService: LoanService,
     private val depositProductService: DepositProductService,
     private val feePolicyService: FeePolicyService,
+    private val parameterAdminService: ParameterAdminService,
     private val eodClosingService: EodClosingService,
     private val transactionManager: PlatformTransactionManager
 ) {
@@ -785,6 +787,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val parameterChangeExecution = if (approval.businessType in PARAMETER_CHANGE_BUSINESS_TYPES) {
+            parameterAdminService.applyApprovedChange(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -799,7 +806,8 @@ class StaffAccessService(
                 transactionCorrectionExecution != null ||
                 depositRateChangeExecution != null ||
                 feePolicyChangeExecution != null ||
-                loanExecution != null,
+                loanExecution != null ||
+                parameterChangeExecution != null,
             customer = customer,
             account = accountHoldExecution?.second ?: feeWaiverExecution?.second ?: transactionCorrectionExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
@@ -817,6 +825,7 @@ class StaffAccessService(
             reconciliationItem = reconciliationExecution?.item,
             eodClosing = null,
             loanExecution = loanExecution,
+            parameterChangeRequest = parameterChangeExecution,
             ledgerTransaction = fdsExecution?.ledgerTransaction
                 ?: reconciliationExecution?.ledgerTransaction
                 ?: transactionCorrectionExecution?.third
@@ -844,7 +853,8 @@ class StaffAccessService(
             pendingApproval.businessType != ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE &&
             pendingApproval.businessType != ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE &&
             pendingApproval.businessType != ApprovalBusinessTypes.EOD_CLOSING &&
-            pendingApproval.businessType != ApprovalBusinessTypes.LOAN_EXECUTION
+            pendingApproval.businessType != ApprovalBusinessTypes.LOAN_EXECUTION &&
+            pendingApproval.businessType !in PARAMETER_CHANGE_BUSINESS_TYPES
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
         }
@@ -890,6 +900,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val parameterChangeRequest = if (pendingApproval.businessType in PARAMETER_CHANGE_BUSINESS_TYPES) {
+            parameterAdminService.rejectChange(approval)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
@@ -897,7 +912,8 @@ class StaffAccessService(
             transactionCorrectionRequest = transactionCorrectionRequest,
             loanApplication = loanApplication,
             depositRateChangeRequest = depositRateChangeRequest,
-            feePolicyChangeRequest = feePolicyChangeRequest
+            feePolicyChangeRequest = feePolicyChangeRequest,
+            parameterChangeRequest = parameterChangeRequest
         )
     }
 
@@ -980,6 +996,11 @@ class StaffAccessService(
             ApprovalBusinessTypes.TRANSACTION_CORRECTION -> TRANSACTION_CORRECTION_CHECKER_ROLES
             ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE -> PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE -> FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.RECONCILIATION_PARAMETER_CHANGE -> RECONCILIATION_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.AUDIT_PARAMETER_CHANGE -> AUDIT_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.FDS_RULE_PARAMETER_CHANGE -> FDS_RULE_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.SECURITY_POLICY_PARAMETER_CHANGE -> SECURITY_POLICY_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.AUTHORIZATION_PARAMETER_CHANGE -> AUTHORIZATION_PARAMETER_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.EOD_CLOSING -> EOD_CLOSING_CHECKER_ROLES
             ApprovalBusinessTypes.LOAN_EXECUTION -> LOAN_EXECUTION_CHECKER_ROLES
             else -> return
@@ -2728,6 +2749,18 @@ class StaffAccessService(
         val TRANSACTION_CORRECTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
         val PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
         val FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+        val RECONCILIATION_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+        val AUDIT_PARAMETER_CHANGE_CHECKER_ROLES = setOf("COMPLIANCE_MANAGER")
+        val FDS_RULE_PARAMETER_CHANGE_CHECKER_ROLES = setOf("COMPLIANCE_MANAGER")
+        val SECURITY_POLICY_PARAMETER_CHANGE_CHECKER_ROLES = setOf("COMPLIANCE_MANAGER")
+        val AUTHORIZATION_PARAMETER_CHANGE_CHECKER_ROLES = setOf("COMPLIANCE_MANAGER")
+        val PARAMETER_CHANGE_BUSINESS_TYPES = setOf(
+            ApprovalBusinessTypes.RECONCILIATION_PARAMETER_CHANGE,
+            ApprovalBusinessTypes.AUDIT_PARAMETER_CHANGE,
+            ApprovalBusinessTypes.FDS_RULE_PARAMETER_CHANGE,
+            ApprovalBusinessTypes.SECURITY_POLICY_PARAMETER_CHANGE,
+            ApprovalBusinessTypes.AUTHORIZATION_PARAMETER_CHANGE
+        )
         val EOD_CLOSING_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
         val LOAN_EXECUTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }

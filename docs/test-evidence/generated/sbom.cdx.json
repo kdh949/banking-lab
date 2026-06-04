@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:dd1336dc-2662-4a59-b1cf-908667f3fb2b",
+  "serialNumber": "urn:uuid:afaaa4df-5180-43de-aaa5-f516b485ad97",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-04T13:09:41+00:00",
+    "timestamp": "2026-06-04T13:31:59+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "7e741099-60c6-4007-b1b7-234831d35df7",
+      "bom-ref": "08d23836-00ab-4f30-8a44-1411da119f20",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,22 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "0b33d938-8777-4d9f-8164-0a0876ca491b",
-      "type": "application",
-      "name": "package-lock.json",
-      "properties": [
-        {
-          "name": "aquasecurity:trivy:Class",
-          "value": "lang-pkgs"
-        },
-        {
-          "name": "aquasecurity:trivy:Type",
-          "value": "npm"
-        }
-      ]
-    },
-    {
-      "bom-ref": "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5",
+      "bom-ref": "767563aa-f237-4975-985e-064f57e59c14",
       "type": "application",
       "name": "analytics/aml-fds-python/uv.lock",
       "properties": [
@@ -59,6 +44,21 @@
         {
           "name": "aquasecurity:trivy:Type",
           "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e7c09408-65d3-4d84-b223-7d360e3206df",
+      "type": "application",
+      "name": "package-lock.json",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "npm"
         }
       ]
     },
@@ -1874,7 +1874,20 @@
   ],
   "dependencies": [
     {
-      "ref": "0b33d938-8777-4d9f-8164-0a0876ca491b",
+      "ref": "08d23836-00ab-4f30-8a44-1411da119f20",
+      "dependsOn": [
+        "767563aa-f237-4975-985e-064f57e59c14",
+        "e7c09408-65d3-4d84-b223-7d360e3206df"
+      ]
+    },
+    {
+      "ref": "767563aa-f237-4975-985e-064f57e59c14",
+      "dependsOn": [
+        "pkg:pypi/banking-lab-aml-fds@0.1.0"
+      ]
+    },
+    {
+      "ref": "e7c09408-65d3-4d84-b223-7d360e3206df",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
@@ -1888,19 +1901,6 @@
         "pkg:npm/%40banking-lab/screen-engine@0.1.0",
         "pkg:npm/%40banking-lab/staff-terminal@0.1.0",
         "pkg:npm/%40playwright/test@1.60.0"
-      ]
-    },
-    {
-      "ref": "7e741099-60c6-4007-b1b7-234831d35df7",
-      "dependsOn": [
-        "0b33d938-8777-4d9f-8164-0a0876ca491b",
-        "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5"
-      ]
-    },
-    {
-      "ref": "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5",
-      "dependsOn": [
-        "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {
