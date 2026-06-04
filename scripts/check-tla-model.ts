@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 
 type CheckStatus = "pass" | "failed" | "not_available" | "not_attempted";
@@ -204,18 +205,75 @@ function checkRequiredTokens(model: string, tokens: string[], source: string): v
 }
 
 function runTlcIfAvailable(): Array<Record<string, unknown>> {
-  const command = process.env.BANKING_LAB_TLC_CMD || "tlc";
-  const executable = splitCommand(command);
-  const probe = spawnSync(executable[0], [...executable.slice(1), "-version"], { encoding: "utf8" });
-  const probeError = probe.error as NodeJS.ErrnoException | undefined;
-  if (probeError?.code === "ENOENT") {
+  const resolved = resolveTlcCommand();
+  if (!resolved) {
     return [];
   }
+  const { command, executable } = resolved;
 
   return [
     runTlcCommand(command, executable, "Ledger", ledgerTlaPath, ledgerCfgPath),
     runTlcCommand(command, executable, "Idempotency", idempotencyTlaPath, idempotencyCfgPath)
   ];
+}
+
+function resolveTlcCommand(): { command: string; executable: string[] } | null {
+  if (process.env.BANKING_LAB_TLC_CMD) {
+    const command = process.env.BANKING_LAB_TLC_CMD;
+    const executable = splitCommand(command);
+    const probe = spawnSync(executable[0], [...executable.slice(1), "-version"], { encoding: "utf8" });
+    return probe.status === 0 ? { command, executable } : null;
+  }
+
+  const tlcExecutable = ["tlc"];
+  const tlcProbe = spawnSync(tlcExecutable[0], ["-version"], { encoding: "utf8" });
+  if (tlcProbe.status === 0) {
+    return { command: "tlc", executable: tlcExecutable };
+  }
+
+  const jarPath = resolveTlcJarPath();
+  if (!jarPath) {
+    return null;
+  }
+  const javaExecutable = resolveJavaExecutable();
+  if (!javaExecutable) {
+    return null;
+  }
+  const command = `${javaExecutable.join(" ")} -cp ${jarPath} tlc2.TLC`;
+  const executable = [...javaExecutable, "-cp", jarPath, "tlc2.TLC"];
+  return { command, executable };
+}
+
+function resolveTlcJarPath(): string | null {
+  const candidates = [
+    process.env.BANKING_LAB_TLC_JAR,
+    path.join("tools", "tla2tools.jar"),
+    path.join("formal", "tla2tools.jar"),
+    path.join(homedir(), "Downloads", "tla2tools.jar")
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return candidates.find((candidate) => existsSync(candidate)) || null;
+}
+
+function resolveJavaExecutable(): string[] | null {
+  const javaHome = process.env.JAVA_HOME;
+  const candidates = [
+    process.env.BANKING_LAB_JAVA_CMD,
+    javaHome ? path.join(javaHome, "bin", "java") : undefined,
+    "/opt/homebrew/opt/openjdk@21/bin/java",
+    "/opt/homebrew/opt/openjdk/bin/java",
+    "java"
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    const executable = splitCommand(candidate);
+    const probe = spawnSync(executable[0], [...executable.slice(1), "-version"], { encoding: "utf8" });
+    if (probe.status === 0) {
+      return executable;
+    }
+  }
+
+  return null;
 }
 
 function runTlcCommand(

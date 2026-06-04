@@ -7,7 +7,7 @@ EXTENDS Naturals, Integers, FiniteSets
 \* held/failed commands that must not produce ledger postings, and
 \* approved adjustment references.
 
-CONSTANTS AccountSet, TxnSet, KeySet, DateSet, ClosedInitial, InitialBalance, ApprovedReferences, LimitByAccount
+CONSTANTS AccountSet, TxnSet, KeySet, DateSet, ClosedInitial, ApprovedReferences
 
 VARIABLES txns, postings, balances, idemResults, closedDates, heldCommands, usedAmounts
 
@@ -18,6 +18,10 @@ CommandIds == TxnIds \cup {h.id : h \in heldCommands}
 PostingTxnIds == {p.txn : p \in postings}
 UsedKeys == {r.key : r \in idemResults}
 ReversedOriginalIds == {t.original : t \in {r \in txns : r.status = "REVERSAL"}}
+
+InitialBalance == [acct \in AccountSet |-> 2]
+
+LimitByAccount == [acct \in AccountSet |-> 2]
 
 DebitCount(acct) ==
   Cardinality({p \in postings : /\ p.account = acct /\ p.side = "DEBIT"})

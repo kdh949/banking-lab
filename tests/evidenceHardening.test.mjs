@@ -14,9 +14,11 @@ test("coverage matrix uses split API-backed and deployment evidence statuses", a
   assert.match(row("| analytics | Python AML/FDS scoring"), /GET \/api\/fds\/analytics/);
   assert.match(row("| analytics | Python AML/FDS scoring"), /\| complete \|$/);
   assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /bounded state-search/);
-  assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /\| partial \|$/);
+  assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /actual TLC/);
+  assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /\| complete \|$/);
   assert.match(row("| platform | Kubernetes/Helm/Argo CD structural validation"), /\| complete \|$/);
-  assert.match(row("| platform | Live cluster deployment validation"), /\| missing \|$/);
+  assert.match(row("| platform | Live cluster deployment validation"), /kind create cluster/);
+  assert.match(row("| platform | Live cluster deployment validation"), /\| complete \|$/);
 });
 
 test("security evidence has a Docker-forced rerun path and live DAST evidence", async () => {
