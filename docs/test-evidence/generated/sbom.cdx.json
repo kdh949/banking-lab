@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:b2d0aeb3-3a5c-4ebf-99ef-5c1b93d322dc",
+  "serialNumber": "urn:uuid:3805faae-aaa1-4ce8-9583-ea2d7f3c8926",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-04T00:46:26+00:00",
+    "timestamp": "2026-06-04T14:13:45+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "ec229c21-4b9a-4e19-91d0-59cad6abc8e6",
+      "bom-ref": "032f20f9-99cc-4013-a0ed-9141ae662c3e",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "106c85a0-0f27-4e37-a416-851e6433a0a3",
+      "bom-ref": "1275d1a6-0137-4c02-9346-67ba204f4418",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -44,6 +44,21 @@
         {
           "name": "aquasecurity:trivy:Type",
           "value": "npm"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a23f9bbc-3a2d-4adc-bd10-d2456a1a5779",
+      "type": "application",
+      "name": "analytics/aml-fds-python/uv.lock",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "uv"
         }
       ]
     },
@@ -1617,11 +1632,256 @@
           "value": "npm"
         }
       ]
+    },
+    {
+      "bom-ref": "pkg:pypi/banking-lab-aml-fds@0.1.0",
+      "type": "library",
+      "name": "banking-lab-aml-fds",
+      "version": "0.1.0",
+      "purl": "pkg:pypi/banking-lab-aml-fds@0.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "banking-lab-aml-fds@0.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/colorama@0.4.6",
+      "type": "library",
+      "name": "colorama",
+      "version": "0.4.6",
+      "purl": "pkg:pypi/colorama@0.4.6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "colorama@0.4.6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/duckdb@1.5.3",
+      "type": "library",
+      "name": "duckdb",
+      "version": "1.5.3",
+      "purl": "pkg:pypi/duckdb@1.5.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "duckdb@1.5.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/iniconfig@2.3.0",
+      "type": "library",
+      "name": "iniconfig",
+      "version": "2.3.0",
+      "purl": "pkg:pypi/iniconfig@2.3.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "iniconfig@2.3.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/joblib@1.5.3",
+      "type": "library",
+      "name": "joblib",
+      "version": "1.5.3",
+      "purl": "pkg:pypi/joblib@1.5.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "joblib@1.5.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/narwhals@2.22.0",
+      "type": "library",
+      "name": "narwhals",
+      "version": "2.22.0",
+      "purl": "pkg:pypi/narwhals@2.22.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "narwhals@2.22.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/numpy@2.4.6",
+      "type": "library",
+      "name": "numpy",
+      "version": "2.4.6",
+      "purl": "pkg:pypi/numpy@2.4.6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "numpy@2.4.6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/packaging@26.2",
+      "type": "library",
+      "name": "packaging",
+      "version": "26.2",
+      "purl": "pkg:pypi/packaging@26.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "packaging@26.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/pluggy@1.6.0",
+      "type": "library",
+      "name": "pluggy",
+      "version": "1.6.0",
+      "purl": "pkg:pypi/pluggy@1.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "pluggy@1.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/pygments@2.20.0",
+      "type": "library",
+      "name": "pygments",
+      "version": "2.20.0",
+      "purl": "pkg:pypi/pygments@2.20.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "pygments@2.20.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/pytest@9.0.3",
+      "type": "library",
+      "name": "pytest",
+      "version": "9.0.3",
+      "purl": "pkg:pypi/pytest@9.0.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "pytest@9.0.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/scikit-learn@1.9.0",
+      "type": "library",
+      "name": "scikit-learn",
+      "version": "1.9.0",
+      "purl": "pkg:pypi/scikit-learn@1.9.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "scikit-learn@1.9.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/scipy@1.17.1",
+      "type": "library",
+      "name": "scipy",
+      "version": "1.17.1",
+      "purl": "pkg:pypi/scipy@1.17.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "scipy@1.17.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/threadpoolctl@3.6.0",
+      "type": "library",
+      "name": "threadpoolctl",
+      "version": "3.6.0",
+      "purl": "pkg:pypi/threadpoolctl@3.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "threadpoolctl@3.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "uv"
+        }
+      ]
     }
   ],
   "dependencies": [
     {
-      "ref": "106c85a0-0f27-4e37-a416-851e6433a0a3",
+      "ref": "032f20f9-99cc-4013-a0ed-9141ae662c3e",
+      "dependsOn": [
+        "1275d1a6-0137-4c02-9346-67ba204f4418",
+        "a23f9bbc-3a2d-4adc-bd10-d2456a1a5779"
+      ]
+    },
+    {
+      "ref": "1275d1a6-0137-4c02-9346-67ba204f4418",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
@@ -1638,9 +1898,9 @@
       ]
     },
     {
-      "ref": "ec229c21-4b9a-4e19-91d0-59cad6abc8e6",
+      "ref": "a23f9bbc-3a2d-4adc-bd10-d2456a1a5779",
       "dependsOn": [
-        "106c85a0-0f27-4e37-a416-851e6433a0a3"
+        "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {
@@ -2039,6 +2299,80 @@
     },
     {
       "ref": "pkg:npm/tslib@2.8.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/banking-lab-aml-fds@0.1.0",
+      "dependsOn": [
+        "pkg:pypi/duckdb@1.5.3",
+        "pkg:pypi/pytest@9.0.3",
+        "pkg:pypi/scikit-learn@1.9.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/colorama@0.4.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/duckdb@1.5.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/iniconfig@2.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/joblib@1.5.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/narwhals@2.22.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/numpy@2.4.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/packaging@26.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pluggy@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pygments@2.20.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pytest@9.0.3",
+      "dependsOn": [
+        "pkg:pypi/colorama@0.4.6",
+        "pkg:pypi/iniconfig@2.3.0",
+        "pkg:pypi/packaging@26.2",
+        "pkg:pypi/pluggy@1.6.0",
+        "pkg:pypi/pygments@2.20.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/scikit-learn@1.9.0",
+      "dependsOn": [
+        "pkg:pypi/joblib@1.5.3",
+        "pkg:pypi/narwhals@2.22.0",
+        "pkg:pypi/numpy@2.4.6",
+        "pkg:pypi/scipy@1.17.1",
+        "pkg:pypi/threadpoolctl@3.6.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/scipy@1.17.1",
+      "dependsOn": [
+        "pkg:pypi/numpy@2.4.6"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/threadpoolctl@3.6.0",
       "dependsOn": []
     }
   ],

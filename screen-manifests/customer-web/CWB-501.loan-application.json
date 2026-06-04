@@ -1,0 +1,69 @@
+{
+  "screenId": "CWB-501",
+  "transactionCode": "CWB501",
+  "title": "Synthetic Loan Application",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "loan",
+  "highRisk": true,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["LOAN_EXECUTION"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "depositAccountId",
+      "label": "Deposit Account",
+      "type": "account-select",
+      "required": true
+    },
+    {
+      "name": "productId",
+      "label": "Loan Product",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "requestedAmountMinor",
+      "label": "Amount",
+      "type": "money",
+      "required": true
+    },
+    {
+      "name": "syntheticMonthlyIncomeMinor",
+      "label": "Synthetic Monthly Income",
+      "type": "money",
+      "required": true
+    },
+    {
+      "name": "syntheticMonthlyDebtMinor",
+      "label": "Synthetic Monthly Debt",
+      "type": "money",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/loans/applications",
+    "read": "GET /api/loans/products"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

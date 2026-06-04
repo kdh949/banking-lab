@@ -12,7 +12,7 @@ npm run formal:ledger
 
 Pass. The command produced `docs/test-evidence/generated/formal-ledger-tlc-result.json` with `staticOnly: false`.
 
-Local `tlc` was not installed in this environment, so the command used the built-in bounded state-search checker instead of accepting a static artifact fallback. The checker explored 3371 states and 8313 transitions across the ledger and idempotency models.
+Local `tlc` was not installed in this environment, so the command used the built-in bounded state-search checker instead of accepting a static artifact fallback. The checker explored 3335 states and 8241 transitions across the ledger and idempotency models.
 
 ## Invariants Checked
 
@@ -25,6 +25,8 @@ Local `tlc` was not installed in this environment, so the command used the built
 - `BalanceProjectionRecalculable`
 - `HeldOrFailedCommandNoPosting`
 - `AdjustmentRequiresApprovalReference`
+- `LimitUsageWithinConfigured`
+- `LimitUsageMatchesPostedDebits`
 - `SingleBusinessResultPerKey`
 - `RetryReturnsSameBusinessResult`
 - `NoDuplicateSideEffectForRetry`

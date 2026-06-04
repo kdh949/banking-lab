@@ -51,6 +51,7 @@ class LedgerCommandServiceIntegrationTest {
               ledger_postings,
               ledger_transactions,
               account_balance_projections,
+              limit_usage_counters,
               account_holds,
               account_limits,
               accounts,
@@ -115,6 +116,133 @@ class LedgerCommandServiceIntegrationTest {
         assertEquals(beforeTransactionCount, countTransactions())
         assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-WDR-BAD-001"))
         assertEquals(beforeBalance, ledgerCommandService.balance("ACC-A").availableBalanceMinor)
+    }
+
+    @Test
+    fun `over-limit withdrawal is rejected with no ledger mutation idempotency row or usage side effect`() {
+        seedAccount("CUS-LIM-A", "ACC-LIM-A", "LAB-300-000001")
+        seedTransferLimits("ACC-LIM-A", daily = 100_000, monthly = 1_000_000, single = 5_000)
+        ledgerCommandService.deposit(deposit("ACC-LIM-A", 100_000, "IT-LIM-SEED-A"))
+        val beforeTransactionCount = countTransactions()
+        val beforeBalance = ledgerCommandService.balance("ACC-LIM-A").availableBalanceMinor
+
+        val error = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-LIM-A", 6_000, "IT-LIM-WDR-OVER"))
+        }
+
+        assertEquals("LIMIT_EXCEEDED", error.code)
+        assertEquals("PER_TRANSACTION", error.details?.get("limitKind"))
+        assertEquals("STAFF_TERMINAL", error.details?.get("channel"))
+        assertEquals(beforeTransactionCount, countTransactions())
+        assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-LIM-WDR-OVER"))
+        assertEquals(beforeBalance, ledgerCommandService.balance("ACC-LIM-A").availableBalanceMinor)
+        assertEquals(0, countLimitCounters("ACC-LIM-A"))
+    }
+
+    @Test
+    fun `cumulative daily limit breach across transactions rejects the later posting`() {
+        seedAccount("CUS-LIM-B", "ACC-LIM-B", "LAB-300-000002")
+        seedAccount("CUS-LIM-C", "ACC-LIM-C", "LAB-300-000003")
+        seedTransferLimits("ACC-LIM-B", daily = 15_000, monthly = 100_000, single = 10_000)
+        ledgerCommandService.deposit(deposit("ACC-LIM-B", 100_000, "IT-LIM-SEED-B"))
+        ledgerCommandService.withdraw(withdrawal("ACC-LIM-B", 6_000, "IT-LIM-WDR-001"))
+        ledgerCommandService.internalTransfer(transfer("ACC-LIM-B", "ACC-LIM-C", 7_000, "IT-LIM-TRF-001", channel = "STAFF_TERMINAL"))
+        val beforeTransactionCount = countTransactions()
+
+        val error = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-LIM-B", 3_000, "IT-LIM-WDR-DAILY-OVER"))
+        }
+
+        assertEquals("LIMIT_EXCEEDED", error.code)
+        assertEquals("DAILY", error.details?.get("limitKind"))
+        assertEquals(2_000L, error.details?.get("remainingMinor"))
+        assertEquals(beforeTransactionCount, countTransactions())
+        assertEquals(13_000, limitUsed("ACC-LIM-B", "STAFF_TERMINAL", "DAILY", LocalDate.now()))
+        assertEquals(13_000, limitUsed("ACC-LIM-B", "STAFF_TERMINAL", "MONTHLY", LocalDate.now().withDayOfMonth(1)))
+    }
+
+    @Test
+    fun `daily and monthly counters reset on the next business date and next month`() {
+        val janOne = LocalDate.of(2026, 1, 1)
+        val janTwo = LocalDate.of(2026, 1, 2)
+        val janThree = LocalDate.of(2026, 1, 3)
+        val febOne = LocalDate.of(2026, 2, 1)
+        seedAccount("CUS-LIM-D", "ACC-LIM-D", "LAB-300-000004")
+        seedTransferLimits("ACC-LIM-D", daily = 10_000, monthly = 15_000, single = 10_000)
+        ledgerCommandService.deposit(deposit("ACC-LIM-D", 100_000, "IT-LIM-SEED-D"))
+
+        ledgerCommandService.withdraw(withdrawal("ACC-LIM-D", 10_000, "IT-LIM-WDR-JAN-1", janOne))
+        val dailyError = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-LIM-D", 1_000, "IT-LIM-WDR-JAN-1-OVER", janOne))
+        }
+        ledgerCommandService.withdraw(withdrawal("ACC-LIM-D", 5_000, "IT-LIM-WDR-JAN-2", janTwo))
+        val monthlyError = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-LIM-D", 1_000, "IT-LIM-WDR-JAN-3-OVER", janThree))
+        }
+        ledgerCommandService.withdraw(withdrawal("ACC-LIM-D", 10_000, "IT-LIM-WDR-FEB-1", febOne))
+
+        assertEquals("DAILY", dailyError.details?.get("limitKind"))
+        assertEquals("MONTHLY", monthlyError.details?.get("limitKind"))
+        assertEquals(10_000, limitUsed("ACC-LIM-D", "STAFF_TERMINAL", "DAILY", janOne))
+        assertEquals(5_000, limitUsed("ACC-LIM-D", "STAFF_TERMINAL", "DAILY", janTwo))
+        assertEquals(15_000, limitUsed("ACC-LIM-D", "STAFF_TERMINAL", "MONTHLY", janOne.withDayOfMonth(1)))
+        assertEquals(10_000, limitUsed("ACC-LIM-D", "STAFF_TERMINAL", "MONTHLY", febOne.withDayOfMonth(1)))
+    }
+
+    @Test
+    fun `concurrent withdrawal burst never exceeds configured daily limit`() {
+        seedAccount("CUS-LIM-CON", "ACC-LIM-CON", "LAB-300-000005")
+        seedTransferLimits("ACC-LIM-CON", daily = 10_000, monthly = 100_000, single = 1_000)
+        ledgerCommandService.deposit(deposit("ACC-LIM-CON", 100_000, "IT-LIM-CON-SEED"))
+        val executor = Executors.newFixedThreadPool(16)
+        try {
+            val futures = (0 until 120).map { index ->
+                executor.submit<Result<Any>> {
+                    runCatching {
+                        ledgerCommandService.withdraw(
+                            withdrawal("ACC-LIM-CON", 1_000, "IT-LIM-CON-WDR-${index.toString().padStart(3, '0')}")
+                        )
+                    }
+                }
+            }
+            val results = futures.map { it.get(30, TimeUnit.SECONDS) }
+            val successCount = results.count { it.isSuccess }
+            val rejectedCount = results.count { it.isFailure }
+
+            assertEquals(10, successCount)
+            assertEquals(110, rejectedCount)
+            assertEquals(10_000, limitUsed("ACC-LIM-CON", "STAFF_TERMINAL", "DAILY", LocalDate.now()))
+            assertEquals(90_000, ledgerCommandService.balance("ACC-LIM-CON").availableBalanceMinor)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `reversal releases counted transfer usage so a later command can consume the limit`() {
+        seedAccount("CUS-LIM-E", "ACC-LIM-E", "LAB-300-000006")
+        seedAccount("CUS-LIM-F", "ACC-LIM-F", "LAB-300-000007")
+        seedTransferLimits("ACC-LIM-E", daily = 10_000, monthly = 100_000, single = 10_000)
+        ledgerCommandService.deposit(deposit("ACC-LIM-E", 100_000, "IT-LIM-SEED-E"))
+        val transfer = ledgerCommandService.internalTransfer(transfer("ACC-LIM-E", "ACC-LIM-F", 8_000, "IT-LIM-TRF-REV", channel = "STAFF_TERMINAL"))
+        val beforeReversalError = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.withdraw(withdrawal("ACC-LIM-E", 3_000, "IT-LIM-WDR-BEFORE-REV"))
+        }
+
+        ledgerCommandService.reverseTransaction(
+            ReversalCommand(
+                originalTransactionId = transfer.value.id,
+                idempotencyKey = "IT-LIM-REV-001",
+                requestedBy = "branch01",
+                requestedChannel = "STAFF_TERMINAL",
+                reason = "Synthetic reversal releases limit usage"
+            )
+        )
+        ledgerCommandService.withdraw(withdrawal("ACC-LIM-E", 3_000, "IT-LIM-WDR-AFTER-REV"))
+
+        assertEquals("LIMIT_EXCEEDED", beforeReversalError.code)
+        assertEquals(3_000, limitUsed("ACC-LIM-E", "STAFF_TERMINAL", "DAILY", LocalDate.now()))
+        assertEquals(97_000, ledgerCommandService.balance("ACC-LIM-E").availableBalanceMinor)
     }
 
     @Test
@@ -297,6 +425,44 @@ class LedgerCommandServiceIntegrationTest {
         )
     }
 
+    private fun seedTransferLimits(accountId: String, daily: Long, monthly: Long, single: Long, channel: String? = null) {
+        val channelColumns = when (channel) {
+            "CUSTOMER_WEB" -> """
+                , customer_web_daily_transfer_limit_minor = EXCLUDED.customer_web_daily_transfer_limit_minor,
+                  customer_web_monthly_transfer_limit_minor = EXCLUDED.customer_web_monthly_transfer_limit_minor,
+                  customer_web_single_transfer_limit_minor = EXCLUDED.customer_web_single_transfer_limit_minor
+            """.trimIndent()
+            "STAFF_TERMINAL" -> """
+                , staff_terminal_daily_transfer_limit_minor = EXCLUDED.staff_terminal_daily_transfer_limit_minor,
+                  staff_terminal_monthly_transfer_limit_minor = EXCLUDED.staff_terminal_monthly_transfer_limit_minor,
+                  staff_terminal_single_transfer_limit_minor = EXCLUDED.staff_terminal_single_transfer_limit_minor
+            """.trimIndent()
+            else -> ""
+        }
+        val insertChannelColumns = when (channel) {
+            "CUSTOMER_WEB" -> ", customer_web_daily_transfer_limit_minor, customer_web_monthly_transfer_limit_minor, customer_web_single_transfer_limit_minor"
+            "STAFF_TERMINAL" -> ", staff_terminal_daily_transfer_limit_minor, staff_terminal_monthly_transfer_limit_minor, staff_terminal_single_transfer_limit_minor"
+            else -> ""
+        }
+        val insertChannelValues = if (channel == "CUSTOMER_WEB" || channel == "STAFF_TERMINAL") ", :daily, :monthly, :single" else ""
+        jdbc.update(
+            """
+            INSERT INTO account_limits (
+              account_id, daily_transfer_limit_minor, monthly_transfer_limit_minor, single_transfer_limit_minor
+              $insertChannelColumns
+            )
+            VALUES (:accountId, :daily, :monthly, :single $insertChannelValues)
+            ON CONFLICT (account_id) DO UPDATE SET
+              daily_transfer_limit_minor = EXCLUDED.daily_transfer_limit_minor,
+              monthly_transfer_limit_minor = EXCLUDED.monthly_transfer_limit_minor,
+              single_transfer_limit_minor = EXCLUDED.single_transfer_limit_minor,
+              updated_at = now()
+              $channelColumns
+            """.trimIndent(),
+            mapOf("accountId" to accountId, "daily" to daily, "monthly" to monthly, "single" to single)
+        )
+    }
+
     private fun deposit(accountId: String, amountMinor: Long, key: String, businessDate: LocalDate? = null): DepositCommand =
         DepositCommand(
             accountId = accountId,
@@ -307,23 +473,38 @@ class LedgerCommandServiceIntegrationTest {
             businessDate = businessDate
         )
 
-    private fun withdrawal(accountId: String, amountMinor: Long, key: String): WithdrawalCommand =
+    private fun withdrawal(
+        accountId: String,
+        amountMinor: Long,
+        key: String,
+        businessDate: LocalDate? = null,
+        channel: String = "STAFF_TERMINAL"
+    ): WithdrawalCommand =
         WithdrawalCommand(
             accountId = accountId,
             amountMinor = amountMinor,
             idempotencyKey = key,
             requestedBy = "branch01",
-            requestedChannel = "STAFF_TERMINAL"
+            requestedChannel = channel,
+            businessDate = businessDate
         )
 
-    private fun transfer(fromAccountId: String, toAccountId: String, amountMinor: Long, key: String): InternalTransferCommand =
+    private fun transfer(
+        fromAccountId: String,
+        toAccountId: String,
+        amountMinor: Long,
+        key: String,
+        businessDate: LocalDate? = null,
+        channel: String = "CUSTOMER_WEB"
+    ): InternalTransferCommand =
         InternalTransferCommand(
             fromAccountId = fromAccountId,
             toAccountId = toAccountId,
             amountMinor = amountMinor,
             idempotencyKey = key,
             requestedBy = "customer01",
-            requestedChannel = "CUSTOMER_WEB"
+            requestedChannel = channel,
+            businessDate = businessDate
         )
 
     private fun adjustment(
@@ -409,6 +590,32 @@ class LedgerCommandServiceIntegrationTest {
             mapOf("eventType" to eventType, "businessReferenceId" to businessReferenceId),
             Int::class.java
         ) ?: 0
+
+    private fun countLimitCounters(accountId: String): Int =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM limit_usage_counters WHERE account_id = :accountId",
+            mapOf("accountId" to accountId),
+            Int::class.java
+        ) ?: 0
+
+    private fun limitUsed(accountId: String, channel: String, periodKind: String, businessDate: LocalDate): Long =
+        jdbc.queryForObject(
+            """
+            SELECT COALESCE(sum(used_amount_minor), 0)
+            FROM limit_usage_counters
+            WHERE account_id = :accountId
+              AND channel = :channel
+              AND period_kind = :periodKind
+              AND business_date = :businessDate
+            """.trimIndent(),
+            mapOf(
+                "accountId" to accountId,
+                "channel" to channel,
+                "periodKind" to periodKind,
+                "businessDate" to businessDate
+            ),
+            Long::class.java
+        ) ?: 0L
 
     companion object {
         @Container

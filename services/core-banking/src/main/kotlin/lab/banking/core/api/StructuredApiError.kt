@@ -18,5 +18,6 @@ data class StructuredApiError(
     val correlationId: String = requestId,
     val route: String? = null,
     val docs: String = "docs/migration/structured-api-error-contract.md",
-    val syntheticOnly: Boolean = true
+    val syntheticOnly: Boolean = true,
+    val details: Map<String, Any?>? = null
 )

@@ -10,6 +10,7 @@ import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.parameters.ParameterAdminService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.dao.PessimisticLockingFailureException
@@ -25,6 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate
 class CustomerTransferService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val ledgerCommandService: LedgerCommandService,
+    private val parameterAdminService: ParameterAdminService,
     private val transactionManager: PlatformTransactionManager,
     private val objectMapper: ObjectMapper,
     private val auditEvents: AuditEventAppender
@@ -163,7 +165,7 @@ class CustomerTransferService(
     }
 
     private fun shouldHoldForFds(command: CustomerTransferCommand): Boolean =
-        command.amountMinor >= FDS_HIGH_AMOUNT_THRESHOLD_MINOR
+        command.amountMinor >= fdsHighAmountThreshold(command.businessDate)
 
     private fun <T> runSerializableCustomerCommand(operation: () -> T): T {
         var attempt = 1
@@ -545,7 +547,7 @@ class CustomerTransferService(
 
     private fun fdsAlerts(command: CustomerTransferCommand): List<Map<String, String>> =
         buildList {
-            if (command.amountMinor >= FDS_HIGH_AMOUNT_THRESHOLD_MINOR) {
+            if (command.amountMinor >= fdsHighAmountThreshold(command.businessDate)) {
                 add(
                     mapOf(
                         "ruleId" to "FDS-RULE-UNUSUAL-AMOUNT",
@@ -571,6 +573,9 @@ class CustomerTransferService(
             }
         }
 
+    private fun fdsHighAmountThreshold(businessDate: LocalDate?): Long =
+        parameterAdminService.longValue("fds", "highAmountMinor", businessDate ?: LocalDate.now())
+
     private fun sha256(value: String): String =
         MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
@@ -586,7 +591,6 @@ class CustomerTransferService(
 
     private companion object {
         const val SERIALIZABLE_CUSTOMER_COMMAND_MAX_ATTEMPTS = 5
-        const val FDS_HIGH_AMOUNT_THRESHOLD_MINOR = 5_000_000L
     }
 }
 

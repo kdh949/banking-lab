@@ -1,0 +1,43 @@
+{
+  "screenId": "CWB-604",
+  "transactionCode": "CWB604",
+  "title": "Synthetic Card Cancellation",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "card",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "authorizationId",
+      "label": "Authorization ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "captureId",
+      "label": "Capture ID",
+      "type": "text",
+      "required": false
+    }
+  ],
+  "api": {
+    "command": "POST /api/cards/authorizations/{authorizationId}/cancel",
+    "alternateCommand": "POST /api/cards/captures/{captureId}/reverse"
+  },
+  "postActions": ["releaseHold", "reverseLedgerTransaction", "createAuditEvent"]
+}

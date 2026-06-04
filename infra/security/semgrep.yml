@@ -11,4 +11,6 @@ rules:
     pattern-regex: "UPDATE\\s+account_balance_projections\\s+SET\\s+(ledger_balance_minor|available_balance_minor)\\s*="
     paths:
       exclude:
-        - services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt
+        - "**/services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt"
+        - "**/services/core-banking/src/integrationTest/**"
+        - "**/services/core-banking/src/test/**"

@@ -3,19 +3,21 @@ EXTENDS Naturals, Integers, FiniteSets
 
 \* Concepts covered: Accounts, Transactions, Postings, Debit/Credit,
 \* Balance projection, IdempotencyKey, Reversal, Closed business date,
+\* posting-time LimitUsage counters with reversal release,
 \* held/failed commands that must not produce ledger postings, and
 \* approved adjustment references.
 
-CONSTANTS AccountSet, TxnSet, KeySet, DateSet, ClosedInitial, InitialBalance, ApprovedReferences
+CONSTANTS AccountSet, TxnSet, KeySet, DateSet, ClosedInitial, InitialBalance, ApprovedReferences, LimitByAccount
 
-VARIABLES txns, postings, balances, idemResults, closedDates, heldCommands
+VARIABLES txns, postings, balances, idemResults, closedDates, heldCommands, usedAmounts
 
-vars == <<txns, postings, balances, idemResults, closedDates, heldCommands>>
+vars == <<txns, postings, balances, idemResults, closedDates, heldCommands, usedAmounts>>
 
 TxnIds == {t.id : t \in txns}
 CommandIds == TxnIds \cup {h.id : h \in heldCommands}
 PostingTxnIds == {p.txn : p \in postings}
 UsedKeys == {r.key : r \in idemResults}
+ReversedOriginalIds == {t.original : t \in {r \in txns : r.status = "REVERSAL"}}
 
 DebitCount(acct) ==
   Cardinality({p \in postings : /\ p.account = acct /\ p.side = "DEBIT"})
@@ -29,6 +31,17 @@ TxnDebitCount(txn) ==
 TxnCreditCount(txn) ==
   Cardinality({p \in postings : /\ p.txn = txn /\ p.side = "CREDIT"})
 
+CountedDebitCount(acct) ==
+  Cardinality({
+    p \in postings :
+      /\ p.account = acct
+      /\ p.side = "DEBIT"
+      /\ \E t \in txns :
+        /\ t.id = p.txn
+        /\ t.status = "POSTED"
+        /\ t.id \notin ReversedOriginalIds
+  })
+
 Init ==
   /\ txns = {}
   /\ postings = {}
@@ -36,6 +49,7 @@ Init ==
   /\ idemResults = {}
   /\ closedDates = ClosedInitial
   /\ heldCommands = {}
+  /\ usedAmounts = [acct \in AccountSet |-> 0]
 
 PostBalanced ==
   \E txn \in TxnSet, key \in KeySet, date \in DateSet,
@@ -45,12 +59,14 @@ PostBalanced ==
     /\ date \notin closedDates
     /\ debitAcct # creditAcct
     /\ balances[debitAcct] > 0
+    /\ usedAmounts[debitAcct] < LimitByAccount[debitAcct]
     /\ txns' = txns \cup {[id |-> txn, status |-> "POSTED", original |-> "NONE", key |-> key, date |-> date, approval |-> "NONE"]}
     /\ postings' = postings \cup {
          [txn |-> txn, account |-> debitAcct, side |-> "DEBIT"],
          [txn |-> txn, account |-> creditAcct, side |-> "CREDIT"]
        }
     /\ balances' = [balances EXCEPT ![debitAcct] = @ - 1, ![creditAcct] = @ + 1]
+    /\ usedAmounts' = [usedAmounts EXCEPT ![debitAcct] = @ + 1]
     /\ idemResults' = idemResults \cup {[key |-> key, txn |-> txn]}
     /\ UNCHANGED <<closedDates, heldCommands>>
 
@@ -61,6 +77,7 @@ ReversePosted ==
     /\ key \notin UsedKeys
     /\ date \notin closedDates
     /\ \E t \in txns : /\ t.id = original /\ t.status = "POSTED"
+    /\ ~ \E r \in txns : /\ r.status = "REVERSAL" /\ r.original = original
     /\ [txn |-> original, account |-> originalDebitAcct, side |-> "DEBIT"] \in postings
     /\ [txn |-> original, account |-> originalCreditAcct, side |-> "CREDIT"] \in postings
     /\ balances[originalCreditAcct] > 0
@@ -70,6 +87,7 @@ ReversePosted ==
          [txn |-> txn, account |-> originalDebitAcct, side |-> "CREDIT"]
        }
     /\ balances' = [balances EXCEPT ![originalCreditAcct] = @ - 1, ![originalDebitAcct] = @ + 1]
+    /\ usedAmounts' = [usedAmounts EXCEPT ![originalDebitAcct] = IF @ > 0 THEN @ - 1 ELSE 0]
     /\ idemResults' = idemResults \cup {[key |-> key, txn |-> txn]}
     /\ UNCHANGED <<closedDates, heldCommands>>
 
@@ -88,7 +106,7 @@ PostApprovedAdjustment ==
        }
     /\ balances' = [balances EXCEPT ![debitAcct] = @ - 1, ![creditAcct] = @ + 1]
     /\ idemResults' = idemResults \cup {[key |-> key, txn |-> txn]}
-    /\ UNCHANGED <<closedDates, heldCommands>>
+    /\ UNCHANGED <<closedDates, heldCommands, usedAmounts>>
 
 HoldOrFailCommand ==
   \E command \in TxnSet, key \in KeySet:
@@ -96,7 +114,7 @@ HoldOrFailCommand ==
     /\ key \notin UsedKeys
     /\ heldCommands' = heldCommands \cup {[id |-> command, key |-> key, status |-> "HELD_OR_FAILED"]}
     /\ idemResults' = idemResults \cup {[key |-> key, txn |-> command]}
-    /\ UNCHANGED <<txns, postings, balances, closedDates>>
+    /\ UNCHANGED <<txns, postings, balances, closedDates, usedAmounts>>
 
 Next == PostBalanced \/ ReversePosted \/ PostApprovedAdjustment \/ HoldOrFailCommand
 
@@ -139,5 +157,11 @@ HeldOrFailedCommandNoPosting ==
 AdjustmentRequiresApprovalReference ==
   \A t \in txns :
     t.status = "ADJUSTMENT" => t.approval \in ApprovedReferences
+
+LimitUsageWithinConfigured ==
+  \A acct \in AccountSet : usedAmounts[acct] <= LimitByAccount[acct]
+
+LimitUsageMatchesPostedDebits ==
+  \A acct \in AccountSet : usedAmounts[acct] = CountedDebitCount(acct)
 
 =============================================================================

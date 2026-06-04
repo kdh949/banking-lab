@@ -4,12 +4,25 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type BalanceCertificateDto,
+  type CardAuthorizationResponse,
+  type CardCaptureResponse,
+  type CardDto,
+  type CardIssueResponse,
+  type CustomerAccessHistoryDto,
   type CustomerAccountDetailDto,
   type CustomerComplaintConfirmResponse,
   type CustomerComplaintEntryResponse,
+  type CustomerStatementDto,
   type CustomerTransactionDto,
   type CustomerTransferStatusDto,
-  type CustomerTransferResponse
+  type CustomerTransferResponse,
+  type LoanApplicationResponse,
+  type LoanExecutionResponse,
+  type LoanPaymentResponse,
+  type LoanDto,
+  type ThreeDsSimulationDto,
+  type TransactionConfirmationDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
@@ -66,6 +79,43 @@ type HistoryStatusState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type StatementReadModelState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly statement: CustomerStatementDto;
+      readonly confirmation: TransactionConfirmationDto;
+      readonly certificate: BalanceCertificateDto;
+      readonly accessHistory: CustomerAccessHistoryDto;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type LoanDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly application: LoanApplicationResponse;
+      readonly execution: LoanExecutionResponse;
+      readonly loan: LoanDto;
+      readonly repayment: LoanPaymentResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type CardDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly issue: CardIssueResponse;
+      readonly threeDs: ThreeDsSimulationDto;
+      readonly authorization: CardAuthorizationResponse;
+      readonly capture: CardCaptureResponse;
+      readonly lostCard: CardDto;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -118,6 +168,9 @@ export function ApiBackedCustomerPanel() {
   const [transferRetryState, setTransferRetryState] = useState<TransferRetryState>({ status: "idle" });
   const [transferFailureState, setTransferFailureState] = useState<TransferFailureState>({ status: "idle" });
   const [historyStatusState, setHistoryStatusState] = useState<HistoryStatusState>({ status: "idle" });
+  const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
+  const [loanDomainState, setLoanDomainState] = useState<LoanDomainState>({ status: "idle" });
+  const [cardDomainState, setCardDomainState] = useState<CardDomainState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -553,6 +606,186 @@ export function ApiBackedCustomerPanel() {
       setHistoryStatusState({ status: "loaded", idempotencyKey, historyItem, heldTransfer });
     } catch (error: unknown) {
       setHistoryStatusState({ status: "failed", message: error instanceof Error ? error.message : "Unknown history/status failure" });
+    }
+  };
+
+  const runStatementReadModelSmoke = async () => {
+    if (!apiBaseUrl || statementReadModelState.status === "running") {
+      return;
+    }
+    setStatementReadModelState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const businessDate = "2026-02-06";
+      const transfer = await client.requestCustomerTransfer({
+        customerId: "SYN-CUS-001",
+        fromAccountId: "ACC-SYN-001-001",
+        toAccountId: "ACC-SYN-002-001",
+        amountMinor: 777,
+        idempotencyKey: `CWB-STMT-${Date.now()}`,
+        requestedBy: "SYN-CUS-001",
+        businessDate,
+        reason: "Browser customer statement read-model smoke"
+      });
+      const transactionId = transfer.item.transactionId;
+      if (!transactionId) {
+        setStatementReadModelState({ status: "failed", message: "statement smoke transfer did not post a transaction" });
+        return;
+      }
+      const statement = await client.customerStatement("SYN-CUS-001", businessDate, businessDate);
+      const confirmation = await client.transactionConfirmation(transactionId);
+      const certificate = await client.balanceCertificate("ACC-SYN-001-001", businessDate);
+      const accessHistory = await client.customerAccessHistory("SYN-CUS-001");
+      if (!confirmation.balanced || statement.lineCount === 0 || !accessHistory.items.some((item) => item.eventType === "STATEMENT_VIEW")) {
+        setStatementReadModelState({ status: "failed", message: "statement read-model outputs were incomplete" });
+        return;
+      }
+      setStatementReadModelState({ status: "loaded", statement, confirmation, certificate, accessHistory });
+    } catch (error: unknown) {
+      setStatementReadModelState({ status: "failed", message: error instanceof Error ? error.message : "Unknown statement read-model failure" });
+    }
+  };
+
+  const runLoanDomainSmoke = async () => {
+    if (!apiBaseUrl || loanDomainState.status === "running") {
+      return;
+    }
+    setLoanDomainState({ status: "running" });
+    try {
+      const customerClient = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const staffClient = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "manager01",
+          roles: ["BRANCH_MANAGER"]
+        })
+      });
+      const idempotencyKey = `CWB-LOAN-${Date.now()}`;
+      const application = await customerClient.requestLoanApplication({
+        customerId: "SYN-CUS-001",
+        depositAccountId: "ACC-SYN-001-001",
+        productId: "LOAN-PROD-SYN-PERSONAL-001",
+        requestedAmountMinor: 120_000,
+        requestedTermMonths: 12,
+        syntheticMonthlyIncomeMinor: 3_000_000,
+        syntheticMonthlyDebtMinor: 200_000,
+        syntheticCreditGrade: "A",
+        syntheticRiskGrade: "LOW",
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic loan domain smoke",
+        idempotencyKey
+      });
+      const approvalId = application.approval?.approvalId;
+      if (!approvalId) {
+        setLoanDomainState({ status: "failed", message: "loan application did not create an approval" });
+        return;
+      }
+      const approvalExecution = await staffClient.approveStaffApproval(approvalId, {
+        approvedBy: "manager01",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "LON-102"
+      });
+      const execution = approvalExecution.loanExecution;
+      if (!execution) {
+        setLoanDomainState({ status: "failed", message: "loan approval did not execute disbursement" });
+        return;
+      }
+      const loan = await customerClient.loanDetail(execution.loan.loanId);
+      const firstDue = loan.schedule.find((item) => item.status === "PENDING");
+      const repayment = await customerClient.repayLoan(loan.loanId, {
+        idempotencyKey: `${idempotencyKey}-REPAY`,
+        principalMinor: firstDue?.principalMinor,
+        interestMinor: firstDue?.interestMinor,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic loan repayment smoke"
+      });
+      if (repayment.ledgerTransaction.value.transactionType !== "LOAN_REPAYMENT") {
+        setLoanDomainState({ status: "failed", message: "loan repayment did not post through the ledger" });
+        return;
+      }
+      setLoanDomainState({ status: "loaded", application, execution, loan, repayment });
+    } catch (error: unknown) {
+      setLoanDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown loan domain failure" });
+    }
+  };
+
+  const runCardDomainSmoke = async () => {
+    if (!apiBaseUrl || cardDomainState.status === "running") {
+      return;
+    }
+    setCardDomainState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const runId = Date.now();
+      const issue = await client.issueCard({
+        customerId: "SYN-CUS-001",
+        accountId: "ACC-SYN-001-001",
+        panToken: `tok_pan_cwb_${runId}`,
+        panLast4: "4242",
+        dailyLimitMinor: 200_000,
+        monthlyLimitMinor: 400_000,
+        singleLimitMinor: 150_000,
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic card issue smoke",
+        idempotencyKey: `CWB-CARD-ISSUE-${runId}`
+      });
+      const threeDs = await client.simulateCardThreeDs({
+        cardId: issue.item.cardId,
+        amountMinor: 120_000,
+        idempotencyKey: `CWB-CARD-3DS-${runId}`
+      });
+      const authorization = await client.authorizeCard({
+        cardId: issue.item.cardId,
+        amountMinor: 120_000,
+        merchantName: "Synthetic Browser Merchant",
+        threeDsAuthenticationId: threeDs.authenticationId,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic card authorization smoke",
+        idempotencyKey: `CWB-CARD-AUTH-${runId}`
+      });
+      const capture = await client.captureCardAuthorization(authorization.item.authorizationId, {
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic card capture smoke",
+        idempotencyKey: `CWB-CARD-CAP-${runId}`
+      });
+      const lostCard = await client.reportCardLost(issue.item.cardId, {
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic card loss smoke"
+      });
+      if (capture.ledgerTransaction.value.transactionType !== "CARD_CAPTURE" || lostCard.status !== "LOST") {
+        setCardDomainState({ status: "failed", message: "card smoke did not complete capture/loss transitions" });
+        return;
+      }
+      setCardDomainState({ status: "loaded", issue, threeDs, authorization, capture, lostCard });
+    } catch (error: unknown) {
+      setCardDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown card domain failure" });
     }
   };
 
@@ -1152,6 +1385,141 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-statement-read-model">
+        <button type="button" onClick={runStatementReadModelSmoke} disabled={!apiBaseUrl || statementReadModelState.status === "running"}>
+          Run statement read model smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Statement</dt>
+            <dd>{statementReadModelLabel(statementReadModelState)}</dd>
+          </div>
+          {statementReadModelState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Period</dt>
+                <dd>{statementReadModelState.statement.from}</dd>
+              </div>
+              <div>
+                <dt>Lines</dt>
+                <dd>{statementReadModelState.statement.lineCount}</dd>
+              </div>
+              <div>
+                <dt>Net</dt>
+                <dd>{statementReadModelState.statement.netAmountMinor}</dd>
+              </div>
+              <div>
+                <dt>Confirmation</dt>
+                <dd>{statementReadModelState.confirmation.confirmationId}</dd>
+              </div>
+              <div>
+                <dt>Balanced</dt>
+                <dd>{statementReadModelState.confirmation.balanced ? "yes" : "no"}</dd>
+              </div>
+              <div>
+                <dt>Certificate</dt>
+                <dd>{statementReadModelState.certificate.certificateId}</dd>
+              </div>
+              <div>
+                <dt>Access events</dt>
+                <dd>{statementReadModelState.accessHistory.items.length}</dd>
+              </div>
+            </>
+          ) : null}
+          {statementReadModelState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{statementReadModelState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-customer-loan-domain">
+        <button type="button" onClick={runLoanDomainSmoke} disabled={!apiBaseUrl || loanDomainState.status === "running"}>
+          Run loan domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Loan</dt>
+            <dd>{loanDomainLabel(loanDomainState)}</dd>
+          </div>
+          {loanDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Application</dt>
+                <dd>{loanDomainState.application.item.applicationId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{loanDomainState.application.approval?.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Loan ID</dt>
+                <dd>{loanDomainState.execution.loan.loanId}</dd>
+              </div>
+              <div>
+                <dt>Disbursement</dt>
+                <dd>{loanDomainState.execution.ledgerTransaction.value.id}</dd>
+              </div>
+              <div>
+                <dt>Schedule</dt>
+                <dd>{loanDomainState.loan.schedule.length}</dd>
+              </div>
+              <div>
+                <dt>Repayment</dt>
+                <dd>{loanDomainState.repayment.ledgerTransaction.value.id}</dd>
+              </div>
+            </>
+          ) : null}
+          {loanDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{loanDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-customer-card-domain">
+        <button type="button" onClick={runCardDomainSmoke} disabled={!apiBaseUrl || cardDomainState.status === "running"}>
+          Run card domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Card</dt>
+            <dd>{cardDomainLabel(cardDomainState)}</dd>
+          </div>
+          {cardDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Card ID</dt>
+                <dd>{cardDomainState.issue.item.cardId}</dd>
+              </div>
+              <div>
+                <dt>3DS</dt>
+                <dd>{cardDomainState.threeDs.authenticationId}</dd>
+              </div>
+              <div>
+                <dt>Authorization</dt>
+                <dd>{cardDomainState.authorization.item.authorizationId}</dd>
+              </div>
+              <div>
+                <dt>Capture</dt>
+                <dd>{cardDomainState.capture.ledgerTransaction.value.id}</dd>
+              </div>
+              <div>
+                <dt>Loss status</dt>
+                <dd>{cardDomainState.lostCard.status}</dd>
+              </div>
+            </>
+          ) : null}
+          {cardDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{cardDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1436,6 +1804,45 @@ function historyStatusLabel(state: HistoryStatusState): string {
   }
   if (state.status === "loaded") {
     return "history and held status loaded";
+  }
+  return "failed";
+}
+
+function statementReadModelLabel(state: StatementReadModelState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "statement artifacts loaded";
+  }
+  return "failed";
+}
+
+function loanDomainLabel(state: LoanDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "loan posted";
+  }
+  return "failed";
+}
+
+function cardDomainLabel(state: CardDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "card captured and lost";
   }
   return "failed";
 }

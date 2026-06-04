@@ -1,0 +1,54 @@
+{
+  "screenId": "CWB-601",
+  "transactionCode": "CWB601",
+  "title": "Synthetic Card Issue",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "card",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "accountId",
+      "label": "Linked Account",
+      "type": "account-select",
+      "required": true
+    },
+    {
+      "name": "panToken",
+      "label": "PAN Token",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "panLast4",
+      "label": "PAN Last4",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/cards"
+  },
+  "postActions": ["createAuditEvent"]
+}

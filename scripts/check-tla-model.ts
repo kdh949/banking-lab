@@ -32,6 +32,7 @@ type LedgerState = {
   txns: LedgerTxn[];
   postings: Posting[];
   balances: Record<string, number>;
+  usedAmounts: Record<string, number>;
   idemResults: Record<string, string>;
   closedDates: string[];
   heldCommands: HeldCommand[];
@@ -86,6 +87,10 @@ const ledgerRequiredTokens = [
   "BalanceProjectionRecalculable",
   "HeldOrFailedCommandNoPosting",
   "AdjustmentRequiresApprovalReference",
+  "LimitUsageWithinConfigured",
+  "LimitUsageMatchesPostedDebits",
+  "LimitByAccount",
+  "usedAmounts",
   "Accounts",
   "Idempotency",
   "Reversal",
@@ -255,10 +260,12 @@ function runLedgerBoundedModelChecker(): SearchResult {
   const dates = ["d1", "d2"];
   const approvedReferences = ["apr1", "apr2"];
   const initialBalances: Record<string, number> = { a1: 2, a2: 2 };
+  const limitByAccount: Record<string, number> = { a1: 2, a2: 2 };
   const initial: LedgerState = {
     txns: [],
     postings: [],
     balances: { ...initialBalances },
+    usedAmounts: { a1: 0, a2: 0 },
     idemResults: {},
     closedDates: ["d2"],
     heldCommands: []
@@ -273,7 +280,9 @@ function runLedgerBoundedModelChecker(): SearchResult {
     ["ClosedDateNoDirectPosting", (state: LedgerState) => closedDateNoDirectPosting(state)],
     ["BalanceProjectionRecalculable", (state: LedgerState) => balanceProjectionRecalculable(state, initialBalances, accounts)],
     ["HeldOrFailedCommandNoPosting", (state: LedgerState) => heldOrFailedCommandNoPosting(state)],
-    ["AdjustmentRequiresApprovalReference", (state: LedgerState) => adjustmentRequiresApprovalReference(state, approvedReferences)]
+    ["AdjustmentRequiresApprovalReference", (state: LedgerState) => adjustmentRequiresApprovalReference(state, approvedReferences)],
+    ["LimitUsageWithinConfigured", (state: LedgerState) => limitUsageWithinConfigured(state, accounts, limitByAccount)],
+    ["LimitUsageMatchesPostedDebits", (state: LedgerState) => limitUsageMatchesPostedDebits(state, accounts)]
   ] as const;
 
   let transitionsExplored = 0;
@@ -304,7 +313,7 @@ function runLedgerBoundedModelChecker(): SearchResult {
       continue;
     }
 
-    const nextStates = ledgerTransitions(current.state, { accounts, txnIds, keys, dates, approvedReferences });
+    const nextStates = ledgerTransitions(current.state, { accounts, txnIds, keys, dates, approvedReferences, limitByAccount });
     transitionsExplored += nextStates.length;
     for (const nextState of nextStates) {
       queue.push({ depth: current.depth + 1, state: nextState });
@@ -335,6 +344,7 @@ function ledgerTransitions(
     keys: string[];
     dates: string[];
     approvedReferences: string[];
+    limitByAccount: Record<string, number>;
   }
 ): LedgerState[] {
   const next: LedgerState[] = [];
@@ -347,10 +357,14 @@ function ledgerTransitions(
       for (const date of openDates) {
         for (const debitAcct of sets.accounts) {
           for (const creditAcct of sets.accounts) {
-            if (debitAcct === creditAcct || state.balances[debitAcct] < 1) {
+            if (
+              debitAcct === creditAcct
+                || state.balances[debitAcct] < 1
+                || state.usedAmounts[debitAcct] >= sets.limitByAccount[debitAcct]
+            ) {
               continue;
             }
-            next.push(addLedgerTransaction(state, {
+            next.push(addLedgerTransactionWithUsage(state, {
               id: txn,
               status: "POSTED",
               original: "NONE",
@@ -360,17 +374,20 @@ function ledgerTransitions(
             }, [
               { txn, account: debitAcct, side: "DEBIT" },
               { txn, account: creditAcct, side: "CREDIT" }
-            ]));
+            ], { countedDebitAccount: debitAcct }));
           }
         }
 
         for (const original of state.txns.filter((candidate) => candidate.status === "POSTED")) {
+          if (state.txns.some((candidate) => candidate.status === "REVERSAL" && candidate.original === original.id)) {
+            continue;
+          }
           const originalDebit = state.postings.find((posting) => posting.txn === original.id && posting.side === "DEBIT");
           const originalCredit = state.postings.find((posting) => posting.txn === original.id && posting.side === "CREDIT");
           if (!originalDebit || !originalCredit || state.balances[originalCredit.account] < 1) {
             continue;
           }
-          next.push(addLedgerTransaction(state, {
+          next.push(addLedgerTransactionWithUsage(state, {
             id: txn,
             status: "REVERSAL",
             original: original.id,
@@ -380,7 +397,7 @@ function ledgerTransitions(
           }, [
             { txn, account: originalCredit.account, side: "DEBIT" },
             { txn, account: originalDebit.account, side: "CREDIT" }
-          ]));
+          ], { releaseDebitAccount: originalDebit.account }));
         }
 
         for (const approval of sets.approvedReferences) {
@@ -417,12 +434,27 @@ function ledgerTransitions(
 }
 
 function addLedgerTransaction(state: LedgerState, txn: LedgerTxn, postings: Posting[]): LedgerState {
+  return addLedgerTransactionWithUsage(state, txn, postings, {});
+}
+
+function addLedgerTransactionWithUsage(
+  state: LedgerState,
+  txn: LedgerTxn,
+  postings: Posting[],
+  usage: { countedDebitAccount?: string; releaseDebitAccount?: string }
+): LedgerState {
   const next = cloneLedgerState(state);
   next.txns.push(txn);
   next.postings.push(...postings);
   next.idemResults[txn.key] = txn.id;
   for (const posting of postings) {
     next.balances[posting.account] += posting.side === "CREDIT" ? 1 : -1;
+  }
+  if (usage.countedDebitAccount) {
+    next.usedAmounts[usage.countedDebitAccount] += 1;
+  }
+  if (usage.releaseDebitAccount) {
+    next.usedAmounts[usage.releaseDebitAccount] = Math.max(0, next.usedAmounts[usage.releaseDebitAccount] - 1);
   }
   return next;
 }
@@ -432,6 +464,7 @@ function cloneLedgerState(state: LedgerState): LedgerState {
     txns: state.txns.map((txn) => ({ ...txn })),
     postings: state.postings.map((posting) => ({ ...posting })),
     balances: { ...state.balances },
+    usedAmounts: { ...state.usedAmounts },
     idemResults: { ...state.idemResults },
     closedDates: [...state.closedDates],
     heldCommands: state.heldCommands.map((command) => ({ ...command }))
@@ -508,11 +541,38 @@ function adjustmentRequiresApprovalReference(state: LedgerState, approvedReferen
   );
 }
 
+function limitUsageWithinConfigured(
+  state: LedgerState,
+  accounts: string[],
+  limitByAccount: Record<string, number>
+): boolean {
+  return accounts.every((account) => state.usedAmounts[account] <= limitByAccount[account]);
+}
+
+function limitUsageMatchesPostedDebits(state: LedgerState, accounts: string[]): boolean {
+  const reversedOriginalIds = new Set(
+    state.txns
+      .filter((txn) => txn.status === "REVERSAL")
+      .map((txn) => txn.original)
+  );
+  return accounts.every((account) => {
+    const countedDebits = state.postings.filter((posting) => {
+      if (posting.account !== account || posting.side !== "DEBIT") {
+        return false;
+      }
+      const txn = state.txns.find((candidate) => candidate.id === posting.txn);
+      return Boolean(txn && txn.status === "POSTED" && !reversedOriginalIds.has(txn.id));
+    }).length;
+    return state.usedAmounts[account] === countedDebits;
+  });
+}
+
 function canonicalLedgerState(state: LedgerState): string {
   return JSON.stringify({
     txns: [...state.txns].sort(compareByJson),
     postings: [...state.postings].sort(compareByJson),
     balances: sortRecord(state.balances),
+    usedAmounts: sortRecord(state.usedAmounts),
     idemResults: sortRecord(state.idemResults),
     closedDates: [...state.closedDates].sort(),
     heldCommands: [...state.heldCommands].sort(compareByJson)

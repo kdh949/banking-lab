@@ -1,6 +1,8 @@
 # Security Evidence Summary
 
-Generated at: 2026-06-04T00:46:26.654Z
+Generated at: 2026-06-04T14:13:45.766Z
+
+Forced Docker scanner fallbacks: false
 
 | Check | Status | Evidence | Reason |
 | --- | --- | --- | --- |
@@ -11,3 +13,4 @@ Generated at: 2026-06-04T00:46:26.654Z
 | dast-zap-baseline | skipped |  | BANKING_LAB_DAST_URL is not set; no live target was supplied for DAST. |
 
 Totals: 4 passed, 0 failed, 1 skipped.
+

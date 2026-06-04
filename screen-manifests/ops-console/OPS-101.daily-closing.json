@@ -16,5 +16,24 @@
     "piiAccess": false,
     "maskingPolicy": "NONE"
   },
-  "widgets": ["ledgerInvariantStatus", "closingStatus", "unmatchedItems"]
+  "approval": {
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["EOD_CLOSING"]
+  },
+  "widgets": ["ledgerInvariantStatus", "closingStatus", "unmatchedItems"],
+  "actions": [
+    {
+      "id": "readEodMonitor",
+      "label": "Read Monitor",
+      "type": "query",
+      "target": "GET /api/ops/eod/{businessDate}"
+    },
+    {
+      "id": "requestEodClose",
+      "label": "Request Close",
+      "type": "command",
+      "target": "POST /api/ops/eod/close"
+    }
+  ]
 }

@@ -45,10 +45,11 @@ class BankingCaseTemporalWorker(
                     .build()
             )
             factory = WorkerFactory.newInstance(client)
-            factory.newWorker(taskQueue)
-                .registerWorkflowImplementationFactory(
-                    BankingCaseTemporalWorkflow::class.java
-                ) { traceLogger.newWorkflow() }
+            val worker = factory.newWorker(taskQueue)
+            worker.registerWorkflowImplementationFactory(
+                BankingCaseTemporalWorkflow::class.java
+            ) { traceLogger.newWorkflow() }
+            worker.registerWorkflowImplementationTypes(EndOfDayClosingWorkflowImpl::class.java)
             factory.start()
             serviceStubs = stubs
             workerFactory = factory

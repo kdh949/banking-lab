@@ -69,8 +69,14 @@ class BankingLabAuthorizationFilter(
         val path = request.requestURI
         return when {
             path.startsWith("/api/customer/") -> setOf("CUSTOMER")
+            path.startsWith("/api/customers/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/transactions/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/accounts/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/products/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/fees/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/loans/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/cards/") || path == "/api/cards" -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/fds/analytics" -> setOf("FDS_REVIEWER", "AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -172,10 +178,33 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/products/deposits") -> "PRD-101"
             path.startsWith("/api/staff/products/deposits") -> "PRD-102"
             path.startsWith("/api/fees/policies") -> "FEE-101"
+            path.startsWith("/api/loans/products") -> "CWB-501"
+            path.startsWith("/api/loans/applications") -> "CWB-501"
+            path.startsWith("/api/loans/") && path.contains("repayments") -> "CWB-503"
+            path.startsWith("/api/loans/") && path.contains("prepayments") -> "CWB-504"
+            path.startsWith("/api/loans/") && path.contains("accruals") -> "LON-103"
+            path.startsWith("/api/loans/") -> "CWB-502"
+            path.startsWith("/api/cards/3ds") -> "CWB-605"
+            path.startsWith("/api/cards/authorizations") && path.contains("captures") -> "CWB-603"
+            path.startsWith("/api/cards/authorizations") && path.contains("cancel") -> "CWB-604"
+            path.startsWith("/api/cards/authorizations") -> "CWB-602"
+            path.startsWith("/api/cards/") && path.contains("loss-report") -> "CWB-606"
+            path.startsWith("/api/cards") -> "CWB-601"
             path.startsWith("/api/staff/fee-policies") -> "FEE-103"
             path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"
             path.startsWith("/api/ops/fee-posting-batches") -> "OPS-403"
+            path.startsWith("/api/ops/parameters/reconciliation") -> "OPS-301"
+            path.startsWith("/api/ops/eod") -> "OPS-101"
+            path.startsWith("/api/staff/audit-parameters") -> "AUD-201"
+            path.startsWith("/api/staff/fds-parameters") -> "FDS-301"
+            path == "/api/fds/analytics" -> "FDS-301"
+            path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
+            path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
+            path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
+            path.startsWith("/api/customers/") && path.contains("statements") -> "CWB-103"
+            path.startsWith("/api/transactions/") && path.contains("confirmation") -> "LED-102"
+            path.startsWith("/api/accounts/") && path.contains("balance-certificate") -> "ACC-102"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"

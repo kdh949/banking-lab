@@ -32,6 +32,24 @@
   },
   "actions": [
     {
+      "id": "readStatement",
+      "label": "Read Statement",
+      "type": "query",
+      "target": "GET /api/customers/{customerId}/statements"
+    },
+    {
+      "id": "readTransactionConfirmation",
+      "label": "Read Confirmation",
+      "type": "query",
+      "target": "GET /api/transactions/{transactionId}/confirmation"
+    },
+    {
+      "id": "readBalanceCertificate",
+      "label": "Read Balance Certificate",
+      "type": "query",
+      "target": "GET /api/accounts/{accountId}/balance-certificate"
+    },
+    {
       "id": "openTransfer",
       "label": "Open Transfer",
       "type": "navigate",

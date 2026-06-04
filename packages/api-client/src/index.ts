@@ -90,6 +90,97 @@ export interface CustomerTransactionHistoryResponse {
   readonly items: readonly CustomerTransactionDto[];
 }
 
+export interface StatementLineDto {
+  readonly transactionId: string;
+  readonly transactionType: string;
+  readonly businessDate: string;
+  readonly postedAt?: string | null;
+  readonly accountId: string;
+  readonly direction: "DEBIT" | "CREDIT";
+  readonly amountMinor: number;
+  readonly signedAmountMinor: number;
+  readonly currency: string;
+  readonly postingType: string;
+  readonly requestedChannel: string;
+  readonly reason?: string | null;
+}
+
+export interface CustomerStatementDto {
+  readonly customerId: string;
+  readonly from: string;
+  readonly to: string;
+  readonly currency: string;
+  readonly openingBalanceMinor: number;
+  readonly closingBalanceMinor: number;
+  readonly debitTotalMinor: number;
+  readonly creditTotalMinor: number;
+  readonly netAmountMinor: number;
+  readonly lineCount: number;
+  readonly lines: readonly StatementLineDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface TransactionConfirmationPostingDto {
+  readonly accountId: string;
+  readonly customerId: string;
+  readonly direction: "DEBIT" | "CREDIT";
+  readonly amountMinor: number;
+  readonly signedAmountMinor: number;
+  readonly currency: string;
+  readonly postingType: string;
+}
+
+export interface TransactionConfirmationDto {
+  readonly confirmationId: string;
+  readonly transactionId: string;
+  readonly transactionType: string;
+  readonly businessReferenceId: string;
+  readonly businessDate: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly requestedChannel: string;
+  readonly postedAt?: string | null;
+  readonly originalTransactionId?: string | null;
+  readonly currency: string;
+  readonly totalDebitMinor: number;
+  readonly totalCreditMinor: number;
+  readonly balanced: boolean;
+  readonly postings: readonly TransactionConfirmationPostingDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface BalanceCertificateDto {
+  readonly certificateId: string;
+  readonly accountId: string;
+  readonly customerId: string;
+  readonly currency: string;
+  readonly date: string;
+  readonly balanceAsOfMinor: number;
+  readonly currentLedgerBalanceMinor: number;
+  readonly currentAvailableBalanceMinor: number;
+  readonly deterministicInputHash: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAccessHistoryItemDto {
+  readonly auditEventId: string;
+  readonly eventType: string;
+  readonly actorType: string;
+  readonly actorId: string;
+  readonly actorRole: string;
+  readonly screenId?: string | null;
+  readonly businessReferenceId?: string | null;
+  readonly accountId?: string | null;
+  readonly reasonPresent: boolean;
+  readonly createdAt: string;
+}
+
+export interface CustomerAccessHistoryDto {
+  readonly customerId: string;
+  readonly items: readonly CustomerAccessHistoryItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
 export interface CustomerTransferStatusDto {
   readonly resultId?: string | null;
   readonly transactionId?: string | null;
@@ -652,6 +743,417 @@ export interface FeePostingBatchResponse {
   readonly replayed: boolean;
 }
 
+export interface EodCloseCommand {
+  readonly businessDate: string;
+  readonly idempotencyKey?: string | null;
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string | null;
+  readonly feePolicyId?: string | null;
+  readonly externalMode?: string | null;
+}
+
+export interface EodClosingStepDto {
+  readonly businessDate: string;
+  readonly step: "INTEREST_ACCRUAL" | "INTEREST_POSTING" | "FEE_POSTING" | "RECONCILIATION" | "DAILY_CLOSING";
+  readonly status: string;
+  readonly startedAt?: string | null;
+  readonly finishedAt?: string | null;
+  readonly result: Record<string, unknown>;
+}
+
+export interface EodClosingMonitorDto {
+  readonly businessDate: string;
+  readonly status: string;
+  readonly dailyClosingStatus?: string | null;
+  readonly ledgerTotalHash?: string | null;
+  readonly steps: readonly EodClosingStepDto[];
+  readonly reconciliationItems: readonly ReconciliationItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface EodCloseRequestResponse {
+  readonly approval?: OperatorApproval | null;
+  readonly monitor: EodClosingMonitorDto;
+  readonly replayed: boolean;
+}
+
+export interface LoanProductDto {
+  readonly productId: string;
+  readonly productCode: string;
+  readonly productName: string;
+  readonly currency: string;
+  readonly annualRateBps: number;
+  readonly termMonths: number;
+  readonly minimumAmountMinor: number;
+  readonly maximumAmountMinor: number;
+  readonly approvalThresholdMinor: number;
+  readonly status: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanProductListResponse {
+  readonly items: readonly LoanProductDto[];
+}
+
+export interface LoanApplicationCommand {
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly requestedAmountMinor: number;
+  readonly requestedTermMonths?: number | null;
+  readonly syntheticMonthlyIncomeMinor: number;
+  readonly syntheticMonthlyDebtMinor: number;
+  readonly syntheticCreditGrade: string;
+  readonly syntheticRiskGrade: string;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface LoanApplicationDto {
+  readonly applicationId: string;
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly requestedAmountMinor: number;
+  readonly requestedTermMonths: number;
+  readonly syntheticCreditGrade: string;
+  readonly syntheticRiskGrade: string;
+  readonly underwritingScore: number;
+  readonly underwritingDecision: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanApplicationResponse {
+  readonly item: LoanApplicationDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
+export interface LoanScheduleItemDto {
+  readonly scheduleId: string;
+  readonly installmentNo: number;
+  readonly dueDate: string;
+  readonly principalMinor: number;
+  readonly interestMinor: number;
+  readonly totalMinor: number;
+  readonly status: string;
+  readonly ledgerTransactionId?: string | null;
+  readonly paidAt?: string | null;
+}
+
+export interface LoanDto {
+  readonly loanId: string;
+  readonly applicationId: string;
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly principalMinor: number;
+  readonly outstandingPrincipalMinor: number;
+  readonly annualRateBps: number;
+  readonly termMonths: number;
+  readonly status: string;
+  readonly disbursementTransactionId?: string | null;
+  readonly nextDueDate?: string | null;
+  readonly overdueDays: number;
+  readonly disbursedAt?: string | null;
+  readonly schedule: readonly LoanScheduleItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanExecutionResponse {
+  readonly application: LoanApplicationDto;
+  readonly loan: LoanDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+}
+
+export interface LoanPaymentCommand {
+  readonly principalMinor?: number | null;
+  readonly interestMinor?: number | null;
+  readonly businessDate?: string | null;
+  readonly idempotencyKey?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface LoanPaymentDto {
+  readonly paymentId: string;
+  readonly loanId: string;
+  readonly paymentType: string;
+  readonly principalMinor: number;
+  readonly interestMinor: number;
+  readonly totalMinor: number;
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly ledgerTransactionId: string;
+  readonly requestedBy: string;
+  readonly requestedChannel: string;
+  readonly reason: string;
+  readonly createdAt: string;
+}
+
+export interface LoanPaymentResponse {
+  readonly item: LoanPaymentDto;
+  readonly loan: LoanDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+  readonly replayed: boolean;
+}
+
+export interface LoanAccrualCommand {
+  readonly accrualDate: string;
+  readonly requestedBy: string;
+  readonly actorRole: string;
+  readonly reason: string;
+}
+
+export interface LoanAccrualDto {
+  readonly accrualId: string;
+  readonly loanId: string;
+  readonly accrualDate: string;
+  readonly outstandingPrincipalMinor: number;
+  readonly annualRateBps: number;
+  readonly interestMinor: number;
+  readonly overdueDays: number;
+  readonly status: string;
+  readonly createdAt: string;
+}
+
+export interface LoanAccrualResponse {
+  readonly item: LoanAccrualDto;
+  readonly loan: LoanDto;
+  readonly replayed: boolean;
+}
+
+export interface IssueCardCommand {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly panToken: string;
+  readonly panLast4: string;
+  readonly dailyLimitMinor: number;
+  readonly monthlyLimitMinor: number;
+  readonly singleLimitMinor: number;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardDto {
+  readonly cardId: string;
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly panToken: string;
+  readonly panLast4: string;
+  readonly status: string;
+  readonly dailyLimitMinor: number;
+  readonly monthlyLimitMinor: number;
+  readonly singleLimitMinor: number;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CardIssueResponse {
+  readonly item: CardDto;
+  readonly replayed: boolean;
+}
+
+export interface ThreeDsSimulationCommand {
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly idempotencyKey: string;
+}
+
+export interface ThreeDsSimulationDto {
+  readonly authenticationId: string;
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CardAuthorizationCommand {
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly merchantName: string;
+  readonly businessDate?: string | null;
+  readonly threeDsAuthenticationId?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+  readonly currency?: string;
+}
+
+export interface CardAuthorizationDto {
+  readonly authorizationId: string;
+  readonly cardId: string;
+  readonly accountId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly merchantName: string;
+  readonly businessDate: string;
+  readonly status: string;
+  readonly holdId?: string | null;
+  readonly threeDsAuthenticationId?: string | null;
+  readonly createdAt: string;
+}
+
+export interface CardAuthorizationResponse {
+  readonly item: CardAuthorizationDto;
+  readonly replayed: boolean;
+}
+
+export interface CardCaptureCommand {
+  readonly businessDate?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardCaptureDto {
+  readonly captureId: string;
+  readonly authorizationId: string;
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly ledgerTransactionId: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly reversedAt?: string | null;
+}
+
+export interface CardCaptureResponse {
+  readonly item: CardCaptureDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+  readonly replayed: boolean;
+}
+
+export interface CardCancelCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardLossReportCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface ParameterVersionDto {
+  readonly namespace: string;
+  readonly parameterVersionId: string;
+  readonly parameterKey: string;
+  readonly parameterValue: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly effectiveTo?: string | null;
+  readonly approvalId?: string | null;
+  readonly createdBy: string;
+  readonly approvedAt?: string | null;
+  readonly rollbackOfVersionId?: string | null;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterValueDto {
+  readonly namespace: string;
+  readonly parameterKey: string;
+  readonly currentValue: string;
+  readonly currentVersionId: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly scheduled: readonly ParameterVersionDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ParameterValueDto[];
+}
+
+export interface ParameterHistoryResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ParameterVersionDto[];
+}
+
+export interface ParameterChangeRequestCommand {
+  readonly parameterKey: string;
+  readonly scheduledValue?: unknown;
+  readonly effectiveFrom?: string | null;
+  readonly effectiveAt?: string | null;
+  readonly rollbackOfVersionId?: string | null;
+  readonly rollbackPlan: string;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface ParameterChangeRequestDto {
+  readonly requestId: string;
+  readonly namespace: string;
+  readonly parameterKey: string;
+  readonly businessType: string;
+  readonly approvalId: string;
+  readonly requestedValue: string;
+  readonly valueType: string;
+  readonly effectiveFrom: string;
+  readonly rollbackPlan: string;
+  readonly rollbackOfVersionId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly idempotencyKey: string;
+  readonly appliedVersionId?: string | null;
+  readonly appliedAt?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ParameterChangeRequestResponse {
+  readonly item: ParameterChangeRequestDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
+export interface FdsAnalyticsEvidenceResultDto {
+  readonly transactionId: string;
+  readonly customerId: string;
+  readonly riskBand: string;
+  readonly totalScore: number;
+  readonly alerts: readonly string[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface FdsAnalyticsEvidenceDto {
+  readonly engine: string;
+  readonly generatedAt: string;
+  readonly controls: Record<string, boolean>;
+  readonly scoredTransactions: number;
+  readonly highRiskResults: number;
+  readonly alertCounts: Record<string, number>;
+  readonly highestRisk?: FdsAnalyticsEvidenceResultDto | null;
+  readonly auditEventId: string;
+  readonly syntheticOnly: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -684,6 +1186,8 @@ export interface StaffApprovalExecutionResponse {
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
   readonly reconciliationItem?: ReconciliationItemDto | null;
+  readonly eodClosing?: EodClosingMonitorDto | null;
+  readonly loanExecution?: LoanExecutionResponse | null;
   readonly ledgerTransaction?: LedgerCommandResult | null;
 }
 
@@ -692,6 +1196,7 @@ export interface StaffApprovalRejectionResponse {
   readonly rejected: boolean;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
+  readonly loanApplication?: LoanApplicationDto | null;
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
   readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
 }
@@ -877,6 +1382,14 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
   if (!fetchImpl) {
     throw new Error("A fetch implementation is required for Banking API calls.");
   }
+  const parameterQuery = (reason: string, asOf?: string): Record<string, string> =>
+    asOf ? { reason, asOf } : { reason };
+  const getParameters = (path: string, reason: string, asOf?: string) =>
+    request<ParameterListResponse>(fetchImpl, baseUrl, path, parameterQuery(reason, asOf), options.bearerToken);
+  const getParameterHistory = (path: string, reason: string) =>
+    request<ParameterHistoryResponse>(fetchImpl, baseUrl, path, { reason }, options.bearerToken);
+  const requestParameterChange = (path: string, command: ParameterChangeRequestCommand) =>
+    request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
 
   return {
     staffCustomerDetail(customerId: string, reason: string) {
@@ -1085,6 +1598,248 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    requestEodClose(command: EodCloseCommand) {
+      return request<EodCloseRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/eod/close",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    eodMonitor(businessDate: string) {
+      return request<EodClosingMonitorDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/eod/${encodeURIComponent(businessDate)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    loanProducts() {
+      return request<LoanProductListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/loans/products",
+        {},
+        options.bearerToken
+      );
+    },
+
+    requestLoanApplication(command: LoanApplicationCommand) {
+      return request<LoanApplicationResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/loans/applications",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    loanDetail(loanId: string, reason?: string) {
+      return request<LoanDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}`,
+        reason ? { reason } : {},
+        options.bearerToken
+      );
+    },
+
+    repayLoan(loanId: string, command: LoanPaymentCommand) {
+      return request<LoanPaymentResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/repayments`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    prepayLoan(loanId: string, command: LoanPaymentCommand) {
+      return request<LoanPaymentResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/prepayments`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    runLoanAccrual(loanId: string, command: LoanAccrualCommand) {
+      return request<LoanAccrualResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/accruals/run`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    issueCard(command: IssueCardCommand) {
+      return request<CardIssueResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cardDetail(cardId: string) {
+      return request<CardDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/${encodeURIComponent(cardId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    simulateCardThreeDs(command: ThreeDsSimulationCommand) {
+      return request<ThreeDsSimulationDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards/3ds-simulations",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    authorizeCard(command: CardAuthorizationCommand) {
+      return request<CardAuthorizationResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards/authorizations",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    captureCardAuthorization(authorizationId: string, command: CardCaptureCommand) {
+      return request<CardCaptureResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/authorizations/${encodeURIComponent(authorizationId)}/captures`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelCardAuthorization(authorizationId: string, command: CardCancelCommand) {
+      return request<CardAuthorizationResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/authorizations/${encodeURIComponent(authorizationId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reverseCardCapture(captureId: string, command: CardCancelCommand) {
+      return request<CardCaptureResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/captures/${encodeURIComponent(captureId)}/reverse`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reportCardLost(cardId: string, command: CardLossReportCommand) {
+      return request<CardDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/${encodeURIComponent(cardId)}/loss-report`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reconciliationParameters(reason: string, asOf?: string) {
+      return getParameters("/api/ops/parameters/reconciliation", reason, asOf);
+    },
+
+    reconciliationParameterHistory(reason: string) {
+      return getParameterHistory("/api/ops/parameters/reconciliation/history", reason);
+    },
+
+    requestReconciliationParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/ops/parameters/reconciliation/change-requests", command);
+    },
+
+    auditParameters(reason: string, asOf?: string) {
+      return getParameters("/api/staff/audit-parameters", reason, asOf);
+    },
+
+    auditParameterHistory(reason: string) {
+      return getParameterHistory("/api/staff/audit-parameters/history", reason);
+    },
+
+    requestAuditParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/staff/audit-parameters/change-requests", command);
+    },
+
+    fdsParameters(reason: string, asOf?: string) {
+      return getParameters("/api/staff/fds-parameters", reason, asOf);
+    },
+
+    fdsParameterHistory(reason: string) {
+      return getParameterHistory("/api/staff/fds-parameters/history", reason);
+    },
+
+    requestFdsParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/staff/fds-parameters/change-requests", command);
+    },
+
+    fdsAnalyticsEvidence(reason: string) {
+      return request<FdsAnalyticsEvidenceDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/fds/analytics",
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    securityParameters(reason: string, asOf?: string) {
+      return getParameters("/api/admin/platform/security-parameters", reason, asOf);
+    },
+
+    securityParameterHistory(reason: string) {
+      return getParameterHistory("/api/admin/platform/security-parameters/history", reason);
+    },
+
+    requestSecurityParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/admin/platform/security-parameters/change-requests", command);
+    },
+
+    authorizationParameters(reason: string, asOf?: string) {
+      return getParameters("/api/admin/platform/authorization-parameters", reason, asOf);
+    },
+
+    authorizationParameterHistory(reason: string) {
+      return getParameterHistory("/api/admin/platform/authorization-parameters/history", reason);
+    },
+
+    requestAuthorizationParameterChange(command: ParameterChangeRequestCommand) {
+      return requestParameterChange("/api/admin/platform/authorization-parameters/change-requests", command);
+    },
+
     unmaskStaffCustomer(command: PiiUnmaskCommand) {
       return request<StaffUnmaskResponse>(
         fetchImpl,
@@ -1123,6 +1878,46 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         "/api/customer/transactions",
         { customerId, accountId },
+        options.bearerToken
+      );
+    },
+
+    customerStatement(customerId: string, from: string, to: string, reason?: string) {
+      return request<CustomerStatementDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customers/${encodeURIComponent(customerId)}/statements`,
+        reason ? { from, to, reason } : { from, to },
+        options.bearerToken
+      );
+    },
+
+    transactionConfirmation(transactionId: string, reason?: string) {
+      return request<TransactionConfirmationDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/transactions/${encodeURIComponent(transactionId)}/confirmation`,
+        reason ? { reason } : {},
+        options.bearerToken
+      );
+    },
+
+    balanceCertificate(accountId: string, date: string, reason?: string) {
+      return request<BalanceCertificateDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/accounts/${encodeURIComponent(accountId)}/balance-certificate`,
+        reason ? { date, reason } : { date },
+        options.bearerToken
+      );
+    },
+
+    customerAccessHistory(customerId: string, reason?: string) {
+      return request<CustomerAccessHistoryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customers/${encodeURIComponent(customerId)}/access-history`,
+        reason ? { reason } : {},
         options.bearerToken
       );
     },

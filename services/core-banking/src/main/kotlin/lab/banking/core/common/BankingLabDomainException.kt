@@ -10,5 +10,6 @@ class BankingLabDomainException(
     val policy: String? = null,
     override val message: String,
     val causeText: String,
-    val fix: String
+    val fix: String,
+    val details: Map<String, Any?>? = null
 ) : RuntimeException(message)

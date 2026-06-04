@@ -6,8 +6,12 @@ import java.time.OffsetDateTime
 import lab.banking.core.aml.AmlCaseDto
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.complaint.ComplaintCaseDto
+import lab.banking.core.eod.EodClosingMonitorDto
 import lab.banking.core.fds.FdsCaseDto
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.loan.LoanApplicationDto
+import lab.banking.core.loan.LoanExecutionResponse
+import lab.banking.core.parameters.ParameterChangeRequestDto
 import lab.banking.core.product.DepositRateChangeRequestDto
 import lab.banking.core.product.FeePolicyChangeRequestDto
 import lab.banking.core.reconciliation.ReconciliationItemDto
@@ -293,6 +297,9 @@ data class StaffApprovalExecutionResponse(
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
     val reconciliationItem: ReconciliationItemDto?,
+    val eodClosing: EodClosingMonitorDto?,
+    val loanExecution: LoanExecutionResponse?,
+    val parameterChangeRequest: ParameterChangeRequestDto?,
     val ledgerTransaction: LedgerCommandResult?
 )
 
@@ -301,8 +308,10 @@ data class StaffApprovalRejectionResponse(
     val rejected: Boolean,
     val feeWaiverRequest: FeeWaiverRequestDto?,
     val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
+    val loanApplication: LoanApplicationDto?,
     val depositRateChangeRequest: DepositRateChangeRequestDto?,
-    val feePolicyChangeRequest: FeePolicyChangeRequestDto?
+    val feePolicyChangeRequest: FeePolicyChangeRequestDto?,
+    val parameterChangeRequest: ParameterChangeRequestDto?
 )
 
 data class StaffCustomerRecord(
