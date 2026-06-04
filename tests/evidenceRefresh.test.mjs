@@ -35,6 +35,7 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.equal(packageJson.scripts["retirement:final-review:prepare"], "node --experimental-strip-types scripts/prepare-final-retirement-review-evidence.ts");
   assert.equal(packageJson.scripts["retirement:final-review:record"], "node --experimental-strip-types scripts/record-final-retirement-review.ts");
   assert.equal(packageJson.scripts["retirement:final-review:verify"], "node --experimental-strip-types scripts/verify-final-retirement-review.ts");
+  assert.equal(packageJson.scripts["governance:evidence"], "node --experimental-strip-types scripts/run-governance-evidence.ts");
   assert.equal(evidenceRefresh?.status, "pass");
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/evidence-refresh-review.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/stack-retirement-area-audit.md"));
@@ -63,6 +64,16 @@ test("evidence refresh gate is wired to the checker and review artifact", async 
   assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/goal-completion-audit.md"));
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-goal-completion-audit.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/goalCompletionAudit.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("scripts/run-governance-evidence.ts"));
+  assert.ok(evidenceRefresh?.evidence?.includes("tests/governanceEvidence.test.mjs"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/hardening-h8-governance-artifacts.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/regulatory-mapping/governance-artifact-mapping.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/incident-response/synthetic-incident-response-runbook.md"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated/governance/governance-evidence-summary.json"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated/governance/access-rights-review.json"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated/governance/deployment-approval-evidence.json"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated/governance/incident-response-drill-log.json"));
+  assert.ok(evidenceRefresh?.evidence?.includes("docs/test-evidence/generated/governance/vulnerability-remediation-tracker.json"));
   assert.ok(evidenceRefresh?.evidence?.includes(script));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/evidenceRefresh.test.mjs"));
   assert.doesNotMatch(gate.statusReason, /evidence-refresh completion/i);

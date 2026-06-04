@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "H8-DEPLOYMENT-APPROVAL-EVIDENCE",
+  "releaseId": "REL-HARDENING-H1-H8-2026-06-05",
+  "generatedAt": "2026-06-04T21:26:00.411Z",
+  "syntheticOnly": true,
+  "controls": {
+    "realMoneyUsed": false,
+    "realPiiUsed": false,
+    "realKycUsed": false,
+    "realPaymentNetworkUsed": false,
+    "realExternalFinancialInstitutionApiUsed": false,
+    "realSanctionsDataUsed": false,
+    "regulatorSubmissionMade": false
+  },
+  "changeRecord": {
+    "changeId": "CHG-HARDENING-H1-H8-2026-06-05",
+    "branch": "codex/hardening-h8-governance-artifacts",
+    "commit": "b2c80d97d6f912aae8796404bd7cf25971111ec5",
+    "targetEnvironment": "synthetic-lab",
+    "scope": [
+      "H1 Spring canonical lock",
+      "H2 secure defaults",
+      "H3 DB ledger integrity",
+      "H4 HA/DR proof",
+      "H5 operational security lab",
+      "H6 AML/FDS governance",
+      "H7 data platform",
+      "H8 governance artifacts"
+    ],
+    "noRealFundsOrPiiOrNetworks": true
+  },
+  "approval": {
+    "status": "approved",
+    "maker": "release-maker01",
+    "checker": "release-checker01",
+    "makerCheckerSeparated": true,
+    "approvedAt": "2026-06-05T09:30:00Z",
+    "reason": "Synthetic hardening evidence release after H1-H7 controls passed objective gates."
+  },
+  "requiredPreReleaseCommands": [
+    "npm run security:evidence",
+    "npm run evidence:refresh-check",
+    "npm run governance:evidence",
+    "npm run node:retirement-gate",
+    "npm test"
+  ],
+  "linkedEvidence": [
+    "docs/implementation-coverage-matrix.md",
+    "docs/test-evidence/evidence-gap-report.md",
+    "docs/test-evidence/hardening-h7-data-platform.md"
+  ]
+}

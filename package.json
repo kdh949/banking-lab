@@ -26,6 +26,7 @@
     "dr:multi-instance-drill": "node --experimental-strip-types scripts/run-multi-instance-drill.ts",
     "siem:alert-drill": "node --experimental-strip-types scripts/run-siem-alert-drill.ts",
     "aml:str-report": "node --experimental-strip-types scripts/run-aml-str-report.ts",
+    "governance:evidence": "node --experimental-strip-types scripts/run-governance-evidence.ts",
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",

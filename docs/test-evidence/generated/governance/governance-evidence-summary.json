@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "H8-GOVERNANCE-EVIDENCE-SUMMARY",
+  "generatedAt": "2026-06-04T21:26:00.411Z",
+  "status": "pass",
+  "syntheticOnly": true,
+  "controls": {
+    "realMoneyUsed": false,
+    "realPiiUsed": false,
+    "realKycUsed": false,
+    "realPaymentNetworkUsed": false,
+    "realExternalFinancialInstitutionApiUsed": false,
+    "realSanctionsDataUsed": false,
+    "regulatorSubmissionMade": false
+  },
+  "artifacts": [
+    {
+      "id": "access-rights-review",
+      "path": "docs/test-evidence/generated/governance/access-rights-review.json",
+      "status": "pass"
+    },
+    {
+      "id": "deployment-approval-evidence",
+      "path": "docs/test-evidence/generated/governance/deployment-approval-evidence.json",
+      "status": "pass"
+    },
+    {
+      "id": "incident-response-drill-log",
+      "path": "docs/test-evidence/generated/governance/incident-response-drill-log.json",
+      "status": "pass"
+    },
+    {
+      "id": "vulnerability-remediation-tracker",
+      "path": "docs/test-evidence/generated/governance/vulnerability-remediation-tracker.json",
+      "status": "pass"
+    },
+    {
+      "id": "governance-evidence-summary",
+      "path": "docs/test-evidence/generated/governance/governance-evidence-summary.json",
+      "status": "pass"
+    },
+    {
+      "id": "incident-response-runbook",
+      "path": "docs/incident-response/synthetic-incident-response-runbook.md",
+      "status": "pass"
+    }
+  ],
+  "accessRights": {
+    "principalCount": 12,
+    "roleAssignmentCount": 16,
+    "overPrivilegeFlagCount": 4,
+    "flaggedPrincipals": [
+      "compliance01",
+      "manager-webauthn-block01",
+      "security-admin01"
+    ]
+  },
+  "deploymentApproval": {
+    "releaseId": "REL-HARDENING-H1-H8-2026-06-05",
+    "approvalStatus": "approved",
+    "makerCheckerSeparated": true
+  },
+  "incidentResponse": {
+    "incidentId": "IR-H8-SYNTHETIC-HA-DR-2026-06-05",
+    "status": "pass",
+    "linkedDrillCount": 2
+  },
+  "vulnerabilityRemediation": {
+    "totalFindings": 5,
+    "passedChecks": 5,
+    "failedChecks": 0,
+    "skippedChecks": 0,
+    "openRemediationCount": 0,
+    "acceptedLabGapCount": 0,
+    "status": "pass"
+  }
+}
