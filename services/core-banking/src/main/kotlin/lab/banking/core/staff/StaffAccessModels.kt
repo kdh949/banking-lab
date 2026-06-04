@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import lab.banking.core.aml.AmlCaseDto
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.complaint.ComplaintCaseDto
+import lab.banking.core.eod.EodClosingMonitorDto
 import lab.banking.core.fds.FdsCaseDto
 import lab.banking.core.ledger.domain.LedgerCommandResult
 import lab.banking.core.product.DepositRateChangeRequestDto
@@ -293,6 +294,7 @@ data class StaffApprovalExecutionResponse(
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
     val reconciliationItem: ReconciliationItemDto?,
+    val eodClosing: EodClosingMonitorDto?,
     val ledgerTransaction: LedgerCommandResult?
 )
 

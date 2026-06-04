@@ -14,6 +14,7 @@ import lab.banking.core.approval.PersistentApprovalService
 import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.complaint.ComplaintCaseService
+import lab.banking.core.eod.EodClosingService
 import lab.banking.core.fds.FdsCaseService
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.application.ReversalCommand
@@ -47,6 +48,7 @@ class StaffAccessService(
     private val ledgerCommandService: LedgerCommandService,
     private val depositProductService: DepositProductService,
     private val feePolicyService: FeePolicyService,
+    private val eodClosingService: EodClosingService,
     private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -689,9 +691,17 @@ class StaffAccessService(
     }
 
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
-        return runSerializableApprovalExecution {
+        val response = runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
         }
+        if (response.item.businessType != ApprovalBusinessTypes.EOD_CLOSING) {
+            return response
+        }
+        val eodClosingExecution = eodClosingService.applyApprovedClose(response.item)
+        return response.copy(
+            executed = true,
+            eodClosing = eodClosingExecution.monitor
+        )
     }
 
     private fun approveStaffRequestInTransaction(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
@@ -797,6 +807,7 @@ class StaffAccessService(
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
             reconciliationItem = reconciliationExecution?.item,
+            eodClosing = null,
             ledgerTransaction = fdsExecution?.ledgerTransaction
                 ?: reconciliationExecution?.ledgerTransaction
                 ?: transactionCorrectionExecution?.third
@@ -821,7 +832,8 @@ class StaffAccessService(
             pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER &&
             pendingApproval.businessType != ApprovalBusinessTypes.TRANSACTION_CORRECTION &&
             pendingApproval.businessType != ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE &&
-            pendingApproval.businessType != ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE
+            pendingApproval.businessType != ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE &&
+            pendingApproval.businessType != ApprovalBusinessTypes.EOD_CLOSING
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
         }
@@ -951,6 +963,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.TRANSACTION_CORRECTION -> TRANSACTION_CORRECTION_CHECKER_ROLES
             ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE -> PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE -> FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.EOD_CLOSING -> EOD_CLOSING_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -2697,5 +2710,6 @@ class StaffAccessService(
         val TRANSACTION_CORRECTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
         val PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
         val FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+        val EOD_CLOSING_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

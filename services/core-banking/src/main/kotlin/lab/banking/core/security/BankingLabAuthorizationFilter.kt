@@ -176,6 +176,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"
             path.startsWith("/api/ops/fee-posting-batches") -> "OPS-403"
+            path.startsWith("/api/ops/eod") -> "OPS-101"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"

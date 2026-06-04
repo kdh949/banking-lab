@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type EodClosingMonitorDto,
   type ReconciliationItemDto,
   type StaffApprovalExecutionResponse
 } from "@banking-lab/api-client";
@@ -19,6 +20,12 @@ type CommandState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | { readonly status: "adjusted"; readonly approvalId: string; readonly execution: StaffApprovalExecutionResponse }
+  | { readonly status: "failed"; readonly message: string };
+
+type EodMonitorState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly monitor: EodClosingMonitorDto }
   | { readonly status: "failed"; readonly message: string };
 
 type WorkflowFailureState =
@@ -74,9 +81,11 @@ const oidcIntentKey = "bankingLabOpsOidcIntent";
 const storedOperatorLoginKey = "bankingLabOpsKeycloakOperatorLogin";
 const adjustmentItemId = "REC-SYN-CMD-001";
 const reconciliationFailureItemId = "REC-SYN-FAIL-001";
+const eodMonitorBusinessDate = "2026-02-03";
 
 export function ApiBackedOpsPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+  const [eodState, setEodState] = useState<EodMonitorState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
   const [commandState, setCommandState] = useState<CommandState>({ status: "idle" });
   const [workflowFailureState, setWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
   const [keycloakOperatorState, setKeycloakOperatorState] = useState<OperatorKeycloakLoginState>(() =>
@@ -112,6 +121,37 @@ export function ApiBackedOpsPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "ops01",
+        roles: ["OPS_OPERATOR"]
+      })
+    });
+
+    client
+      .eodMonitor(eodMonitorBusinessDate)
+      .then((monitor) => {
+        if (!cancelled) {
+          setEodState({ status: "loaded", monitor });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setEodState({ status: "failed", message: error instanceof Error ? error.message : "Unknown EOD API failure" });
         }
       });
 
@@ -466,6 +506,37 @@ export function ApiBackedOpsPanel() {
           </div>
         ) : null}
       </dl>
+      <div className="api-actions" data-testid="api-backed-eod-monitor">
+        <h3>OPS-101</h3>
+        <dl>
+          <div>
+            <dt>Business date</dt>
+            <dd>{eodState.status === "loaded" ? eodState.monitor.businessDate : eodMonitorBusinessDate}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{eodMonitorLabel(eodState)}</dd>
+          </div>
+          {eodState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Steps</dt>
+                <dd>{eodState.monitor.steps.length}</dd>
+              </div>
+              <div>
+                <dt>Ledger hash</dt>
+                <dd>{eodState.monitor.ledgerTotalHash ?? "pending"}</dd>
+              </div>
+            </>
+          ) : null}
+          {eodState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{eodState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-reconciliation-command">
         <button type="button" onClick={runReconciliationAdjustmentSmoke} disabled={!apiBaseUrl || commandState.status === "running"}>
           Run reconciliation adjustment smoke
@@ -754,6 +825,19 @@ function commandLabel(state: CommandState): string {
   }
   if (state.status === "adjusted") {
     return "reconciliation adjustment approved";
+  }
+  return "failed";
+}
+
+function eodMonitorLabel(state: EodMonitorState): string {
+  if (state.status === "offline") {
+    return "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return state.monitor.status;
   }
   return "failed";
 }

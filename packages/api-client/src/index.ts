@@ -652,6 +652,41 @@ export interface FeePostingBatchResponse {
   readonly replayed: boolean;
 }
 
+export interface EodCloseCommand {
+  readonly businessDate: string;
+  readonly idempotencyKey?: string | null;
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string | null;
+  readonly feePolicyId?: string | null;
+  readonly externalMode?: string | null;
+}
+
+export interface EodClosingStepDto {
+  readonly businessDate: string;
+  readonly step: "INTEREST_ACCRUAL" | "INTEREST_POSTING" | "FEE_POSTING" | "RECONCILIATION" | "DAILY_CLOSING";
+  readonly status: string;
+  readonly startedAt?: string | null;
+  readonly finishedAt?: string | null;
+  readonly result: Record<string, unknown>;
+}
+
+export interface EodClosingMonitorDto {
+  readonly businessDate: string;
+  readonly status: string;
+  readonly dailyClosingStatus?: string | null;
+  readonly ledgerTotalHash?: string | null;
+  readonly steps: readonly EodClosingStepDto[];
+  readonly reconciliationItems: readonly ReconciliationItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface EodCloseRequestResponse {
+  readonly approval?: OperatorApproval | null;
+  readonly monitor: EodClosingMonitorDto;
+  readonly replayed: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -684,6 +719,7 @@ export interface StaffApprovalExecutionResponse {
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
   readonly reconciliationItem?: ReconciliationItemDto | null;
+  readonly eodClosing?: EodClosingMonitorDto | null;
   readonly ledgerTransaction?: LedgerCommandResult | null;
 }
 
@@ -1082,6 +1118,27 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    requestEodClose(command: EodCloseCommand) {
+      return request<EodCloseRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/eod/close",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    eodMonitor(businessDate: string) {
+      return request<EodClosingMonitorDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/eod/${encodeURIComponent(businessDate)}`,
+        {},
+        options.bearerToken
       );
     },
 
