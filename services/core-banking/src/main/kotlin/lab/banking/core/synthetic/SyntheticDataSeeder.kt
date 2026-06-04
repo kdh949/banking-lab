@@ -33,7 +33,8 @@ class SyntheticDataSeeder(
               ('SYN-CUS-002', 'Lab Customer Beta', '010-0000-1002', 'Busan Synthetic District', 'STANDARD', 'LOW'),
               ('SYN-CUS-CMD-001', 'Lab Customer Command', '010-0000-1301', 'Incheon Synthetic District', 'STANDARD', 'LOW'),
               ('SYN-CUS-HOLD-001', 'Lab Customer Hold', '010-0000-1701', 'Daejeon Synthetic District', 'STANDARD', 'LOW'),
-              ('SYN-CUS-LIMIT-001', 'Lab Customer Limit', '010-0000-1801', 'Gwangju Synthetic District', 'STANDARD', 'LOW')
+              ('SYN-CUS-LIMIT-001', 'Lab Customer Limit', '010-0000-1801', 'Gwangju Synthetic District', 'STANDARD', 'LOW'),
+              ('SYN-CUS-KYC-001', 'Lab Customer KYC', '010-0000-1901', 'Seoul Synthetic KYC District', 'STANDARD', 'MEDIUM')
             ON CONFLICT (customer_id) DO UPDATE
             SET customer_name = EXCLUDED.customer_name,
                 customer_phone = EXCLUDED.customer_phone,
@@ -56,7 +57,8 @@ class SyntheticDataSeeder(
               ('SYN-CUS-002', 'VERIFIED', 'BUSINESS', 'DAILY_BANKING', 'SIM-KYC-002'),
               ('SYN-CUS-CMD-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-CMD-001'),
               ('SYN-CUS-HOLD-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-HOLD-001'),
-              ('SYN-CUS-LIMIT-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-LIMIT-001')
+              ('SYN-CUS-LIMIT-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-LIMIT-001'),
+              ('SYN-CUS-KYC-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-REVIEW-001')
             ON CONFLICT (customer_id) DO UPDATE
             SET kyc_status = EXCLUDED.kyc_status,
                 source_of_funds_code = EXCLUDED.source_of_funds_code,

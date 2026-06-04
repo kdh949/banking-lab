@@ -143,6 +143,52 @@ data class TransferLimitChangeRequestResponse(
     val limit: StaffTransferLimitDto
 )
 
+data class CustomerKycReviewRequestCommand(
+    val requestedBy: String? = null,
+    val requestedByRole: String? = null,
+    val reason: String? = null,
+    val reasonCode: String? = null,
+    val reviewTrigger: String? = null,
+    val description: String? = null,
+    val idempotencyKey: String? = null
+)
+
+data class StaffKycProfileDto(
+    val customerId: String,
+    val kycStatus: String,
+    val sourceOfFundsCode: String,
+    val transactionPurposeCode: String,
+    val simulatedProviderReference: String,
+    val updatedAt: OffsetDateTime
+)
+
+data class CustomerKycReviewRequestDto(
+    val requestId: String,
+    val businessType: String,
+    val businessReferenceId: String,
+    val targetCustomerId: String,
+    val requestedBy: String,
+    val requestedRole: String,
+    val reason: String,
+    val reasonCode: String,
+    val reviewTrigger: String,
+    val previousKycStatus: String,
+    val requestedKycStatus: String,
+    val status: String,
+    val approvalId: String?,
+    val idempotencyKey: String,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val executedAt: OffsetDateTime?,
+    val metadata: Map<String, Any?>
+)
+
+data class CustomerKycReviewRequestResponse(
+    val item: CustomerKycReviewRequestDto,
+    val approval: OperatorApproval,
+    val kycProfile: StaffKycProfileDto
+)
+
 data class StaffApprovalExecutionResponse(
     val item: OperatorApproval,
     val executed: Boolean,
@@ -151,6 +197,8 @@ data class StaffApprovalExecutionResponse(
     val accountHoldRequest: AccountHoldRequestDto?,
     val transferLimit: StaffTransferLimitDto?,
     val transferLimitChangeRequest: TransferLimitChangeRequestDto?,
+    val kycProfile: StaffKycProfileDto?,
+    val kycReviewRequest: CustomerKycReviewRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,

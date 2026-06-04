@@ -39,6 +39,7 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              customer_kyc_review_requests,
               account_limit_change_requests,
               account_hold_requests,
               masking_access_logs,
@@ -65,6 +66,15 @@ class StaffAccessApiParityIntegrationTest {
             VALUES
               ('BANK', 'Bank Suspense', NULL, NULL, 'INTERNAL', 'LOW'),
               ('SYN-CUS-001', 'Lab Customer Alpha', '010-0000-1001', 'Seoul Synthetic District', 'STANDARD', 'LOW')
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO customer_kyc_profiles (
+              customer_id, kyc_status, source_of_funds_code, transaction_purpose_code, simulated_provider_reference
+            )
+            VALUES ('SYN-CUS-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-001')
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
@@ -707,6 +717,150 @@ class StaffAccessApiParityIntegrationTest {
         assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'LIM-102'"))
     }
 
+    @Test
+    fun `customer KYC review request applies only after maker-checker approval without real provider or ledger mutation`() {
+        val initialLedgerBalance = accountLedgerBalance()
+        val initialLedgerPostings = countRows("ledger_postings")
+        assertEquals("VERIFIED", kycStatus())
+
+        mockMvc.perform(
+            post("/api/staff/customers/SYN-CUS-001/kyc-review-requests")
+                .header("x-request-id", "REQ-KYC-REASON")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reasonCode": "PERIODIC_RECONFIRMATION",
+                      "reviewTrigger": "PERIODIC_REVIEW",
+                      "idempotencyKey": "KYC-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-KYC-REASON"))
+        assertEquals(0, countRows("customer_kyc_review_requests"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'CUSTOMER_KYC_REVIEW'"))
+
+        mockMvc.perform(
+            post("/api/staff/customers/SYN-CUS-001/kyc-review-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "callcenter01",
+                      "requestedByRole": "CALL_CENTER_MANAGER",
+                      "reason": "Unauthorized KYC review attempt",
+                      "reasonCode": "RISK_REVIEW",
+                      "reviewTrigger": "BRANCH_REQUEST",
+                      "idempotencyKey": "KYC-KEY-DENIED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals(0, countRows("customer_kyc_review_requests"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/customers/SYN-CUS-001/kyc-review-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Periodic synthetic KYC re-confirmation",
+                      "reasonCode": "PERIODIC_RECONFIRMATION",
+                      "reviewTrigger": "PERIODIC_REVIEW",
+                      "description": "Synthetic KYC review request",
+                      "idempotencyKey": "KYC-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("CUSTOMER_KYC_REVIEW"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.item.previousKycStatus").value("VERIFIED"))
+            .andExpect(jsonPath("$.item.requestedKycStatus").value("REVIEW_REQUIRED"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andExpect(jsonPath("$.kycProfile.kycStatus").value("VERIFIED"))
+            .andReturn()
+
+        val body = objectMapper.readTree(requestResponse.response.contentAsString)
+        val requestId = body.path("item").path("requestId").asText()
+        val approvalId = body.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/customers/SYN-CUS-001/kyc-review-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Periodic synthetic KYC re-confirmation replay",
+                      "reasonCode": "PERIODIC_RECONFIRMATION",
+                      "reviewTrigger": "PERIODIC_REVIEW",
+                      "idempotencyKey": "KYC-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.requestId").value(requestId))
+            .andExpect(jsonPath("$.approval.approvalId").value(approvalId))
+        assertEquals(1, countRows("customer_kyc_review_requests WHERE business_type = 'CUSTOMER_KYC_REVIEW'"))
+        assertEquals("VERIFIED", kycStatus())
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"KYC-101"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+        assertEquals("PENDING_APPROVAL", kycReviewRequestStatus(requestId))
+        assertEquals("VERIFIED", kycStatus())
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"KYC-101"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.kycReviewRequest.status").value("REVIEW_REQUESTED"))
+            .andExpect(jsonPath("$.kycProfile.kycStatus").value("REVIEW_REQUIRED"))
+
+        assertEquals("REVIEW_REQUESTED", kycReviewRequestStatus(requestId))
+        assertEquals("REVIEW_REQUIRED", kycStatus())
+        assertEquals(initialLedgerBalance, accountLedgerBalance())
+        assertEquals(initialLedgerPostings, countRows("ledger_postings"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"KYC-101"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED' AND screen_id = 'KYC-101'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED' AND screen_id = 'KYC-101'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'KYC-101'"))
+        assertEquals(
+            1,
+            countRows(
+                "audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'KYC-101' AND payload_json->>'realKycProviderCalled' = 'false'"
+            )
+        )
+    }
+
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM $tableExpression",
@@ -732,6 +886,20 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.queryForObject(
             "SELECT status FROM account_limit_change_requests WHERE request_id = :requestId",
             mapOf("requestId" to requestId),
+            String::class.java
+        )
+
+    private fun kycReviewRequestStatus(requestId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM customer_kyc_review_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        )
+
+    private fun kycStatus(): String? =
+        jdbc.queryForObject(
+            "SELECT kyc_status FROM customer_kyc_profiles WHERE customer_id = 'SYN-CUS-001'",
+            emptyMap<String, Any?>(),
             String::class.java
         )
 
