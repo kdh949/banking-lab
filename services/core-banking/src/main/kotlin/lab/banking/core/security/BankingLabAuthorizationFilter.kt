@@ -74,6 +74,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/accounts/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/products/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/fees/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/loans/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -175,6 +176,12 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/products/deposits") -> "PRD-101"
             path.startsWith("/api/staff/products/deposits") -> "PRD-102"
             path.startsWith("/api/fees/policies") -> "FEE-101"
+            path.startsWith("/api/loans/products") -> "CWB-501"
+            path.startsWith("/api/loans/applications") -> "CWB-501"
+            path.startsWith("/api/loans/") && path.contains("repayments") -> "CWB-503"
+            path.startsWith("/api/loans/") && path.contains("prepayments") -> "CWB-504"
+            path.startsWith("/api/loans/") && path.contains("accruals") -> "LON-103"
+            path.startsWith("/api/loans/") -> "CWB-502"
             path.startsWith("/api/staff/fee-policies") -> "FEE-103"
             path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"

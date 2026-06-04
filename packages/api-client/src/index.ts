@@ -778,6 +778,163 @@ export interface EodCloseRequestResponse {
   readonly replayed: boolean;
 }
 
+export interface LoanProductDto {
+  readonly productId: string;
+  readonly productCode: string;
+  readonly productName: string;
+  readonly currency: string;
+  readonly annualRateBps: number;
+  readonly termMonths: number;
+  readonly minimumAmountMinor: number;
+  readonly maximumAmountMinor: number;
+  readonly approvalThresholdMinor: number;
+  readonly status: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanProductListResponse {
+  readonly items: readonly LoanProductDto[];
+}
+
+export interface LoanApplicationCommand {
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly requestedAmountMinor: number;
+  readonly requestedTermMonths?: number | null;
+  readonly syntheticMonthlyIncomeMinor: number;
+  readonly syntheticMonthlyDebtMinor: number;
+  readonly syntheticCreditGrade: string;
+  readonly syntheticRiskGrade: string;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface LoanApplicationDto {
+  readonly applicationId: string;
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly requestedAmountMinor: number;
+  readonly requestedTermMonths: number;
+  readonly syntheticCreditGrade: string;
+  readonly syntheticRiskGrade: string;
+  readonly underwritingScore: number;
+  readonly underwritingDecision: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanApplicationResponse {
+  readonly item: LoanApplicationDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
+export interface LoanScheduleItemDto {
+  readonly scheduleId: string;
+  readonly installmentNo: number;
+  readonly dueDate: string;
+  readonly principalMinor: number;
+  readonly interestMinor: number;
+  readonly totalMinor: number;
+  readonly status: string;
+  readonly ledgerTransactionId?: string | null;
+  readonly paidAt?: string | null;
+}
+
+export interface LoanDto {
+  readonly loanId: string;
+  readonly applicationId: string;
+  readonly customerId: string;
+  readonly depositAccountId: string;
+  readonly productId: string;
+  readonly principalMinor: number;
+  readonly outstandingPrincipalMinor: number;
+  readonly annualRateBps: number;
+  readonly termMonths: number;
+  readonly status: string;
+  readonly disbursementTransactionId?: string | null;
+  readonly nextDueDate?: string | null;
+  readonly overdueDays: number;
+  readonly disbursedAt?: string | null;
+  readonly schedule: readonly LoanScheduleItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface LoanExecutionResponse {
+  readonly application: LoanApplicationDto;
+  readonly loan: LoanDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+}
+
+export interface LoanPaymentCommand {
+  readonly principalMinor?: number | null;
+  readonly interestMinor?: number | null;
+  readonly businessDate?: string | null;
+  readonly idempotencyKey?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface LoanPaymentDto {
+  readonly paymentId: string;
+  readonly loanId: string;
+  readonly paymentType: string;
+  readonly principalMinor: number;
+  readonly interestMinor: number;
+  readonly totalMinor: number;
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly ledgerTransactionId: string;
+  readonly requestedBy: string;
+  readonly requestedChannel: string;
+  readonly reason: string;
+  readonly createdAt: string;
+}
+
+export interface LoanPaymentResponse {
+  readonly item: LoanPaymentDto;
+  readonly loan: LoanDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+  readonly replayed: boolean;
+}
+
+export interface LoanAccrualCommand {
+  readonly accrualDate: string;
+  readonly requestedBy: string;
+  readonly actorRole: string;
+  readonly reason: string;
+}
+
+export interface LoanAccrualDto {
+  readonly accrualId: string;
+  readonly loanId: string;
+  readonly accrualDate: string;
+  readonly outstandingPrincipalMinor: number;
+  readonly annualRateBps: number;
+  readonly interestMinor: number;
+  readonly overdueDays: number;
+  readonly status: string;
+  readonly createdAt: string;
+}
+
+export interface LoanAccrualResponse {
+  readonly item: LoanAccrualDto;
+  readonly loan: LoanDto;
+  readonly replayed: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -811,6 +968,7 @@ export interface StaffApprovalExecutionResponse {
   readonly amlCase?: AmlCaseDto | null;
   readonly reconciliationItem?: ReconciliationItemDto | null;
   readonly eodClosing?: EodClosingMonitorDto | null;
+  readonly loanExecution?: LoanExecutionResponse | null;
   readonly ledgerTransaction?: LedgerCommandResult | null;
 }
 
@@ -819,6 +977,7 @@ export interface StaffApprovalRejectionResponse {
   readonly rejected: boolean;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
+  readonly loanApplication?: LoanApplicationDto | null;
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
   readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
 }
@@ -1230,6 +1389,70 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         `/api/ops/eod/${encodeURIComponent(businessDate)}`,
         {},
         options.bearerToken
+      );
+    },
+
+    loanProducts() {
+      return request<LoanProductListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/loans/products",
+        {},
+        options.bearerToken
+      );
+    },
+
+    requestLoanApplication(command: LoanApplicationCommand) {
+      return request<LoanApplicationResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/loans/applications",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    loanDetail(loanId: string, reason?: string) {
+      return request<LoanDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}`,
+        reason ? { reason } : {},
+        options.bearerToken
+      );
+    },
+
+    repayLoan(loanId: string, command: LoanPaymentCommand) {
+      return request<LoanPaymentResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/repayments`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    prepayLoan(loanId: string, command: LoanPaymentCommand) {
+      return request<LoanPaymentResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/prepayments`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    runLoanAccrual(loanId: string, command: LoanAccrualCommand) {
+      return request<LoanAccrualResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/loans/${encodeURIComponent(loanId)}/accruals/run`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
       );
     },
 

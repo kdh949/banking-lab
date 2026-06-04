@@ -1,0 +1,50 @@
+{
+  "screenId": "CWB-502",
+  "transactionCode": "CWB502",
+  "title": "Synthetic Loan Detail",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "loan",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "loanId",
+      "label": "Loan ID",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "query": {
+    "endpoint": "GET /api/loans/{loanId}",
+    "fields": [
+      {
+        "name": "loanId",
+        "label": "Loan ID",
+        "type": "text",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["loanId", "status", "outstandingPrincipalMinor", "nextDueDate"]
+  },
+  "api": {
+    "read": "GET /api/loans/{loanId}"
+  },
+  "postActions": ["createAuditEvent"]
+}

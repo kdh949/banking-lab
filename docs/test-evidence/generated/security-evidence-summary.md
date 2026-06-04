@@ -1,6 +1,8 @@
 # Security Evidence Summary
 
-Generated at: 2026-06-04T00:46:26.654Z
+Generated at: 2026-06-04T12:50:45.087Z
+
+Forced Docker scanner fallbacks: false
 
 | Check | Status | Evidence | Reason |
 | --- | --- | --- | --- |

@@ -13,6 +13,10 @@ import {
   type CustomerTransactionDto,
   type CustomerTransferStatusDto,
   type CustomerTransferResponse,
+  type LoanApplicationResponse,
+  type LoanExecutionResponse,
+  type LoanPaymentResponse,
+  type LoanDto,
   type TransactionConfirmationDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -82,6 +86,18 @@ type StatementReadModelState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type LoanDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly application: LoanApplicationResponse;
+      readonly execution: LoanExecutionResponse;
+      readonly loan: LoanDto;
+      readonly repayment: LoanPaymentResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -135,6 +151,7 @@ export function ApiBackedCustomerPanel() {
   const [transferFailureState, setTransferFailureState] = useState<TransferFailureState>({ status: "idle" });
   const [historyStatusState, setHistoryStatusState] = useState<HistoryStatusState>({ status: "idle" });
   const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
+  const [loanDomainState, setLoanDomainState] = useState<LoanDomainState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -614,6 +631,78 @@ export function ApiBackedCustomerPanel() {
       setStatementReadModelState({ status: "loaded", statement, confirmation, certificate, accessHistory });
     } catch (error: unknown) {
       setStatementReadModelState({ status: "failed", message: error instanceof Error ? error.message : "Unknown statement read-model failure" });
+    }
+  };
+
+  const runLoanDomainSmoke = async () => {
+    if (!apiBaseUrl || loanDomainState.status === "running") {
+      return;
+    }
+    setLoanDomainState({ status: "running" });
+    try {
+      const customerClient = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const staffClient = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "manager01",
+          roles: ["BRANCH_MANAGER"]
+        })
+      });
+      const idempotencyKey = `CWB-LOAN-${Date.now()}`;
+      const application = await customerClient.requestLoanApplication({
+        customerId: "SYN-CUS-001",
+        depositAccountId: "ACC-SYN-001-001",
+        productId: "LOAN-PROD-SYN-PERSONAL-001",
+        requestedAmountMinor: 120_000,
+        requestedTermMonths: 12,
+        syntheticMonthlyIncomeMinor: 3_000_000,
+        syntheticMonthlyDebtMinor: 200_000,
+        syntheticCreditGrade: "A",
+        syntheticRiskGrade: "LOW",
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic loan domain smoke",
+        idempotencyKey
+      });
+      const approvalId = application.approval?.approvalId;
+      if (!approvalId) {
+        setLoanDomainState({ status: "failed", message: "loan application did not create an approval" });
+        return;
+      }
+      const approvalExecution = await staffClient.approveStaffApproval(approvalId, {
+        approvedBy: "manager01",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "LON-102"
+      });
+      const execution = approvalExecution.loanExecution;
+      if (!execution) {
+        setLoanDomainState({ status: "failed", message: "loan approval did not execute disbursement" });
+        return;
+      }
+      const loan = await customerClient.loanDetail(execution.loan.loanId);
+      const firstDue = loan.schedule.find((item) => item.status === "PENDING");
+      const repayment = await customerClient.repayLoan(loan.loanId, {
+        idempotencyKey: `${idempotencyKey}-REPAY`,
+        principalMinor: firstDue?.principalMinor,
+        interestMinor: firstDue?.interestMinor,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic loan repayment smoke"
+      });
+      if (repayment.ledgerTransaction.value.transactionType !== "LOAN_REPAYMENT") {
+        setLoanDomainState({ status: "failed", message: "loan repayment did not post through the ledger" });
+        return;
+      }
+      setLoanDomainState({ status: "loaded", application, execution, loan, repayment });
+    } catch (error: unknown) {
+      setLoanDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown loan domain failure" });
     }
   };
 
@@ -1262,6 +1351,51 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-loan-domain">
+        <button type="button" onClick={runLoanDomainSmoke} disabled={!apiBaseUrl || loanDomainState.status === "running"}>
+          Run loan domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Loan</dt>
+            <dd>{loanDomainLabel(loanDomainState)}</dd>
+          </div>
+          {loanDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Application</dt>
+                <dd>{loanDomainState.application.item.applicationId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{loanDomainState.application.approval?.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Loan ID</dt>
+                <dd>{loanDomainState.execution.loan.loanId}</dd>
+              </div>
+              <div>
+                <dt>Disbursement</dt>
+                <dd>{loanDomainState.execution.ledgerTransaction.value.id}</dd>
+              </div>
+              <div>
+                <dt>Schedule</dt>
+                <dd>{loanDomainState.loan.schedule.length}</dd>
+              </div>
+              <div>
+                <dt>Repayment</dt>
+                <dd>{loanDomainState.repayment.ledgerTransaction.value.id}</dd>
+              </div>
+            </>
+          ) : null}
+          {loanDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{loanDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1559,6 +1693,19 @@ function statementReadModelLabel(state: StatementReadModelState): string {
   }
   if (state.status === "loaded") {
     return "statement artifacts loaded";
+  }
+  return "failed";
+}
+
+function loanDomainLabel(state: LoanDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "loan posted";
   }
   return "failed";
 }

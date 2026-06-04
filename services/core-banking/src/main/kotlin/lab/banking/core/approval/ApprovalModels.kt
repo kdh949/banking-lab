@@ -25,6 +25,7 @@ object ApprovalBusinessTypes {
     const val AML_CASE_CLOSE = "AML_CASE_CLOSE"
     const val RECONCILIATION_ADJUSTMENT = "RECONCILIATION_ADJUSTMENT"
     const val EOD_CLOSING = "EOD_CLOSING"
+    const val LOAN_EXECUTION = "LOAN_EXECUTION"
     const val COMPLAINT_ANSWER_SEND = "COMPLAINT_ANSWER_SEND"
     const val ROLE_GRANT = "ROLE_GRANT"
     const val BULK_UNMASK_APPROVAL = "BULK_UNMASK_APPROVAL"
@@ -45,6 +46,7 @@ object ApprovalBusinessTypes {
         AML_CASE_CLOSE,
         RECONCILIATION_ADJUSTMENT,
         EOD_CLOSING,
+        LOAN_EXECUTION,
         COMPLAINT_ANSWER_SEND,
         ROLE_GRANT,
         BULK_UNMASK_APPROVAL

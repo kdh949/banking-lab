@@ -3,20 +3,213 @@
   "Trivy": {
     "Version": "0.71.0"
   },
-  "ReportID": "019e9018-6ec8-730c-9a19-7b185c55f169",
-  "CreatedAt": "2026-06-04T00:46:20.872201253Z",
-  "ArtifactID": "sha256:c3f74783c5883df2c5ea1430ab5b26ed019bce1ceb40a734f0082c3ac517811e",
+  "ReportID": "019e92af-89c1-700b-8073-a31c46e94cdf",
+  "CreatedAt": "2026-06-04T12:50:38.145003754Z",
+  "ArtifactID": "sha256:186970333e0043aceb4965c24879a574a04a865f018804026a3b9a793984e9db",
   "ArtifactName": "/workspace",
   "ArtifactType": "repository",
   "Metadata": {
     "RepoURL": "https://github.com/kdh949/banking-lab.git",
-    "Branch": "feature/extend-integration-workstation",
-    "Commit": "087f31b79485d3fd3c0af97b8654332d19169a07",
-    "CommitMsg": "feat: 통합단말 manifest 렌더러 main 병합",
+    "Branch": "codex/loan-card-controls",
+    "Commit": "2908c6c5285d8387fe94f96324cf63d3858d32c6",
+    "CommitMsg": "feat: 명세서 읽기 모델 추가",
     "Author": "Donghyun Kim \u003ckdh949@naver.com\u003e",
     "Committer": "Donghyun Kim \u003ckdh949@naver.com\u003e"
   },
   "Results": [
+    {
+      "Target": "analytics/aml-fds-python/uv.lock",
+      "Class": "lang-pkgs",
+      "Type": "uv",
+      "Packages": [
+        {
+          "ID": "banking-lab-aml-fds@0.1.0",
+          "Name": "banking-lab-aml-fds",
+          "Identifier": {
+            "PURL": "pkg:pypi/banking-lab-aml-fds@0.1.0",
+            "UID": "9ae3a5670b06e046"
+          },
+          "Version": "0.1.0",
+          "Relationship": "root",
+          "DependsOn": [
+            "duckdb@1.5.3",
+            "pytest@9.0.3",
+            "scikit-learn@1.9.0"
+          ],
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "duckdb@1.5.3",
+          "Name": "duckdb",
+          "Identifier": {
+            "PURL": "pkg:pypi/duckdb@1.5.3",
+            "UID": "aadd8ef038c47187"
+          },
+          "Version": "1.5.3",
+          "Relationship": "direct",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "pytest@9.0.3",
+          "Name": "pytest",
+          "Identifier": {
+            "PURL": "pkg:pypi/pytest@9.0.3",
+            "UID": "abf27dbff5ff9e6c"
+          },
+          "Version": "9.0.3",
+          "Relationship": "direct",
+          "DependsOn": [
+            "colorama@0.4.6",
+            "iniconfig@2.3.0",
+            "packaging@26.2",
+            "pluggy@1.6.0",
+            "pygments@2.20.0"
+          ],
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "scikit-learn@1.9.0",
+          "Name": "scikit-learn",
+          "Identifier": {
+            "PURL": "pkg:pypi/scikit-learn@1.9.0",
+            "UID": "a62823d08dbcc395"
+          },
+          "Version": "1.9.0",
+          "Relationship": "direct",
+          "DependsOn": [
+            "joblib@1.5.3",
+            "narwhals@2.22.0",
+            "numpy@2.4.6",
+            "scipy@1.17.1",
+            "threadpoolctl@3.6.0"
+          ],
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "colorama@0.4.6",
+          "Name": "colorama",
+          "Identifier": {
+            "PURL": "pkg:pypi/colorama@0.4.6",
+            "UID": "98af92aaf4648e7c"
+          },
+          "Version": "0.4.6",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "iniconfig@2.3.0",
+          "Name": "iniconfig",
+          "Identifier": {
+            "PURL": "pkg:pypi/iniconfig@2.3.0",
+            "UID": "ecf4195b1ee7b23a"
+          },
+          "Version": "2.3.0",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "joblib@1.5.3",
+          "Name": "joblib",
+          "Identifier": {
+            "PURL": "pkg:pypi/joblib@1.5.3",
+            "UID": "bb7b09e6a6d9c8a6"
+          },
+          "Version": "1.5.3",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "narwhals@2.22.0",
+          "Name": "narwhals",
+          "Identifier": {
+            "PURL": "pkg:pypi/narwhals@2.22.0",
+            "UID": "43475b8e9eaa7630"
+          },
+          "Version": "2.22.0",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "numpy@2.4.6",
+          "Name": "numpy",
+          "Identifier": {
+            "PURL": "pkg:pypi/numpy@2.4.6",
+            "UID": "dc4df43a95aaba14"
+          },
+          "Version": "2.4.6",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "packaging@26.2",
+          "Name": "packaging",
+          "Identifier": {
+            "PURL": "pkg:pypi/packaging@26.2",
+            "UID": "d2a2839b37bea4d5"
+          },
+          "Version": "26.2",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "pluggy@1.6.0",
+          "Name": "pluggy",
+          "Identifier": {
+            "PURL": "pkg:pypi/pluggy@1.6.0",
+            "UID": "81b81bffc9dd487"
+          },
+          "Version": "1.6.0",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "pygments@2.20.0",
+          "Name": "pygments",
+          "Identifier": {
+            "PURL": "pkg:pypi/pygments@2.20.0",
+            "UID": "8844583df4e10add"
+          },
+          "Version": "2.20.0",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "scipy@1.17.1",
+          "Name": "scipy",
+          "Identifier": {
+            "PURL": "pkg:pypi/scipy@1.17.1",
+            "UID": "3066eca0770d13bc"
+          },
+          "Version": "1.17.1",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "DependsOn": [
+            "numpy@2.4.6"
+          ],
+          "AnalyzedBy": "uv"
+        },
+        {
+          "ID": "threadpoolctl@3.6.0",
+          "Name": "threadpoolctl",
+          "Identifier": {
+            "PURL": "pkg:pypi/threadpoolctl@3.6.0",
+            "UID": "39dcd2c5e1818101"
+          },
+          "Version": "3.6.0",
+          "Indirect": true,
+          "Relationship": "indirect",
+          "AnalyzedBy": "uv"
+        }
+      ]
+    },
     {
       "Target": "package-lock.json",
       "Class": "lang-pkgs",

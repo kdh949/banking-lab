@@ -1,6 +1,7 @@
 {
-  "generatedAt": "2026-06-04T00:46:26.654Z",
+  "generatedAt": "2026-06-04T12:50:45.087Z",
   "syntheticOnly": true,
+  "forcedDockerScanners": false,
   "checks": [
     {
       "id": "npm-audit-high",

@@ -1,0 +1,39 @@
+{
+  "screenId": "LON-102",
+  "transactionCode": "LON102",
+  "title": "Synthetic Loan Execution",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "loan",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["LOAN_EXECUTION"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "DEFAULT_STAFF_MASKING"
+  },
+  "fields": [
+    {
+      "name": "approvalId",
+      "label": "Approval ID",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/approvals/{approvalId}/approve"
+  },
+  "postActions": ["postBalancedLedgerTransaction", "createAuditEvent"]
+}

@@ -9,6 +9,7 @@ import java.util.UUID
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.common.BankingLabDomainException
+import lab.banking.core.ledger.domain.BANK_LOAN_ASSET_ACCOUNT_ID
 import lab.banking.core.ledger.domain.BANK_SUSPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.DailyClosingDto
 import lab.banking.core.ledger.domain.DailyClosingResult
@@ -328,6 +329,83 @@ class LedgerCommandService(
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun disburseLoan(command: DisburseLoanCommand): LedgerCommandResult =
+        postLedgerCommand("LOAN_DISBURSEMENT", command.idempotencyKey, command) {
+            requirePositiveAmount(command.amountMinor)
+            requireNonBlank(command.loanId, "loanId")
+            requireNonBlank(command.applicationId, "applicationId")
+            requireNonBlank(command.depositAccountId, "depositAccountId")
+            requireNonBlank(command.reason, "reason")
+            requireApprovedOperation(
+                approvalId = command.approvalId,
+                businessType = ApprovalBusinessTypes.LOAN_EXECUTION,
+                businessReferenceId = command.applicationId,
+                requestedBy = command.requestedBy
+            )
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankLoanAssetAccount(command.currency)
+            lockActiveAccounts(listOf(BANK_LOAN_ASSET_ACCOUNT_ID, command.depositAccountId))
+            createPostedTransaction(
+                transactionType = "LOAN_DISBURSEMENT",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.loanId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = listOf(
+                    LedgerPostingInput(BANK_LOAN_ASSET_ACCOUNT_ID, PostingDirection.DEBIT, command.amountMinor, command.currency, "LOAN_PRINCIPAL"),
+                    LedgerPostingInput(command.depositAccountId, PostingDirection.CREDIT, command.amountMinor, command.currency, "LOAN_PRINCIPAL")
+                )
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun repayLoan(command: LoanRepaymentCommand): LedgerCommandResult =
+        postLedgerCommand(if (command.prepayment) "LOAN_PREPAYMENT" else "LOAN_REPAYMENT", command.idempotencyKey, command) {
+            requireNonBlank(command.loanId, "loanId")
+            requireNonBlank(command.depositAccountId, "depositAccountId")
+            requireNonBlank(command.reason, "reason")
+            if (command.principalMinor < 0 || command.interestMinor < 0 || command.principalMinor + command.interestMinor <= 0) {
+                throw ledgerValidation("loan repayment principalMinor and interestMinor must form a positive amount")
+            }
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankSuspenseAccount(command.currency)
+            ensureBankLoanAssetAccount(command.currency)
+            val totalMinor = command.principalMinor + command.interestMinor
+            val balances = lockActiveAccounts(listOf(command.depositAccountId, BANK_LOAN_ASSET_ACCOUNT_ID, BANK_SUSPENSE_ACCOUNT_ID))
+            val depositBalance = balances.getValue(command.depositAccountId)
+            if (depositBalance.availableBalanceMinor < totalMinor) {
+                throw ledgerConflict(
+                    code = "LEDGER_INSUFFICIENT_AVAILABLE_BALANCE",
+                    message = "insufficient available balance for loan repayment on ${command.depositAccountId}",
+                    invariant = "available_balance >= loan repayment amount"
+                )
+            }
+            val postings = mutableListOf(
+                LedgerPostingInput(command.depositAccountId, PostingDirection.DEBIT, totalMinor, command.currency, "LOAN_REPAYMENT")
+            )
+            if (command.principalMinor > 0) {
+                postings += LedgerPostingInput(BANK_LOAN_ASSET_ACCOUNT_ID, PostingDirection.CREDIT, command.principalMinor, command.currency, "LOAN_PRINCIPAL")
+            }
+            if (command.interestMinor > 0) {
+                postings += LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.CREDIT, command.interestMinor, command.currency, "LOAN_INTEREST")
+            }
+            createPostedTransaction(
+                transactionType = if (command.prepayment) "LOAN_PREPAYMENT" else "LOAN_REPAYMENT",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.loanId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = postings
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun closeBusinessDay(command: DailyClosingCommand): DailyClosingResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(command.idempotencyKey)
@@ -414,6 +492,9 @@ class LedgerCommandService(
                 "ADJUSTMENT" -> "AdjustmentPosted"
                 "INTEREST_POSTING" -> "InterestPosted"
                 "FEE_POSTING" -> "FeePosted"
+                "LOAN_DISBURSEMENT" -> "LoanDisbursed"
+                "LOAN_REPAYMENT" -> "LoanRepaymentPosted"
+                "LOAN_PREPAYMENT" -> "LoanPrepaymentPosted"
                 else -> "LedgerTransactionPosted"
             },
             idempotencyKey = idempotencyKey,
@@ -571,6 +652,26 @@ class LedgerCommandService(
             mapOf("accountId" to BANK_SUSPENSE_ACCOUNT_ID, "currency" to currency)
         )
         ensureBalanceProjection(BANK_SUSPENSE_ACCOUNT_ID)
+    }
+
+    private fun ensureBankLoanAssetAccount(currency: String) {
+        jdbc.update(
+            """
+            INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
+            VALUES ('BANK', 'Synthetic Bank Suspense', 'SYSTEM', 'LOW')
+            ON CONFLICT (customer_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
+            VALUES (:accountId, 'BANK', 'LAB-000-000001', :currency, 'ACTIVE')
+            ON CONFLICT (account_id) DO NOTHING
+            """.trimIndent(),
+            mapOf("accountId" to BANK_LOAN_ASSET_ACCOUNT_ID, "currency" to currency)
+        )
+        ensureBalanceProjection(BANK_LOAN_ASSET_ACCOUNT_ID)
     }
 
     private fun ensureBusinessDateOpen(businessDate: LocalDate) {
@@ -1097,6 +1198,9 @@ class LedgerCommandService(
             "ADJUSTMENT" -> "TX-ADJ"
             "INTEREST_POSTING" -> "TX-INT"
             "FEE_POSTING" -> "TX-FEE"
+            "LOAN_DISBURSEMENT" -> "TX-LOAN-DISB"
+            "LOAN_REPAYMENT" -> "TX-LOAN-REPAY"
+            "LOAN_PREPAYMENT" -> "TX-LOAN-PREPAY"
             else -> "TX-LED"
         } + "-${UUID.randomUUID().toString().uppercase()}"
 

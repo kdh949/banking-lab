@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 
 const val BANK_SUSPENSE_ACCOUNT_ID = "BANK-SUSPENSE"
+const val BANK_LOAN_ASSET_ACCOUNT_ID = "BANK-LOAN-ASSET"
 
 enum class PostingDirection {
     DEBIT,
