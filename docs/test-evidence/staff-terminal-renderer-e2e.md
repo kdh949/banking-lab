@@ -13,6 +13,7 @@ The staff Playwright spec now checks:
 - inquiry screens show search, result table, detail, reason-required, masking, and structured error controls;
 - command screens show form, before/after snapshot, maker-checker approval, and no fake success for declared-only commands;
 - API-backed staff smoke panels remain present for configured Spring API runs;
+- `ACC103` renders an API-backed account hold panel that can request hold approval, prove self-approval rejection, approve with a checker, request release approval, prove release self-approval rejection, approve release, and return the synthetic account to `ACTIVE` when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `APR001` approval inbox renders API-backed list, selected approval, approval execution controls, and related audit events inside the manifest workspace when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `AUD001` audit log renders API-backed audit event rows, selected event details, and hash-chain status inside the manifest workspace when `BANKING_LAB_E2E_API_BASE_URL` is configured.
 
@@ -27,10 +28,10 @@ The full command starts all Next.js channel dev servers through Playwright. API 
 Latest local result:
 
 - 17 passed
-- 34 skipped because API/Keycloak E2E environment variables were not configured
+- 35 skipped because API/Keycloak E2E environment variables were not configured
 
 Latest targeted staff-terminal result:
 
 - `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`
 - 5 passed
-- 7 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured
+- 8 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured

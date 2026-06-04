@@ -212,6 +212,23 @@ test("staff terminal executes Spring API-backed customer change approval when co
   await expect(panel).toContainText("customer change executed");
 });
 
+test("staff terminal ACC103 executes Spring API-backed account hold and release approvals when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed account hold command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=ACC-103`);
+
+  const panel = page.getByTestId("manifest-account-hold-api-panel");
+  await expect(panel).toContainText("account hold API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run account hold smoke" }).click();
+  await expect(panel).toContainText("account hold release completed", { timeout: 20_000 });
+  await expect(panel).toContainText("ACCOUNT_HOLD");
+  await expect(panel).toContainText("ACCOUNT_HOLD_RELEASE");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("ACC-SYN-HOLD-001");
+  await expect(panel).toContainText("ACTIVE");
+});
+
 test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run APR001 API-backed manifest smoke.");
 

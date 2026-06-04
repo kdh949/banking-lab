@@ -223,6 +223,52 @@ export interface CustomerInfoChangeResponse {
   readonly customer: StaffCustomerDetailDto;
 }
 
+export interface AccountHoldRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly description?: string;
+  readonly holdAmountMinor?: number;
+  readonly idempotencyKey?: string;
+}
+
+export interface AccountHoldReleaseRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly description?: string;
+  readonly holdAmountMinor?: number;
+  readonly idempotencyKey?: string;
+}
+
+export interface AccountHoldRequestDto {
+  readonly requestId: string;
+  readonly businessType: string;
+  readonly businessReferenceId: string;
+  readonly targetCustomerId: string;
+  readonly targetAccountId: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly reasonCode: string;
+  readonly holdAmountMinor: number;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface AccountHoldRequestResponse {
+  readonly item: AccountHoldRequestDto;
+  readonly approval: OperatorApproval;
+  readonly account: CustomerAccountDetailDto;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -241,6 +287,8 @@ export interface StaffApprovalExecutionResponse {
   readonly item: OperatorApproval;
   readonly executed: boolean;
   readonly customer?: StaffCustomerDetailDto | null;
+  readonly account?: CustomerAccountDetailDto | null;
+  readonly accountHoldRequest?: AccountHoldRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -425,6 +473,28 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/customers/${encodeURIComponent(customerId)}/change-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestAccountHold(accountId: string, command: AccountHoldRequestCommand) {
+      return request<AccountHoldRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/${encodeURIComponent(accountId)}/hold-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestAccountHoldRelease(accountId: string, command: AccountHoldReleaseRequestCommand) {
+      return request<AccountHoldRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/${encodeURIComponent(accountId)}/hold-release-requests`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

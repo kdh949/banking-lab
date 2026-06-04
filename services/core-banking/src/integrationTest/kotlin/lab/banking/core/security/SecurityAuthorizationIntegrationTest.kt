@@ -41,6 +41,7 @@ class SecurityAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              account_hold_requests,
               reconciliation_adjustment_requests,
               reconciliation_items,
               operator_approvals,

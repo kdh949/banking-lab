@@ -36,6 +36,19 @@
       "label": "Release Reason",
       "type": "textarea",
       "required": true
+    },
+    {
+      "name": "reasonCode",
+      "label": "Release Reason Code",
+      "type": "select",
+      "required": false,
+      "options": ["CUSTOMER_REQUEST", "FRAUD_CLEARED", "COURT_ORDER_RELEASE"]
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
     }
   ],
   "api": {

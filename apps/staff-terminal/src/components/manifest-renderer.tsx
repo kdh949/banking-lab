@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import {
   BankingApiError,
   createBankingApiClient,
+  type AccountHoldRequestResponse,
   type AuditEventDto,
   type OperatorApproval,
   type StaffApprovalExecutionResponse
@@ -59,6 +60,20 @@ type AuditLogState =
   | { readonly status: "loading" }
   | { readonly status: "loaded"; readonly hashChainValid: boolean; readonly events: readonly AuditEventDto[] }
   | { readonly status: "failed"; readonly message: string };
+type AccountHoldApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly holdRequest: AccountHoldRequestResponse;
+      readonly holdSelfApprovalCode: string;
+      readonly holdExecution: StaffApprovalExecutionResponse;
+      readonly releaseRequest: AccountHoldRequestResponse;
+      readonly releaseSelfApprovalCode: string;
+      readonly releaseExecution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
 
 const dashboardScreenId = "WRK-001";
 const fallbackReasonField: ManifestField = {
@@ -98,6 +113,7 @@ const sampleValues: Record<string, string> = {
 
 const apiBackedEndpointFragments = [
   "/api/approvals",
+  "/api/staff/accounts/",
   "/api/staff/customers/",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
@@ -674,9 +690,186 @@ export function CommandScreenRenderer({ manifest }: { readonly manifest: ScreenM
           </TerminalButton>
         </div>
       </TerminalPanel>
+      <CommandApiPanel manifest={manifest} />
       <ApprovalPanel manifest={manifest} />
       <StructuredErrorView manifest={manifest} />
     </>
+  );
+}
+
+function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  if (manifest.screenId === "ACC-103" || manifest.screenId === "ACC-104") {
+    return <AccountHoldCommandApiPanel manifest={manifest} />;
+  }
+  return null;
+}
+
+function AccountHoldCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<AccountHoldApiState>(() => initialAccountHoldApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    try {
+      const holdMakerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const holdSelfCheckerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const holdCheckerClient = createStaffCommandClient("manager02", ["BRANCH_MANAGER"]);
+      const releaseMakerClient = createStaffCommandClient("ops01", ["OPS_MANAGER"]);
+      const releaseSelfCheckerClient = createStaffCommandClient("ops01", ["OPS_MANAGER"]);
+      const releaseCheckerClient = createStaffCommandClient("ops02", ["OPS_MANAGER"]);
+
+      const holdRequest = await holdMakerClient.requestAccountHold("ACC-SYN-HOLD-001", {
+        requestedBy: "manager01",
+        requestedByRole: "BRANCH_MANAGER",
+        reason: "Browser account hold smoke",
+        reasonCode: "FRAUD",
+        description: "Synthetic ACC103 hold smoke",
+        holdAmountMinor: 1000000,
+        idempotencyKey: `BROWSER-HOLD-${suffix}`
+      });
+
+      let holdSelfApprovalCode = "not_checked";
+      try {
+        await holdSelfCheckerClient.approveStaffApproval(holdRequest.approval.approvalId, {
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER",
+          screenId: "ACC-103"
+        });
+        throw new Error("account hold self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        holdSelfApprovalCode = extractErrorCode(error);
+        if (holdSelfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const holdExecution = await holdCheckerClient.approveStaffApproval(holdRequest.approval.approvalId, {
+        approvedBy: "manager02",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "ACC-103"
+      });
+
+      const releaseRequest = await releaseMakerClient.requestAccountHoldRelease("ACC-SYN-HOLD-001", {
+        requestedBy: "ops01",
+        requestedByRole: "OPS_MANAGER",
+        reason: "Browser account hold release smoke",
+        reasonCode: "FRAUD_CLEARED",
+        description: "Synthetic ACC104 release smoke",
+        idempotencyKey: `BROWSER-RELEASE-${suffix}`
+      });
+
+      let releaseSelfApprovalCode = "not_checked";
+      try {
+        await releaseSelfCheckerClient.approveStaffApproval(releaseRequest.approval.approvalId, {
+          approvedBy: "ops01",
+          approvedByRole: "OPS_MANAGER",
+          screenId: "ACC-104"
+        });
+        throw new Error("account hold release self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        releaseSelfApprovalCode = extractErrorCode(error);
+        if (releaseSelfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const releaseExecution = await releaseCheckerClient.approveStaffApproval(releaseRequest.approval.approvalId, {
+        approvedBy: "ops02",
+        approvedByRole: "OPS_MANAGER",
+        screenId: "ACC-104"
+      });
+
+      setState({
+        status: "completed",
+        holdRequest,
+        holdSelfApprovalCode,
+        holdExecution,
+        releaseRequest,
+        releaseSelfApprovalCode,
+        releaseExecution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Account Hold Command"
+      icon="account_balance_wallet"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-account-hold-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{accountHoldStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs ACC103 hold approval and ACC104 release approval against Spring API."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run account hold smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Hold</dt>
+                <dd>{state.holdExecution.accountHoldRequest?.status ?? state.holdRequest.item.status}</dd>
+              </div>
+              <div>
+                <dt>Hold approval</dt>
+                <dd>{state.holdRequest.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Hold type</dt>
+                <dd>{state.holdRequest.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.holdSelfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Held account</dt>
+                <dd>{state.holdExecution.account?.accountId ?? "none"}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Release</dt>
+                <dd>{state.releaseExecution.accountHoldRequest?.status ?? state.releaseRequest.item.status}</dd>
+              </div>
+              <div>
+                <dt>Release approval</dt>
+                <dd>{state.releaseRequest.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Release type</dt>
+                <dd>{state.releaseRequest.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Release self approval</dt>
+                <dd>{state.releaseSelfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Final account status</dt>
+                <dd>{state.releaseExecution.account?.status ?? "none"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
   );
 }
 
@@ -1307,12 +1500,32 @@ function initialApiState(kind: "approval" | "audit"): ApprovalInboxState | Audit
   return { status: "loading" };
 }
 
+function initialAccountHoldApiState(): AccountHoldApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
     bearerToken: createSimulatorBearerToken({
       subject: "manager01",
       roles: ["BRANCH_MANAGER"]
+    })
+  });
+}
+
+function createStaffCommandClient(subject: string, roles: readonly string[]) {
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject,
+      roles
     })
   });
 }
@@ -1361,6 +1574,22 @@ function auditStatusLabel(state: AuditLogState): string {
     return "audit log failed";
   }
   return "audit log loaded";
+}
+
+function accountHoldStatusLabel(state: AccountHoldApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "account hold API ready";
+  }
+  if (state.status === "running") {
+    return "account hold API running";
+  }
+  if (state.status === "failed") {
+    return "account hold API failed";
+  }
+  return "account hold release completed";
 }
 
 function errorMessage(error: unknown): string {

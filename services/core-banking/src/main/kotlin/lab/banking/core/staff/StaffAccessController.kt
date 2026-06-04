@@ -56,6 +56,20 @@ class StaffAccessController(
     ): ResponseEntity<CustomerInfoChangeResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestCustomerInfoChange(customerId, command))
 
+    @PostMapping("/accounts/{accountId}/hold-requests")
+    fun requestAccountHold(
+        @PathVariable accountId: String,
+        @RequestBody command: AccountHoldRequestCommand
+    ): ResponseEntity<AccountHoldRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestAccountHold(accountId, command))
+
+    @PostMapping("/accounts/{accountId}/hold-release-requests")
+    fun requestAccountHoldRelease(
+        @PathVariable accountId: String,
+        @RequestBody command: AccountHoldReleaseRequestCommand
+    ): ResponseEntity<AccountHoldRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestAccountHoldRelease(accountId, command))
+
     @PostMapping("/approvals/{approvalId}/approve")
     fun approveStaffRequest(
         @PathVariable approvalId: String,
