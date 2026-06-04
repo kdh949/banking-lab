@@ -157,6 +157,7 @@ class BankingLabSecurityPolicyEnforcer(
             return false
         }
         return path == "/api/staff/pii/unmask" ||
+            path.startsWith("/api/ops/security/") ||
             path == "/api/ops/daily-closings" ||
             path.matches(Regex("^/api/(staff/)?approvals/[^/]+/(approve|reject)$")) ||
             path.endsWith("/change-requests") && (

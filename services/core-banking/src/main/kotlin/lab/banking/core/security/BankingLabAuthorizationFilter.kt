@@ -88,6 +88,7 @@ class BankingLabAuthorizationFilter(
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/reject$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.startsWith("/api/ops/security") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
             path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "BRANCH_MANAGER")
             path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/auth/session") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER", "PASSKEY_RECOVERY_ADMIN")
@@ -254,6 +255,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/audit-parameters") -> "AUD-201"
             path.startsWith("/api/staff/fds-parameters") -> "FDS-301"
             path == "/api/fds/analytics" -> "FDS-301"
+            path.startsWith("/api/ops/security") -> "OPS-SEC-101"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
             path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
