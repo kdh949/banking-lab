@@ -39,6 +39,7 @@ This review now aligns with the ready Node retirement gate after verified passke
 - `npm run retirement:generated-boundary` passed.
 - `npm run retirement:ready-simulate` passed.
 - `npm run goal:completion-audit` passed with `not complete` status and blocked passkey/final-review items.
+- `npm run governance:evidence` passed and generated H8 access-rights review, deployment approval, incident-response drill log, vulnerability-remediation tracker, governance summary, and synthetic incident-response runbook artifacts.
 - `npm run node:retirement-gate` passed with blocked status.
 - `npm test` passed 131 tests.
 - `npm run validate:manifests` validated 28 manifests.
@@ -67,6 +68,7 @@ This review now aligns with the ready Node retirement gate after verified passke
 - Final retirement review recorder and verifier now also reject duplicate command entries, non-object command evidence entries, silent non-object extras, and any extra command evidence item that is not passing.
 - `docs/test-evidence/final-retirement-review-verifier.md` defines the final-review artifact recorder/verifier schema and records the verified final review artifact.
 - `docs/test-evidence/goal-completion-audit.md` records the active objective as complete after passkey evidence, final review, and the ready retirement gate are all proven.
+- `npm run governance:evidence` generates H8 governance artifacts under `docs/test-evidence/generated/governance/`, including synthetic Keycloak access-rights review, separated deployment approval, H4-linked incident-response drill log, and a vulnerability remediation tracker derived from `security-evidence-summary.json`.
 - `docs/migration/node-retirement-gate.json` marks `evidence-refresh`, `non-synthetic-passkey-operations`, and `retirement-review` passed and sets the gate to `ready`.
 
 ## Remaining Blockers

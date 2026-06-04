@@ -20,6 +20,22 @@ type EvidencePackSummary = {
   failedChecks?: unknown;
 };
 
+type GovernanceEvidenceSummary = {
+  status?: unknown;
+  syntheticOnly?: unknown;
+  artifacts?: unknown;
+  vulnerabilityRemediation?: {
+    failedChecks?: unknown;
+    openRemediationCount?: unknown;
+  };
+};
+
+type GovernanceArtifact = {
+  id?: unknown;
+  path?: unknown;
+  status?: unknown;
+};
+
 const gatePath = "docs/migration/node-retirement-gate.json";
 const evidencePackSummaryPath = "docs/test-evidence/generated/evidence-pack-summary.json";
 const evidenceRefreshReviewPath = "docs/test-evidence/evidence-refresh-review.md";
@@ -52,6 +68,19 @@ const goalCompletionAuditDocPath = "docs/test-evidence/goal-completion-audit.md"
 const goalCompletionAuditScriptPath = "scripts/check-goal-completion-audit.ts";
 const goalCompletionAuditTestPath = "tests/goalCompletionAudit.test.mjs";
 const finalReviewArtifactPath = "docs/test-evidence/generated/final-node-retirement-review.json";
+const governanceEvidenceScriptPath = "scripts/run-governance-evidence.ts";
+const governanceEvidenceTestPath = "tests/governanceEvidence.test.mjs";
+const governanceEvidenceDocPath = "docs/test-evidence/hardening-h8-governance-artifacts.md";
+const governanceMappingPath = "docs/regulatory-mapping/governance-artifact-mapping.md";
+const incidentResponseRunbookPath = "docs/incident-response/synthetic-incident-response-runbook.md";
+const governanceSummaryPath = "docs/test-evidence/generated/governance/governance-evidence-summary.json";
+const governanceArtifactPaths = [
+  governanceSummaryPath,
+  "docs/test-evidence/generated/governance/access-rights-review.json",
+  "docs/test-evidence/generated/governance/deployment-approval-evidence.json",
+  "docs/test-evidence/generated/governance/incident-response-drill-log.json",
+  "docs/test-evidence/generated/governance/vulnerability-remediation-tracker.json"
+];
 const checkScriptPath = "scripts/check-evidence-refresh.ts";
 const checkTestPath = "tests/evidenceRefresh.test.mjs";
 const evidenceRefreshGateId = "evidence-refresh";
@@ -87,6 +116,7 @@ const requiredCommands = [
   "npm run retirement:ready-simulate",
   "npm run goal:completion-audit",
   "npm run evidence:pack",
+  "npm run governance:evidence",
   "npm run retirement:audit",
   "npm run node:retirement-gate",
   "npm test",
@@ -182,6 +212,12 @@ for (const path of [
   goalCompletionAuditDocPath,
   goalCompletionAuditScriptPath,
   goalCompletionAuditTestPath,
+  governanceEvidenceScriptPath,
+  governanceEvidenceTestPath,
+  governanceEvidenceDocPath,
+  governanceMappingPath,
+  incidentResponseRunbookPath,
+  ...governanceArtifactPaths,
   checkScriptPath,
   checkTestPath
 ]) {
@@ -259,6 +295,12 @@ if (!evidenceRefreshGate) {
     goalCompletionAuditDocPath,
     goalCompletionAuditScriptPath,
     goalCompletionAuditTestPath,
+    governanceEvidenceScriptPath,
+    governanceEvidenceTestPath,
+    governanceEvidenceDocPath,
+    governanceMappingPath,
+    incidentResponseRunbookPath,
+    ...governanceArtifactPaths,
     checkScriptPath,
     checkTestPath
   ]) {
@@ -319,6 +361,25 @@ if (gateReady) {
 }
 for (const command of requiredCommands) {
   requireIncludes(evidenceRefreshReview, command, `Evidence refresh review must include command: ${command}.`);
+}
+
+const governanceSummary = await readJson<GovernanceEvidenceSummary>(governanceSummaryPath);
+if (governanceSummary) {
+  if (governanceSummary.status !== "pass") {
+    errors.push("Governance evidence summary must be pass.");
+  }
+  if (governanceSummary.syntheticOnly !== true) {
+    errors.push("Governance evidence summary syntheticOnly must be true.");
+  }
+  if (governanceSummary.vulnerabilityRemediation?.failedChecks !== 0 || governanceSummary.vulnerabilityRemediation?.openRemediationCount !== 0) {
+    errors.push("Governance vulnerability remediation summary must have no failed checks or open remediation items.");
+  }
+  const artifactPaths = objectArray<GovernanceArtifact>(governanceSummary.artifacts).map((artifact) => stringValue(artifact.path));
+  for (const path of [...governanceArtifactPaths, incidentResponseRunbookPath]) {
+    if (!artifactPaths.includes(path)) {
+      errors.push(`Governance evidence summary must include artifact path: ${path}.`);
+    }
+  }
 }
 
 const markdownFiles = [

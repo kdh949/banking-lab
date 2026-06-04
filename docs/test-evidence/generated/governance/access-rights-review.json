@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "H8-ACCESS-RIGHTS-REVIEW",
+  "generatedAt": "2026-06-04T21:26:00.411Z",
+  "syntheticOnly": true,
+  "source": "infra/keycloak/realm-banking-lab.json",
+  "sourceSha256": "6f9e52d358f47296cdb6caaa4573efe9192a0035e2113d14b560946e4516a6d4",
+  "reviewPeriod": "2026-Q2",
+  "controls": {
+    "realMoneyUsed": false,
+    "realPiiUsed": false,
+    "realKycUsed": false,
+    "realPaymentNetworkUsed": false,
+    "realExternalFinancialInstitutionApiUsed": false,
+    "realSanctionsDataUsed": false,
+    "regulatorSubmissionMade": false
+  },
+  "roleCatalog": [
+    {
+      "role": "AML_REVIEWER",
+      "critical": false,
+      "owner": "synthetic-compliance-owner"
+    },
+    {
+      "role": "AUDITOR",
+      "critical": true,
+      "owner": "synthetic-security-owner"
+    },
+    {
+      "role": "BRANCH_MANAGER",
+      "critical": true,
+      "owner": "synthetic-business-owner"
+    },
+    {
+      "role": "BRANCH_STAFF",
+      "critical": false,
+      "owner": "synthetic-business-owner"
+    },
+    {
+      "role": "CALL_CENTER",
+      "critical": false,
+      "owner": "synthetic-business-owner"
+    },
+    {
+      "role": "COMPLAINT_HANDLER",
+      "critical": false,
+      "owner": "synthetic-business-owner"
+    },
+    {
+      "role": "COMPLIANCE_MANAGER",
+      "critical": true,
+      "owner": "synthetic-compliance-owner"
+    },
+    {
+      "role": "CUSTOMER",
+      "critical": false,
+      "owner": "synthetic-business-owner"
+    },
+    {
+      "role": "FDS_REVIEWER",
+      "critical": false,
+      "owner": "synthetic-compliance-owner"
+    },
+    {
+      "role": "OPS_OPERATOR",
+      "critical": true,
+      "owner": "synthetic-ops-owner"
+    },
+    {
+      "role": "PASSKEY_RECOVERY_ADMIN",
+      "critical": true,
+      "owner": "synthetic-security-owner"
+    },
+    {
+      "role": "SYSTEM",
+      "critical": true,
+      "owner": "synthetic-ops-owner"
+    }
+  ],
+  "principals": [
+    {
+      "principalId": "auditor01",
+      "subjectType": "STAFF",
+      "roles": [
+        "AUDITOR"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "AUDITOR"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "branch01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_STAFF"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "complaint01",
+      "subjectType": "STAFF",
+      "roles": [
+        "COMPLAINT_HANDLER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "compliance01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_MANAGER",
+        "COMPLIANCE_MANAGER"
+      ],
+      "roleCount": 2,
+      "criticalRoles": [
+        "BRANCH_MANAGER",
+        "COMPLIANCE_MANAGER"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [
+        "approval-and-compliance-review-combined"
+      ],
+      "reviewStatus": "review-required"
+    },
+    {
+      "principalId": "customer01",
+      "subjectType": "CUSTOMER",
+      "roles": [
+        "CUSTOMER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "manager-mfa01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_MANAGER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "BRANCH_MANAGER"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "manager-webauthn-block01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_MANAGER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "BRANCH_MANAGER"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [
+        "blocked-test-principal-retains-manager-role"
+      ],
+      "reviewStatus": "review-required"
+    },
+    {
+      "principalId": "manager-webauthn01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_MANAGER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "BRANCH_MANAGER"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "manager01",
+      "subjectType": "STAFF",
+      "roles": [
+        "BRANCH_MANAGER"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "BRANCH_MANAGER"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "ops01",
+      "subjectType": "STAFF",
+      "roles": [
+        "OPS_OPERATOR"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "OPS_OPERATOR"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "risk01",
+      "subjectType": "STAFF",
+      "roles": [
+        "AML_REVIEWER",
+        "FDS_REVIEWER"
+      ],
+      "roleCount": 2,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "security-admin01",
+      "subjectType": "STAFF",
+      "roles": [
+        "AUDITOR",
+        "COMPLIANCE_MANAGER",
+        "PASSKEY_RECOVERY_ADMIN"
+      ],
+      "roleCount": 3,
+      "criticalRoles": [
+        "AUDITOR",
+        "COMPLIANCE_MANAGER",
+        "PASSKEY_RECOVERY_ADMIN"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [
+        "more-than-two-realm-roles",
+        "passkey-recovery-and-audit-review-combined"
+      ],
+      "reviewStatus": "review-required"
+    }
+  ],
+  "summary": {
+    "principalCount": 12,
+    "roleAssignmentCount": 16,
+    "overPrivilegeFlagCount": 4,
+    "status": "pass"
+  }
+}
