@@ -26,7 +26,8 @@ class StructuredApiErrorHandler {
                     cause = error.causeText,
                     fix = error.fix,
                     requestId = requestId(request),
-                    route = request.requestURI
+                    route = request.requestURI,
+                    details = error.details
                 )
             )
         )

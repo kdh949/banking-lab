@@ -77,6 +77,12 @@ class LedgerCommandService(
                     invariant = "available_balance >= withdrawal amount"
                 )
             }
+            enforcePostingLimits(
+                accountId = command.accountId,
+                channel = command.requestedChannel,
+                businessDate = businessDate,
+                amountMinor = command.amountMinor
+            )
             createPostedTransaction(
                 transactionType = "WITHDRAWAL",
                 idempotencyKey = command.idempotencyKey,
@@ -110,6 +116,12 @@ class LedgerCommandService(
                     invariant = "available_balance >= transfer amount"
                 )
             }
+            enforcePostingLimits(
+                accountId = command.fromAccountId,
+                channel = command.requestedChannel,
+                businessDate = businessDate,
+                amountMinor = command.amountMinor
+            )
             createPostedTransaction(
                 transactionType = "INTERNAL_TRANSFER",
                 idempotencyKey = command.idempotencyKey,
@@ -167,7 +179,9 @@ class LedgerCommandService(
                 reason = command.reason,
                 originalTransactionId = command.originalTransactionId,
                 postings = reversalPostings
-            )
+            ).also {
+                releaseLimitUsageForReversal(original)
+            }
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -574,6 +588,209 @@ class LedgerCommandService(
         }
     }
 
+    private fun enforcePostingLimits(accountId: String, channel: String, businessDate: LocalDate, amountMinor: Long) {
+        val limits = accountLimitConfig(accountId, channel) ?: return
+        val normalizedChannel = normalizeLimitChannel(channel)
+        if (amountMinor > limits.singleTransferLimitMinor) {
+            throw limitExceeded(
+                limitKind = "PER_TRANSACTION",
+                channel = normalizedChannel,
+                configuredMinor = limits.singleTransferLimitMinor,
+                attemptedMinor = amountMinor,
+                remainingMinor = limits.singleTransferLimitMinor
+            )
+        }
+        incrementLimitUsage(
+            accountId = accountId,
+            channel = normalizedChannel,
+            businessDate = businessDate,
+            periodKind = "DAILY",
+            periodStartDate = businessDate,
+            amountMinor = amountMinor,
+            configuredLimitMinor = limits.dailyTransferLimitMinor
+        )
+        incrementLimitUsage(
+            accountId = accountId,
+            channel = normalizedChannel,
+            businessDate = businessDate,
+            periodKind = "MONTHLY",
+            periodStartDate = businessDate.withDayOfMonth(1),
+            amountMinor = amountMinor,
+            configuredLimitMinor = limits.monthlyTransferLimitMinor
+        )
+    }
+
+    private fun accountLimitConfig(accountId: String, channel: String): AccountLimitConfig? =
+        jdbc.query(
+            """
+            SELECT daily_transfer_limit_minor, monthly_transfer_limit_minor, single_transfer_limit_minor,
+                   customer_web_daily_transfer_limit_minor, customer_web_monthly_transfer_limit_minor,
+                   customer_web_single_transfer_limit_minor,
+                   staff_terminal_daily_transfer_limit_minor, staff_terminal_monthly_transfer_limit_minor,
+                   staff_terminal_single_transfer_limit_minor,
+                   atm_daily_withdrawal_limit_minor, atm_monthly_withdrawal_limit_minor,
+                   atm_single_withdrawal_limit_minor
+            FROM account_limits
+            WHERE account_id = :accountId
+            FOR UPDATE
+            """.trimIndent(),
+            mapOf("accountId" to accountId)
+        ) { rs, _ ->
+            val normalized = normalizeLimitChannel(channel)
+            val defaultDaily = rs.getLong("daily_transfer_limit_minor")
+            val defaultMonthly = rs.getLong("monthly_transfer_limit_minor")
+            val defaultSingle = rs.getLong("single_transfer_limit_minor")
+            when (normalized) {
+                "CUSTOMER_WEB" -> AccountLimitConfig(
+                    dailyTransferLimitMinor = nullableLong(rs, "customer_web_daily_transfer_limit_minor") ?: defaultDaily,
+                    monthlyTransferLimitMinor = nullableLong(rs, "customer_web_monthly_transfer_limit_minor") ?: defaultMonthly,
+                    singleTransferLimitMinor = nullableLong(rs, "customer_web_single_transfer_limit_minor") ?: defaultSingle
+                )
+                "STAFF_TERMINAL" -> AccountLimitConfig(
+                    dailyTransferLimitMinor = nullableLong(rs, "staff_terminal_daily_transfer_limit_minor") ?: defaultDaily,
+                    monthlyTransferLimitMinor = nullableLong(rs, "staff_terminal_monthly_transfer_limit_minor") ?: defaultMonthly,
+                    singleTransferLimitMinor = nullableLong(rs, "staff_terminal_single_transfer_limit_minor") ?: defaultSingle
+                )
+                "ATM" -> AccountLimitConfig(
+                    dailyTransferLimitMinor = nullableLong(rs, "atm_daily_withdrawal_limit_minor") ?: defaultDaily,
+                    monthlyTransferLimitMinor = nullableLong(rs, "atm_monthly_withdrawal_limit_minor") ?: defaultMonthly,
+                    singleTransferLimitMinor = nullableLong(rs, "atm_single_withdrawal_limit_minor") ?: defaultSingle
+                )
+                else -> AccountLimitConfig(defaultDaily, defaultMonthly, defaultSingle)
+            }
+        }.firstOrNull()
+
+    private fun incrementLimitUsage(
+        accountId: String,
+        channel: String,
+        businessDate: LocalDate,
+        periodKind: String,
+        periodStartDate: LocalDate,
+        amountMinor: Long,
+        configuredLimitMinor: Long
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO limit_usage_counters (
+              account_id, channel, business_date, period_kind, used_amount_minor
+            )
+            VALUES (:accountId, :channel, :periodStartDate, :periodKind, 0)
+            ON CONFLICT (account_id, channel, period_kind, business_date) DO NOTHING
+            """.trimIndent(),
+            mapOf(
+                "accountId" to accountId,
+                "channel" to channel,
+                "periodStartDate" to periodStartDate,
+                "periodKind" to periodKind
+            )
+        )
+        val usedAmountMinor = jdbc.queryForObject(
+            """
+            SELECT used_amount_minor
+            FROM limit_usage_counters
+            WHERE account_id = :accountId
+              AND channel = :channel
+              AND period_kind = :periodKind
+              AND business_date = :periodStartDate
+            FOR UPDATE
+            """.trimIndent(),
+            mapOf(
+                "accountId" to accountId,
+                "channel" to channel,
+                "periodKind" to periodKind,
+                "periodStartDate" to periodStartDate
+            ),
+            Long::class.java
+        ) ?: 0L
+        val remainingMinor = (configuredLimitMinor - usedAmountMinor).coerceAtLeast(0L)
+        if (amountMinor > remainingMinor) {
+            throw limitExceeded(
+                limitKind = periodKind,
+                channel = channel,
+                configuredMinor = configuredLimitMinor,
+                attemptedMinor = amountMinor,
+                remainingMinor = remainingMinor,
+                businessDate = businessDate
+            )
+        }
+        jdbc.update(
+            """
+            UPDATE limit_usage_counters
+            SET used_amount_minor = used_amount_minor + :amountMinor,
+                version = version + 1,
+                updated_at = now()
+            WHERE account_id = :accountId
+              AND channel = :channel
+              AND period_kind = :periodKind
+              AND business_date = :periodStartDate
+            """.trimIndent(),
+            mapOf(
+                "accountId" to accountId,
+                "channel" to channel,
+                "periodKind" to periodKind,
+                "periodStartDate" to periodStartDate,
+                "amountMinor" to amountMinor
+            )
+        )
+    }
+
+    private fun releaseLimitUsageForReversal(original: LedgerTransactionDto) {
+        if (original.transactionType !in setOf("WITHDRAWAL", "INTERNAL_TRANSFER")) {
+            return
+        }
+        val channel = normalizeLimitChannel(original.requestedChannel)
+        original.postings
+            .filter { it.direction == PostingDirection.DEBIT && it.accountId != BANK_SUSPENSE_ACCOUNT_ID }
+            .forEach { posting ->
+                releaseLimitUsage(posting.accountId, channel, "DAILY", original.businessDate, posting.amountMinor)
+                releaseLimitUsage(posting.accountId, channel, "MONTHLY", original.businessDate.withDayOfMonth(1), posting.amountMinor)
+            }
+    }
+
+    private fun releaseLimitUsage(
+        accountId: String,
+        channel: String,
+        periodKind: String,
+        periodStartDate: LocalDate,
+        amountMinor: Long
+    ) {
+        jdbc.update(
+            """
+            UPDATE limit_usage_counters
+            SET used_amount_minor = GREATEST(0, used_amount_minor - :amountMinor),
+                version = version + 1,
+                updated_at = now()
+            WHERE account_id = :accountId
+              AND channel = :channel
+              AND period_kind = :periodKind
+              AND business_date = :periodStartDate
+            """.trimIndent(),
+            mapOf(
+                "accountId" to accountId,
+                "channel" to channel,
+                "periodKind" to periodKind,
+                "periodStartDate" to periodStartDate,
+                "amountMinor" to amountMinor
+            )
+        )
+    }
+
+    private fun normalizeLimitChannel(channel: String): String {
+        val normalized = channel.trim().uppercase()
+        return when {
+            normalized.contains("CUSTOMER") || normalized.contains("WEB") -> "CUSTOMER_WEB"
+            normalized.contains("STAFF") || normalized.contains("BRANCH") -> "STAFF_TERMINAL"
+            normalized.contains("ATM") -> "ATM"
+            normalized.isBlank() -> "CORE_BANKING"
+            else -> normalized
+        }
+    }
+
+    private fun nullableLong(rs: ResultSet, column: String): Long? {
+        val value = rs.getLong(column)
+        return if (rs.wasNull()) null else value
+    }
+
     private fun findTransaction(transactionId: String): LedgerTransactionDto? {
         val transactions = jdbc.query(
             """
@@ -933,6 +1150,33 @@ class LedgerCommandService(
             fix = "Use a reversal, adjustment, open business date, or a command amount within available balance."
         )
 
+    private fun limitExceeded(
+        limitKind: String,
+        channel: String,
+        configuredMinor: Long,
+        attemptedMinor: Long,
+        remainingMinor: Long,
+        businessDate: LocalDate? = null
+    ): BankingLabDomainException =
+        BankingLabDomainException(
+            code = "LIMIT_EXCEEDED",
+            status = HttpStatus.CONFLICT,
+            domain = "ledger",
+            invariant = "used_amount(account, channel, period) <= configured limit",
+            message = "transfer limit exceeded for $channel $limitKind",
+            causeText = "The command would exceed the configured synthetic account transfer limit before ledger posting.",
+            fix = "Reduce the amount, wait for the next period, reverse a counted transaction, or submit an approved limit change.",
+            details = mapOf(
+                "limitKind" to limitKind,
+                "channel" to channel,
+                "configuredMinor" to configuredMinor,
+                "attemptedMinor" to attemptedMinor,
+                "remainingMinor" to remainingMinor,
+                "businessDate" to businessDate?.toString(),
+                "syntheticOnly" to true
+            )
+        )
+
     data class AccountBalance(
         val accountId: String,
         val currency: String,
@@ -956,5 +1200,11 @@ class LedgerCommandService(
         val requestedBy: String,
         val status: String,
         val approvedBy: String?
+    )
+
+    private data class AccountLimitConfig(
+        val dailyTransferLimitMinor: Long,
+        val monthlyTransferLimitMinor: Long,
+        val singleTransferLimitMinor: Long
     )
 }

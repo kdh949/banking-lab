@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T08:18:57.352Z",
+  "generatedAt": "2026-06-04T11:36:23.411Z",
   "staticCheck": "pass",
   "staticOnly": false,
   "tlc": "not_available",
@@ -17,6 +17,8 @@
     "BalanceProjectionRecalculable",
     "HeldOrFailedCommandNoPosting",
     "AdjustmentRequiresApprovalReference",
+    "LimitUsageWithinConfigured",
+    "LimitUsageMatchesPostedDebits",
     "SingleBusinessResultPerKey",
     "RetryReturnsSameBusinessResult",
     "NoDuplicateSideEffectForRetry",

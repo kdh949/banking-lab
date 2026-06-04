@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T08:18:57.351Z",
+  "generatedAt": "2026-06-04T11:36:23.409Z",
   "modelCheckerRun": "formal-ledger",
   "models": [
     {
@@ -29,62 +29,74 @@
         "status": "pass",
         "engine": "bounded-state-search",
         "maxDepth": 3,
-        "statesExplored": 3292,
-        "transitionsExplored": 8181,
+        "statesExplored": 3256,
+        "transitionsExplored": 8109,
         "invariants": [
           {
             "model": "Ledger",
             "name": "BalancedDoubleEntry",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "IdempotencySingleBusinessResult",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "AvailableBalanceNonNegative",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "ReversalReferencesOriginal",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "ReversalMirrorsOriginal",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "ClosedDateNoDirectPosting",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "BalanceProjectionRecalculable",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "HeldOrFailedCommandNoPosting",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
           },
           {
             "model": "Ledger",
             "name": "AdjustmentRequiresApprovalReference",
             "status": "pass",
-            "checkedStates": 3292
+            "checkedStates": 3256
+          },
+          {
+            "model": "Ledger",
+            "name": "LimitUsageWithinConfigured",
+            "status": "pass",
+            "checkedStates": 3256
+          },
+          {
+            "model": "Ledger",
+            "name": "LimitUsageMatchesPostedDebits",
+            "status": "pass",
+            "checkedStates": 3256
           }
         ]
       },
@@ -129,55 +141,67 @@
       "model": "Ledger",
       "name": "BalancedDoubleEntry",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "IdempotencySingleBusinessResult",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "AvailableBalanceNonNegative",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "ReversalReferencesOriginal",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "ReversalMirrorsOriginal",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "ClosedDateNoDirectPosting",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "BalanceProjectionRecalculable",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "HeldOrFailedCommandNoPosting",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
     },
     {
       "model": "Ledger",
       "name": "AdjustmentRequiresApprovalReference",
       "status": "pass",
-      "checkedStates": 3292
+      "checkedStates": 3256
+    },
+    {
+      "model": "Ledger",
+      "name": "LimitUsageWithinConfigured",
+      "status": "pass",
+      "checkedStates": 3256
+    },
+    {
+      "model": "Ledger",
+      "name": "LimitUsageMatchesPostedDebits",
+      "status": "pass",
+      "checkedStates": 3256
     },
     {
       "model": "Idempotency",
