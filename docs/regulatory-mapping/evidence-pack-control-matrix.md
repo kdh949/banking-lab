@@ -18,6 +18,10 @@
 | Synthetic KMS/HSM rotation | `synthetic_kms_keys`, `/api/ops/security/kms/rotate`, synthetic key hashes without real key material | `OperationalSecurityIntegrationTest`, `docs/security/synthetic-secret-rotation-runbook.md` |
 | PAM break-glass post-review | `break_glass_grants`, `break_glass_review_cases`, `/api/ops/security/break-glass/*` | `OperationalSecurityIntegrationTest` |
 | Synthetic SIEM alert drill | `infra/observability/loki/rules/fake/operational-security-alerts.yml`, `scripts/run-siem-alert-drill.ts` | `npm run siem:alert-drill`, `docs/test-evidence/generated/siem-alert-drill.json` |
+| Synthetic sanctions and PEP screening | `synthetic_watchlist_entries`, `sanctions_screening_hits`, `AmlFdsGovernanceService` | `AmlFdsGovernanceIntegrationTest`, `tests/amlGovernance.test.mjs` |
+| AML/FDS model governance artifact | `aml_model_versions`, `scripts/run-aml-str-report.ts` model-card lineage | `npm run aml:str-report`, `docs/test-evidence/generated/aml-model-card.json` |
+| Synthetic STR and AML regulatory reporting | `synthetic_str_reports`, `synthetic_aml_regulatory_reports`, `scripts/run-aml-str-report.ts` | `npm run aml:str-report`, `docs/test-evidence/generated/synthetic-str-report.json`, `docs/test-evidence/generated/aml-regulatory-report.json` |
+| Sanctions false-positive disposition approval | `AmlFdsGovernanceService.falsePositiveDisposition`, `sanctions_screening_hits` disposition fields | `AmlFdsGovernanceIntegrationTest` |
 | Masked PII by default | `maskCustomer`, `maskAccount`, `StaffAccessService` | audit/staff tests, staff access API integration test |
 | Maker-checker for high-risk operations | `ApprovalStore`, `PersistentApprovalService`, `/api/approvals`, `/api/staff/approvals`, `operator_approvals` | maker-checker, complaint, FDS/AML/recon tests, approval persistence/API integration tests, customer change, complaint answer, FDS execution, AML closure, and reconciliation adjustment integration tests |
 | Complaint answer approval | complaint workflow runtime, `ComplaintCaseService` | Phase 5 tests, complaint API integration test |

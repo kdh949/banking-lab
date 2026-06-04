@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-06-04T20:46:05.639Z",
+  "modelVersionId": "AML-MODEL-SYN-RULES-V1",
+  "modelName": "banking_lab_aml_fds_rules",
+  "modelVersion": "2026-h6-synthetic-rules-v1",
+  "status": "ACTIVE",
+  "engine": "banking_lab_analytics.duckdb_batch",
+  "syntheticOnly": true,
+  "realPiiUsed": false,
+  "realMoneyUsed": false,
+  "realBankNetworkUsed": false,
+  "realSanctionsDataUsed": false,
+  "features": [
+    "account_id",
+    "amount_minor",
+    "amount_to_median_ratio",
+    "beneficiary_account_id",
+    "channel",
+    "currency",
+    "customer_id",
+    "device_id",
+    "event_time",
+    "first_time_beneficiary",
+    "high_amount_anomaly",
+    "new_device",
+    "portfolio_median_amount_minor",
+    "risk_grade",
+    "status",
+    "synthetic_only",
+    "transaction_id",
+    "velocity_24h"
+  ],
+  "scoreDistribution": {
+    "LOW": 6,
+    "HIGH": 1,
+    "REVIEW": 2
+  },
+  "driftCheck": {
+    "status": "pass",
+    "method": "fixed synthetic baseline",
+    "populationStabilityIndex": 0
+  },
+  "explainability": {
+    "method": "deterministic rule alerts plus anomaly reasons",
+    "topAlertCounts": {
+      "AML_HIGH_RISK_CUSTOMER": 2,
+      "AML_HIGH_VELOCITY": 1,
+      "FDS_FIRST_TIME_BENEFICIARY": 8,
+      "FDS_LARGE_TRANSFER": 1,
+      "FDS_NEW_DEVICE": 1
+    },
+    "notes": "No real customer data, real sanctions data, or external model provider is used."
+  },
+  "lineage": {
+    "scoringEvidencePath": "docs/test-evidence/generated/fds-aml-analytics.json",
+    "scoringEvidenceGeneratedAt": "2026-06-04T08:04:46Z",
+    "scoringEvidenceSha256": "53613dd3533e40e609f2c2c4eac9396e92c66812d13832dda9edb237e62d1924",
+    "trainingDataBoundary": "synthetic sample transactions only"
+  }
+}

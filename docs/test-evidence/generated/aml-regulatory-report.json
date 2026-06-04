@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-06-04T20:46:05.639Z",
+  "reportType": "SYNTHETIC_AML_PERIODIC_REPORT",
+  "period": {
+    "start": "2026-02-01",
+    "end": "2026-02-28"
+  },
+  "syntheticOnly": true,
+  "realRegulatorSubmission": false,
+  "realSanctionsDataUsed": false,
+  "totalScoredTransactions": 9,
+  "highRiskCount": 1,
+  "alertCounts": {
+    "AML_HIGH_RISK_CUSTOMER": 2,
+    "AML_HIGH_VELOCITY": 1,
+    "FDS_FIRST_TIME_BENEFICIARY": 8,
+    "FDS_LARGE_TRANSFER": 1,
+    "FDS_NEW_DEVICE": 1
+  },
+  "modelVersion": "2026-h6-synthetic-rules-v1",
+  "modelVersionId": "AML-MODEL-SYN-RULES-V1",
+  "evidenceHash": "53613dd3533e40e609f2c2c4eac9396e92c66812d13832dda9edb237e62d1924",
+  "submissionBoundary": "in-repo generated artifact only; no real regulator submission"
+}

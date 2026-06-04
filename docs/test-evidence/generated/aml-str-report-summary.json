@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-06-04T20:46:05.639Z",
+  "command": "npm run aml:str-report",
+  "status": "pass",
+  "syntheticOnly": true,
+  "realPiiUsed": false,
+  "realMoneyUsed": false,
+  "realBankNetworkUsed": false,
+  "realSanctionsDataUsed": false,
+  "realRegulatorSubmission": false,
+  "artifacts": [
+    "docs/test-evidence/generated/aml-model-card.json",
+    "docs/test-evidence/generated/synthetic-str-report.json",
+    "docs/test-evidence/generated/aml-regulatory-report.json"
+  ],
+  "controls": {
+    "syntheticControlsPass": true,
+    "modelCardGenerated": true,
+    "strReportGenerated": true,
+    "regulatoryReportGenerated": true
+  },
+  "source": {
+    "path": "docs/test-evidence/generated/fds-aml-analytics.json",
+    "sha256": "53613dd3533e40e609f2c2c4eac9396e92c66812d13832dda9edb237e62d1924"
+  }
+}
