@@ -172,7 +172,7 @@ Current automated coverage includes ledger invariants, runtime APIs, customer we
 
 The current manifest catalog contains 74 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
 
-`npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC if a local `tlc` command is available, and otherwise runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
+`npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC through a local `tlc` command, `BANKING_LAB_TLC_CMD`, `BANKING_LAB_TLC_JAR`, a repo-local TLC jar, or `~/Downloads/tla2tools.jar`, resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback when a TLC jar is used, and then runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
 
 CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, Gradle core-banking tests, Playwright manifest E2E, security evidence, and formal model checks.
 
@@ -184,11 +184,11 @@ Important current gaps are intentionally not marked complete:
 
 - remaining staff-terminal depth should be expanded only as later platform/operations workflows add new operator commands;
 - deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
-- Python AML/FDS analytics has a DuckDB mart, generated batch evidence, and an FDS/AML console evidence panel; it does not yet expose a Spring read API or long-running Python service;
-- `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable, but local TLC execution is not claimed;
-- Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, but no live cluster deployment proof;
-- `npm run security:evidence:docker` exists for Docker-available Semgrep/Trivy/SBOM/DAST reruns; DAST still requires `BANKING_LAB_DAST_URL`;
-- `npm run load:synthetic` now produces local synthetic load-smoke evidence, and `npm run postgres:backup-drill` produces fixture-mode backup/restore drill evidence; live PostgreSQL restore proof requires `--mode=live` against disposable databases.
+- Python AML/FDS analytics has a DuckDB mart, generated batch evidence, a Spring read API, and an FDS/AML console evidence panel;
+- `npm run formal:ledger` now records actual TLC evidence when a TLC jar is available and always rejects static-only output as CI/milestone evidence;
+- Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, plus disposable kind/Helm live deployment smoke evidence for PostgreSQL and core banking;
+- `npm run security:evidence:docker` exists for Docker-available Semgrep/Trivy/SBOM/DAST reruns; DAST requires `BANKING_LAB_DAST_URL`;
+- `npm run load:synthetic` now produces local synthetic load-smoke evidence, and `npm run postgres:backup-drill:docker-live` records live PostgreSQL restore proof against disposable databases.
 
 The Node retirement evidence remains valid for the previous target-stack migration scope. The broader missing-features goal in `docs/codex/implementation_missing_features_goals.md` is now covered through phased implementation evidence, with future hardening items called out separately where they are not claimed.
 

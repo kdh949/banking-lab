@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-04T11:36:23.411Z",
+  "generatedAt": "2026-06-04T17:01:06.500Z",
   "staticCheck": "pass",
   "staticOnly": false,
-  "tlc": "not_available",
+  "tlc": "pass",
   "modelChecker": "pass",
   "engine": "bounded-state-search",
   "model": "formal/Ledger.tla",

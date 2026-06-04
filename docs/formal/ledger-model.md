@@ -52,7 +52,7 @@ Run:
 npm run formal:ledger
 ```
 
-If a `tlc` command is available, the script attempts TLC for both root models. If TLC is not installed, the script runs a deterministic bounded state-search checker over the finite ledger and idempotency state space and writes `docs/test-evidence/generated/formal-ledger-tlc-result.json`.
+If a TLC runner is available through `BANKING_LAB_TLC_CMD`, a local `tlc` command, `BANKING_LAB_TLC_JAR`, `tools/tla2tools.jar`, `formal/tla2tools.jar`, or `~/Downloads/tla2tools.jar`, the script attempts TLC for both root models. For TLC jar execution it resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback before falling back to `java`. If TLC is unavailable, the script runs a deterministic bounded state-search checker over the finite ledger and idempotency state space and writes `docs/test-evidence/generated/formal-ledger-tlc-result.json`.
 
 Static-only mode is available only for local diagnostics:
 

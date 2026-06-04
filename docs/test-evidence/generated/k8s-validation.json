@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T08:39:52.355Z",
+  "generatedAt": "2026-06-04T17:02:15.793Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {

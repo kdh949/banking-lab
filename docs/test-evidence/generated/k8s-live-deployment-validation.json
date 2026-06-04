@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-06-04T16:47:20Z",
+  "command": "kind create cluster --name banking-lab-evidence --wait 120s && docker build -f infra/docker-compose/core-banking.Dockerfile -t banking-lab/core-banking-service:local . && kind load docker-image banking-lab/core-banking-service:local --name banking-lab-evidence && helm install banking-lab infra/helm/banking-lab --namespace banking-lab --create-namespace --set temporalWorker.replicas=0 --wait --timeout 5m && kubectl smoke checks && helm uninstall banking-lab -n banking-lab --wait && kind delete cluster --name banking-lab-evidence",
+  "cluster": {
+    "type": "kind",
+    "name": "banking-lab-evidence",
+    "kindVersion": "kind v0.32.0 go1.26.3 darwin/arm64",
+    "kubernetesClientVersion": "v1.34.1",
+    "created": true,
+    "deleted": true,
+    "cleanupVerification": "No kind clusters found."
+  },
+  "dockerImage": {
+    "image": "banking-lab/core-banking-service:local",
+    "buildCommand": "docker build -f infra/docker-compose/core-banking.Dockerfile -t banking-lab/core-banking-service:local .",
+    "buildStatus": "pass",
+    "imageId": "sha256:fa3e063c03209969783a5feaf23733f70ca078f859ac339d6240186fc8ca7ae4",
+    "loadedIntoKind": true,
+    "sourceArtifact": "services/core-banking/build/libs/core-banking-0.1.0-migration.jar",
+    "sourceArtifactRefresh": "JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew :services:core-banking:bootJar passed before this image build. An earlier attempt without JAVA_HOME failed because the default JDK was 26.0.1 and Gradle/Kotlin DSL rejected that Java version before task execution."
+  },
+  "helmInstall": {
+    "command": "helm install banking-lab infra/helm/banking-lab --namespace banking-lab --create-namespace --set temporalWorker.replicas=0 --wait --timeout 5m",
+    "status": "pass",
+    "releaseStatus": "deployed",
+    "revision": 1,
+    "namespace": "banking-lab",
+    "scope": "Helm live smoke installed PostgreSQL and the core-banking Spring service. The Temporal worker was scaled to zero for this disposable smoke because the chart does not deploy a Temporal server."
+  },
+  "readiness": {
+    "coreBankingDeployment": "1/1",
+    "postgresStatefulSet": "1/1",
+    "rolloutStatus": [
+      "deployment \"banking-lab-core-banking\" successfully rolled out",
+      "partitioned roll out complete: 1 new pods have been updated..."
+    ],
+    "pods": [
+      {
+        "name": "banking-lab-core-banking-6699cc89bb-p4dvf",
+        "ready": "1/1",
+        "status": "Running",
+        "restarts": "2"
+      },
+      {
+        "name": "banking-lab-postgres-0",
+        "ready": "1/1",
+        "status": "Running",
+        "restarts": "0"
+      }
+    ]
+  },
+  "serviceSmoke": {
+    "command": "kubectl get --raw /api/v1/namespaces/banking-lab/services/http:banking-lab-core-banking:8081/proxy/health",
+    "status": "pass",
+    "response": {
+      "status": "ok",
+      "syntheticOnly": true,
+      "auditHashChainValid": true,
+      "nodeReferenceRuntimeRetained": true,
+      "migrationTarget": "kotlin-spring-boot"
+    }
+  },
+  "serverSideDryRun": {
+    "command": "kubectl apply --server-side --dry-run=server --force-conflicts -f infra/k8s",
+    "status": "pass",
+    "resourceCount": 15,
+    "note": "The first server-side dry-run without --force-conflicts reported Secret field-manager conflicts because Helm already owned the live release Secret fields. The forced dry-run was still non-mutating and validated the raw manifests through the live API server."
+  },
+  "cleanup": {
+    "helmUninstall": {
+      "command": "helm uninstall banking-lab -n banking-lab --wait",
+      "status": "partial_pass",
+      "note": "Kubernetes resources and the release record were removed. Helm returned 'release: not found' during purge after uninstall completion."
+    },
+    "postUninstallCheck": "helm list -A returned no releases; kubectl no longer showed banking-lab namespace resources.",
+    "kindDelete": {
+      "command": "kind delete cluster --name banking-lab-evidence",
+      "status": "pass"
+    }
+  },
+  "productionClaim": false,
+  "syntheticOnly": true,
+  "status": "pass"
+}
