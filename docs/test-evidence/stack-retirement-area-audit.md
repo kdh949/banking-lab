@@ -1,6 +1,6 @@
 # Stack Retirement Area Audit
 
-Date: 2026-06-03
+Date: 2026-06-05
 
 Status: pass
 
@@ -18,7 +18,7 @@ npm run retirement:stack-audit
 
 ## Current Result
 
-Passed on 2026-06-03.
+Passed on 2026-06-05.
 
 The audit checked these target areas:
 
@@ -39,4 +39,6 @@ The audit checked these target areas:
 
 ## Retirement Impact
 
-The stack area audit is green for the current target source tree, but Node retirement remains blocked by non-synthetic passkey operations and final retirement review.
+The stack area audit is green for the current target source tree. `npm run node:retirement-gate` now invokes this audit before accepting a ready result, and `tests/stackRetirementAreaAudit.test.mjs` includes an in-memory canary proving that a target-path import of `legacy-node-reference/runtime/server.mjs` is rejected.
+
+Node retirement is ready for the current synthetic lab scope, while the archived Node oracle/reference boundary remains available for parity comparison.

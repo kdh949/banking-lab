@@ -18,6 +18,7 @@ type NodeRetirementGate = {
 const gatePath = process.env.BANKING_LAB_NODE_RETIREMENT_GATE_PATH
   ?? "docs/migration/node-retirement-gate.json";
 const boundaryAuditPath = "scripts/check-retirement-boundary-audit.ts";
+const stackAuditPath = "scripts/check-stack-retirement-by-area.ts";
 const passkeyVerifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const finalReviewVerifierPath = "scripts/verify-final-retirement-review.ts";
 const passkeyGateId = "non-synthetic-passkey-operations";
@@ -277,6 +278,24 @@ function runReadyBoundaryAudit(): string[] {
   ];
 }
 
+function runReadyStackAudit(): string[] {
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", stackAuditPath], {
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024
+  });
+  if (result.status === 0) {
+    return [];
+  }
+  const output = [result.stderr, result.stdout]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n")
+    .trim();
+  return [
+    "Target-stack area audit must pass before the Node reference gate can be ready.",
+    output || result.error?.message || "Stack area audit failed without output."
+  ];
+}
+
 const missingReferencePaths: string[] = [];
 for (const referencePath of gate.nodeReferenceRuntime.paths) {
   if (!await exists(referencePath)) {
@@ -331,6 +350,16 @@ if (ready) {
     console.error("Node reference retirement gate: failed");
     console.error("Ready boundary audit failed:");
     for (const error of boundaryAuditErrors) {
+      console.error(error);
+    }
+    process.exit(1);
+  }
+
+  const stackAuditErrors = runReadyStackAudit();
+  if (stackAuditErrors.length > 0) {
+    console.error("Node reference retirement gate: failed");
+    console.error("Ready stack-area audit failed:");
+    for (const error of stackAuditErrors) {
       console.error(error);
     }
     process.exit(1);
