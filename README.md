@@ -184,10 +184,11 @@ Important current gaps are intentionally not marked complete:
 
 - remaining staff-terminal depth should be expanded only as later platform/operations workflows add new operator commands;
 - deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
-- Python AML/FDS analytics has a DuckDB mart and generated batch evidence, but not a live Spring/FDS console adapter;
-- `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable;
+- Python AML/FDS analytics has a DuckDB mart, generated batch evidence, and an FDS/AML console evidence panel; it does not yet expose a Spring read API or long-running Python service;
+- `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable, but local TLC execution is not claimed;
 - Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, but no live cluster deployment proof;
-- `npm run load:synthetic` now produces local synthetic load-smoke evidence; PostgreSQL backup/restore remains optional future hardening and is not claimed here.
+- `npm run security:evidence:docker` exists for Docker-available Semgrep/Trivy/SBOM/DAST reruns; DAST still requires `BANKING_LAB_DAST_URL`;
+- `npm run load:synthetic` now produces local synthetic load-smoke evidence, and `npm run postgres:backup-drill` produces fixture-mode backup/restore drill evidence; live PostgreSQL restore proof requires `--mode=live` against disposable databases.
 
 The Node retirement evidence remains valid for the previous target-stack migration scope. The broader missing-features goal in `docs/codex/implementation_missing_features_goals.md` is now covered through phased implementation evidence, with future hardening items called out separately where they are not claimed.
 

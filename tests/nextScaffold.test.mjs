@@ -62,6 +62,20 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
 });
 
+test("fds-aml-console exposes generated analytics evidence through a target Next panel", async () => {
+  const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
+  const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");
+  const artifact = JSON.parse(await readFile("docs/test-evidence/generated/fds-aml-analytics.json", "utf8"));
+
+  assert.match(page, /AnalyticsEvidencePanel/);
+  assert.match(panel, /fds-aml-analytics\.json/);
+  assert.match(panel, /data-testid="analytics-evidence-panel"/);
+  assert.equal(artifact.controls.realMoneyUsed, false);
+  assert.equal(artifact.controls.realPiiUsed, false);
+  assert.ok(artifact.results.length > 0);
+  assert.ok(artifact.results.some((result) => result.riskBand === "HIGH"));
+});
+
 test("target Next app directories do not contain legacy static shells", async () => {
   const apps = [
     "admin-console",
