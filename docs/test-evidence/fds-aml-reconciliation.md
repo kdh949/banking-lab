@@ -33,7 +33,7 @@ scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrati
 - Feature generation covers 24-hour velocity, first beneficiary, high amount anomaly, customer risk grade, and portfolio median amount ratio.
 - Deterministic rules flag high amount, new device, first beneficiary, high velocity, and high-risk customer cases.
 - Deterministic anomaly scoring adds amount-to-median, absolute high amount, velocity, and new-beneficiary high-amount reasons.
-- `npm run analytics:fds-aml:test` passed with 6 Python tests.
+- `npm run analytics:fds-aml:test` passed with 10 Python tests after the H7 data-platform DQ, lineage, and reproducible-report tests were added.
 - `npm run analytics:fds-aml` generated the JSON/CSV artifacts listed above.
 - This is a batch/evidence linkage, not a live Spring or FDS/AML-console scoring service.
 

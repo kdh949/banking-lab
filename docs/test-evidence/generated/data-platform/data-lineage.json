@@ -1,0 +1,51 @@
+{
+  "fieldLineage": {
+    "riskReport.highRiskExposureMinor": [
+      "source.synthetic_oltp.account_balance_projections.risk_grade",
+      "source.synthetic_oltp.account_balance_projections.ledger_balance_minor",
+      "mart.risk_exposure_mart.risk_grade",
+      "report.synthetic_liquidity_exposure.highRiskExposureMinor"
+    ],
+    "riskReport.totalAvailableBalanceMinor": [
+      "source.synthetic_oltp.account_balance_projections.available_balance_minor",
+      "mart.risk_exposure_mart.available_balance_minor",
+      "report.synthetic_liquidity_exposure.totalAvailableBalanceMinor"
+    ],
+    "riskReport.totalLedgerBalanceMinor": [
+      "source.synthetic_oltp.ledger_postings.direction",
+      "source.synthetic_oltp.ledger_postings.amount_minor",
+      "mart.finance_balance_mart.posting_balance_minor",
+      "mart.risk_exposure_mart.ledger_balance_minor",
+      "report.synthetic_liquidity_exposure.totalLedgerBalanceMinor"
+    ]
+  },
+  "generatedAt": "2026-06-05T00:00:00Z",
+  "nodes": [
+    {
+      "id": "source.synthetic_oltp.ledger_postings",
+      "kind": "source",
+      "path": "sample-data/data-platform/ledger_postings.csv"
+    },
+    {
+      "id": "source.synthetic_oltp.account_balance_projections",
+      "kind": "source",
+      "path": "sample-data/data-platform/account_balance_projections.csv"
+    },
+    {
+      "id": "mart.finance_balance_mart",
+      "kind": "duckdb_parquet_mart",
+      "path": "../../docs/test-evidence/generated/data-platform/finance_balance_mart.parquet"
+    },
+    {
+      "id": "mart.risk_exposure_mart",
+      "kind": "duckdb_parquet_mart",
+      "path": "../../docs/test-evidence/generated/data-platform/risk_exposure_mart.parquet"
+    },
+    {
+      "id": "report.synthetic_liquidity_exposure",
+      "kind": "risk_report",
+      "path": "../../docs/test-evidence/generated/data-platform/synthetic-risk-report.json"
+    }
+  ],
+  "syntheticOnly": true
+}

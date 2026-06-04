@@ -1,0 +1,31 @@
+{
+  "accountCount": 3,
+  "asOf": "2026-06-05T00:00:00Z",
+  "availableToLedgerRatio": 0.917044,
+  "currency": "KRW",
+  "highRiskExposureMinor": 3500000,
+  "highRiskExposureRatio": 0.527903,
+  "reportHash": "08c4a96d5f66896f28a17f40822d100c0a1eada06363f39b18727c75b3e4cfa4",
+  "reportId": "RISK-SYN-H7-LIQUIDITY-EXPOSURE",
+  "riskBuckets": [
+    {
+      "accountCount": 1,
+      "exposureMinor": 3500000,
+      "riskGrade": "HIGH"
+    },
+    {
+      "accountCount": 1,
+      "exposureMinor": 2380000,
+      "riskGrade": "LOW"
+    },
+    {
+      "accountCount": 1,
+      "exposureMinor": 750000,
+      "riskGrade": "REVIEW_REQUIRED"
+    }
+  ],
+  "syntheticOnly": true,
+  "totalAvailableBalanceMinor": 6080000,
+  "totalHoldAmountMinor": 550000,
+  "totalLedgerBalanceMinor": 6630000
+}

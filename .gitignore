@@ -8,6 +8,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+.uv-cache/
 coverage/
 test-results/
 .nyc_output/
