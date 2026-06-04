@@ -11,6 +11,7 @@ import {
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
   type StaffApprovalRejectionResponse,
+  type TransactionCorrectionRequestResponse,
   type TransferLimitChangeRequestResponse
 } from "@banking-lab/api-client";
 import { createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -115,6 +116,17 @@ type FeeWaiverApiState =
       readonly execution: StaffApprovalExecutionResponse;
     }
   | { readonly status: "failed"; readonly message: string };
+type TransactionCorrectionApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly request: TransactionCorrectionRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
 
 const dashboardScreenId = "WRK-001";
 const fallbackReasonField: ManifestField = {
@@ -156,6 +168,7 @@ const apiBackedEndpointFragments = [
   "/api/approvals",
   "/api/staff/accounts/",
   "/api/staff/customers/",
+  "/api/staff/transactions/",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
   "/api/staff/complaints",
@@ -750,6 +763,9 @@ function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   }
   if (manifest.screenId === "FEE-102") {
     return <FeeWaiverCommandApiPanel manifest={manifest} />;
+  }
+  if (manifest.screenId === "LED-103") {
+    return <TransactionCorrectionCommandApiPanel manifest={manifest} />;
   }
   return null;
 }
@@ -1360,6 +1376,140 @@ function FeeWaiverCommandApiPanel({ manifest }: { readonly manifest: ScreenManif
               <div>
                 <dt>Executed</dt>
                 <dd>{state.execution.executed ? "fee waiver approved" : "not executed"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function TransactionCorrectionCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<TransactionCorrectionApiState>(() => initialTransactionCorrectionApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    try {
+      const makerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const selfCheckerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const checkerClient = createStaffCommandClient("manager02", ["BRANCH_MANAGER"]);
+
+      const request = await makerClient.requestTransactionCorrection("TX-SYN-CORR-001", {
+        requestedBy: "manager01",
+        requestedByRole: "BRANCH_MANAGER",
+        reason: "Browser transaction correction smoke",
+        reasonCode: "CUSTOMER_DISPUTE",
+        correctionType: "REVERSAL",
+        targetAccountId: "ACC-SYN-CORR-FROM",
+        description: "Synthetic LED103 reversal correction smoke",
+        idempotencyKey: `BROWSER-CORRECTION-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(request.approval.approvalId, {
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER",
+          screenId: "LED-103"
+        });
+        throw new Error("transaction correction self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const execution = await checkerClient.approveStaffApproval(request.approval.approvalId, {
+        approvedBy: "manager02",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "LED-103"
+      });
+
+      setState({
+        status: "completed",
+        request,
+        selfApprovalCode,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Transaction Correction Command"
+      icon="receipt"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-transaction-correction-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{transactionCorrectionStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs LED103 request and checker-approved reversal against Spring ledger APIs."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run transaction correction smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Request</dt>
+                <dd>{state.execution.transactionCorrectionRequest?.status ?? state.request.item.status}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.request.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Original transaction</dt>
+                <dd>{state.request.item.targetTransactionId}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Account</dt>
+                <dd>{state.execution.account?.accountId ?? state.request.account.accountId}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Correction type</dt>
+                <dd>{state.execution.transactionCorrectionRequest?.correctionType ?? state.request.item.correctionType}</dd>
+              </div>
+              <div>
+                <dt>Reversal transaction</dt>
+                <dd>{state.execution.ledgerTransaction?.value.id ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Ledger type</dt>
+                <dd>{state.execution.ledgerTransaction?.value.transactionType ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Source row mutation</dt>
+                <dd>ledgerSourceRowsMutated=false</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "transaction correction reversed" : "not executed"}</dd>
               </div>
             </dl>
           </div>
@@ -2037,6 +2187,16 @@ function initialFeeWaiverApiState(): FeeWaiverApiState {
   return { status: "idle" };
 }
 
+function initialTransactionCorrectionApiState(): TransactionCorrectionApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -2165,6 +2325,22 @@ function feeWaiverStatusLabel(state: FeeWaiverApiState): string {
     return "fee waiver API failed";
   }
   return "fee waiver approved and rejected";
+}
+
+function transactionCorrectionStatusLabel(state: TransactionCorrectionApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "transaction correction API ready";
+  }
+  if (state.status === "running") {
+    return "transaction correction API running";
+  }
+  if (state.status === "failed") {
+    return "transaction correction API failed";
+  }
+  return "transaction correction reversed";
 }
 
 function errorMessage(error: unknown): string {

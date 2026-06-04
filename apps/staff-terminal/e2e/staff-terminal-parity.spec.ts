@@ -146,6 +146,12 @@ test("staff terminal renders command and maker-checker approval screens without 
   await expect(page.getByRole("heading", { name: "Fee Waiver Request" })).toBeVisible();
   await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
   await expect(page.getByTestId("manifest-fee-waiver-api-panel")).toBeAttached();
+
+  await page.getByLabel("Transaction code search").fill("LED103");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Transaction Correction Request" })).toBeVisible();
+  await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
+  await expect(page.getByTestId("manifest-transaction-correction-api-panel")).toBeAttached();
 });
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
@@ -278,6 +284,23 @@ test("staff terminal FEE102 executes Spring API-backed fee waiver approval and r
   await expect(panel).toContainText("APPROVED");
   await expect(panel).toContainText("REJECTED");
   await expect(panel).toContainText("feePostingCreated=false");
+});
+
+test("staff terminal LED103 executes Spring API-backed transaction correction reversal when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed transaction correction command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=LED-103`);
+
+  const panel = page.getByTestId("manifest-transaction-correction-api-panel");
+  await expect(panel).toContainText("transaction correction API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run transaction correction smoke" }).click();
+  await expect(panel).toContainText("transaction correction reversed", { timeout: 20_000 });
+  await expect(panel).toContainText("TRANSACTION_CORRECTION");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("TX-SYN-CORR-001");
+  await expect(panel).toContainText("REVERSAL");
+  await expect(panel).toContainText("ledgerSourceRowsMutated=false");
 });
 
 test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {

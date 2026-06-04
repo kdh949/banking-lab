@@ -231,6 +231,47 @@ data class FeeWaiverRequestResponse(
     val account: StaffAccountDto
 )
 
+data class TransactionCorrectionRequestCommand(
+    val requestedBy: String? = null,
+    val requestedByRole: String? = null,
+    val reason: String? = null,
+    val reasonCode: String? = null,
+    val correctionType: String? = null,
+    val targetAccountId: String? = null,
+    val businessDate: LocalDate? = null,
+    val description: String? = null,
+    val idempotencyKey: String? = null
+)
+
+data class TransactionCorrectionRequestDto(
+    val requestId: String,
+    val businessType: String,
+    val businessReferenceId: String,
+    val targetCustomerId: String,
+    val targetAccountId: String,
+    val targetTransactionId: String,
+    val requestedBy: String,
+    val requestedRole: String,
+    val reason: String,
+    val reasonCode: String,
+    val correctionType: String,
+    val correctionBusinessDate: LocalDate,
+    val status: String,
+    val approvalId: String?,
+    val ledgerTransactionId: String?,
+    val idempotencyKey: String,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val executedAt: OffsetDateTime?,
+    val metadata: Map<String, Any?>
+)
+
+data class TransactionCorrectionRequestResponse(
+    val item: TransactionCorrectionRequestDto,
+    val approval: OperatorApproval,
+    val account: StaffAccountDto
+)
+
 data class StaffApprovalExecutionResponse(
     val item: OperatorApproval,
     val executed: Boolean,
@@ -242,6 +283,7 @@ data class StaffApprovalExecutionResponse(
     val kycProfile: StaffKycProfileDto?,
     val kycReviewRequest: CustomerKycReviewRequestDto?,
     val feeWaiverRequest: FeeWaiverRequestDto?,
+    val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
@@ -252,7 +294,8 @@ data class StaffApprovalExecutionResponse(
 data class StaffApprovalRejectionResponse(
     val item: OperatorApproval,
     val rejected: Boolean,
-    val feeWaiverRequest: FeeWaiverRequestDto?
+    val feeWaiverRequest: FeeWaiverRequestDto?,
+    val transactionCorrectionRequest: TransactionCorrectionRequestDto?
 )
 
 data class StaffCustomerRecord(

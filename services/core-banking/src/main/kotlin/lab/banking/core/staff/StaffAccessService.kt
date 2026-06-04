@@ -15,6 +15,9 @@ import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.complaint.ComplaintCaseService
 import lab.banking.core.fds.FdsCaseService
+import lab.banking.core.ledger.application.LedgerCommandService
+import lab.banking.core.ledger.application.ReversalCommand
+import lab.banking.core.ledger.domain.LedgerCommandResult
 import lab.banking.core.reconciliation.ReconciliationOpsService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
@@ -39,6 +42,7 @@ class StaffAccessService(
     private val fdsCaseService: FdsCaseService,
     private val amlCaseService: AmlCaseService,
     private val reconciliationOpsService: ReconciliationOpsService,
+    private val ledgerCommandService: LedgerCommandService,
     private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -596,6 +600,90 @@ class StaffAccessService(
         )
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestTransactionCorrection(
+        transactionId: String,
+        command: TransactionCorrectionRequestCommand
+    ): TransactionCorrectionRequestResponse {
+        val requestedBy = command.requestedBy ?: "manager01"
+        val requestedRole = command.requestedByRole ?: "BRANCH_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, TRANSACTION_CORRECTION_REQUEST_ROLES, "actor role cannot request transaction correction")
+        requireReason(command.reason, "TRANSACTION_CORRECTION requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingTransactionCorrectionRequest(requestedBy, idempotencyKey)
+            ?.let { return transactionCorrectionResponse(it) }
+
+        val correctionType = (command.correctionType ?: "REVERSAL").uppercase()
+        if (correctionType != "REVERSAL") {
+            throw WorkflowErrors.validation("only REVERSAL transaction correction is supported in this phase")
+        }
+        if (transactionAlreadyReversed(transactionId)) {
+            throw WorkflowErrors.stateViolation("target transaction is already reversed")
+        }
+        if (pendingTransactionCorrectionExists(transactionId)) {
+            throw WorkflowErrors.stateViolation("transaction correction is already pending for target transaction")
+        }
+        val target = transactionCorrectionTarget(transactionId, command.targetAccountId?.takeIf { it.isNotBlank() })
+        val account = account(target.accountId, forUpdate = true)
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can request transaction correction")
+        }
+
+        val requestId = nextTransactionCorrectionRequestId()
+        val reasonCode = command.reasonCode ?: "CUSTOMER_DISPUTE"
+        val correctionBusinessDate = command.businessDate ?: LocalDate.now()
+        val metadata = mapOf(
+            "description" to command.description.orEmpty(),
+            "originalTransactionType" to target.transactionType,
+            "originalBusinessDate" to target.businessDate.toString(),
+            "targetPostingAmountMinor" to target.accountPostingAmountMinor,
+            "reversalPostingRequired" to true,
+            "ledgerSourceRowsMutated" to false,
+            "syntheticOnly" to true
+        )
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.TRANSACTION_CORRECTION,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = target.snapshot(),
+                afterSnapshot = mapOf(
+                    "requestId" to requestId,
+                    "targetTransactionId" to target.transactionId,
+                    "targetAccountId" to target.accountId,
+                    "correctionType" to correctionType,
+                    "correctionBusinessDate" to correctionBusinessDate.toString(),
+                    "reasonCode" to reasonCode,
+                    "description" to command.description.orEmpty(),
+                    "reversalPostingRequired" to true,
+                    "ledgerSourceRowsMutated" to false
+                ),
+                screenId = "LED-103"
+            )
+        )
+        insertTransactionCorrectionRequest(
+            requestId = requestId,
+            target = target,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            correctionType = correctionType,
+            correctionBusinessDate = correctionBusinessDate,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return TransactionCorrectionRequestResponse(
+            item = transactionCorrectionRequest(requestId),
+            approval = approval,
+            account = account.toDto()
+        )
+    }
+
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         return runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
@@ -661,6 +749,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val transactionCorrectionExecution = if (approval.businessType == ApprovalBusinessTypes.TRANSACTION_CORRECTION) {
+            applyApprovedTransactionCorrectionRequest(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -671,20 +764,24 @@ class StaffAccessService(
                 accountHoldExecution != null ||
                 transferLimitExecution != null ||
                 kycExecution != null ||
-                feeWaiverExecution != null,
+                feeWaiverExecution != null ||
+                transactionCorrectionExecution != null,
             customer = customer,
-            account = accountHoldExecution?.second ?: feeWaiverExecution?.second,
+            account = accountHoldExecution?.second ?: feeWaiverExecution?.second ?: transactionCorrectionExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
             transferLimit = transferLimitExecution?.second,
             transferLimitChangeRequest = transferLimitExecution?.first,
             kycProfile = kycExecution?.second,
             kycReviewRequest = kycExecution?.first,
             feeWaiverRequest = feeWaiverExecution?.first,
+            transactionCorrectionRequest = transactionCorrectionExecution?.first,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
             reconciliationItem = reconciliationExecution?.item,
-            ledgerTransaction = fdsExecution?.ledgerTransaction ?: reconciliationExecution?.ledgerTransaction
+            ledgerTransaction = fdsExecution?.ledgerTransaction
+                ?: reconciliationExecution?.ledgerTransaction
+                ?: transactionCorrectionExecution?.third
         )
     }
 
@@ -701,22 +798,44 @@ class StaffAccessService(
         if (pendingApproval.requestedBy == command.rejectedBy) {
             throw WorkflowErrors.selfApprovalRejected()
         }
-        if (pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER) {
+        if (
+            pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER &&
+            pendingApproval.businessType != ApprovalBusinessTypes.TRANSACTION_CORRECTION
+        ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
         }
-        val request = feeWaiverRequestForUpdate(pendingApproval.businessReferenceId)
-        if (request.approvalId != pendingApproval.approvalId || request.businessType != pendingApproval.businessType) {
-            throw WorkflowErrors.stateViolation("approval does not match fee waiver request")
-        }
-        if (request.status != "PENDING_APPROVAL") {
-            throw WorkflowErrors.stateViolation("only pending fee waiver requests can be rejected")
-        }
         val approval = approvals.reject(approvalId, command)
-        markFeeWaiverRequestRejected(request.requestId)
+        val feeWaiverRequest = if (pendingApproval.businessType == ApprovalBusinessTypes.FEE_WAIVER) {
+            val request = feeWaiverRequestForUpdate(pendingApproval.businessReferenceId)
+            if (request.approvalId != pendingApproval.approvalId || request.businessType != pendingApproval.businessType) {
+                throw WorkflowErrors.stateViolation("approval does not match fee waiver request")
+            }
+            if (request.status != "PENDING_APPROVAL") {
+                throw WorkflowErrors.stateViolation("only pending fee waiver requests can be rejected")
+            }
+            markFeeWaiverRequestRejected(request.requestId)
+            feeWaiverRequest(request.requestId)
+        } else {
+            null
+        }
+        val transactionCorrectionRequest = if (pendingApproval.businessType == ApprovalBusinessTypes.TRANSACTION_CORRECTION) {
+            val request = transactionCorrectionRequestForUpdate(pendingApproval.businessReferenceId)
+            if (request.approvalId != pendingApproval.approvalId || request.businessType != pendingApproval.businessType) {
+                throw WorkflowErrors.stateViolation("approval does not match transaction correction request")
+            }
+            if (request.status != "PENDING_APPROVAL") {
+                throw WorkflowErrors.stateViolation("only pending transaction correction requests can be rejected")
+            }
+            markTransactionCorrectionRequestRejected(request.requestId)
+            transactionCorrectionRequest(request.requestId)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
-            feeWaiverRequest = feeWaiverRequest(request.requestId)
+            feeWaiverRequest = feeWaiverRequest,
+            transactionCorrectionRequest = transactionCorrectionRequest
         )
     }
 
@@ -796,6 +915,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE -> TRANSFER_LIMIT_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW -> CUSTOMER_KYC_REVIEW_CHECKER_ROLES
             ApprovalBusinessTypes.FEE_WAIVER -> FEE_WAIVER_CHECKER_ROLES
+            ApprovalBusinessTypes.TRANSACTION_CORRECTION -> TRANSACTION_CORRECTION_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -819,6 +939,9 @@ class StaffAccessService(
 
     private fun nextFeeWaiverRequestId(): String =
         "FWR-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun nextTransactionCorrectionRequestId(): String =
+        "TCR-${UUID.randomUUID().toString().uppercase()}"
 
     private fun customer(customerId: String): StaffCustomerRecord =
         try {
@@ -1748,6 +1871,305 @@ class StaffAccessService(
             metadata = readMetadata(rs.getString("metadata_json"))
         )
 
+    private fun applyApprovedTransactionCorrectionRequest(
+        approval: OperatorApproval,
+        command: ApproveApprovalCommand
+    ): Triple<TransactionCorrectionRequestDto, StaffAccountDto, LedgerCommandResult> {
+        val request = transactionCorrectionRequestForUpdate(approval.businessReferenceId)
+        if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match transaction correction request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending transaction correction requests can be executed")
+        }
+        val account = account(request.targetAccountId, forUpdate = true)
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can apply transaction correction")
+        }
+        if (request.correctionType != "REVERSAL") {
+            throw WorkflowErrors.validation("only REVERSAL transaction correction is supported in this phase")
+        }
+        val ledgerResult = ledgerCommandService.reverseTransaction(
+            ReversalCommand(
+                originalTransactionId = request.targetTransactionId,
+                idempotencyKey = "TRANSACTION-CORRECTION-${request.requestId}",
+                requestedBy = command.approvedBy,
+                requestedChannel = "STAFF_TERMINAL",
+                businessDate = request.correctionBusinessDate,
+                reason = request.reason,
+                businessReferenceId = request.requestId
+            )
+        )
+        markTransactionCorrectionRequestReversed(request.requestId, ledgerResult.value.id)
+        appendAudit(
+            eventType = "COMMAND_EXECUTED",
+            actorId = command.approvedBy,
+            actorRole = command.approvedByRole,
+            screenId = command.screenId ?: "LED-103",
+            customerId = request.targetCustomerId,
+            accountId = request.targetAccountId,
+            reason = request.reason,
+            payload = mapOf(
+                "businessType" to approval.businessType,
+                "requestId" to request.requestId,
+                "approvalId" to approval.approvalId,
+                "targetTransactionId" to request.targetTransactionId,
+                "reversalTransactionId" to ledgerResult.value.id,
+                "correctionType" to request.correctionType,
+                "syntheticOnly" to true,
+                "ledgerSourceRowsMutated" to false
+            )
+        )
+        val updatedRequest = transactionCorrectionRequest(request.requestId)
+        val updatedAccount = account(request.targetAccountId, forUpdate = false)
+        return Triple(updatedRequest, updatedAccount.toDto(), ledgerResult)
+    }
+
+    private fun insertTransactionCorrectionRequest(
+        requestId: String,
+        target: TransactionCorrectionTarget,
+        requestedBy: String,
+        requestedRole: String,
+        reason: String,
+        reasonCode: String,
+        correctionType: String,
+        correctionBusinessDate: LocalDate,
+        approvalId: String,
+        idempotencyKey: String,
+        metadata: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO transaction_correction_requests (
+              request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+              target_transaction_id, requested_by, requested_role, reason, reason_code,
+              correction_type, correction_business_date, status, approval_id, idempotency_key, metadata_json
+            )
+            VALUES (
+              :requestId, :businessType, :requestId, :customerId, :accountId,
+              :targetTransactionId, :requestedBy, :requestedRole, :reason, :reasonCode,
+              :correctionType, :correctionBusinessDate, 'PENDING_APPROVAL',
+              :approvalId, :idempotencyKey, CAST(:metadataJson AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "businessType" to ApprovalBusinessTypes.TRANSACTION_CORRECTION,
+                "customerId" to target.customerId,
+                "accountId" to target.accountId,
+                "targetTransactionId" to target.transactionId,
+                "requestedBy" to requestedBy,
+                "requestedRole" to requestedRole,
+                "reason" to reason,
+                "reasonCode" to reasonCode,
+                "correctionType" to correctionType,
+                "correctionBusinessDate" to correctionBusinessDate,
+                "approvalId" to approvalId,
+                "idempotencyKey" to idempotencyKey,
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+    }
+
+    private fun markTransactionCorrectionRequestReversed(requestId: String, ledgerTransactionId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE transaction_correction_requests
+            SET status = 'REVERSED',
+                ledger_transaction_id = :ledgerTransactionId,
+                updated_at = now(),
+                executed_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId, "ledgerTransactionId" to ledgerTransactionId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("transaction correction request is no longer pending")
+        }
+    }
+
+    private fun markTransactionCorrectionRequestRejected(requestId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE transaction_correction_requests
+            SET status = 'REJECTED',
+                updated_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("transaction correction request is no longer pending")
+        }
+    }
+
+    private fun transactionCorrectionResponse(request: TransactionCorrectionRequestDto): TransactionCorrectionRequestResponse =
+        TransactionCorrectionRequestResponse(
+            item = request,
+            approval = approvals.approval(request.approvalId ?: throw WorkflowErrors.stateViolation("transaction correction request has no approval")),
+            account = account(request.targetAccountId, forUpdate = false).toDto()
+        )
+
+    private fun existingTransactionCorrectionRequest(requestedBy: String, idempotencyKey: String): TransactionCorrectionRequestDto? =
+        jdbc.query(
+            transactionCorrectionRequestSql(
+                """
+                WHERE business_type = :businessType
+                  AND requested_by = :requestedBy
+                  AND idempotency_key = :idempotencyKey
+                """.trimIndent()
+            ),
+            mapOf(
+                "businessType" to ApprovalBusinessTypes.TRANSACTION_CORRECTION,
+                "requestedBy" to requestedBy,
+                "idempotencyKey" to idempotencyKey
+            ),
+            this::mapTransactionCorrectionRequest
+        ).firstOrNull()
+
+    private fun transactionCorrectionRequest(requestId: String): TransactionCorrectionRequestDto =
+        jdbc.queryForObject(
+            transactionCorrectionRequestSql("WHERE request_id = :requestId"),
+            mapOf("requestId" to requestId),
+            this::mapTransactionCorrectionRequest
+        ) ?: throw WorkflowErrors.notFound("transaction correction request not found: $requestId")
+
+    private fun transactionCorrectionRequestForUpdate(requestId: String): TransactionCorrectionRequestDto =
+        jdbc.queryForObject(
+            transactionCorrectionRequestSql("WHERE request_id = :requestId FOR UPDATE"),
+            mapOf("requestId" to requestId),
+            this::mapTransactionCorrectionRequest
+        ) ?: throw WorkflowErrors.notFound("transaction correction request not found: $requestId")
+
+    private fun transactionCorrectionRequestSql(suffix: String): String =
+        """
+        SELECT request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+               target_transaction_id, requested_by, requested_role, reason, reason_code,
+               correction_type, correction_business_date, status, approval_id, ledger_transaction_id,
+               idempotency_key, created_at, updated_at, executed_at, metadata_json::text AS metadata_json
+        FROM transaction_correction_requests
+        $suffix
+        """.trimIndent()
+
+    private fun mapTransactionCorrectionRequest(rs: ResultSet, rowNum: Int): TransactionCorrectionRequestDto =
+        TransactionCorrectionRequestDto(
+            requestId = rs.getString("request_id"),
+            businessType = rs.getString("business_type"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            targetCustomerId = rs.getString("target_customer_id"),
+            targetAccountId = rs.getString("target_account_id"),
+            targetTransactionId = rs.getString("target_transaction_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedRole = rs.getString("requested_role"),
+            reason = rs.getString("reason"),
+            reasonCode = rs.getString("reason_code"),
+            correctionType = rs.getString("correction_type"),
+            correctionBusinessDate = rs.getObject("correction_business_date", LocalDate::class.java),
+            status = rs.getString("status"),
+            approvalId = rs.getString("approval_id"),
+            ledgerTransactionId = rs.getString("ledger_transaction_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            executedAt = rs.getObject("executed_at", OffsetDateTime::class.java),
+            metadata = readMetadata(rs.getString("metadata_json"))
+        )
+
+    private fun transactionAlreadyReversed(transactionId: String): Boolean =
+        (
+            jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM ledger_transactions
+                WHERE original_transaction_id = :transactionId
+                  AND transaction_type = 'REVERSAL'
+                """.trimIndent(),
+                mapOf("transactionId" to transactionId),
+                Int::class.java
+            ) ?: 0
+            ) > 0
+
+    private fun pendingTransactionCorrectionExists(transactionId: String): Boolean =
+        (
+            jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM transaction_correction_requests
+                WHERE target_transaction_id = :transactionId
+                  AND status = 'PENDING_APPROVAL'
+                """.trimIndent(),
+                mapOf("transactionId" to transactionId),
+                Int::class.java
+            ) ?: 0
+            ) > 0
+
+    private fun transactionCorrectionTarget(transactionId: String, requestedAccountId: String?): TransactionCorrectionTarget {
+        val rows = jdbc.query(
+            """
+            SELECT lt.ledger_transaction_id, lt.transaction_type, lt.status, lt.business_date,
+                   lt.requested_by, lt.requested_channel, lt.original_transaction_id,
+                   lp.account_id, lp.direction, lp.amount_minor, lp.currency, a.customer_id
+            FROM ledger_transactions lt
+            JOIN ledger_postings lp
+              ON lp.ledger_transaction_id = lt.ledger_transaction_id
+            JOIN accounts a
+              ON a.account_id = lp.account_id
+            WHERE lt.ledger_transaction_id = :transactionId
+            ORDER BY CASE WHEN a.customer_id = 'BANK' THEN 1 ELSE 0 END, lp.ledger_posting_id
+            """.trimIndent(),
+            mapOf("transactionId" to transactionId)
+        ) { rs, _ ->
+            TransactionCorrectionPostingRow(
+                transactionId = rs.getString("ledger_transaction_id"),
+                transactionType = rs.getString("transaction_type"),
+                status = rs.getString("status"),
+                businessDate = rs.getObject("business_date", LocalDate::class.java),
+                requestedBy = rs.getString("requested_by"),
+                requestedChannel = rs.getString("requested_channel"),
+                originalTransactionId = rs.getString("original_transaction_id"),
+                accountId = rs.getString("account_id"),
+                direction = rs.getString("direction"),
+                amountMinor = rs.getLong("amount_minor"),
+                currency = rs.getString("currency"),
+                customerId = rs.getString("customer_id")
+            )
+        }
+        if (rows.isEmpty()) {
+            throw WorkflowErrors.notFound("ledger transaction not found: $transactionId")
+        }
+        val first = rows.first()
+        if (first.status != "POSTED") {
+            throw WorkflowErrors.stateViolation("only posted ledger transactions can be corrected")
+        }
+        if (first.transactionType == "REVERSAL") {
+            throw WorkflowErrors.stateViolation("reversal transactions cannot be corrected directly")
+        }
+        val customerRows = rows.filter { it.customerId != "BANK" }
+        val targetRow = if (requestedAccountId != null) {
+            customerRows.firstOrNull { it.accountId == requestedAccountId }
+                ?: throw WorkflowErrors.validation("targetAccountId must belong to the target transaction")
+        } else {
+            customerRows.firstOrNull()
+                ?: throw WorkflowErrors.validation("target transaction has no customer account posting")
+        }
+        return TransactionCorrectionTarget(
+            transactionId = first.transactionId,
+            transactionType = first.transactionType,
+            status = first.status,
+            businessDate = first.businessDate,
+            requestedBy = first.requestedBy,
+            requestedChannel = first.requestedChannel,
+            originalTransactionId = first.originalTransactionId,
+            customerId = targetRow.customerId,
+            accountId = targetRow.accountId,
+            currency = targetRow.currency,
+            accountPostingAmountMinor = customerRows.filter { it.accountId == targetRow.accountId }.sumOf { it.amountMinor },
+            postingsCount = rows.size
+        )
+    }
+
     private fun accountHoldResponse(request: AccountHoldRequestDto): AccountHoldRequestResponse =
         AccountHoldRequestResponse(
             item = request,
@@ -2107,6 +2529,52 @@ class StaffAccessService(
         val updatedAt: OffsetDateTime
     )
 
+    private data class TransactionCorrectionPostingRow(
+        val transactionId: String,
+        val transactionType: String,
+        val status: String,
+        val businessDate: LocalDate,
+        val requestedBy: String,
+        val requestedChannel: String,
+        val originalTransactionId: String?,
+        val accountId: String,
+        val direction: String,
+        val amountMinor: Long,
+        val currency: String,
+        val customerId: String
+    )
+
+    private data class TransactionCorrectionTarget(
+        val transactionId: String,
+        val transactionType: String,
+        val status: String,
+        val businessDate: LocalDate,
+        val requestedBy: String,
+        val requestedChannel: String,
+        val originalTransactionId: String?,
+        val customerId: String,
+        val accountId: String,
+        val currency: String,
+        val accountPostingAmountMinor: Long,
+        val postingsCount: Int
+    ) {
+        fun snapshot(): Map<String, Any?> =
+            mapOf(
+                "ledgerTransactionId" to transactionId,
+                "transactionType" to transactionType,
+                "status" to status,
+                "businessDate" to businessDate.toString(),
+                "requestedBy" to requestedBy,
+                "requestedChannel" to requestedChannel,
+                "originalTransactionId" to originalTransactionId,
+                "targetCustomerId" to customerId,
+                "targetAccountId" to accountId,
+                "currency" to currency,
+                "targetPostingAmountMinor" to accountPostingAmountMinor,
+                "postingsCount" to postingsCount
+            )
+    }
+
     private companion object {
         const val SERIALIZABLE_APPROVAL_MAX_ATTEMPTS = 5
         const val SERIALIZABLE_STAFF_ACCESS_MAX_ATTEMPTS = 5
@@ -2120,5 +2588,7 @@ class StaffAccessService(
         val CUSTOMER_KYC_REVIEW_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val FEE_WAIVER_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER")
         val FEE_WAIVER_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val TRANSACTION_CORRECTION_REQUEST_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER")
+        val TRANSACTION_CORRECTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

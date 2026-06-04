@@ -420,6 +420,47 @@ export interface FeeWaiverRequestResponse {
   readonly account: CustomerAccountDetailDto;
 }
 
+export interface TransactionCorrectionRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly correctionType?: string;
+  readonly targetAccountId?: string;
+  readonly businessDate?: string;
+  readonly description?: string;
+  readonly idempotencyKey?: string;
+}
+
+export interface TransactionCorrectionRequestDto {
+  readonly requestId: string;
+  readonly businessType: string;
+  readonly businessReferenceId: string;
+  readonly targetCustomerId: string;
+  readonly targetAccountId: string;
+  readonly targetTransactionId: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly reasonCode: string;
+  readonly correctionType: string;
+  readonly correctionBusinessDate: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface TransactionCorrectionRequestResponse {
+  readonly item: TransactionCorrectionRequestDto;
+  readonly approval: OperatorApproval;
+  readonly account: CustomerAccountDetailDto;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -445,6 +486,7 @@ export interface StaffApprovalExecutionResponse {
   readonly kycProfile?: StaffKycProfileDto | null;
   readonly kycReviewRequest?: CustomerKycReviewRequestDto | null;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
+  readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -456,6 +498,7 @@ export interface StaffApprovalRejectionResponse {
   readonly item: OperatorApproval;
   readonly rejected: boolean;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
+  readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
 }
 
 export interface ReconciliationItemsResponse {
@@ -700,6 +743,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/accounts/${encodeURIComponent(accountId)}/fee-waiver-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestTransactionCorrection(transactionId: string, command: TransactionCorrectionRequestCommand) {
+      return request<TransactionCorrectionRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/transactions/${encodeURIComponent(transactionId)}/correction-requests`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

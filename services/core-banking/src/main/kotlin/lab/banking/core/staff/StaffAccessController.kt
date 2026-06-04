@@ -99,6 +99,13 @@ class StaffAccessController(
     ): ResponseEntity<FeeWaiverRequestResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestFeeWaiver(accountId, command))
 
+    @PostMapping("/transactions/{transactionId}/correction-requests")
+    fun requestTransactionCorrection(
+        @PathVariable transactionId: String,
+        @RequestBody command: TransactionCorrectionRequestCommand
+    ): ResponseEntity<TransactionCorrectionRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestTransactionCorrection(transactionId, command))
+
     @PostMapping("/approvals/{approvalId}/approve")
     fun approveStaffRequest(
         @PathVariable approvalId: String,

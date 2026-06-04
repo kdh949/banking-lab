@@ -17,6 +17,7 @@ The staff Playwright spec now checks:
 - `LIM102` renders an API-backed transfer-limit panel that can request a limit-change approval, prove self-approval rejection, approve with a checker, and observe the new `account_limits` values when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `KYC101` renders an API-backed KYC review panel that can request synthetic KYC re-confirmation, prove self-approval rejection, approve with a checker, and observe `REVIEW_REQUIRED` in `customer_kyc_profiles` when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `FEE102` renders an API-backed fee waiver panel that can request synthetic fee waiver approval, prove self-approval rejection, reject a separate request with a checker, approve another request with a checker, and observe no fee posting creation when `BANKING_LAB_E2E_API_BASE_URL` is configured;
+- `LED103` renders an API-backed transaction correction panel that can request a synthetic reversal correction, prove self-approval rejection, approve with a checker, and observe a `REVERSAL` ledger transaction without source-row mutation when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `APR001` approval inbox renders API-backed list, selected approval, approval execution controls, and related audit events inside the manifest workspace when `BANKING_LAB_E2E_API_BASE_URL` is configured;
 - `AUD001` audit log renders API-backed audit event rows, selected event details, and hash-chain status inside the manifest workspace when `BANKING_LAB_E2E_API_BASE_URL` is configured.
 
@@ -31,10 +32,10 @@ The full command starts all Next.js channel dev servers through Playwright. API 
 Latest local result:
 
 - 17 passed
-- 38 skipped because API/Keycloak E2E environment variables were not configured
+- 39 skipped because API/Keycloak E2E environment variables were not configured
 
 Latest targeted staff-terminal result:
 
 - `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`
 - 5 passed
-- 11 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured
+- 12 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured

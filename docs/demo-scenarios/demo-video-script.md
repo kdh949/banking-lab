@@ -34,7 +34,7 @@ Show:
 
 Narration:
 
-Sensitive staff access requires a reason and leaves an audit event. The approval inbox and audit log are no longer only declared screens; they have conditional Spring API-backed paths. Account hold, limit change, KYC review, and fee waiver now have conditional Spring API-backed command slices; transaction correction remains a follow-up command slice.
+Sensitive staff access requires a reason and leaves an audit event. The approval inbox and audit log are no longer only declared screens; they have conditional Spring API-backed paths. Account hold, limit change, KYC review, fee waiver, and transaction correction now have conditional Spring API-backed command slices; transaction correction uses approval-gated reversal postings instead of mutating original ledger rows.
 
 ## Scene 3: Customer Web Transfer
 
@@ -115,7 +115,7 @@ Open:
 Show:
 
 - API-backed, manifest-only, partial, and missing classifications
-- missing staff command slices
+- remaining product, analytics, formal, platform, and operations evidence gaps
 - product/fee/interest module gap
 - Python/DuckDB analytics gap
 - formal TLC gap
