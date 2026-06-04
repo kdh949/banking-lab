@@ -17,7 +17,9 @@ Implemented behavior:
 - case status, owner, SLA, comments, approval, and timeline rendering;
 - parameter current/scheduled/history/rollback rendering;
 - masking state display;
-- structured error contract display.
+- structured error contract display;
+- API-backed `APR001` approval inbox rendering for list, selection, approval execution, and related audit events;
+- API-backed `AUD001` audit log rendering for event list, event selection, and hash-chain status display.
 
 ## Control Model
 
@@ -41,3 +43,5 @@ Covered existing flows:
 - privileged PII unmask;
 - customer information change approval;
 - Keycloak staff/checker propagation when configured.
+
+The `APR001` and `AUD001` tabs now also use the shared `@banking-lab/api-client` inside the manifest workspace instead of remaining declared-only screens. `APR001` uses the real approval list/detail/approve API and reads audit events after execution; `AUD001` uses the real audit-event API and keeps hash-chain status visible to auditors.

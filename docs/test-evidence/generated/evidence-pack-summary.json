@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-03T04:25:23.549Z",
+  "generatedAt": "2026-06-04T04:25:03.172Z",
   "scope": "Bank-grade Core Banking Lab Evidence Pack",
   "syntheticOnly": true,
   "totalChecks": 38,
@@ -27,7 +27,7 @@
     {
       "phase": "Phase 3",
       "scope": "Phase 3 Staff Terminal MVP",
-      "generatedAt": "2026-06-01T21:32:41.377Z",
+      "generatedAt": "2026-06-04T04:25:03.172Z",
       "totalChecks": 6,
       "passedChecks": 6,
       "failedChecks": [],

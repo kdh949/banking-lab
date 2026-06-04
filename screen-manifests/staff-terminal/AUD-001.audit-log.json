@@ -18,7 +18,7 @@
     "maskingPolicy": "NONE"
   },
   "query": {
-    "endpoint": "GET /api/staff/audit-events",
+    "endpoint": "GET /api/audit/events",
     "fields": [
       {
         "name": "eventType",

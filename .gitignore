@@ -11,6 +11,7 @@ test-results/
 .nyc_output/
 dist/
 build/
+services/**/bin/
 .gradle/
 .next/
 *.tsbuildinfo

@@ -1,4 +1,4 @@
-import type { ChangeEventHandler, ReactNode } from "react";
+import type { ChangeEventHandler, MouseEventHandler, ReactNode } from "react";
 
 export type IconName =
   | "account_balance_wallet"
@@ -137,6 +137,8 @@ export function TerminalButton({
   children,
   className = "",
   type = "button",
+  disabled = false,
+  onClick,
   "aria-label": ariaLabel
 }: {
   readonly variant: TerminalButtonVariant;
@@ -145,10 +147,18 @@ export function TerminalButton({
   readonly children?: ReactNode;
   readonly className?: string;
   readonly type?: "button" | "submit" | "reset";
+  readonly disabled?: boolean;
+  readonly onClick?: MouseEventHandler<HTMLButtonElement>;
   readonly "aria-label"?: string;
 }) {
   return (
-    <button className={cx("terminal-button", `terminal-button-${variant}`, active && "is-active", className)} type={type} aria-label={ariaLabel}>
+    <button
+      className={cx("terminal-button", `terminal-button-${variant}`, active && "is-active", className)}
+      type={type}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+    >
       {icon ? <TerminalIcon name={icon} /> : null}
       {children ? <span>{children}</span> : null}
     </button>
