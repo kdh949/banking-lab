@@ -33,6 +33,7 @@ test("FDS/AML console renders masked context, approval metadata, and workflow st
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Investigation and approval workspace" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();

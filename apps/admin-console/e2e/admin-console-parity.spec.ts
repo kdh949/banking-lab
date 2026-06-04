@@ -33,6 +33,7 @@ test("admin console renders platform control and parameter manifests", async ({ 
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Platform controls and privileged parameters" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();

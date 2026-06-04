@@ -1,3 +1,13 @@
+import {
+  ChannelActionRow,
+  ChannelCard,
+  ChannelCardGrid,
+  ChannelDefinitionList,
+  ChannelMetric,
+  ChannelMetricGrid,
+  ChannelShell,
+  ChannelWorkflow
+} from "../../../../packages/channel-ui/src";
 import { ApiBackedComplaintPanel } from "../components/ApiBackedComplaintPanel";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
@@ -10,77 +20,31 @@ export default async function ComplaintPortalPage() {
   const reasonRequired = manifests.filter((manifest) => manifest.audit.reasonRequired).length;
 
   return (
-    <main>
-      <div className="shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Electronic Complaint Portal</p>
-            <h1>Customer case workspace</h1>
-          </div>
-          <span className="status">Synthetic complaints only</span>
-        </header>
+    <ChannelShell appId="complaint-portal" eyebrow="Electronic Complaint Portal" title="Customer case workspace" status="Synthetic complaints only">
+      <ChannelMetricGrid>
+        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" detail="Control summary" />
+        <ChannelMetric label="Reason-required manifests" value={reasonRequired} />
+        <ChannelMetric label="Case template" value="workflow timeline" />
+      </ChannelMetricGrid>
 
-        <section className="case-grid" aria-label="Complaint portal control summary">
-          <article className="case-card">
-            <div className="case-heading">
-              <span>Control summary</span>
-              <h2>Default PII masking</h2>
-            </div>
-            <dl>
-              <div>
-                <dt>Masking</dt>
-                <dd>CUSTOMER_SELF</dd>
-              </div>
-              <div>
-                <dt>Reason-required manifests</dt>
-                <dd>{reasonRequired}</dd>
-              </div>
-            </dl>
-          </article>
-        </section>
+      <ApiBackedComplaintPanel />
 
-        <ApiBackedComplaintPanel />
-
-        <section className="case-grid" aria-label="Complaint portal manifests">
-          {manifests.map((manifest) => (
-            <article className="case-card" key={manifest.screenId}>
-              <div className="case-heading">
-                <span>{manifest.screenId}</span>
-                <h2>{manifest.title}</h2>
-              </div>
-              <div className="workflow">
-                <span>workflow timeline</span>
-                {(manifest.workflow?.states || []).map((state) => (
-                  <span key={state}>{state}</span>
-                ))}
-              </div>
-              <dl>
-                <div>
-                  <dt>Template</dt>
-                  <dd>{manifest.layout.template}</dd>
-                </div>
-                <div>
-                  <dt>Sections</dt>
-                  <dd>{list(manifest.sections)}</dd>
-                </div>
-                <div>
-                  <dt>SLA</dt>
-                  <dd>{manifest.sla?.enabled ? `${manifest.sla.targetHours} hours` : "none"}</dd>
-                </div>
-                <div>
-                  <dt>Audit</dt>
-                  <dd>{manifest.audit.selfService ? "customer self-service" : "standard"}</dd>
-                </div>
-              </dl>
-              <div className="actions">
-                {(manifest.actions || []).map((action) => (
-                  <span key={action.id}>{action.label}</span>
-                ))}
-              </div>
-            </article>
-          ))}
-        </section>
-      </div>
-    </main>
+      <ChannelCardGrid>
+        {manifests.map((manifest) => (
+          <ChannelCard key={manifest.screenId} screenId={manifest.screenId} title={manifest.title}>
+            <ChannelWorkflow states={manifest.workflow?.states || []} />
+            <ChannelDefinitionList
+              items={[
+                { term: "Template", detail: manifest.layout.template },
+                { term: "Sections", detail: list(manifest.sections) },
+                { term: "SLA", detail: manifest.sla?.enabled ? `${manifest.sla.targetHours} hours` : "none" },
+                { term: "Audit", detail: manifest.audit.selfService ? "customer self-service" : "standard" }
+              ]}
+            />
+            <ChannelActionRow items={(manifest.actions || []).map((action) => action.label)} />
+          </ChannelCard>
+        ))}
+      </ChannelCardGrid>
+    </ChannelShell>
   );
 }

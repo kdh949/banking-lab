@@ -22,6 +22,7 @@ test("customer web renders account, transfer, and complaint controls from manife
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Customer Web Banking" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true }).first()).toBeVisible();

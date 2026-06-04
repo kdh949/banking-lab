@@ -1,3 +1,13 @@
+import {
+  ChannelActionRow,
+  ChannelCard,
+  ChannelCardGrid,
+  ChannelDefinitionList,
+  ChannelMetric,
+  ChannelMetricGrid,
+  ChannelShell,
+  ChannelWorkflow
+} from "../../../../packages/channel-ui/src";
 import { ApiBackedRiskPanel } from "../components/ApiBackedRiskPanel";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
@@ -11,74 +21,36 @@ export default async function FdsAmlConsolePage() {
   const amlReview = manifests.find((manifest) => manifest.screenId === "AML-201");
 
   return (
-    <main>
-      <div className="shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">FDS / AML Console</p>
-            <h1>Investigation and approval workspace</h1>
-          </div>
-          <span className="status">Held transfers do not post</span>
-        </header>
+    <ChannelShell appId="fds-aml-console" eyebrow="FDS / AML Console" title="Investigation and approval workspace" status="Held transfers do not post">
+      <ChannelMetricGrid>
+        <ChannelMetric label="FDS release/block" value={heldReview?.approval?.required ? "maker-checker" : "pending manifest"} />
+        <ChannelMetric label="AML closure" value={amlReview?.approval?.required ? "approval controlled" : "pending manifest"} />
+        <ChannelMetric label="PII policy" value="masked by default" />
+      </ChannelMetricGrid>
 
-        <section className="summary-grid" aria-label="Risk control summary">
-          <article>
-            <span>FDS release/block</span>
-            <strong>{heldReview?.approval?.required ? "maker-checker" : "pending manifest"}</strong>
-          </article>
-          <article>
-            <span>AML closure</span>
-            <strong>{amlReview?.approval?.required ? "approval controlled" : "pending manifest"}</strong>
-          </article>
-          <article>
-            <span>PII policy</span>
-            <strong>masked by default</strong>
-          </article>
-        </section>
+      <ApiBackedRiskPanel />
 
-        <ApiBackedRiskPanel />
-
-        <section className="case-grid" aria-label="FDS AML manifest screens">
-          {manifests.map((manifest) => (
-            <article className="case-card" key={manifest.screenId}>
-              <div className="case-heading">
-                <span>{manifest.screenId}</span>
-                <h2>{manifest.title}</h2>
-                <p>{manifest.domain} · {manifest.layout.template}</p>
-              </div>
-              <div className="workflow">
-                <span>workflow timeline</span>
-                {(manifest.workflow?.states || []).map((state) => (
-                  <span key={state}>{state}</span>
-                ))}
-              </div>
-              <dl>
-                <div>
-                  <dt>Roles</dt>
-                  <dd>{list(manifest.requiredRoles)}</dd>
-                </div>
-                <div>
-                  <dt>Sections</dt>
-                  <dd>{list(manifest.sections)}</dd>
-                </div>
-                <div>
-                  <dt>SLA</dt>
-                  <dd>{manifest.sla?.enabled ? `${manifest.sla.targetHours} hours` : "none"}</dd>
-                </div>
-                <div>
-                  <dt>Approval Types</dt>
-                  <dd>{manifest.approval?.required ? list(manifest.approval.businessTypes) : "not required"}</dd>
-                </div>
-              </dl>
-              <div className="actions">
-                {(manifest.actions || []).map((action) => (
-                  <span key={action.id}>{action.label}</span>
-                ))}
-              </div>
-            </article>
-          ))}
-        </section>
-      </div>
-    </main>
+      <ChannelCardGrid density="wide">
+        {manifests.map((manifest) => (
+          <ChannelCard
+            key={manifest.screenId}
+            screenId={manifest.screenId}
+            title={manifest.title}
+            meta={`${manifest.domain} · ${manifest.layout.template}`}
+          >
+            <ChannelWorkflow states={manifest.workflow?.states || []} />
+            <ChannelDefinitionList
+              items={[
+                { term: "Roles", detail: list(manifest.requiredRoles) },
+                { term: "Sections", detail: list(manifest.sections) },
+                { term: "SLA", detail: manifest.sla?.enabled ? `${manifest.sla.targetHours} hours` : "none" },
+                { term: "Approval Types", detail: manifest.approval?.required ? list(manifest.approval.businessTypes) : "not required" }
+              ]}
+            />
+            <ChannelActionRow items={(manifest.actions || []).map((action) => action.label)} />
+          </ChannelCard>
+        ))}
+      </ChannelCardGrid>
+    </ChannelShell>
   );
 }

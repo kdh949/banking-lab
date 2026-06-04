@@ -1,3 +1,12 @@
+import {
+  ChannelCard,
+  ChannelCardGrid,
+  ChannelDefinitionList,
+  ChannelPanel,
+  ChannelShell,
+  ChannelSplit,
+  ChannelWorkflow
+} from "../../../../packages/channel-ui/src";
 import { ApiBackedOpsPanel } from "../components/ApiBackedOpsPanel";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
@@ -9,77 +18,39 @@ export default async function OpsConsolePage() {
   const manifests = await loadChannelManifests();
 
   return (
-    <main>
-      <div className="shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Operations Console</p>
-            <h1>Closing and reconciliation controls</h1>
-          </div>
-          <span className="status">Balanced adjustments only</span>
-        </header>
+    <ChannelShell appId="ops-console" eyebrow="Operations Console" title="Closing and reconciliation controls" status="Balanced adjustments only">
+      <ApiBackedOpsPanel />
 
-        <ApiBackedOpsPanel />
-
-        <section className="ops-grid" aria-label="Operations manifest shell">
-          <aside className="panel">
-            <h2>Control Summary</h2>
+      <ChannelSplit
+        aside={
+          <ChannelPanel title="Control Summary">
             <ul>
               <li>Ledger invariant status before closing</li>
               <li>Closed business dates reject direct posting</li>
               <li>Mismatch corrections require approval</li>
               <li>Adjustment transaction remains balanced</li>
             </ul>
-          </aside>
-
-          <section className="cards">
-            {manifests.map((manifest) => (
-              <article className="card" key={manifest.screenId}>
-                <div className="card-heading">
-                  <span>{manifest.screenId}</span>
-                  <h2>{manifest.title}</h2>
-                  <p>{manifest.type} · {manifest.domain}</p>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Template</dt>
-                    <dd>{manifest.layout.template}</dd>
-                  </div>
-                  <div>
-                    <dt>Roles</dt>
-                    <dd>{list(manifest.requiredRoles)}</dd>
-                  </div>
-                  <div>
-                    <dt>Declared Surface</dt>
-                    <dd>{list(manifest.widgets || manifest.sections)}</dd>
-                  </div>
-                  <div>
-                    <dt>Approval</dt>
-                    <dd>{manifest.approval?.required ? list(manifest.approval.businessTypes) : "not required"}</dd>
-                  </div>
-                  <div>
-                    <dt>Audit</dt>
-                    <dd>{manifest.audit.reasonRequired ? "reason required" : "standard"}</dd>
-                  </div>
-                  <div>
-                    <dt>Workflow</dt>
-                    <dd>
-                      {manifest.workflow?.states?.length ? (
-                        <>
-                          <span>workflow timeline</span>
-                          <span>{manifest.workflow.states.join(", ")}</span>
-                        </>
-                      ) : (
-                        "none"
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </section>
-        </section>
-      </div>
-    </main>
+          </ChannelPanel>
+        }
+      >
+        <ChannelCardGrid>
+          {manifests.map((manifest) => (
+            <ChannelCard key={manifest.screenId} screenId={manifest.screenId} title={manifest.title} meta={`${manifest.type} · ${manifest.domain}`}>
+              {manifest.workflow?.states?.length ? <ChannelWorkflow states={manifest.workflow.states} /> : null}
+              <ChannelDefinitionList
+                items={[
+                  { term: "Template", detail: manifest.layout.template },
+                  { term: "Roles", detail: list(manifest.requiredRoles) },
+                  { term: "Declared Surface", detail: list(manifest.widgets || manifest.sections) },
+                  { term: "Approval", detail: manifest.approval?.required ? list(manifest.approval.businessTypes) : "not required" },
+                  { term: "Audit", detail: manifest.audit.reasonRequired ? "reason required" : "standard" },
+                  { term: "Workflow", detail: manifest.workflow?.states?.length ? "declared" : "none" }
+                ]}
+              />
+            </ChannelCard>
+          ))}
+        </ChannelCardGrid>
+      </ChannelSplit>
+    </ChannelShell>
   );
 }
