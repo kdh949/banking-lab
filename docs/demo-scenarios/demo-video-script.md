@@ -115,7 +115,7 @@ Open:
 Show:
 
 - API-backed, manifest-only, partial, and missing classifications
-- remaining analytics integration, formal, platform, and operations evidence gaps
+- remaining optional hardening items that are not claimed as completed evidence
 - product-ledger Phase C now includes deposit interest, fee policy versioning, fee posting, and targeted fee refund reversal
 - Python/DuckDB analytics now has batch evidence; live Spring/FDS-console linkage remains
 - formal model-checker evidence is executable through bounded state search; local TLC binary is still optional
