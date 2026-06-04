@@ -22,6 +22,10 @@
 | AML/FDS model governance artifact | `aml_model_versions`, `scripts/run-aml-str-report.ts` model-card lineage | `npm run aml:str-report`, `docs/test-evidence/generated/aml-model-card.json` |
 | Synthetic STR and AML regulatory reporting | `synthetic_str_reports`, `synthetic_aml_regulatory_reports`, `scripts/run-aml-str-report.ts` | `npm run aml:str-report`, `docs/test-evidence/generated/synthetic-str-report.json`, `docs/test-evidence/generated/aml-regulatory-report.json` |
 | Sanctions false-positive disposition approval | `AmlFdsGovernanceService.falsePositiveDisposition`, `sanctions_screening_hits` disposition fields | `AmlFdsGovernanceIntegrationTest` |
+| Analytical mart reconciliation | `banking_lab_analytics.data_platform`, `finance_balance_mart`, `risk_exposure_mart` | `npm run data:dq-check`, `analytics/aml-fds-python/tests/test_data_platform.py` |
+| Data-platform dirty-data DQ gate | `run_data_platform(..., inject_dirty_data=True)`, null/duplicate/range/reconciliation checks | `analytics/aml-fds-python/tests/test_data_platform.py`, injected-dirty CLI run |
+| Report field lineage | `docs/test-evidence/generated/data-platform/data-lineage.json`, `resolve_lineage` | `tests/dataPlatform.test.mjs`, `analytics/aml-fds-python/tests/test_data_platform.py` |
+| Synthetic liquidity/exposure report reproducibility | `docs/test-evidence/generated/data-platform/synthetic-risk-report.json`, report hash | `analytics/aml-fds-python/tests/test_data_platform.py` |
 | Masked PII by default | `maskCustomer`, `maskAccount`, `StaffAccessService` | audit/staff tests, staff access API integration test |
 | Maker-checker for high-risk operations | `ApprovalStore`, `PersistentApprovalService`, `/api/approvals`, `/api/staff/approvals`, `operator_approvals` | maker-checker, complaint, FDS/AML/recon tests, approval persistence/API integration tests, customer change, complaint answer, FDS execution, AML closure, and reconciliation adjustment integration tests |
 | Complaint answer approval | complaint workflow runtime, `ComplaintCaseService` | Phase 5 tests, complaint API integration test |

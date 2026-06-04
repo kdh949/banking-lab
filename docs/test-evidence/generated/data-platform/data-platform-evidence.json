@@ -1,0 +1,138 @@
+{
+  "controls": {
+    "deterministicReporting": true,
+    "duckdbMartGenerated": true,
+    "parquetMartsWritten": true,
+    "realBankNetworkUsed": false,
+    "realExternalProviderUsed": false,
+    "realKycUsed": false,
+    "realMoneyUsed": false,
+    "realPiiUsed": false
+  },
+  "dqChecks": [
+    {
+      "checkId": "source_null_account_ids",
+      "description": "null account_id values are not allowed in source extracts",
+      "failedRows": 0,
+      "status": "pass"
+    },
+    {
+      "checkId": "projection_unique_account_currency",
+      "description": "account balance projections must be unique by account and currency",
+      "failedRows": 0,
+      "status": "pass"
+    },
+    {
+      "checkId": "posting_amount_positive",
+      "description": "ledger posting amounts must be positive",
+      "failedRows": 0,
+      "status": "pass"
+    },
+    {
+      "checkId": "projection_balance_range",
+      "description": "projection balances must be non-negative and available balance cannot exceed ledger balance",
+      "failedRows": 0,
+      "status": "pass"
+    },
+    {
+      "checkId": "ledger_projection_reconciliation",
+      "description": "finance balance mart must equal account balance projections",
+      "failedRows": 0,
+      "status": "pass"
+    }
+  ],
+  "dqStatus": "pass",
+  "engine": "banking_lab_analytics.duckdb_data_platform",
+  "generatedAt": "2026-06-05T00:00:00Z",
+  "lineage": {
+    "fieldLineage": {
+      "riskReport.highRiskExposureMinor": [
+        "source.synthetic_oltp.account_balance_projections.risk_grade",
+        "source.synthetic_oltp.account_balance_projections.ledger_balance_minor",
+        "mart.risk_exposure_mart.risk_grade",
+        "report.synthetic_liquidity_exposure.highRiskExposureMinor"
+      ],
+      "riskReport.totalAvailableBalanceMinor": [
+        "source.synthetic_oltp.account_balance_projections.available_balance_minor",
+        "mart.risk_exposure_mart.available_balance_minor",
+        "report.synthetic_liquidity_exposure.totalAvailableBalanceMinor"
+      ],
+      "riskReport.totalLedgerBalanceMinor": [
+        "source.synthetic_oltp.ledger_postings.direction",
+        "source.synthetic_oltp.ledger_postings.amount_minor",
+        "mart.finance_balance_mart.posting_balance_minor",
+        "mart.risk_exposure_mart.ledger_balance_minor",
+        "report.synthetic_liquidity_exposure.totalLedgerBalanceMinor"
+      ]
+    },
+    "generatedAt": "2026-06-05T00:00:00Z",
+    "nodes": [
+      {
+        "id": "source.synthetic_oltp.ledger_postings",
+        "kind": "source",
+        "path": "sample-data/data-platform/ledger_postings.csv"
+      },
+      {
+        "id": "source.synthetic_oltp.account_balance_projections",
+        "kind": "source",
+        "path": "sample-data/data-platform/account_balance_projections.csv"
+      },
+      {
+        "id": "mart.finance_balance_mart",
+        "kind": "duckdb_parquet_mart",
+        "path": "../../docs/test-evidence/generated/data-platform/finance_balance_mart.parquet"
+      },
+      {
+        "id": "mart.risk_exposure_mart",
+        "kind": "duckdb_parquet_mart",
+        "path": "../../docs/test-evidence/generated/data-platform/risk_exposure_mart.parquet"
+      },
+      {
+        "id": "report.synthetic_liquidity_exposure",
+        "kind": "risk_report",
+        "path": "../../docs/test-evidence/generated/data-platform/synthetic-risk-report.json"
+      }
+    ],
+    "syntheticOnly": true
+  },
+  "martRowCounts": {
+    "financeBalanceMart": 3,
+    "riskExposureMart": 3
+  },
+  "riskReport": {
+    "accountCount": 3,
+    "asOf": "2026-06-05T00:00:00Z",
+    "availableToLedgerRatio": 0.917044,
+    "currency": "KRW",
+    "highRiskExposureMinor": 3500000,
+    "highRiskExposureRatio": 0.527903,
+    "reportHash": "08c4a96d5f66896f28a17f40822d100c0a1eada06363f39b18727c75b3e4cfa4",
+    "reportId": "RISK-SYN-H7-LIQUIDITY-EXPOSURE",
+    "riskBuckets": [
+      {
+        "accountCount": 1,
+        "exposureMinor": 3500000,
+        "riskGrade": "HIGH"
+      },
+      {
+        "accountCount": 1,
+        "exposureMinor": 2380000,
+        "riskGrade": "LOW"
+      },
+      {
+        "accountCount": 1,
+        "exposureMinor": 750000,
+        "riskGrade": "REVIEW_REQUIRED"
+      }
+    ],
+    "syntheticOnly": true,
+    "totalAvailableBalanceMinor": 6080000,
+    "totalHoldAmountMinor": 550000,
+    "totalLedgerBalanceMinor": 6630000
+  },
+  "sourceHashes": {
+    "accountBalanceProjectionsSha256": "b3917b56bb2a83e0f351e0c85fee3a5c71c7e15522f30e5b0250f50408741289",
+    "ledgerPostingsSha256": "4f5e9717de635bdf894b85123ffe44a3a15b1ed7425cb4ef3b87b745d00530ee"
+  },
+  "syntheticOnly": true
+}

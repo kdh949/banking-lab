@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 banking-lab-analytics = "banking_lab_analytics.scoring:main"
+banking-lab-data-platform = "banking_lab_analytics.data_platform:main"
 
 [build-system]
 requires = ["hatchling"]

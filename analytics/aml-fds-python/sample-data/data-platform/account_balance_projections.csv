@@ -1,0 +1,4 @@
+account_id,customer_id,currency,ledger_balance_minor,available_balance_minor,hold_amount_minor,risk_grade,account_status
+ACC-DATA-001,CUS-DATA-001,KRW,2380000,2380000,0,LOW,ACTIVE
+ACC-DATA-002,CUS-DATA-002,KRW,750000,700000,50000,REVIEW_REQUIRED,ACTIVE
+ACC-DATA-003,CUS-DATA-003,KRW,3500000,3000000,500000,HIGH,ACTIVE
