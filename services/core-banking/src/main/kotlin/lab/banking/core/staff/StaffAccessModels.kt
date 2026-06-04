@@ -9,6 +9,7 @@ import lab.banking.core.complaint.ComplaintCaseDto
 import lab.banking.core.fds.FdsCaseDto
 import lab.banking.core.ledger.domain.LedgerCommandResult
 import lab.banking.core.product.DepositRateChangeRequestDto
+import lab.banking.core.product.FeePolicyChangeRequestDto
 import lab.banking.core.reconciliation.ReconciliationItemDto
 
 data class StaffAccessItemResponse<T>(
@@ -219,6 +220,7 @@ data class FeeWaiverRequestDto(
     val currency: String,
     val status: String,
     val approvalId: String?,
+    val refundLedgerTransactionId: String?,
     val idempotencyKey: String,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
@@ -286,6 +288,7 @@ data class StaffApprovalExecutionResponse(
     val feeWaiverRequest: FeeWaiverRequestDto?,
     val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
     val depositRateChangeRequest: DepositRateChangeRequestDto?,
+    val feePolicyChangeRequest: FeePolicyChangeRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
@@ -298,7 +301,8 @@ data class StaffApprovalRejectionResponse(
     val rejected: Boolean,
     val feeWaiverRequest: FeeWaiverRequestDto?,
     val transactionCorrectionRequest: TransactionCorrectionRequestDto?,
-    val depositRateChangeRequest: DepositRateChangeRequestDto?
+    val depositRateChangeRequest: DepositRateChangeRequestDto?,
+    val feePolicyChangeRequest: FeePolicyChangeRequestDto?
 )
 
 data class StaffCustomerRecord(

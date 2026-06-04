@@ -19,6 +19,7 @@ class SyntheticDataSeeder(
         seedAccountLimits()
         seedBalanceProjections()
         seedDepositProducts()
+        seedFeePolicies()
         seedLedgerCorrectionTransactions()
         seedWorkflowCases()
         seedAuditEvent()
@@ -212,6 +213,43 @@ class SyntheticDataSeeder(
               'ENR-SYN-SAVINGS-001', 'ACC-SYN-001-001', 'DP-SYN-SAVINGS', 'ACTIVE'
             )
             ON CONFLICT (account_id, product_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedFeePolicies() {
+        jdbc.update(
+            """
+            INSERT INTO fee_policies (
+              policy_id, fee_code, fee_name, product_id, currency, status, waiver_eligible, synthetic_only
+            )
+            VALUES (
+              'FEE-SYN-MONTHLY', 'MONTHLY_SERVICE_FEE', 'Synthetic Monthly Service Fee',
+              'DP-SYN-SAVINGS', 'KRW', 'ACTIVE', TRUE, TRUE
+            )
+            ON CONFLICT (policy_id) DO UPDATE
+            SET fee_code = EXCLUDED.fee_code,
+                fee_name = EXCLUDED.fee_name,
+                product_id = EXCLUDED.product_id,
+                currency = EXCLUDED.currency,
+                status = EXCLUDED.status,
+                waiver_eligible = EXCLUDED.waiver_eligible,
+                synthetic_only = EXCLUDED.synthetic_only
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO fee_policy_versions (
+              fee_policy_version_id, policy_id, amount_minor, effective_from,
+              effective_to, status, approval_id, created_by
+            )
+            VALUES (
+              'FVER-SYN-MONTHLY-001', 'FEE-SYN-MONTHLY', 1000, DATE '2026-01-01',
+              NULL, 'ACTIVE', NULL, 'synthetic-seeder'
+            )
+            ON CONFLICT (fee_policy_version_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
         )

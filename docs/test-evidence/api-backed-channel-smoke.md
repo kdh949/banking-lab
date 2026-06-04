@@ -4,7 +4,7 @@ Date: 2026-06-04
 
 ## Scope
 
-This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, fee waiver approval/rejection, transaction correction reversal approval, deposit rate parameter approval, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, transaction correction reversal approval, deposit rate parameter approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
+This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, fee waiver approval/rejection, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
 
 ## Changes Proven
 
@@ -31,10 +31,12 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `staff-terminal` can execute a Spring API-backed account hold/release command smoke for `ACC-SYN-HOLD-001` by requesting an `ACCOUNT_HOLD` approval, proving maker self-approval rejection, approving as a separate branch manager, requesting an `ACCOUNT_HOLD_RELEASE` approval, proving release self-approval rejection, approving as a separate ops checker, and observing the account return to `ACTIVE` without ledger source-row mutation.
 - `staff-terminal` can execute a Spring API-backed transfer-limit command smoke for `ACC-SYN-LIMIT-001` by requesting a `TRANSFER_LIMIT_CHANGE` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `account_limits` update without ledger source-row mutation.
 - `staff-terminal` can execute a Spring API-backed KYC re-confirmation command smoke for `SYN-CUS-KYC-001` by requesting a `CUSTOMER_KYC_REVIEW` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `customer_kyc_profiles.kyc_status = REVIEW_REQUIRED` without ledger source-row mutation or real KYC provider calls.
-- `staff-terminal` can execute a Spring API-backed fee waiver command smoke for `ACC-SYN-FEE-001` by requesting a `FEE_WAIVER` approval, proving maker self-approval rejection, rejecting a separate fee waiver as a checker, approving another fee waiver as a separate checker, and observing `feePostingCreated=false` without ledger source-row mutation.
+- `staff-terminal` can execute a Spring API-backed fee waiver command smoke for `ACC-SYN-FEE-001` by requesting a `FEE_WAIVER` approval, proving maker self-approval rejection, rejecting a separate fee waiver as a checker, approving another fee waiver as a separate checker, and observing non-targeted waivers do not create refund postings. Targeted fee waivers can refund a single-account `FEE_POSTING` transaction by balanced reversal after checker approval.
 - `staff-terminal` can execute a Spring API-backed transaction correction command smoke for `TX-SYN-CORR-001` by requesting a `TRANSACTION_CORRECTION` approval, proving maker self-approval rejection, approving as a separate checker, and observing a balanced `REVERSAL` ledger transaction with `ledgerSourceRowsMutated=false`.
 - `staff-terminal` can execute a Spring API-backed deposit rate parameter command smoke for `DP-SYN-SAVINGS` by requesting a `PRODUCT_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied rate version without ledger source-row mutation.
+- `staff-terminal` can execute a Spring API-backed fee policy parameter command smoke for `FEE-SYN-MONTHLY` by requesting a `FEE_POLICY_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied fee policy version without ledger source-row mutation.
 - The Spring product-ledger API can list deposit products, create approval-gated rate versions, run deterministic daily interest accruals, and post interest through a balanced `INTEREST_POSTING` ledger transaction.
+- The Spring product-ledger API can list fee policies, create approval-gated fee policy versions, post fee batches through a balanced `FEE_POSTING` ledger transaction, replay the same batch idempotency key without duplicate postings, and refund a targeted posted fee through an approved `FEE_WAIVER` reversal.
 - `staff-terminal` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange branch and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render masked lookup with the `branch01` token, execute privileged unmask with the `manager01` token, request a customer information change as `branch01`, and approve it with the `manager01` token while Spring simulator tokens are disabled.
 - `staff-terminal` can complete a live Keycloak `webauthn-register` required action using a Chromium virtual authenticator, exchange the returned authorization code through the Next BFF route, and call Spring with the resulting signed Bearer token while Spring simulator tokens are disabled.
 - The synthetic Keycloak realm backing that WebAuthn smoke now has explicit local WebAuthn policy and `PASSKEY_RECOVERY_ADMIN` role segregation evidence in `docs/test-evidence/keycloak-live-realm-smoke.md`.
@@ -207,7 +209,7 @@ Changes:
 - `db/migrations/V016__fee_waiver_requests.sql` adds durable fee waiver request state with idempotency keys.
 - `POST /api/staff/accounts/{accountId}/fee-waiver-requests` creates `FEE_WAIVER` maker-checker approvals.
 - `POST /api/staff/approvals/{approvalId}/reject` rejects fee waiver approvals through the staff route and synchronizes the `fee_waiver_requests` row to `REJECTED`.
-- Approval execution updates only the fee waiver request status to `APPROVED`; it records `feePostingCreated=false`, `syntheticOnly=true`, and `ledgerSourceRowsMutated=false`.
+- Non-targeted approval execution updates the fee waiver request status to `APPROVED`; targeted approvals can store `refund_ledger_transaction_id` after reversing a single-account `FEE_POSTING` transaction through a balanced `REVERSAL`. In both paths the audit evidence records `syntheticOnly=true` and `ledgerSourceRowsMutated=false`.
 - The shared api-client and staff-terminal manifest renderer expose a conditional `FEE102` browser smoke that proves self-approval rejection, checker rejection, and checker approval.
 
 Commands run:
@@ -303,7 +305,46 @@ Commands run:
 Not proven locally on 2026-06-04:
 
 - API-backed PRD102 browser execution against a live Spring API was not run locally because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
-- Fee policy versioning, fee posting, and fee refund remain for the next Phase C slice.
+- Fee policy versioning, fee posting, and targeted fee refund reversal are covered by the next Phase C fee policy/posting slice below.
+
+## 2026-06-04 FEE103/OPS403 Fee Policy Posting Update
+
+This update completes the Phase C fee-policy/posting vertical slice from `docs/codex/implementation_missing_features_goals.md`.
+
+Changes:
+
+- `db/migrations/V019__fee_policies_posting.sql` adds fee policies, fee policy versions, fee policy change requests, fee posting batches, and a fee-waiver refund ledger reference.
+- `GET /api/fees/policies` and `GET /api/fees/policies/{policyId}` expose the synthetic fee policy catalog and active fee amount version.
+- `GET /api/staff/fees` enforces a business reason and appends `FEE_VIEW` audit events for fee inquiry.
+- `POST /api/staff/fee-policies/{policyId}/change-requests` creates `FEE_POLICY_PARAMETER_CHANGE` maker-checker approvals.
+- `POST /api/staff/approvals/{approvalId}/approve` applies approved fee policy changes as new effective-date versions without mutating historical ledger rows.
+- `POST /api/ops/fee-posting-batches` posts active product fees through a balanced `FEE_POSTING` ledger transaction and stores idempotent batch evidence.
+- Targeted `FEE_WAIVER` approval can refund a single-account posted fee by creating a balanced `REVERSAL` transaction and recording the refund ledger transaction id.
+- The shared api-client, `FEE-101`, `FEE-102`, `FEE-103`, `OPS-403` manifests, synthetic seed, and staff-terminal renderer expose the fee policy/posting slice. The `FEE103` browser smoke remains conditional on a configured Spring API.
+
+Commands run:
+
+- `npm run validate:manifests` passed with 74 manifests.
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
+- `npm test` passed with 131 Node reference/oracle tests.
+- `npm run test:screen-engine` passed with 10 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run next:staff-terminal:build` passed.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 14 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e` passed locally with 17 passed and 41 skipped because API/Keycloak variables were not configured.
+- `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.product.DepositProductApiIntegrationTest --rerun-tasks` passed after sandbox escalation.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.product.FeePolicyApiIntegrationTest --rerun-tasks` passed after sandbox escalation.
+- `docker compose config` passed.
+- `docker compose --profile platform config` passed.
+- `npm run evidence:refresh-check` passed.
+- `git diff --check` passed.
+
+Not proven locally on 2026-06-04:
+
+- API-backed FEE103 browser execution against a live Spring API was not run locally because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 
 ## Commands
 

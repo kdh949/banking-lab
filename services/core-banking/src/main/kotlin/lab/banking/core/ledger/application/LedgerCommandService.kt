@@ -270,6 +270,50 @@ class LedgerCommandService(
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun feePosting(command: FeePostingCommand): LedgerCommandResult =
+        postLedgerCommand("FEE_POSTING", command.idempotencyKey, command) {
+            requireNonBlank(command.reason, "reason")
+            if (command.charges.isEmpty()) {
+                throw ledgerValidation("charges must contain at least one account fee line")
+            }
+            val groupedCharges = command.charges
+                .groupBy { it.accountId }
+                .mapValues { (_, lines) -> lines.sumOf { it.amountMinor } }
+                .filterValues { it > 0 }
+                .toSortedMap()
+            if (groupedCharges.isEmpty()) {
+                throw ledgerValidation("charges must contain positive fee amountMinor values")
+            }
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankSuspenseAccount(command.currency)
+            val balances = lockActiveAccounts(groupedCharges.keys.toList() + BANK_SUSPENSE_ACCOUNT_ID)
+            groupedCharges.forEach { (accountId, amountMinor) ->
+                val balance = balances.getValue(accountId)
+                if (balance.availableBalanceMinor < amountMinor) {
+                    throw ledgerConflict(
+                        code = "LEDGER_INSUFFICIENT_AVAILABLE_BALANCE",
+                        message = "insufficient available balance for fee posting on $accountId",
+                        invariant = "available_balance >= fee amount"
+                    )
+                }
+            }
+            val totalFeeMinor = groupedCharges.values.sum()
+            createPostedTransaction(
+                transactionType = "FEE_POSTING",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.businessReferenceId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = groupedCharges.map { (accountId, amountMinor) ->
+                    LedgerPostingInput(accountId, PostingDirection.DEBIT, amountMinor, command.currency, "FEE")
+                } + LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.CREDIT, totalFeeMinor, command.currency, "FEE")
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun closeBusinessDay(command: DailyClosingCommand): DailyClosingResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(command.idempotencyKey)
@@ -355,6 +399,7 @@ class LedgerCommandService(
                 "REVERSAL" -> "LedgerTransactionReversed"
                 "ADJUSTMENT" -> "AdjustmentPosted"
                 "INTEREST_POSTING" -> "InterestPosted"
+                "FEE_POSTING" -> "FeePosted"
                 else -> "LedgerTransactionPosted"
             },
             idempotencyKey = idempotencyKey,
@@ -834,6 +879,7 @@ class LedgerCommandService(
             "REVERSAL" -> "TX-REV"
             "ADJUSTMENT" -> "TX-ADJ"
             "INTEREST_POSTING" -> "TX-INT"
+            "FEE_POSTING" -> "TX-FEE"
             else -> "TX-LED"
         } + "-${UUID.randomUUID().toString().uppercase()}"
 

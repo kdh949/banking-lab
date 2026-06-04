@@ -80,6 +80,22 @@ data class InterestPostingCommand(
     val businessReferenceId: String? = null
 )
 
+data class FeePostingCharge(
+    val accountId: String,
+    val amountMinor: Long
+)
+
+data class FeePostingCommand(
+    val charges: List<FeePostingCharge>,
+    val idempotencyKey: String,
+    val requestedBy: String = "SYSTEM",
+    val requestedChannel: String = "CORE_BANKING",
+    val businessDate: LocalDate? = null,
+    val reason: String? = null,
+    val currency: String = "KRW",
+    val businessReferenceId: String? = null
+)
+
 data class DailyClosingCommand(
     val businessDate: LocalDate,
     val idempotencyKey: String,

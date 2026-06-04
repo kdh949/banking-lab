@@ -407,6 +407,7 @@ export interface FeeWaiverRequestDto {
   readonly currency: string;
   readonly status: string;
   readonly approvalId?: string | null;
+  readonly refundLedgerTransactionId?: string | null;
   readonly idempotencyKey: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -565,6 +566,92 @@ export interface InterestPostingBatchResponse {
   readonly replayed: boolean;
 }
 
+export interface FeePolicyDto {
+  readonly policyId: string;
+  readonly feeCode: string;
+  readonly feeName: string;
+  readonly productId?: string | null;
+  readonly currency: string;
+  readonly status: string;
+  readonly waiverEligible: boolean;
+  readonly currentVersionId?: string | null;
+  readonly amountMinor?: number | null;
+  readonly effectiveFrom?: string | null;
+  readonly effectiveTo?: string | null;
+  readonly syntheticOnly: boolean;
+}
+
+export interface FeePolicyListResponse {
+  readonly items: readonly FeePolicyDto[];
+}
+
+export interface StaffFeePolicyListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly FeePolicyDto[];
+}
+
+export interface FeePolicyChangeRequestCommand {
+  readonly requestedAmountMinor: number;
+  readonly effectiveFrom: string;
+  readonly requestedBy: string;
+  readonly actorRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface FeePolicyChangeRequestDto {
+  readonly requestId: string;
+  readonly policyId: string;
+  readonly approvalId?: string | null;
+  readonly requestedAmountMinor: number;
+  readonly effectiveFrom: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly idempotencyKey: string;
+  readonly appliedFeePolicyVersionId?: string | null;
+  readonly createdAt?: string | null;
+  readonly updatedAt?: string | null;
+  readonly appliedAt?: string | null;
+}
+
+export interface FeePolicyChangeRequestResponse {
+  readonly item: FeePolicyChangeRequestDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
+export interface FeePostingBatchCommand {
+  readonly policyId: string;
+  readonly businessDate: string;
+  readonly requestedBy: string;
+  readonly actorRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface FeePostingBatchDto {
+  readonly batchId: string;
+  readonly policyId: string;
+  readonly feePolicyVersionId: string;
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly status: string;
+  readonly ledgerTransactionId: string;
+  readonly totalFeeMinor: number;
+  readonly accountCount: number;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly postedAt?: string | null;
+}
+
+export interface FeePostingBatchResponse {
+  readonly item: FeePostingBatchDto;
+  readonly ledgerTransaction?: LedgerTransactionDto | null;
+  readonly replayed: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -592,6 +679,7 @@ export interface StaffApprovalExecutionResponse {
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
+  readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -605,6 +693,7 @@ export interface StaffApprovalRejectionResponse {
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
+  readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
 }
 
 export interface ReconciliationItemsResponse {
@@ -934,6 +1023,62 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         "/api/ops/interest-posting-batches",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    feePolicies(asOf?: string) {
+      return request<FeePolicyListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/fees/policies",
+        asOf ? { asOf } : {},
+        options.bearerToken
+      );
+    },
+
+    feePolicy(policyId: string, asOf?: string) {
+      return request<FeePolicyDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/fees/policies/${encodeURIComponent(policyId)}`,
+        asOf ? { asOf } : {},
+        options.bearerToken
+      );
+    },
+
+    staffFees(params: { accountId?: string; reason: string; asOf?: string }) {
+      return request<StaffFeePolicyListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/fees",
+        {
+          ...(params.accountId ? { accountId: params.accountId } : {}),
+          reason: params.reason,
+          ...(params.asOf ? { asOf: params.asOf } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    requestFeePolicyChange(policyId: string, command: FeePolicyChangeRequestCommand) {
+      return request<FeePolicyChangeRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/fee-policies/${encodeURIComponent(policyId)}/change-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    postFeeBatch(command: FeePostingBatchCommand) {
+      return request<FeePostingBatchResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/fee-posting-batches",
         {},
         options.bearerToken,
         { method: "POST", body: command }

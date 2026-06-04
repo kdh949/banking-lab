@@ -19,6 +19,7 @@ object ApprovalBusinessTypes {
     const val FEE_WAIVER = "FEE_WAIVER"
     const val TRANSACTION_CORRECTION = "TRANSACTION_CORRECTION"
     const val PRODUCT_PARAMETER_CHANGE = "PRODUCT_PARAMETER_CHANGE"
+    const val FEE_POLICY_PARAMETER_CHANGE = "FEE_POLICY_PARAMETER_CHANGE"
     const val FDS_RELEASE = "FDS_RELEASE"
     const val FDS_BLOCK = "FDS_BLOCK"
     const val AML_CASE_CLOSE = "AML_CASE_CLOSE"
@@ -37,6 +38,7 @@ object ApprovalBusinessTypes {
         FEE_WAIVER,
         TRANSACTION_CORRECTION,
         PRODUCT_PARAMETER_CHANGE,
+        FEE_POLICY_PARAMETER_CHANGE,
         FDS_RELEASE,
         FDS_BLOCK,
         AML_CASE_CLOSE,

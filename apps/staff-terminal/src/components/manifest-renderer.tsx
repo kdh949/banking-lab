@@ -9,6 +9,8 @@ import {
   type CustomerKycReviewRequestResponse,
   type DepositProductListResponse,
   type DepositRateChangeRequestResponse,
+  type FeePolicyChangeRequestResponse,
+  type FeePolicyListResponse,
   type FeeWaiverRequestResponse,
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
@@ -141,6 +143,18 @@ type DepositProductApiState =
       readonly execution: StaffApprovalExecutionResponse;
     }
   | { readonly status: "failed"; readonly message: string };
+type FeePolicyApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly policies: FeePolicyListResponse;
+      readonly request: FeePolicyChangeRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
 
 const dashboardScreenId = "WRK-001";
 const fallbackReasonField: ManifestField = {
@@ -172,6 +186,8 @@ const sampleValues: Record<string, string> = {
   posting: "balanced",
   previousEventHash: "hash:previous",
   productId: "DP-SYN-SAVINGS",
+  policyId: "FEE-SYN-MONTHLY",
+  requestedAmountMinor: "1500",
   requestedAnnualRateBps: "425",
   riskGrade: "LOW",
   status: "ACTIVE",
@@ -184,9 +200,13 @@ const apiBackedEndpointFragments = [
   "/api/approvals",
   "/api/staff/accounts/",
   "/api/staff/customers/",
+  "/api/staff/fee-policies/",
+  "/api/staff/fees",
   "/api/staff/products/",
   "/api/staff/transactions/",
+  "/api/fees/policies",
   "/api/products/deposits",
+  "/api/ops/fee-posting-batches",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
   "/api/staff/complaints",
@@ -1336,7 +1356,7 @@ function FeeWaiverCommandApiPanel({ manifest }: { readonly manifest: ScreenManif
       <div className="manifest-api-stack" data-testid="manifest-fee-waiver-api-panel">
         <div className="manifest-api-summary">
           <strong>{feeWaiverStatusLabel(state)}</strong>
-          <span>{state.status === "offline" ? state.message : "Runs FEE102 request, rejection, and approval against Spring API without ledger postings."}</span>
+          <span>{state.status === "offline" ? state.message : "Runs FEE102 request, rejection, and approval against Spring API; targeted posted fees refund by reversal."}</span>
         </div>
         <div className="manifest-action-bar">
           <TerminalButton
@@ -1392,7 +1412,7 @@ function FeeWaiverCommandApiPanel({ manifest }: { readonly manifest: ScreenManif
               </div>
               <div>
                 <dt>Fee posting</dt>
-                <dd>feePostingCreated=false</dd>
+                <dd>{state.execution.feeWaiverRequest?.refundLedgerTransactionId ?? "not targeted"}</dd>
               </div>
               <div>
                 <dt>Executed</dt>
@@ -1671,6 +1691,136 @@ function DepositRateChangeCommandApiPanel({ manifest }: { readonly manifest: Scr
   );
 }
 
+function FeePolicyChangeCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<FeePolicyApiState>(() => initialFeePolicyApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    const effectiveFrom = new Date().toISOString().slice(0, 10);
+    try {
+      const makerClient = createStaffCommandClient("opsmanager01", ["OPS_MANAGER"]);
+      const selfCheckerClient = createStaffCommandClient("opsmanager01", ["OPS_MANAGER"]);
+      const checkerClient = createStaffCommandClient("compliance01", ["COMPLIANCE_MANAGER"]);
+      const policies = await makerClient.feePolicies(effectiveFrom);
+      const policyId = policies.items[0]?.policyId;
+      if (!policyId) {
+        throw new Error("fee policy seed data is missing");
+      }
+      const request = await makerClient.requestFeePolicyChange(policyId, {
+        requestedBy: "opsmanager01",
+        actorRole: "OPS_MANAGER",
+        requestedAmountMinor: 1500,
+        effectiveFrom,
+        reason: "Browser fee policy parameter smoke",
+        idempotencyKey: `BROWSER-FEE-POLICY-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(request.approval?.approvalId ?? "", {
+          approvedBy: "opsmanager01",
+          approvedByRole: "OPS_MANAGER",
+          screenId: "FEE-103"
+        });
+        throw new Error("fee policy self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const execution = await checkerClient.approveStaffApproval(request.approval?.approvalId ?? "", {
+        approvedBy: "compliance01",
+        approvedByRole: "COMPLIANCE_MANAGER",
+        screenId: "FEE-103"
+      });
+
+      setState({
+        status: "completed",
+        policies,
+        request,
+        selfApprovalCode,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Fee Policy Parameter"
+      icon="settings"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-fee-policy-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{feePolicyStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs FEE103 fee policy amount request and checker-approved version change against Spring APIs."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run fee policy smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Policies</dt>
+                <dd>{state.policies.items.length}</dd>
+              </div>
+              <div>
+                <dt>Policy</dt>
+                <dd>{state.request.item.policyId}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.request.approval?.businessType ?? state.execution.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Request</dt>
+                <dd>{state.execution.feePolicyChangeRequest?.status ?? state.request.item.status}</dd>
+              </div>
+              <div>
+                <dt>Amount</dt>
+                <dd>{state.execution.feePolicyChangeRequest?.requestedAmountMinor ?? state.request.item.requestedAmountMinor}</dd>
+              </div>
+              <div>
+                <dt>Policy version</dt>
+                <dd>{state.execution.feePolicyChangeRequest?.appliedFeePolicyVersionId ?? "pending"}</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "fee policy version applied" : "not executed"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
 export function CaseScreenRenderer({
   manifest,
   allManifests,
@@ -1754,10 +1904,18 @@ export function ParameterScreenRenderer({ manifest }: { readonly manifest: Scree
           ariaLabel={`${manifest.title} parameter history`}
         />
       </TerminalPanel>
+      <ParameterApiPanel manifest={manifest} />
       <ApprovalPanel manifest={manifest} />
       <StructuredErrorView manifest={manifest} />
     </>
   );
+}
+
+function ParameterApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  if (manifest.screenId === "FEE-103") {
+    return <FeePolicyChangeCommandApiPanel manifest={manifest} />;
+  }
+  return null;
 }
 
 export function DashboardScreenRenderer({
@@ -2358,6 +2516,16 @@ function initialDepositProductApiState(): DepositProductApiState {
   return { status: "idle" };
 }
 
+function initialFeePolicyApiState(): FeePolicyApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -2518,6 +2686,22 @@ function depositProductStatusLabel(state: DepositProductApiState): string {
     return "deposit product API failed";
   }
   return "deposit rate version applied";
+}
+
+function feePolicyStatusLabel(state: FeePolicyApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "fee policy API ready";
+  }
+  if (state.status === "running") {
+    return "fee policy API running";
+  }
+  if (state.status === "failed") {
+    return "fee policy API failed";
+  }
+  return "fee policy version applied";
 }
 
 function errorMessage(error: unknown): string {

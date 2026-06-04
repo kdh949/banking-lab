@@ -115,8 +115,8 @@ Open:
 Show:
 
 - API-backed, manifest-only, partial, and missing classifications
-- remaining product, analytics, formal, platform, and operations evidence gaps
-- fee policy and fee posting gap after the first deposit product/interest slice
+- remaining analytics, formal, platform, and operations evidence gaps
+- product-ledger Phase C now includes deposit interest, fee policy versioning, fee posting, and targeted fee refund reversal
 - Python/DuckDB analytics gap
 - formal TLC gap
 - Kubernetes/Helm validation and load or backup/restore drill gap

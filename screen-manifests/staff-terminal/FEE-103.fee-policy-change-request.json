@@ -1,0 +1,69 @@
+{
+  "screenId": "FEE-103",
+  "transactionCode": "FEE103",
+  "title": "Fee Policy Change Request",
+  "app": "staff-terminal",
+  "type": "PARAMETER",
+  "domain": "fee",
+  "highRisk": true,
+  "requiredRoles": ["OPS_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "parameter": {
+    "namespace": "fee-policy",
+    "keys": ["amountMinor", "effectiveFrom"],
+    "currentValueEndpoint": "GET /api/fees/policies/{policyId}",
+    "historyEndpoint": "GET /api/fees/policies/{policyId}"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["FEE_POLICY_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "policyId",
+      "label": "Policy ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "requestedAmountMinor",
+      "label": "Requested Amount",
+      "type": "amount",
+      "required": true
+    },
+    {
+      "name": "effectiveFrom",
+      "label": "Effective From",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/fee-policies/{policyId}/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}
