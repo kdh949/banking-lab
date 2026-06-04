@@ -1,6 +1,14 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  BankingApiError,
+  createBankingApiClient,
+  type AuditEventDto,
+  type OperatorApproval,
+  type StaffApprovalExecutionResponse
+} from "@banking-lab/api-client";
+import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import type { ManifestField, ScreenManifest } from "../../../../packages/screen-engine/src/types";
 import { ApiBackedStaffPanel } from "./ApiBackedStaffPanel";
 import {
@@ -34,6 +42,23 @@ type StaffManifestScreenRendererProps = {
 };
 
 type RendererStatus = "api-backed" | "declared-only";
+type ApprovalInboxState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly approvals: readonly OperatorApproval[];
+      readonly auditEvents: readonly AuditEventDto[];
+      readonly hashChainValid: boolean;
+      readonly execution?: StaffApprovalExecutionResponse;
+      readonly errorCode?: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+type AuditLogState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly hashChainValid: boolean; readonly events: readonly AuditEventDto[] }
+  | { readonly status: "failed"; readonly message: string };
 
 const dashboardScreenId = "WRK-001";
 const fallbackReasonField: ManifestField = {
@@ -72,6 +97,7 @@ const sampleValues: Record<string, string> = {
 };
 
 const apiBackedEndpointFragments = [
+  "/api/approvals",
   "/api/staff/customers/",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
@@ -81,6 +107,8 @@ const apiBackedEndpointFragments = [
   "/api/ops/reconciliation-items",
   "/api/audit/events"
 ] as const;
+const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const simulatorTokenSmokesEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED !== "false";
 
 export function StaffIntegratedWorkspace({ manifests, initialScreen }: StaffIntegratedWorkspaceProps) {
   const sortedManifests = useMemo(() => [...manifests].sort(compareManifest), [manifests]);
@@ -238,6 +266,7 @@ export function InquiryScreenRenderer({
       <ScreenHeader manifest={manifest} />
       <SearchPanel manifest={manifest} searchFields={searchFields} reasonFields={reasonFields} />
       <DataTable manifest={manifest} columns={columns} />
+      <InquiryApiPanel manifest={manifest} />
       <div className="manifest-detail-grid">
         <DetailPanel manifest={manifest} />
         <ActionPanel manifest={manifest} allManifests={allManifests} onOpenManifest={onOpenManifest} />
@@ -245,6 +274,361 @@ export function InquiryScreenRenderer({
       <AuditTimeline manifest={manifest} />
       <StructuredErrorView manifest={manifest} />
     </>
+  );
+}
+
+function InquiryApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  if (manifest.screenId === "APR-001") {
+    return <ApprovalInboxApiPanel />;
+  }
+  if (manifest.screenId === "AUD-001") {
+    return <AuditLogApiPanel />;
+  }
+  return null;
+}
+
+function ApprovalInboxApiPanel() {
+  const [state, setState] = useState<ApprovalInboxState>(() => initialApiState("approval"));
+  const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(null);
+
+  const selectedApproval = state.status === "loaded"
+    ? state.approvals.find((approval) => approval.approvalId === selectedApprovalId) ?? state.approvals[0]
+    : undefined;
+  const approvalRows = state.status === "loaded"
+    ? state.approvals.slice(0, 8).map((approval) => [
+        <button
+          type="button"
+          aria-label={`Select approval ${approval.approvalId}`}
+          onClick={() => void selectApproval(approval.approvalId)}
+          key={`${approval.approvalId}-select`}
+        >
+          Select
+        </button>,
+        approval.approvalId,
+        approval.businessType,
+        approval.requestedBy,
+        approval.status,
+        formatDateTime(approval.requestedAt)
+      ])
+    : [];
+  const approvalAuditEvents = state.status === "loaded"
+    ? state.auditEvents.filter((event) =>
+        selectedApproval
+          ? event.businessReferenceId === selectedApproval.businessReferenceId ||
+            event.screenId === "APR-001" ||
+            event.eventType.startsWith("COMMAND_")
+          : event.eventType.startsWith("COMMAND_")
+      ).slice(-6).reverse()
+    : [];
+
+  const loadApprovals = async (cancelled?: () => boolean) => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    const approvalClient = createApprovalClient();
+    const auditClient = createAuditClient();
+    const [approvals, audit] = await Promise.all([
+      approvalClient.staffApprovals(),
+      auditClient.auditEvents()
+    ]);
+    if (cancelled?.()) {
+      return;
+    }
+    setState({
+      status: "loaded",
+      approvals,
+      auditEvents: audit.items,
+      hashChainValid: audit.hashChainValid
+    });
+    setSelectedApprovalId((current) => current ?? approvals.find((approval) => approval.status === "PENDING")?.approvalId ?? approvals[0]?.approvalId ?? null);
+  };
+
+  const selectApproval = async (approvalId: string) => {
+    setSelectedApprovalId(approvalId);
+    if (state.status !== "loaded") {
+      return;
+    }
+    try {
+      const approval = await createApprovalClient().staffApproval(approvalId);
+      setState((current) => current.status === "loaded"
+        ? {
+            ...current,
+            approvals: replaceApproval(current.approvals, approval),
+            errorCode: undefined
+          }
+        : current);
+    } catch (error: unknown) {
+      setState((current) => current.status === "loaded"
+        ? {
+            ...current,
+            errorCode: extractErrorCode(error)
+          }
+        : { status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  useEffect(() => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    let cancelled = false;
+    loadApprovals(() => cancelled).catch((error: unknown) => {
+      if (!cancelled) {
+        setState({ status: "failed", message: errorMessage(error) });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const approveSelected = async () => {
+    if (!selectedApproval || state.status !== "loaded" || selectedApproval.status !== "PENDING") {
+      return;
+    }
+    setState({ ...state, status: "loaded" });
+    try {
+      const approvalClient = createApprovalClient();
+      const auditClient = createAuditClient();
+      const execution = await approvalClient.approveStaffApproval(selectedApproval.approvalId, {
+        approvedBy: "manager01",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "APR-001"
+      });
+      const [approvals, audit] = await Promise.all([
+        approvalClient.staffApprovals(),
+        auditClient.auditEvents()
+      ]);
+      setState({
+        status: "loaded",
+        approvals,
+        auditEvents: audit.items,
+        hashChainValid: audit.hashChainValid,
+        execution
+      });
+      setSelectedApprovalId(execution.item.approvalId);
+    } catch (error: unknown) {
+      setState({
+        ...state,
+        errorCode: extractErrorCode(error),
+        status: "loaded"
+      });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed APR001 Approval Inbox"
+      icon="account_tree"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? "/api/approvals" : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-approval-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{approvalStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Spring approval list, selected approval, checker execution, and audit evidence."}</span>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <DenseTable
+              columns={["select", "approvalId", "businessType", "requestedBy", "status", "requestedAt"]}
+              rows={approvalRows}
+              ariaLabel="API-backed APR001 approval inbox"
+            />
+            <div className="manifest-api-detail-grid">
+              <dl className="manifest-definition-list" data-testid="manifest-selected-approval">
+                <div>
+                  <dt>Selection</dt>
+                  <dd>{selectedApproval ? "selected approval" : "none"}</dd>
+                </div>
+                <div>
+                  <dt>Approval</dt>
+                  <dd>{selectedApproval?.approvalId ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Business type</dt>
+                  <dd>{selectedApproval?.businessType ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Reference</dt>
+                  <dd>{selectedApproval?.businessReferenceId ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Reason</dt>
+                  <dd>{selectedApproval?.requestReason ?? "none"}</dd>
+                </div>
+              </dl>
+              <dl className="manifest-definition-list">
+                <div>
+                  <dt>Execution</dt>
+                  <dd>{state.execution?.executed ? "approval executed" : "waiting for checker"}</dd>
+                </div>
+                <div>
+                  <dt>Checker</dt>
+                  <dd>{state.execution?.item.approvedBy ?? "manager01"}</dd>
+                </div>
+                <div>
+                  <dt>Customer</dt>
+                  <dd>{state.execution?.customer?.customerId ?? "not executed yet"}</dd>
+                </div>
+                <div>
+                  <dt>Masked phone</dt>
+                  <dd>{state.execution?.customer?.maskedPhone ?? "not executed yet"}</dd>
+                </div>
+                <div>
+                  <dt>Error</dt>
+                  <dd>{state.errorCode ?? "none"}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="manifest-action-bar">
+              <TerminalButton
+                variant="panelAction"
+                icon="play_arrow"
+                type="button"
+                onClick={approveSelected}
+                disabled={!selectedApproval || selectedApproval.status !== "PENDING"}
+              >
+                Approve selected approval
+              </TerminalButton>
+            </div>
+            <div className="manifest-api-audit" data-testid="manifest-approval-audit-events">
+              <strong>Audit events</strong>
+              <span>Hash chain {state.hashChainValid ? "valid" : "invalid"}</span>
+              <DenseTable
+                columns={["auditEventId", "eventType", "actorId", "screenId", "reason"]}
+                rows={approvalAuditEvents.map((event) => [
+                  event.auditEventId,
+                  event.eventType,
+                  event.actorId,
+                  event.screenId ?? "none",
+                  event.reason ?? "none"
+                ])}
+                ariaLabel="APR001 approval audit events"
+              />
+            </div>
+          </>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function AuditLogApiPanel() {
+  const [state, setState] = useState<AuditLogState>(() => initialApiState("audit"));
+  const [selectedAuditEventId, setSelectedAuditEventId] = useState<string | null>(null);
+  const selectedEvent = state.status === "loaded"
+    ? state.events.find((event) => event.auditEventId === selectedAuditEventId) ?? state.events[0]
+    : undefined;
+
+  useEffect(() => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    let cancelled = false;
+    createAuditClient()
+      .auditEvents()
+      .then((response) => {
+        if (!cancelled) {
+          setState({ status: "loaded", hashChainValid: response.hashChainValid, events: response.items });
+          setSelectedAuditEventId((current) => current ?? response.items[0]?.auditEventId ?? null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setState({ status: "failed", message: errorMessage(error) });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <TerminalPanel
+      title="API-backed AUD001 Audit Log"
+      icon="receipt"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? "/api/audit/events" : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-audit-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{auditStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Spring audit read model with hash-chain validity and event detail."}</span>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <DenseTable
+              columns={["select", "auditEventId", "eventType", "actorId", "screenId", "createdAt"]}
+              rows={state.events.slice(0, 12).map((event) => [
+                <button
+                  type="button"
+                  aria-label={`Select audit ${event.auditEventId}`}
+                  onClick={() => setSelectedAuditEventId(event.auditEventId)}
+                  key={`${event.auditEventId}-select`}
+                >
+                  Select
+                </button>,
+                event.auditEventId,
+                event.eventType,
+                event.actorId,
+                event.screenId ?? "none",
+                formatDateTime(event.createdAt)
+              ])}
+              ariaLabel="API-backed AUD001 audit events"
+            />
+            <div className="manifest-api-detail-grid">
+              <dl className="manifest-definition-list" data-testid="manifest-selected-audit-event">
+                <div>
+                  <dt>Selection</dt>
+                  <dd>{selectedEvent ? "selected audit event" : "none"}</dd>
+                </div>
+                <div>
+                  <dt>Hash chain</dt>
+                  <dd>{state.hashChainValid ? "valid" : "invalid"}</dd>
+                </div>
+                <div>
+                  <dt>Event</dt>
+                  <dd>{selectedEvent?.auditEventId ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{selectedEvent?.eventType ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Actor</dt>
+                  <dd>{selectedEvent?.actorId ?? "none"}</dd>
+                </div>
+              </dl>
+              <dl className="manifest-definition-list">
+                <div>
+                  <dt>Business ref</dt>
+                  <dd>{selectedEvent?.businessReferenceId ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Reason</dt>
+                  <dd>{selectedEvent?.reason ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Payload hash</dt>
+                  <dd>{selectedEvent?.payloadHash ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Previous hash</dt>
+                  <dd>{selectedEvent?.previousEventHash ?? "none"}</dd>
+                </div>
+                <div>
+                  <dt>Created</dt>
+                  <dd>{formatDateTime(selectedEvent?.createdAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          </>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
   );
 }
 
@@ -909,6 +1293,100 @@ function apiStatusForManifest(manifest: ScreenManifest): { readonly status: Rend
   return apiBacked
     ? { status: "api-backed", label: "API-backed via @banking-lab/api-client" }
     : { status: "declared-only", label: "declared-only / not API-backed yet" };
+}
+
+function initialApiState(kind: "approval"): ApprovalInboxState;
+function initialApiState(kind: "audit"): AuditLogState;
+function initialApiState(kind: "approval" | "audit"): ApprovalInboxState | AuditLogState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "loading" };
+}
+
+function createApprovalClient() {
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "manager01",
+      roles: ["BRANCH_MANAGER"]
+    })
+  });
+}
+
+function createAuditClient() {
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "auditor01",
+      roles: ["AUDITOR"]
+    })
+  });
+}
+
+function replaceApproval(approvals: readonly OperatorApproval[], replacement: OperatorApproval) {
+  const replaced = approvals.map((approval) => approval.approvalId === replacement.approvalId ? replacement : approval);
+  return replaced.some((approval) => approval.approvalId === replacement.approvalId)
+    ? replaced
+    : [replacement, ...approvals];
+}
+
+function approvalStatusLabel(state: ApprovalInboxState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "loading") {
+    return "loading approval inbox";
+  }
+  if (state.status === "failed") {
+    return "approval inbox failed";
+  }
+  if (state.execution?.executed) {
+    return "approval executed";
+  }
+  return "approval inbox loaded";
+}
+
+function auditStatusLabel(state: AuditLogState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "loading") {
+    return "loading audit log";
+  }
+  if (state.status === "failed") {
+    return "audit log failed";
+  }
+  return "audit log loaded";
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof BankingApiError) {
+    return `${error.message}: ${extractErrorCode(error)}`;
+  }
+  return error instanceof Error ? error.message : "Unknown API failure";
+}
+
+function extractErrorCode(error: unknown): string {
+  if (error instanceof BankingApiError) {
+    try {
+      const parsed = JSON.parse(error.body) as { error?: { code?: string } };
+      return parsed.error?.code ?? error.name;
+    } catch {
+      return error.name;
+    }
+  }
+  return error instanceof Error ? error.name : "unknown_error";
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "none";
+  }
+  return value.replace("T", " ").replace(/\.\d+.*$/u, "Z");
 }
 
 function countBy<T extends string>(values: readonly ScreenManifest[], selector: (manifest: ScreenManifest) => T) {

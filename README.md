@@ -176,7 +176,22 @@ The current manifest catalog contains 66 synthetic screens across customer web, 
 
 CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, Gradle core-banking tests, Playwright manifest E2E, security evidence, and formal model checks.
 
-## 11.1 Kotlin + Next.js Migration
+## 11.1 Current Coverage And Gaps
+
+The current implementation coverage is tracked in `docs/implementation-coverage-matrix.md`.
+
+Important current gaps are intentionally not marked complete:
+
+- several staff-terminal command screens are still manifest-only or missing API-backed workflows, including account hold/release, transfer limit change, KYC review, fee waiver, and transaction correction;
+- deposit product, fee policy, interest accrual, and fee/interest posting modules are not implemented yet;
+- Python AML/FDS analytics currently has deterministic scoring tests but not a DuckDB mart, generated analytics artifact, or Spring/FDS console adapter;
+- `npm run formal:ledger` can still fall back to a static artifact check when TLC is unavailable;
+- Kubernetes/Helm files exist, but executable `k8s:validate` and `helm:template` npm scripts are still a follow-up;
+- load testing and PostgreSQL backup/restore drill evidence are still missing.
+
+The Node retirement evidence remains valid for the previous target-stack migration scope. It does not mean the broader missing-features goal is complete.
+
+## 11.2 Kotlin + Next.js Migration
 
 The current Node.js `.mjs` runtime is the executable reference for the intended Kotlin/Spring Boot backend and TypeScript/Next.js frontend migration. Do not delete the Node reference until the retirement gate is ready.
 

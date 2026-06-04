@@ -128,6 +128,11 @@
   font-weight: 800;
 }
 
+.terminal-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .terminal-button-panelAction,
 .terminal-button-segment {
   min-height: 24px;
@@ -665,6 +670,70 @@
 
 .manifest-table-note {
   padding: 8px 12px;
+}
+
+.manifest-api-panel .dense-table {
+  border-bottom: 1px solid var(--border);
+}
+
+.manifest-api-panel .dense-table td:first-child,
+.manifest-api-panel .dense-table th:first-child {
+  width: 78px;
+  text-align: left;
+}
+
+.manifest-api-panel .dense-table button {
+  min-height: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--primary);
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.manifest-api-stack {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.manifest-api-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(0, 52, 197, 0.2);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  padding: 10px;
+}
+
+.manifest-api-summary strong,
+.manifest-api-audit strong {
+  color: var(--primary);
+  font-size: 12px;
+}
+
+.manifest-api-summary span,
+.manifest-api-audit span,
+.manifest-api-error {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.manifest-api-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manifest-api-audit {
+  display: grid;
+  gap: 8px;
+}
+
+.manifest-api-error {
+  color: var(--danger);
 }
 
 .manifest-detail-grid {

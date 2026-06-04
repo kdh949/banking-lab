@@ -18,7 +18,7 @@
     "maskingPolicy": "NONE"
   },
   "query": {
-    "endpoint": "GET /api/staff/approvals",
+    "endpoint": "GET /api/approvals",
     "fields": [
       {
         "name": "status",

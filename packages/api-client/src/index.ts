@@ -183,9 +183,16 @@ export interface OperatorApproval {
   readonly businessType: string;
   readonly businessReferenceId: string;
   readonly requestedBy: string;
+  readonly requestedAt?: string;
   readonly requestReason: string;
+  readonly beforeSnapshot?: Record<string, unknown> | null;
+  readonly afterSnapshot?: Record<string, unknown> | null;
   readonly status: string;
   readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
   readonly auditEventId?: string | null;
 }
 
@@ -526,6 +533,26 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    staffApprovals() {
+      return request<readonly OperatorApproval[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/approvals",
+        {},
+        options.bearerToken
+      );
+    },
+
+    staffApproval(approvalId: string) {
+      return request<OperatorApproval>(
+        fetchImpl,
+        baseUrl,
+        `/api/approvals/${encodeURIComponent(approvalId)}`,
+        {},
+        options.bearerToken
       );
     },
 

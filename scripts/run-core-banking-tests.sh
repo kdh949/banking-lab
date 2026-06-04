@@ -40,7 +40,12 @@ for ARG in "${GRADLE_ARGS[@]:-}"; do
 done
 
 if [[ "$#" -eq 0 || "${HAS_EXPLICIT_TASK}" == "false" ]]; then
-  GRADLE_ARGS=(:services:core-banking:test :services:core-banking:integrationTest "${GRADLE_ARGS[@]:-}")
+  DEFAULT_GRADLE_ARGS=(:services:core-banking:test :services:core-banking:integrationTest)
+  if [[ "${#GRADLE_ARGS[@]}" -gt 0 ]]; then
+    GRADLE_ARGS=("${DEFAULT_GRADLE_ARGS[@]}" "${GRADLE_ARGS[@]}")
+  else
+    GRADLE_ARGS=("${DEFAULT_GRADLE_ARGS[@]}")
+  fi
 fi
 
 echo "JAVA_HOME=${JAVA_HOME}"

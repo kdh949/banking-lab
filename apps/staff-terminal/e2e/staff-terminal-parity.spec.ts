@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 
 const specDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..");
@@ -27,6 +28,29 @@ async function signInWithKeycloak(page: Page, username: string, password: string
   await page.locator("input[name='username']").fill(username);
   await page.locator("input[name='password']").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
+}
+
+async function createSyntheticCustomerChangeApproval(request: APIRequestContext) {
+  const phoneSuffix = String(Date.now()).slice(-4).padStart(4, "0");
+  const response = await request.post(`${apiBaseUrl}/api/staff/customers/SYN-CUS-CMD-001/change-requests`, {
+    headers: {
+      Authorization: createSimulatorBearerToken({
+        subject: "branch01",
+        roles: ["BRANCH_STAFF"]
+      })
+    },
+    data: {
+      requestedBy: "branch01",
+      requestedByRole: "BRANCH_STAFF",
+      reason: "APR001 manifest approval inbox smoke",
+      afterSnapshot: {
+        phone: `010-0000-${phoneSuffix}`,
+        address: "Seoul Synthetic APR001 Updated"
+      }
+    }
+  });
+  expect(response.status()).toBe(201);
+  return await response.json() as { item: { approvalId: string } };
 }
 
 test("staff terminal renders reason, masking, and maker-checker controls from manifests", async ({ page }) => {
@@ -186,6 +210,44 @@ test("staff terminal executes Spring API-backed customer change approval when co
   await expect(panel).toContainText("SYN-CUS-CMD-001");
   await expect(panel).toContainText("010-****-1399");
   await expect(panel).toContainText("customer change executed");
+});
+
+test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run APR001 API-backed manifest smoke.");
+
+  const approval = await createSyntheticCustomerChangeApproval(request);
+
+  await page.goto(`${baseUrl}/?screen=APR-001`);
+
+  const panel = page.getByTestId("manifest-approval-api-panel");
+  await expect(panel).toContainText("approval inbox loaded", { timeout: 15_000 });
+  await expect(panel).toContainText(approval.item.approvalId);
+
+  await page.getByRole("button", { name: `Select approval ${approval.item.approvalId}` }).click();
+  await expect(page.getByTestId("manifest-selected-approval")).toContainText("selected approval");
+  await expect(page.getByTestId("manifest-selected-approval")).toContainText(approval.item.approvalId);
+
+  await page.getByRole("button", { name: "Approve selected approval" }).click();
+  await expect(panel).toContainText("approval executed", { timeout: 15_000 });
+  await expect(panel).toContainText("manager01");
+  await expect(panel).toContainText("COMMAND_APPROVED");
+  await expect(page.getByTestId("manifest-approval-audit-events")).toContainText("AUD-");
+});
+
+test("staff terminal AUD001 tab lists selects and displays Spring audit events", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run AUD001 API-backed manifest smoke.");
+
+  await page.goto(`${baseUrl}/?screen=AUD-001`);
+
+  const panel = page.getByTestId("manifest-audit-api-panel");
+  await expect(panel).toContainText("audit log loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("Hash chain");
+  await expect(panel).toContainText("AUD-");
+
+  await page.getByRole("button", { name: /Select audit AUD-/ }).first().click();
+  await expect(page.getByTestId("manifest-selected-audit-event")).toContainText("selected audit event");
+  await expect(page.getByTestId("manifest-selected-audit-event")).toContainText("valid");
+  await expect(panel).toContainText("Payload hash");
 });
 
 test("staff terminal propagates interactive Keycloak staff and checker tokens when configured", async ({ page }) => {

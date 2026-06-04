@@ -1,6 +1,6 @@
 # API-backed Channel Smoke Evidence
 
-Date: 2026-06-03
+Date: 2026-06-04
 
 ## Scope
 
@@ -24,6 +24,8 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - FDS release/block decisions update the linked customer transfer result to `POSTED` or `BLOCKED` after maker-checker approval while retaining balanced ledger posting rules for released transfers.
 - The Spring customer transfer API checks customer ownership before delegating to the ledger service, so customer-channel transfer smoke uses the customer route rather than the generic ledger route.
 - `staff-terminal` renders an API-backed inquiry panel that calls `GET /api/staff/customers/{customerId}/detail` with a business reason.
+- `staff-terminal` renders `APR001` as an API-backed manifest workspace panel that calls `GET /api/approvals`, refreshes selection through `GET /api/approvals/{approvalId}`, executes `POST /api/staff/approvals/{approvalId}/approve` through `@banking-lab/api-client`, and reads related audit events through `GET /api/audit/events`.
+- `staff-terminal` renders `AUD001` as an API-backed manifest workspace panel that calls `GET /api/audit/events`, supports event selection, and displays hash-chain status inside the manifest workspace.
 - `staff-terminal` can execute a Spring API-backed privileged unmask smoke by first proving branch-role denial is visible as a structured browser error, then approving a time-boxed `UNMASKED_TIMEBOXED` response as `manager01`.
 - `staff-terminal` can execute a Spring API-backed browser command smoke by requesting a customer information change for `SYN-CUS-CMD-001`, proving self-approval rejection for the maker actor, approving with a separate manager actor, and observing a masked updated phone.
 - `staff-terminal` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange branch and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render masked lookup with the `branch01` token, execute privileged unmask with the `manager01` token, request a customer information change as `branch01`, and approve it with the `manager01` token while Spring simulator tokens are disabled.
@@ -60,6 +62,32 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - Customer complaint entry uses bounded SERIALIZABLE retry so parallel browser audit writes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint confirmation uses the same bounded SERIALIZABLE retry and writes a customer `COMMAND_EXECUTED` audit event while preserving customer ownership checks.
 - Playwright exercises the real browser path from Next.js to the live Spring API.
+
+## 2026-06-04 APR001/AUD001 Manifest Workspace Update
+
+This update added Playwright coverage for API-configured staff terminal runs without marking the API-backed browser path passed in the current local environment.
+
+Commands run:
+
+- `npm run validate:manifests` passed.
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed.
+- `npm test` passed with 131 Node reference/oracle tests.
+- `npm run test:screen-engine` passed with 10 tests.
+- `npm run next:staff-terminal:build` passed.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 7 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e` passed locally with 17 passed and 34 skipped because API/Keycloak E2E environment variables were not configured.
+- `npm run evidence:phase3` passed and regenerated `docs/test-evidence/generated/phase-3-staff-terminal.json`.
+- `npm run evidence:pack` passed and regenerated the evidence pack summary.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test` passed after sandbox escalation.
+- `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.approval.ApprovalApiParityIntegrationTest --tests lab.banking.core.audit.AuditMaskingParityIntegrationTest` could not run to completion in this environment. The sandboxed attempt was blocked by Gradle lock socket creation, and the escalated attempt reached Testcontainers initialization but Docker was unavailable (`/var/run/docker.sock` missing).
+
+Not proven locally on 2026-06-04:
+
+- API-backed APR001 browser approval execution against a live Spring API.
+- API-backed AUD001 browser audit-event retrieval against a live Spring API.
+
+Those two browser paths are covered by conditional Playwright tests and require `BANKING_LAB_E2E_API_BASE_URL` plus a running Spring API with synthetic seed data.
 
 ## Commands
 
