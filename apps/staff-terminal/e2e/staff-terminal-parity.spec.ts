@@ -68,6 +68,9 @@ test("staff terminal opens transaction codes into tabs and switches active busin
   await expect(page.getByRole("heading", { name: "Complaint Answer Approval" })).toBeVisible();
   await expect(page.getByText("[CMP202] Complaint Answer Approval")).toBeVisible();
   await expect(page.getByText("Case Status")).toBeVisible();
+  await expect(page.getByText("Case Handling Reason")).toBeVisible();
+  await expect(page.getByText("Business reason required")).toBeVisible();
+  await expect(page.getByText("Structured Error Surface")).toBeVisible();
   await expect(page.getByText("WAITING_APPROVAL")).toBeVisible();
 
   await page.getByRole("button", { name: /\[CST001\] Customer Integrated Search/ }).click();

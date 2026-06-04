@@ -335,9 +335,13 @@ export function CaseScreenRenderer({
             <span>Attachments: simulator metadata only, no real customer files.</span>
           </div>
         </TerminalPanel>
+        <TerminalPanel title="Case Handling Reason" icon="article" className="manifest-panel">
+          <ReasonRequiredPanel fields={resolveReasonFields(manifest, manifest.fields || [])} reasonRequired={manifest.audit.reasonRequired} />
+        </TerminalPanel>
       </div>
       <AuditTimeline manifest={manifest} />
       <ApprovalPanel manifest={manifest} />
+      <StructuredErrorView manifest={manifest} />
       <ActionPanel manifest={manifest} allManifests={allManifests} onOpenManifest={onOpenManifest} />
     </>
   );
