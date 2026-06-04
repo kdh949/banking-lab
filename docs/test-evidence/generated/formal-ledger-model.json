@@ -1,17 +1,26 @@
 {
-  "generatedAt": "2026-06-04T00:41:46.662Z",
-  "model": "formal/tla/Ledger.tla",
-  "config": "formal/tla/Ledger.cfg",
+  "generatedAt": "2026-06-04T08:18:57.352Z",
   "staticCheck": "pass",
-  "tlc": "skipped",
-  "command": "tlc not found",
+  "staticOnly": false,
+  "tlc": "not_available",
+  "modelChecker": "pass",
+  "engine": "bounded-state-search",
+  "model": "formal/Ledger.tla",
+  "config": "formal/Ledger.cfg",
   "invariants": [
     "BalancedDoubleEntry",
     "IdempotencySingleBusinessResult",
+    "AvailableBalanceNonNegative",
     "ReversalReferencesOriginal",
+    "ReversalMirrorsOriginal",
     "ClosedDateNoDirectPosting",
     "BalanceProjectionRecalculable",
-    "HeldOrFailedTransferNoPosting"
+    "HeldOrFailedCommandNoPosting",
+    "AdjustmentRequiresApprovalReference",
+    "SingleBusinessResultPerKey",
+    "RetryReturnsSameBusinessResult",
+    "NoDuplicateSideEffectForRetry",
+    "FailedOrHeldCommandNoPosting"
   ],
-  "note": "TLC is not installed in this environment. This is a static formal artifact check only, not a completed formal verification run."
+  "note": "Executable formal check passed through bounded state search; TLC is attempted when available. Static-only fallback is not a pass condition."
 }

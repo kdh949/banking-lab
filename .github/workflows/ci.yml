@@ -109,4 +109,6 @@ jobs:
         if: always()
         with:
           name: formal-ledger-model
-          path: docs/test-evidence/generated/formal-ledger-model.json
+          path: |
+            docs/test-evidence/generated/formal-ledger-model.json
+            docs/test-evidence/generated/formal-ledger-tlc-result.json

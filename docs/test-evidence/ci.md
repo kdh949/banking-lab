@@ -25,4 +25,4 @@ Permissions default to `contents: read`.
 
 The security job runs `npm audit --audit-level=high` and `npm run security:evidence`. Tool-specific skips from Semgrep, Trivy, SBOM, or DAST are recorded by the wrapper and uploaded as artifacts; they are not described as completed security scans unless the tools actually ran.
 
-The formal job runs `npm run formal:ledger`. If TLC is unavailable, the generated evidence records a static artifact check only.
+The formal job runs `npm run formal:ledger`. If TLC is unavailable, the generated evidence must show the executable bounded state-search checker passing with `staticOnly: false`; static-only mode is not accepted in CI.
