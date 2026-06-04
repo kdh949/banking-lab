@@ -3,18 +3,18 @@
   "Trivy": {
     "Version": "0.71.0"
   },
-  "ReportID": "019e92fb-8a10-78ed-acc8-2bdacc9bab74",
-  "CreatedAt": "2026-06-04T14:13:38.960585962Z",
-  "ArtifactID": "sha256:28eef7174b6907b210d2531b450e464782a0853729d51919095c7e04ef2945c1",
+  "ReportID": "019e930f-335a-78b1-a57e-8a623a6dc9cd",
+  "CreatedAt": "2026-06-04T14:35:07.482570628Z",
+  "ArtifactID": "sha256:0323bbaee1a2a3afe4a7706450a59511c5ec80ce3b32e62c1ad7ef61fcc831a7",
   "ArtifactName": "/workspace",
   "ArtifactType": "repository",
   "Metadata": {
     "RepoURL": "https://github.com/kdh949/banking-lab.git",
-    "Branch": "codex/loan-card-controls",
-    "Commit": "ec1b3c8e0ac624191fde9e03d61a26dada9af507",
-    "CommitMsg": "test: Phase 5 증적 기대값 갱신",
+    "Branch": "codex/live-phase5-evidence",
+    "Commit": "21b577817f3cf21a9a03f1f559b38a1993e2d2b2",
+    "CommitMsg": "Merge pull request #16 from kdh949/codex/loan-card-controls\n\nfeat: loan card controls vertical slices",
     "Author": "Donghyun Kim \u003ckdh949@naver.com\u003e",
-    "Committer": "Donghyun Kim \u003ckdh949@naver.com\u003e"
+    "Committer": "GitHub \u003cnoreply@github.com\u003e"
   },
   "Results": [
     {
