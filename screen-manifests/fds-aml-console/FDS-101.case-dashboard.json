@@ -1,5 +1,6 @@
 {
   "screenId": "FDS-101",
+  "transactionCode": "FDS101",
   "title": "FDS Case Dashboard",
   "app": "fds-aml-console",
   "type": "CASE",

@@ -1,5 +1,6 @@
 {
   "screenId": "CMP-101",
+  "transactionCode": "CMP101",
   "title": "Complaint Intake",
   "app": "complaint-portal",
   "type": "CASE",

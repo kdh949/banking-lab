@@ -1,0 +1,41 @@
+{
+  "screenId": "BAT-101",
+  "transactionCode": "BAT101",
+  "title": "Daily Closing Status",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "reconciliation",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER", "AUDITOR"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["DAILY_CLOSING_VIEW"],
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "query": {
+    "endpoint": "GET /api/ops/daily-closings",
+    "fields": [
+      {
+        "name": "businessDate",
+        "label": "Business Date",
+        "type": "date"
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["businessDate", "status", "ledgerInvariantStatus", "closedAt", "closedBy"]
+  },
+  "actions": []
+}

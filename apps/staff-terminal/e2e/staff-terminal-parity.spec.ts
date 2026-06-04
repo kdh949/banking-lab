@@ -37,20 +37,12 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await page.goto(baseUrl);
 
   await expect(page.getByText("INZENT Banking")).toBeVisible();
-  await expect(page.getByText("[20000] 수신_네비게이션")).toBeVisible();
+  await expect(page.getByText("[WRK001] Integrated Workstation Dashboard")).toBeVisible();
   await expect(page.getByRole("button", { name: "업무포털" })).toBeVisible();
-  await expect(page.locator(".panel-header").filter({ hasText: "수신업무" })).toBeVisible();
-  await expect(page.getByText("수신_중요공지")).toBeVisible();
-  await expect(page.getByText("수신업무 중간화면")).toBeVisible();
-  await expect(page.getByText("수신업무 공지사항")).toBeVisible();
-  await expect(page.getByText("자주묻는 질문")).toBeVisible();
-  await expect(page.getByText("알면 편한 단말 메뉴얼")).toBeVisible();
-  await expect(page.getByText("신규화면 공지")).toBeAttached();
-  await expect(page.locator(".inside-mini-header").filter({ hasText: "내상품" })).toBeVisible();
-  await expect(page.locator(".inside-mini-header").filter({ hasText: "추천상품" })).toBeVisible();
-  await expect(page.locator(".inside-mini-header").filter({ hasText: "수행마케팅" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Integrated Workstation Dashboard" })).toBeVisible();
+  await expect(page.getByText("Transaction Code Launcher")).toBeVisible();
+  await expect(page.getByLabel("Transaction code search")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Transaction-code workspace" })).toBeAttached();
-  await expect(page.getByLabel("Transaction code")).toHaveValue(screens[0].transactionCode);
   await expect(page.locator(".metric", { hasText: String(reasonRequired) })).toBeAttached();
   await expect(page.locator(".metric-label", { hasText: "reason-required" })).toBeAttached();
   await expect(page.locator(".metric", { hasText: String(makerChecker) })).toBeAttached();
@@ -59,9 +51,28 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await expect(page.getByText("Business reason required")).toBeAttached();
   await expect(page.getByText("APR-001 declared")).toBeAttached();
   await expect(page.getByLabel("Role-aware menu")).toBeVisible();
-  await expect(page.getByLabel("Inside view and API smoke")).toBeVisible();
-  await expect(page.getByText("정상 연결")).toBeVisible();
-  await expect(page.getByText("프린터")).toBeVisible();
+  await expect(page.getByText("Catalog Counts")).toBeVisible();
+  await expect(page.getByTestId("api-backed-staff-customer")).toBeAttached();
+});
+
+test("staff terminal opens transaction codes into tabs and switches active business screens", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  await page.getByLabel("Transaction code search").fill("CST001");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Customer Integrated Search" })).toBeVisible();
+  await expect(page.getByText("[CST001] Customer Integrated Search")).toBeVisible();
+
+  await page.getByLabel("Transaction code search").fill("CMP202");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Complaint Answer Approval" })).toBeVisible();
+  await expect(page.getByText("[CMP202] Complaint Answer Approval")).toBeVisible();
+  await expect(page.getByText("Case Status")).toBeVisible();
+  await expect(page.getByText("WAITING_APPROVAL")).toBeVisible();
+
+  await page.getByRole("button", { name: /\[CST001\] Customer Integrated Search/ }).click();
+  await expect(page.getByRole("heading", { name: "Customer Integrated Search" })).toBeVisible();
+  await expect(page.getByText("Search Conditions")).toBeVisible();
 });
 
 test("staff terminal renders CST-001 through the inquiry manifest renderer", async ({ page }) => {
@@ -75,7 +86,7 @@ test("staff terminal renders CST-001 through the inquiry manifest renderer", asy
   await expect(page.getByRole("heading", { name: "Customer Integrated Search" })).toBeVisible();
   await expect(page.getByText("CST-001")).toBeVisible();
   await expect(titleMeta.getByText("CST001", { exact: true })).toBeVisible();
-  await expect(workArea.locator(".manifest-search-panel")).toContainText("Search Panel");
+  await expect(workArea.locator(".manifest-search-panel")).toContainText("Search Conditions");
   await expect(page.getByLabel("Customer Name")).toBeVisible();
   await expect(page.getByLabel("Phone")).toBeVisible();
   await expect(page.getByLabel("Customer ID")).toBeVisible();
@@ -83,13 +94,31 @@ test("staff terminal renders CST-001 through the inquiry manifest renderer", asy
   await expect(page.getByLabel("Lookup Reason")).toBeVisible();
   await expect(workArea.locator(".manifest-result-panel")).toContainText("Result Table");
   await expect(page.getByText("maskedName")).toBeVisible();
-  await expect(page.getByText("K** D***")).toBeVisible();
-  await expect(rail.locator(".manifest-audit-panel")).toContainText("Audit Panel");
+  await expect(page.getByText("K** D***").first()).toBeVisible();
+  await expect(page.locator(".manifest-audit-panel")).toContainText("Audit Timeline");
   await expect(page.getByText("CUSTOMER_SEARCH")).toBeVisible();
-  await expect(rail.locator(".manifest-masking-panel")).toContainText("Masking Panel");
-  await expect(page.getByText("CUSTOMER_PII")).toBeVisible();
-  await expect(page.getByText("Status Bar")).toBeVisible();
-  await expect(page.getByText("manifest renderer")).toBeVisible();
+  await expect(rail).toContainText("Masking State");
+  await expect(page.getByText("CUSTOMER_PII").first()).toBeVisible();
+  await expect(page.getByText("Structured Error Surface")).toBeVisible();
+  await expect(page.getByText("POLICY_REASON_REQUIRED")).toBeVisible();
+  await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
+});
+
+test("staff terminal renders command and maker-checker approval screens without fake success", async ({ page }) => {
+  await page.goto(`${baseUrl}/?screen=CST-103`);
+
+  await expect(page.getByRole("heading", { name: "Customer Information Change Request" })).toBeVisible();
+  await expect(page.getByText("Command Form")).toBeVisible();
+  await expect(page.getByText("Before After Snapshot")).toBeVisible();
+  await expect(page.getByText("Maker Checker Approval").first()).toBeVisible();
+  await expect(page.getByText("maker-checker enforced").first()).toBeVisible();
+  await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
+
+  await page.getByLabel("Transaction code search").fill("FEE102");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Fee Waiver Request" })).toBeVisible();
+  await expect(page.getByText("declared-only / not API-backed yet").first()).toBeVisible();
+  await expect(page.getByText("No fake success is rendered for this declared-only screen.")).toBeVisible();
 });
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
@@ -102,8 +131,7 @@ test("staff terminal shell has no app-router one-off business screens", async ()
 
   expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
   expect(pageSource).toContain("loadChannelManifests");
-  expect(pageSource).toContain("TerminalNavigationWorkbench");
-  expect(pageSource).toContain("StaffManifestScreenRenderer");
+  expect(pageSource).toContain("StaffIntegratedWorkspace");
   expect(screenSource).toContain("TerminalPortalDashboard");
   expect(screenSource).toContain("TerminalShell");
   expect(uiSource).toContain("TerminalField");

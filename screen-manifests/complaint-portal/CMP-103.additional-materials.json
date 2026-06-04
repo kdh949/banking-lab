@@ -1,0 +1,37 @@
+{
+  "screenId": "CMP-103",
+  "transactionCode": "CMP103",
+  "title": "Complaint Additional Materials",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["WAITING_CUSTOMER", "MATERIAL_SUBMITTED", "IN_REVIEW"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["requestSummary", "attachments", "timeline"],
+  "actions": [
+    {
+      "id": "submitMaterial",
+      "label": "Submit Material",
+      "type": "command",
+      "target": "POST /api/customer/complaints/{caseId}/materials"
+    }
+  ]
+}

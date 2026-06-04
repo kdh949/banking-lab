@@ -1,5 +1,6 @@
 {
   "screenId": "AUD-101",
+  "transactionCode": "AUD101",
   "title": "Audit Hash Chain Review",
   "app": "audit-console",
   "type": "INQUIRY",

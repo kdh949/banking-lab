@@ -1,5 +1,6 @@
 {
   "screenId": "ADM-201",
+  "transactionCode": "ADM201",
   "title": "Security Policy Parameter Change",
   "app": "admin-console",
   "type": "PARAMETER",

@@ -43,7 +43,7 @@ test("audit console renders hash-chain evidence and retention approval metadata 
   await expect(page.getByText("payloadHash")).toBeVisible();
   await expect(page.getByText("AUDIT_PARAMETER_CHANGE")).toBeVisible();
   await expect(page.getByText("maker-checker")).toBeVisible();
-  await expect(page.getByText("reason required")).toBeVisible();
+  await expect(page.getByText("reason required").first()).toBeVisible();
 });
 
 test("audit console shell has no app-router one-off business screens", async () => {

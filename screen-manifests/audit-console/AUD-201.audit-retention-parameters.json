@@ -1,5 +1,6 @@
 {
   "screenId": "AUD-201",
+  "transactionCode": "AUD201",
   "title": "Audit Retention Parameter Change",
   "app": "audit-console",
   "type": "PARAMETER",

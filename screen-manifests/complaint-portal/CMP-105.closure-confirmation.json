@@ -1,0 +1,30 @@
+{
+  "screenId": "CMP-105",
+  "transactionCode": "CMP105",
+  "title": "Complaint Closure Confirmation",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["ANSWERED", "CUSTOMER_CONFIRMED", "CLOSED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["closureSummary", "answer", "timeline"],
+  "actions": []
+}

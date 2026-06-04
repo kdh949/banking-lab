@@ -1,5 +1,6 @@
 {
   "screenId": "CWB-101",
+  "transactionCode": "CWB101",
   "title": "Customer Account Overview",
   "app": "customer-web",
   "type": "INQUIRY",

@@ -1,0 +1,45 @@
+{
+  "screenId": "ACC-104",
+  "transactionCode": "ACC104",
+  "title": "Account Hold Release",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "account",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_MANAGER", "OPS_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "OPS_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["ACCOUNT_HOLD_RELEASE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "fields": [
+    {
+      "name": "accountId",
+      "label": "Account ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Release Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/accounts/{accountId}/hold-release-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

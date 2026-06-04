@@ -66,6 +66,7 @@
     "scripts:typecheck": "tsc -p scripts/tsconfig.json --noEmit",
     "test:e2e": "playwright test",
     "validate:manifests": "node --experimental-strip-types scripts/validate-manifests.ts",
+    "formal:ledger": "node --experimental-strip-types scripts/check-tla-model.ts",
     "security:evidence": "node --experimental-strip-types scripts/run-security-evidence.ts",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",

@@ -1,0 +1,68 @@
+{
+  "screenId": "ADM-301",
+  "transactionCode": "ADM301",
+  "title": "Menu And Role Management",
+  "app": "admin-console",
+  "type": "PARAMETER",
+  "domain": "platform-admin",
+  "highRisk": true,
+  "requiredRoles": ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
+  "layout": {
+    "template": "parameter",
+    "customerContext": false
+  },
+  "parameter": {
+    "namespace": "authorization",
+    "keys": ["roleMenuMap", "approvalRoleMatrix", "reasonRequiredScreens"],
+    "currentValueEndpoint": "GET /api/admin/platform/authorization-parameters",
+    "historyEndpoint": "GET /api/admin/platform/authorization-parameters/history"
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["AUTHORIZATION_PARAMETER_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "parameterKey",
+      "label": "Parameter",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "scheduledValue",
+      "label": "Scheduled Value",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "effectiveAt",
+      "label": "Effective Date Time",
+      "type": "datetime",
+      "required": true
+    },
+    {
+      "name": "rollbackPlan",
+      "label": "Rollback Plan",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/admin/platform/authorization-parameters/change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent", "scheduleParameterChange"]
+}

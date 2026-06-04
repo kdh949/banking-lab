@@ -40,7 +40,7 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
 
   await expect(page.getByText("Balanced adjustments only")).toBeVisible();
   await expect(page.getByText("Mismatch corrections require approval")).toBeVisible();
-  await expect(page.getByText("RECONCILIATION_ADJUSTMENT")).toBeVisible();
+  await expect(page.getByText("RECONCILIATION_ADJUSTMENT").first()).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true })).toBeVisible();
   await expect(page.getByText("ADJUSTMENT_REQUESTED")).toBeVisible();
   await expect(page.getByText("reason required").first()).toBeVisible();

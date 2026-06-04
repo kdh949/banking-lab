@@ -1,5 +1,6 @@
 {
   "screenId": "CWB-301",
+  "transactionCode": "CWB301",
   "title": "Complaint Entry",
   "app": "customer-web",
   "type": "CASE",

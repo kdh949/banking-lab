@@ -1,5 +1,6 @@
 {
   "screenId": "OPS-301",
+  "transactionCode": "OPS301",
   "title": "Reconciliation Parameter Change",
   "app": "ops-console",
   "type": "PARAMETER",

@@ -40,11 +40,11 @@ test("FDS/AML console renders masked context, approval metadata, and workflow st
 
   await expect(page.getByText("Held transfers do not post")).toBeVisible();
   await expect(page.getByText("masked by default")).toBeVisible();
-  await expect(page.getByText("FDS_RELEASE, FDS_BLOCK")).toBeVisible();
+  await expect(page.getByText("FDS_RELEASE, FDS_BLOCK").first()).toBeVisible();
   await expect(page.getByText("AML_CASE_CLOSE")).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("RELEASE_REQUESTED").first()).toBeVisible();
-  await expect(page.getByText("CLOSURE_REQUESTED")).toBeVisible();
+  await expect(page.getByText("CLOSURE_REQUESTED").first()).toBeVisible();
 });
 
 test("FDS/AML console shell has no app-router one-off business screens", async () => {

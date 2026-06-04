@@ -1,0 +1,45 @@
+{
+  "screenId": "CST-104",
+  "transactionCode": "CST104",
+  "title": "Privileged PII Unmask",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "customer",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["PII_UNMASK"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "fields": [
+    {
+      "name": "customerId",
+      "label": "Customer ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Unmask Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/pii/unmask"
+  },
+  "postActions": ["createAuditEvent", "timeboxExposure"]
+}

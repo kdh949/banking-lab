@@ -97,6 +97,7 @@ export type TerminalContextSidebarProps =
 
 export type WorkspaceTab = {
   readonly title: string;
+  readonly screenId?: string;
   readonly active?: boolean;
 };
 
@@ -260,17 +261,19 @@ export function TerminalWorkspace({
   taskTabs,
   children,
   footer,
-  statusBar
+  statusBar,
+  onTabSelect
 }: {
   readonly tabs: readonly WorkspaceTab[];
   readonly taskTabs: readonly string[];
   readonly children: ReactNode;
   readonly footer?: ReactNode;
   readonly statusBar: ReactNode;
+  readonly onTabSelect?: (tab: WorkspaceTab) => void;
 }) {
   return (
     <section className="workspace">
-      <WorkspaceTabs tabs={tabs} />
+      <WorkspaceTabs tabs={tabs} onTabSelect={onTabSelect} />
       <TaskTabs tabs={taskTabs} />
       {children}
       {footer}
@@ -428,11 +431,13 @@ export function ProfileCard({ profile }: { readonly profile: TerminalProfile }) 
 export function WorkspaceTabs({
   tabs,
   activeTitle,
-  secondaryTitle
+  secondaryTitle,
+  onTabSelect
 }: {
   readonly tabs?: readonly WorkspaceTab[];
   readonly activeTitle?: string;
   readonly secondaryTitle?: string;
+  readonly onTabSelect?: (tab: WorkspaceTab) => void;
 }) {
   const resolvedTabs = tabs ?? [
     { title: activeTitle ?? "", active: true },
@@ -442,7 +447,12 @@ export function WorkspaceTabs({
   return (
     <div className="window-tabs" aria-label="Open terminal tabs">
       {resolvedTabs.map((tab, index) => (
-        <button className={cx("window-tab", (tab.active ?? index === 0) && "is-active")} type="button" key={tab.title}>
+        <button
+          className={cx("window-tab", (tab.active ?? index === 0) && "is-active")}
+          type="button"
+          key={tab.title}
+          onClick={() => onTabSelect?.(tab)}
+        >
           <span className={cx("tab-dot", !(tab.active ?? index === 0) && "muted")} aria-hidden="true" />
           {tab.title}
           <TerminalIcon name="close" size={14} />

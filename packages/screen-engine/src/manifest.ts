@@ -5,6 +5,18 @@ import type { ManifestField, ScreenManifest, ScreenType } from "./types";
 const TEMPLATE_TYPES = new Set<string>(["inquiry", "command", "case", "parameter", "dashboard"]);
 const SCREEN_TYPES = new Set<string>(["INQUIRY", "COMMAND", "CASE", "PARAMETER", "DASHBOARD"]);
 const CONVENTION_VERSION = 1;
+export const MINIMUM_MANIFEST_COUNTS = Object.freeze({
+  total: 60,
+  byApp: Object.freeze({
+    "admin-console": 2,
+    "audit-console": 2,
+    "complaint-portal": 8,
+    "customer-web": 10,
+    "fds-aml-console": 6,
+    "ops-console": 3,
+    "staff-terminal": 30
+  })
+});
 
 type TemplateConvention = {
   template: string;
@@ -249,6 +261,46 @@ export function validateManifest(manifest: ScreenManifest): true {
   return true;
 }
 
+export function validateManifestCollection(manifests: ScreenManifest[]): true {
+  if (manifests.length < MINIMUM_MANIFEST_COUNTS.total) {
+    throw new Error(`screen manifest count must be >= ${MINIMUM_MANIFEST_COUNTS.total}; got ${manifests.length}`);
+  }
+  assertUnique(manifests, "screenId", { required: true });
+  assertUnique(manifests, "transactionCode", { required: true });
+
+  const appCounts = new Map<string, number>();
+  for (const manifest of manifests) {
+    appCounts.set(manifest.app, (appCounts.get(manifest.app) || 0) + 1);
+  }
+
+  for (const [app, minimum] of Object.entries(MINIMUM_MANIFEST_COUNTS.byApp)) {
+    const actual = appCounts.get(app) || 0;
+    if (actual < minimum) {
+      throw new Error(`${app} screen manifest count must be >= ${minimum}; got ${actual}`);
+    }
+  }
+
+  return true;
+}
+
+function assertUnique(manifests: ScreenManifest[], field: "screenId" | "transactionCode", options: { readonly required: boolean }): void {
+  const seen = new Map<string, string>();
+  for (const manifest of manifests) {
+    const value = manifest[field];
+    if (!value) {
+      if (options.required) {
+        throw new Error(`${manifest.screenId || "unknown manifest"} missing ${field}`);
+      }
+      continue;
+    }
+    const existingScreenId = seen.get(value);
+    if (existingScreenId) {
+      throw new Error(`${field} ${value} is duplicated by ${existingScreenId} and ${manifest.screenId}`);
+    }
+    seen.set(value, manifest.screenId);
+  }
+}
+
 export async function loadManifests(rootDir = "screen-manifests"): Promise<Array<ScreenManifest & { sourcePath: string }>> {
   const files = await walkJsonFiles(rootDir);
   const manifests: Array<ScreenManifest & { sourcePath: string }> = [];
@@ -257,6 +309,7 @@ export async function loadManifests(rootDir = "screen-manifests"): Promise<Array
     validateManifest(manifest);
     manifests.push({ ...manifest, sourcePath: file });
   }
+  validateManifestCollection(manifests);
   return manifests.sort((a, b) => a.screenId.localeCompare(b.screenId));
 }
 

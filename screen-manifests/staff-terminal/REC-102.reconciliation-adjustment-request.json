@@ -1,0 +1,51 @@
+{
+  "screenId": "REC-102",
+  "transactionCode": "REC102",
+  "title": "Reconciliation Adjustment Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "reconciliation",
+  "highRisk": true,
+  "requiredRoles": ["OPS_OPERATOR"],
+  "layout": {
+    "template": "command",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "OPS_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["RECONCILIATION_ADJUSTMENT"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "itemId",
+      "label": "Item ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "amountMinor",
+      "label": "Amount",
+      "type": "amount",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Adjustment Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/reconciliation-items/{itemId}/adjustment-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

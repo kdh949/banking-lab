@@ -1,0 +1,41 @@
+{
+  "screenId": "CMP-108",
+  "transactionCode": "CMP108",
+  "title": "Complaint Receipt Inquiry",
+  "app": "complaint-portal",
+  "type": "INQUIRY",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/complaints",
+    "fields": [
+      {
+        "name": "caseId",
+        "label": "Case ID",
+        "type": "text"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["caseId", "category", "status", "slaDueAt", "createdAt"]
+  },
+  "actions": [
+    {
+      "id": "openStatus",
+      "label": "Open Status",
+      "type": "navigate",
+      "target": "CMP-102"
+    }
+  ]
+}

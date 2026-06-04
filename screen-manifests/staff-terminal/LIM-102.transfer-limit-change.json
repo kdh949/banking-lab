@@ -1,0 +1,51 @@
+{
+  "screenId": "LIM-102",
+  "transactionCode": "LIM102",
+  "title": "Transfer Limit Change Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "limit",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["TRANSFER_LIMIT_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "fields": [
+    {
+      "name": "customerId",
+      "label": "Customer ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "dailyLimitMinor",
+      "label": "Daily Limit",
+      "type": "amount",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Change Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/customers/{customerId}/limit-change-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

@@ -1,5 +1,6 @@
 {
   "screenId": "OPS-101",
+  "transactionCode": "OPS101",
   "title": "Daily Closing Monitor",
   "app": "ops-console",
   "type": "DASHBOARD",

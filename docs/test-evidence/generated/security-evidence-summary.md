@@ -1,6 +1,6 @@
 # Security Evidence Summary
 
-Generated at: 2026-06-02T23:30:35.306Z
+Generated at: 2026-06-04T00:46:26.654Z
 
 | Check | Status | Evidence | Reason |
 | --- | --- | --- | --- |
@@ -8,6 +8,6 @@ Generated at: 2026-06-02T23:30:35.306Z
 | semgrep-sast | pass | docs/test-evidence/generated/semgrep.json |  |
 | trivy-fs | pass | docs/test-evidence/generated/trivy-fs.json |  |
 | sbom-cyclonedx | pass | docs/test-evidence/generated/sbom.cdx.json |  |
-| dast-zap-baseline | pass | docs/test-evidence/generated/zap-baseline.log |  |
+| dast-zap-baseline | skipped |  | BANKING_LAB_DAST_URL is not set; no live target was supplied for DAST. |
 
-Totals: 5 passed, 0 failed, 0 skipped.
+Totals: 4 passed, 0 failed, 1 skipped.

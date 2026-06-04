@@ -1,0 +1,46 @@
+{
+  "screenId": "CWB-203",
+  "transactionCode": "CWB203",
+  "title": "Transfer Status",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "transfer",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/transfers",
+    "fields": [
+      {
+        "name": "status",
+        "label": "Status",
+        "type": "select"
+      },
+      {
+        "name": "fromDate",
+        "label": "From Date",
+        "type": "date"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["resultId", "transferReferenceId", "status", "amountMinor", "caseId", "message"]
+  },
+  "actions": [
+    {
+      "id": "openResult",
+      "label": "Open Result",
+      "type": "navigate",
+      "target": "CWB-202"
+    }
+  ]
+}

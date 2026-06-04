@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-06-04T00:41:46.662Z",
+  "model": "formal/tla/Ledger.tla",
+  "config": "formal/tla/Ledger.cfg",
+  "staticCheck": "pass",
+  "tlc": "skipped",
+  "command": "tlc not found",
+  "invariants": [
+    "BalancedDoubleEntry",
+    "IdempotencySingleBusinessResult",
+    "ReversalReferencesOriginal",
+    "ClosedDateNoDirectPosting",
+    "BalanceProjectionRecalculable",
+    "HeldOrFailedTransferNoPosting"
+  ],
+  "note": "TLC is not installed in this environment. This is a static formal artifact check only, not a completed formal verification run."
+}

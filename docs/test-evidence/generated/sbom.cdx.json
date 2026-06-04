@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:80bb6755-5378-4530-b6ab-0a6de3a50c3e",
+  "serialNumber": "urn:uuid:b2d0aeb3-3a5c-4ebf-99ef-5c1b93d322dc",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-02T23:30:10+00:00",
+    "timestamp": "2026-06-04T00:46:26+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "836eda5f-bc71-4e50-8dca-c3ac8f96dd4e",
+      "bom-ref": "ec229c21-4b9a-4e19-91d0-59cad6abc8e6",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "473e9ed0-9c58-4b51-bc28-cb987dc43ef3",
+      "bom-ref": "106c85a0-0f27-4e37-a416-851e6433a0a3",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -43,6 +43,24 @@
         },
         {
           "name": "aquasecurity:trivy:Type",
+          "value": "npm"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/%40banking-lab/admin-console@0.1.0",
+      "type": "library",
+      "group": "@banking-lab",
+      "name": "admin-console",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40banking-lab/admin-console@0.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "@banking-lab/admin-console@0.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
           "value": "npm"
         }
       ]
@@ -94,24 +112,6 @@
         {
           "name": "aquasecurity:trivy:PkgID",
           "value": "@banking-lab/auth-client@0.1.0"
-        },
-        {
-          "name": "aquasecurity:trivy:PkgType",
-          "value": "npm"
-        }
-      ]
-    },
-    {
-      "bom-ref": "pkg:npm/%40banking-lab/banking-domain@0.1.0",
-      "type": "library",
-      "group": "@banking-lab",
-      "name": "banking-domain",
-      "version": "0.1.0",
-      "purl": "pkg:npm/%40banking-lab/banking-domain@0.1.0",
-      "properties": [
-        {
-          "name": "aquasecurity:trivy:PkgID",
-          "value": "@banking-lab/banking-domain@0.1.0"
         },
         {
           "name": "aquasecurity:trivy:PkgType",
@@ -1621,12 +1621,12 @@
   ],
   "dependencies": [
     {
-      "ref": "473e9ed0-9c58-4b51-bc28-cb987dc43ef3",
+      "ref": "106c85a0-0f27-4e37-a416-851e6433a0a3",
       "dependsOn": [
+        "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
         "pkg:npm/%40banking-lab/audit-console@0.1.0",
         "pkg:npm/%40banking-lab/auth-client@0.1.0",
-        "pkg:npm/%40banking-lab/banking-domain@0.1.0",
         "pkg:npm/%40banking-lab/complaint-portal@0.1.0",
         "pkg:npm/%40banking-lab/customer-web@0.1.0",
         "pkg:npm/%40banking-lab/fds-aml-console@0.1.0",
@@ -1638,9 +1638,19 @@
       ]
     },
     {
-      "ref": "836eda5f-bc71-4e50-8dca-c3ac8f96dd4e",
+      "ref": "ec229c21-4b9a-4e19-91d0-59cad6abc8e6",
       "dependsOn": [
-        "473e9ed0-9c58-4b51-bc28-cb987dc43ef3"
+        "106c85a0-0f27-4e37-a416-851e6433a0a3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40banking-lab/admin-console@0.1.0",
+      "dependsOn": [
+        "pkg:npm/%40banking-lab/api-client@0.1.0",
+        "pkg:npm/%40banking-lab/auth-client@0.1.0",
+        "pkg:npm/next@16.2.7",
+        "pkg:npm/react-dom@19.2.7",
+        "pkg:npm/react@19.2.7"
       ]
     },
     {
@@ -1659,10 +1669,6 @@
     },
     {
       "ref": "pkg:npm/%40banking-lab/auth-client@0.1.0",
-      "dependsOn": []
-    },
-    {
-      "ref": "pkg:npm/%40banking-lab/banking-domain@0.1.0",
       "dependsOn": []
     },
     {

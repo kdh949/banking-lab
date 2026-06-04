@@ -1,0 +1,37 @@
+{
+  "screenId": "CWB-303",
+  "transactionCode": "CWB303",
+  "title": "Complaint Answer Confirmation",
+  "app": "customer-web",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["ANSWERED", "CUSTOMER_CONFIRMED", "CLOSED", "REOPENED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["answer", "customerConfirmation", "timeline"],
+  "actions": [
+    {
+      "id": "confirmAnswer",
+      "label": "Confirm Answer",
+      "type": "command",
+      "target": "POST /api/customer/complaints/{caseId}/confirm"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "screenId": "AUD-102",
+  "transactionCode": "AUD102",
+  "title": "Staff Customer Access Log",
+  "app": "audit-console",
+  "type": "INQUIRY",
+  "domain": "audit",
+  "requiredRoles": ["AUDITOR", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/audit/events",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "text"
+      },
+      {
+        "name": "actorId",
+        "label": "Actor ID",
+        "type": "text"
+      },
+      {
+        "name": "reason",
+        "label": "Audit Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["auditEventId", "eventType", "actorId", "customerId", "reason", "createdAt"]
+  },
+  "actions": []
+}

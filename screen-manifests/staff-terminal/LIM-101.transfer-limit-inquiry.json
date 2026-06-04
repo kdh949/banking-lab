@@ -1,0 +1,49 @@
+{
+  "screenId": "LIM-101",
+  "transactionCode": "LIM101",
+  "title": "Transfer Limit Inquiry",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "limit",
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["LIMIT_VIEW"],
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/customers/{customerId}/transfer-limits",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["customerId", "dailyLimitMinor", "perTransferLimitMinor", "status", "effectiveAt"]
+  },
+  "actions": [
+    {
+      "id": "changeLimit",
+      "label": "Change Limit",
+      "type": "navigate",
+      "target": "LIM-102"
+    }
+  ]
+}

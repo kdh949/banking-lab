@@ -1,5 +1,6 @@
 {
   "screenId": "CWB-103",
+  "transactionCode": "CWB103",
   "title": "Customer Transaction History",
   "app": "customer-web",
   "type": "INQUIRY",

@@ -1,5 +1,6 @@
 {
   "screenId": "CWB-201",
+  "transactionCode": "CWB201",
   "title": "Internal Transfer Simulation",
   "app": "customer-web",
   "type": "COMMAND",

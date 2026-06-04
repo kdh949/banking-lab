@@ -1,5 +1,6 @@
 {
   "screenId": "CWB-202",
+  "transactionCode": "CWB202",
   "title": "Transfer Result",
   "app": "customer-web",
   "type": "INQUIRY",
