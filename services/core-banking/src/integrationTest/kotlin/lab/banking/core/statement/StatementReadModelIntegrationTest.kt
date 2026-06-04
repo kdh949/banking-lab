@@ -18,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -34,6 +36,9 @@ class StatementReadModelIntegrationTest {
 
     @Autowired
     lateinit var jdbc: NamedParameterJdbcTemplate
+
+    @Autowired
+    lateinit var transactionManager: PlatformTransactionManager
 
     @BeforeEach
     fun resetDatabase() {
@@ -147,6 +152,7 @@ class StatementReadModelIntegrationTest {
     }
 
     private fun seedSyntheticStatementFixtures() {
+        TransactionTemplate(transactionManager).executeWithoutResult {
         jdbc.update(
             """
             INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
@@ -222,6 +228,7 @@ class StatementReadModelIntegrationTest {
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
+        }
     }
 
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {

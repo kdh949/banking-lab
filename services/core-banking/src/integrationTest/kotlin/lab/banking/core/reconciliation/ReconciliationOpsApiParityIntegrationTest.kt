@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -33,6 +35,9 @@ class ReconciliationOpsApiParityIntegrationTest {
 
     @Autowired
     lateinit var jdbc: NamedParameterJdbcTemplate
+
+    @Autowired
+    lateinit var transactionManager: PlatformTransactionManager
 
     @BeforeEach
     fun resetDatabase() {
@@ -233,6 +238,7 @@ class ReconciliationOpsApiParityIntegrationTest {
     }
 
     private fun seedAccountsAndBalances() {
+        TransactionTemplate(transactionManager).executeWithoutResult {
         jdbc.update(
             """
             INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
@@ -289,6 +295,7 @@ class ReconciliationOpsApiParityIntegrationTest {
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
+        }
     }
 
     private fun reconciliationStatus(itemId: String): String? =
