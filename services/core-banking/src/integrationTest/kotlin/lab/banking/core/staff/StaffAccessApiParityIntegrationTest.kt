@@ -39,6 +39,7 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              account_limit_change_requests,
               account_hold_requests,
               masking_access_logs,
               screen_access_logs,
@@ -82,6 +83,13 @@ class StaffAccessApiParityIntegrationTest {
               account_id, currency, ledger_balance_minor, available_balance_minor, hold_amount_minor
             )
             VALUES ('ACC-SYN-001-001', 'KRW', 100000000, 100000000, 0)
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO account_limits (account_id, daily_transfer_limit_minor, single_transfer_limit_minor)
+            VALUES ('ACC-SYN-001-001', 100000000, 50000000)
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
@@ -518,6 +526,187 @@ class StaffAccessApiParityIntegrationTest {
         assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id IN ('ACC-103', 'ACC-104')"))
     }
 
+    @Test
+    fun `transfer limit change applies only after maker-checker approval without ledger source mutation`() {
+        val initialLedgerBalance = accountLedgerBalance()
+        val initialLedgerPostings = countRows("ledger_postings")
+
+        mockMvc.perform(get("/api/staff/customers/SYN-CUS-001/transfer-limits"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'LIMIT_VIEW'"))
+
+        mockMvc.perform(
+            get("/api/staff/customers/SYN-CUS-001/transfer-limits")
+                .queryParam("reason", "Customer requested transfer limit review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[0].customerId").value("SYN-CUS-001"))
+            .andExpect(jsonPath("$.items[0].accountId").value("ACC-SYN-001-001"))
+            .andExpect(jsonPath("$.items[0].dailyTransferLimitMinor").value(100000000))
+            .andExpect(jsonPath("$.items[0].singleTransferLimitMinor").value(50000000))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'LIMIT_VIEW'"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/limit-change-requests")
+                .header("x-request-id", "REQ-LIMIT-REASON")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reasonCode": "CUSTOMER_REQUEST",
+                      "dailyTransferLimitMinor": 150000000,
+                      "singleTransferLimitMinor": 70000000,
+                      "idempotencyKey": "LIMIT-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-LIMIT-REASON"))
+        assertEquals(0, countRows("account_limit_change_requests"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'TRANSFER_LIMIT_CHANGE'"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/limit-change-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "callcenter01",
+                      "requestedByRole": "CALL_CENTER_MANAGER",
+                      "reason": "Unauthorized call-center limit change attempt",
+                      "reasonCode": "CUSTOMER_REQUEST",
+                      "dailyTransferLimitMinor": 150000000,
+                      "singleTransferLimitMinor": 70000000,
+                      "idempotencyKey": "LIMIT-KEY-DENIED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals(0, countRows("account_limit_change_requests"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/limit-change-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer requested invalid limit change",
+                      "reasonCode": "CUSTOMER_REQUEST",
+                      "dailyTransferLimitMinor": 60000000,
+                      "singleTransferLimitMinor": 70000000,
+                      "idempotencyKey": "LIMIT-KEY-INVALID"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+        assertEquals(0, countRows("account_limit_change_requests"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/limit-change-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer requested higher transfer limits",
+                      "reasonCode": "CUSTOMER_REQUEST",
+                      "description": "Synthetic limit increase",
+                      "dailyTransferLimitMinor": 150000000,
+                      "singleTransferLimitMinor": 70000000,
+                      "idempotencyKey": "LIMIT-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("TRANSFER_LIMIT_CHANGE"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andExpect(jsonPath("$.limit.dailyTransferLimitMinor").value(100000000))
+            .andExpect(jsonPath("$.limit.singleTransferLimitMinor").value(50000000))
+            .andReturn()
+
+        val body = objectMapper.readTree(requestResponse.response.contentAsString)
+        val requestId = body.path("item").path("requestId").asText()
+        val approvalId = body.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/limit-change-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer requested higher transfer limits replay",
+                      "reasonCode": "CUSTOMER_REQUEST",
+                      "dailyTransferLimitMinor": 150000000,
+                      "singleTransferLimitMinor": 70000000,
+                      "idempotencyKey": "LIMIT-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.requestId").value(requestId))
+            .andExpect(jsonPath("$.approval.approvalId").value(approvalId))
+        assertEquals(1, countRows("account_limit_change_requests WHERE business_type = 'TRANSFER_LIMIT_CHANGE'"))
+        assertEquals(100000000, dailyTransferLimit())
+        assertEquals(50000000, singleTransferLimit())
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"LIM-102"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+        assertEquals("PENDING_APPROVAL", transferLimitChangeRequestStatus(requestId))
+        assertEquals(100000000, dailyTransferLimit())
+        assertEquals(50000000, singleTransferLimit())
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"LIM-102"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.transferLimitChangeRequest.status").value("APPLIED"))
+            .andExpect(jsonPath("$.transferLimit.dailyTransferLimitMinor").value(150000000))
+            .andExpect(jsonPath("$.transferLimit.singleTransferLimitMinor").value(70000000))
+
+        assertEquals("APPLIED", transferLimitChangeRequestStatus(requestId))
+        assertEquals(150000000, dailyTransferLimit())
+        assertEquals(70000000, singleTransferLimit())
+        assertEquals(initialLedgerBalance, accountLedgerBalance())
+        assertEquals(initialLedgerPostings, countRows("ledger_postings"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"LIM-102"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED' AND screen_id = 'LIM-102'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED' AND screen_id = 'LIM-102'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'LIM-102'"))
+    }
+
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM $tableExpression",
@@ -539,6 +728,13 @@ class StaffAccessApiParityIntegrationTest {
             String::class.java
         )
 
+    private fun transferLimitChangeRequestStatus(requestId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM account_limit_change_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        )
+
     private fun accountLedgerBalance(): Long =
         jdbc.queryForObject(
             "SELECT ledger_balance_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
@@ -556,6 +752,20 @@ class StaffAccessApiParityIntegrationTest {
     private fun accountHoldAmount(): Long =
         jdbc.queryForObject(
             "SELECT hold_amount_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            Long::class.java
+        ) ?: 0
+
+    private fun dailyTransferLimit(): Long =
+        jdbc.queryForObject(
+            "SELECT daily_transfer_limit_minor FROM account_limits WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            Long::class.java
+        ) ?: 0
+
+    private fun singleTransferLimit(): Long =
+        jdbc.queryForObject(
+            "SELECT single_transfer_limit_minor FROM account_limits WHERE account_id = 'ACC-SYN-001-001'",
             emptyMap<String, Any?>(),
             Long::class.java
         ) ?: 0

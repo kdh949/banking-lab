@@ -7,7 +7,8 @@ import {
   type AccountHoldRequestResponse,
   type AuditEventDto,
   type OperatorApproval,
-  type StaffApprovalExecutionResponse
+  type StaffApprovalExecutionResponse,
+  type TransferLimitChangeRequestResponse
 } from "@banking-lab/api-client";
 import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import type { ManifestField, ScreenManifest } from "../../../../packages/screen-engine/src/types";
@@ -72,6 +73,19 @@ type AccountHoldApiState =
       readonly releaseRequest: AccountHoldRequestResponse;
       readonly releaseSelfApprovalCode: string;
       readonly releaseExecution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+type TransferLimitApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly beforeDailyLimit: number;
+      readonly beforeSingleLimit: number;
+      readonly request: TransferLimitChangeRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
     }
   | { readonly status: "failed"; readonly message: string };
 
@@ -701,6 +715,9 @@ function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   if (manifest.screenId === "ACC-103" || manifest.screenId === "ACC-104") {
     return <AccountHoldCommandApiPanel manifest={manifest} />;
   }
+  if (manifest.screenId === "LIM-102") {
+    return <TransferLimitCommandApiPanel manifest={manifest} />;
+  }
   return null;
 }
 
@@ -863,6 +880,159 @@ function AccountHoldCommandApiPanel({ manifest }: { readonly manifest: ScreenMan
               <div>
                 <dt>Final account status</dt>
                 <dd>{state.releaseExecution.account?.status ?? "none"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function TransferLimitCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<TransferLimitApiState>(() => initialTransferLimitApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    try {
+      const makerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const selfCheckerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const checkerClient = createStaffCommandClient("manager02", ["BRANCH_MANAGER"]);
+      const beforeLimits = await makerClient.staffTransferLimits(
+        "SYN-CUS-LIMIT-001",
+        "Browser transfer limit lookup smoke"
+      );
+      const beforeLimit = beforeLimits.items.find((item) => item.accountId === "ACC-SYN-LIMIT-001") ?? beforeLimits.items[0];
+      const beforeDailyLimit = beforeLimit?.dailyTransferLimitMinor ?? 100000000;
+      const beforeSingleLimit = beforeLimit?.singleTransferLimitMinor ?? 50000000;
+      const requestedDailyLimit = beforeDailyLimit + 1000000;
+      const requestedSingleLimit = beforeSingleLimit + 100000;
+
+      const request = await makerClient.requestTransferLimitChange("ACC-SYN-LIMIT-001", {
+        requestedBy: "manager01",
+        requestedByRole: "BRANCH_MANAGER",
+        reason: "Browser transfer limit smoke",
+        reasonCode: "CUSTOMER_REQUEST",
+        description: "Synthetic LIM102 limit change smoke",
+        dailyTransferLimitMinor: requestedDailyLimit,
+        singleTransferLimitMinor: requestedSingleLimit,
+        idempotencyKey: `BROWSER-LIMIT-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(request.approval.approvalId, {
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER",
+          screenId: "LIM-102"
+        });
+        throw new Error("transfer limit self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const execution = await checkerClient.approveStaffApproval(request.approval.approvalId, {
+        approvedBy: "manager02",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "LIM-102"
+      });
+
+      setState({
+        status: "completed",
+        beforeDailyLimit,
+        beforeSingleLimit,
+        request,
+        selfApprovalCode,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Transfer Limit Command"
+      icon="leaderboard"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-transfer-limit-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{transferLimitStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs LIM102 transfer-limit approval against Spring API and account_limits."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run transfer limit smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Request</dt>
+                <dd>{state.execution.transferLimitChangeRequest?.status ?? state.request.item.status}</dd>
+              </div>
+              <div>
+                <dt>Before daily</dt>
+                <dd>{state.beforeDailyLimit}</dd>
+              </div>
+              <div>
+                <dt>Before single</dt>
+                <dd>{state.beforeSingleLimit}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.request.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{state.request.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Account</dt>
+                <dd>{state.execution.transferLimit?.accountId ?? state.request.limit.accountId}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>After daily</dt>
+                <dd>{state.execution.transferLimit?.dailyTransferLimitMinor ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>After single</dt>
+                <dd>{state.execution.transferLimit?.singleTransferLimitMinor ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Checker</dt>
+                <dd>{state.execution.item.approvedBy ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{state.execution.transferLimit?.accountStatus ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "transfer limit applied" : "not executed"}</dd>
               </div>
             </dl>
           </div>
@@ -1510,6 +1680,16 @@ function initialAccountHoldApiState(): AccountHoldApiState {
   return { status: "idle" };
 }
 
+function initialTransferLimitApiState(): TransferLimitApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -1590,6 +1770,22 @@ function accountHoldStatusLabel(state: AccountHoldApiState): string {
     return "account hold API failed";
   }
   return "account hold release completed";
+}
+
+function transferLimitStatusLabel(state: TransferLimitApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "transfer limit API ready";
+  }
+  if (state.status === "running") {
+    return "transfer limit API running";
+  }
+  if (state.status === "failed") {
+    return "transfer limit API failed";
+  }
+  return "transfer limit applied";
 }
 
 function errorMessage(error: unknown): string {

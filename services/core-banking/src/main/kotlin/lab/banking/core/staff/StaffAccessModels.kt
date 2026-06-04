@@ -92,12 +92,65 @@ data class AccountHoldRequestResponse(
     val account: StaffAccountDto
 )
 
+data class TransferLimitChangeRequestCommand(
+    val requestedBy: String? = null,
+    val requestedByRole: String? = null,
+    val reason: String? = null,
+    val reasonCode: String? = null,
+    val description: String? = null,
+    val dailyTransferLimitMinor: Long? = null,
+    val singleTransferLimitMinor: Long? = null,
+    val idempotencyKey: String? = null
+)
+
+data class StaffTransferLimitDto(
+    val customerId: String,
+    val accountId: String,
+    val maskedAccountNo: String,
+    val accountStatus: String,
+    val currency: String,
+    val dailyTransferLimitMinor: Long,
+    val singleTransferLimitMinor: Long,
+    val updatedAt: OffsetDateTime
+)
+
+data class TransferLimitChangeRequestDto(
+    val requestId: String,
+    val businessType: String,
+    val businessReferenceId: String,
+    val targetCustomerId: String,
+    val targetAccountId: String,
+    val requestedBy: String,
+    val requestedRole: String,
+    val reason: String,
+    val reasonCode: String,
+    val currentDailyTransferLimitMinor: Long,
+    val currentSingleTransferLimitMinor: Long,
+    val requestedDailyTransferLimitMinor: Long,
+    val requestedSingleTransferLimitMinor: Long,
+    val status: String,
+    val approvalId: String?,
+    val idempotencyKey: String,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val executedAt: OffsetDateTime?,
+    val metadata: Map<String, Any?>
+)
+
+data class TransferLimitChangeRequestResponse(
+    val item: TransferLimitChangeRequestDto,
+    val approval: OperatorApproval,
+    val limit: StaffTransferLimitDto
+)
+
 data class StaffApprovalExecutionResponse(
     val item: OperatorApproval,
     val executed: Boolean,
     val customer: StaffCustomerDetailDto?,
     val account: StaffAccountDto?,
     val accountHoldRequest: AccountHoldRequestDto?,
+    val transferLimit: StaffTransferLimitDto?,
+    val transferLimitChangeRequest: TransferLimitChangeRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,

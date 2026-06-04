@@ -32,7 +32,8 @@ class SyntheticDataSeeder(
               ('SYN-CUS-001', 'Lab Customer Alpha', '010-0000-1001', 'Seoul Synthetic District', 'STANDARD', 'LOW'),
               ('SYN-CUS-002', 'Lab Customer Beta', '010-0000-1002', 'Busan Synthetic District', 'STANDARD', 'LOW'),
               ('SYN-CUS-CMD-001', 'Lab Customer Command', '010-0000-1301', 'Incheon Synthetic District', 'STANDARD', 'LOW'),
-              ('SYN-CUS-HOLD-001', 'Lab Customer Hold', '010-0000-1701', 'Daejeon Synthetic District', 'STANDARD', 'LOW')
+              ('SYN-CUS-HOLD-001', 'Lab Customer Hold', '010-0000-1701', 'Daejeon Synthetic District', 'STANDARD', 'LOW'),
+              ('SYN-CUS-LIMIT-001', 'Lab Customer Limit', '010-0000-1801', 'Gwangju Synthetic District', 'STANDARD', 'LOW')
             ON CONFLICT (customer_id) DO UPDATE
             SET customer_name = EXCLUDED.customer_name,
                 customer_phone = EXCLUDED.customer_phone,
@@ -54,7 +55,8 @@ class SyntheticDataSeeder(
               ('SYN-CUS-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-001'),
               ('SYN-CUS-002', 'VERIFIED', 'BUSINESS', 'DAILY_BANKING', 'SIM-KYC-002'),
               ('SYN-CUS-CMD-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-CMD-001'),
-              ('SYN-CUS-HOLD-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-HOLD-001')
+              ('SYN-CUS-HOLD-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-HOLD-001'),
+              ('SYN-CUS-LIMIT-001', 'VERIFIED', 'SALARY', 'DAILY_BANKING', 'SIM-KYC-LIMIT-001')
             ON CONFLICT (customer_id) DO UPDATE
             SET kyc_status = EXCLUDED.kyc_status,
                 source_of_funds_code = EXCLUDED.source_of_funds_code,
@@ -75,7 +77,8 @@ class SyntheticDataSeeder(
               ('ACC-SYN-002-001', 'SYN-CUS-002', 'LAB-002-000001', 'KRW', 'ACTIVE'),
               ('ACC-SYN-CMD-FROM', 'SYN-CUS-002', 'LAB-002-000901', 'KRW', 'ACTIVE'),
               ('ACC-SYN-CMD-TO', 'SYN-CUS-001', 'LAB-001-000902', 'KRW', 'ACTIVE'),
-              ('ACC-SYN-HOLD-001', 'SYN-CUS-HOLD-001', 'LAB-017-000001', 'KRW', 'ACTIVE')
+              ('ACC-SYN-HOLD-001', 'SYN-CUS-HOLD-001', 'LAB-017-000001', 'KRW', 'ACTIVE'),
+              ('ACC-SYN-LIMIT-001', 'SYN-CUS-LIMIT-001', 'LAB-018-000001', 'KRW', 'ACTIVE')
             ON CONFLICT (account_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
@@ -91,7 +94,8 @@ class SyntheticDataSeeder(
               ('ACC-SYN-002-001', 200000000, 100000000),
               ('ACC-SYN-CMD-FROM', 100000000, 50000000),
               ('ACC-SYN-CMD-TO', 100000000, 50000000),
-              ('ACC-SYN-HOLD-001', 100000000, 50000000)
+              ('ACC-SYN-HOLD-001', 100000000, 50000000),
+              ('ACC-SYN-LIMIT-001', 100000000, 50000000)
             ON CONFLICT (account_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
@@ -109,7 +113,8 @@ class SyntheticDataSeeder(
               ('ACC-SYN-002-001', 'KRW', 200000000, 200000000, 0),
               ('ACC-SYN-CMD-FROM', 'KRW', 50000000, 50000000, 0),
               ('ACC-SYN-CMD-TO', 'KRW', 0, 0, 0),
-              ('ACC-SYN-HOLD-001', 'KRW', 1000000, 1000000, 0)
+              ('ACC-SYN-HOLD-001', 'KRW', 1000000, 1000000, 0),
+              ('ACC-SYN-LIMIT-001', 'KRW', 3000000, 3000000, 0)
             ON CONFLICT (account_id, currency) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
