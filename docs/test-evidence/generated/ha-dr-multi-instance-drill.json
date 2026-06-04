@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-06-04T19:53:02.783Z",
+  "command": "npm run dr:multi-instance-drill",
+  "status": "pass",
+  "syntheticOnly": true,
+  "multiInstance": {
+    "instanceCount": 2,
+    "instanceModel": "two independent Spring application contexts with separate Hikari pools",
+    "sharedDatabase": "Testcontainers postgres:16-alpine"
+  },
+  "controlsVerified": [
+    "cross-instance SERIALIZABLE withdrawal cannot double spend",
+    "cross-instance duplicate idempotency key creates one ledger transaction",
+    "retryable SQLSTATE 40001 serialization failure is retried before surfacing",
+    "ledger postings remain balanced after concurrent commands"
+  ],
+  "durationMillis": 24616,
+  "rpo": {
+    "target": "0 committed ledger transactions, postings, or projections lost or duplicated",
+    "measured": "0 loss/duplication: one successful double-spend withdrawal, one idempotent ledger row, balanced postings"
+  },
+  "rto": {
+    "target": "cross-instance retry converges within the bounded ledger retry policy",
+    "measured": "bounded retry converged within the 24616 ms drill run"
+  },
+  "firstFailureFixed": "Initial H4 run exposed an uncaught SERIALIZABLE idempotency insert conflict; LedgerCommandService withdrawal now retries retryable serialization failures."
+}
