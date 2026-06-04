@@ -1,0 +1,54 @@
+{
+  "screenId": "CWB-602",
+  "transactionCode": "CWB602",
+  "title": "Synthetic Card Authorization",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "card",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "cardId",
+      "label": "Card ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "amountMinor",
+      "label": "Amount",
+      "type": "money",
+      "required": true
+    },
+    {
+      "name": "merchantName",
+      "label": "Merchant",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/cards/authorizations"
+  },
+  "postActions": ["createAuditEvent", "createHold"]
+}

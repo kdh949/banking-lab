@@ -3,16 +3,16 @@
   "Trivy": {
     "Version": "0.71.0"
   },
-  "ReportID": "019e92af-89c1-700b-8073-a31c46e94cdf",
-  "CreatedAt": "2026-06-04T12:50:38.145003754Z",
-  "ArtifactID": "sha256:186970333e0043aceb4965c24879a574a04a865f018804026a3b9a793984e9db",
+  "ReportID": "019e92c0-e588-77f6-a256-ad508f1d5182",
+  "CreatedAt": "2026-06-04T13:09:35.752522795Z",
+  "ArtifactID": "sha256:530a1fcb5dd3353840d184bf2cdec6dd80ea9ffff1c450a18baecd7a36582440",
   "ArtifactName": "/workspace",
   "ArtifactType": "repository",
   "Metadata": {
     "RepoURL": "https://github.com/kdh949/banking-lab.git",
     "Branch": "codex/loan-card-controls",
-    "Commit": "2908c6c5285d8387fe94f96324cf63d3858d32c6",
-    "CommitMsg": "feat: 명세서 읽기 모델 추가",
+    "Commit": "25fc482ec2065288a88de785f2f8bb6b94f89eff",
+    "CommitMsg": "feat: 대출 도메인 추가",
     "Author": "Donghyun Kim \u003ckdh949@naver.com\u003e",
     "Committer": "Donghyun Kim \u003ckdh949@naver.com\u003e"
   },

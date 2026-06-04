@@ -124,6 +124,19 @@ data class LoanRepaymentCommand(
     val prepayment: Boolean = false
 )
 
+data class CardCaptureCommand(
+    val authorizationId: String,
+    val cardId: String,
+    val accountId: String,
+    val amountMinor: Long,
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val requestedChannel: String = "CARD_SERVICE",
+    val businessDate: LocalDate? = null,
+    val reason: String,
+    val currency: String = "KRW"
+)
+
 data class DailyClosingCommand(
     val businessDate: LocalDate,
     val idempotencyKey: String,

@@ -935,6 +935,125 @@ export interface LoanAccrualResponse {
   readonly replayed: boolean;
 }
 
+export interface IssueCardCommand {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly panToken: string;
+  readonly panLast4: string;
+  readonly dailyLimitMinor: number;
+  readonly monthlyLimitMinor: number;
+  readonly singleLimitMinor: number;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardDto {
+  readonly cardId: string;
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly panToken: string;
+  readonly panLast4: string;
+  readonly status: string;
+  readonly dailyLimitMinor: number;
+  readonly monthlyLimitMinor: number;
+  readonly singleLimitMinor: number;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CardIssueResponse {
+  readonly item: CardDto;
+  readonly replayed: boolean;
+}
+
+export interface ThreeDsSimulationCommand {
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly idempotencyKey: string;
+}
+
+export interface ThreeDsSimulationDto {
+  readonly authenticationId: string;
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CardAuthorizationCommand {
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly merchantName: string;
+  readonly businessDate?: string | null;
+  readonly threeDsAuthenticationId?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+  readonly currency?: string;
+}
+
+export interface CardAuthorizationDto {
+  readonly authorizationId: string;
+  readonly cardId: string;
+  readonly accountId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly merchantName: string;
+  readonly businessDate: string;
+  readonly status: string;
+  readonly holdId?: string | null;
+  readonly threeDsAuthenticationId?: string | null;
+  readonly createdAt: string;
+}
+
+export interface CardAuthorizationResponse {
+  readonly item: CardAuthorizationDto;
+  readonly replayed: boolean;
+}
+
+export interface CardCaptureCommand {
+  readonly businessDate?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardCaptureDto {
+  readonly captureId: string;
+  readonly authorizationId: string;
+  readonly cardId: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly ledgerTransactionId: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly reversedAt?: string | null;
+}
+
+export interface CardCaptureResponse {
+  readonly item: CardCaptureDto;
+  readonly ledgerTransaction: LedgerCommandResult;
+  readonly replayed: boolean;
+}
+
+export interface CardCancelCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedChannel?: string | null;
+  readonly reason?: string | null;
+  readonly idempotencyKey?: string | null;
+}
+
+export interface CardLossReportCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -1450,6 +1569,93 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/loans/${encodeURIComponent(loanId)}/accruals/run`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    issueCard(command: IssueCardCommand) {
+      return request<CardIssueResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cardDetail(cardId: string) {
+      return request<CardDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/${encodeURIComponent(cardId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    simulateCardThreeDs(command: ThreeDsSimulationCommand) {
+      return request<ThreeDsSimulationDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards/3ds-simulations",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    authorizeCard(command: CardAuthorizationCommand) {
+      return request<CardAuthorizationResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/cards/authorizations",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    captureCardAuthorization(authorizationId: string, command: CardCaptureCommand) {
+      return request<CardCaptureResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/authorizations/${encodeURIComponent(authorizationId)}/captures`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelCardAuthorization(authorizationId: string, command: CardCancelCommand) {
+      return request<CardAuthorizationResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/authorizations/${encodeURIComponent(authorizationId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reverseCardCapture(captureId: string, command: CardCancelCommand) {
+      return request<CardCaptureResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/captures/${encodeURIComponent(captureId)}/reverse`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reportCardLost(cardId: string, command: CardLossReportCommand) {
+      return request<CardDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/cards/${encodeURIComponent(cardId)}/loss-report`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

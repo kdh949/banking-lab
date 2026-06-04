@@ -5,6 +5,10 @@ import {
   BankingApiError,
   createBankingApiClient,
   type BalanceCertificateDto,
+  type CardAuthorizationResponse,
+  type CardCaptureResponse,
+  type CardDto,
+  type CardIssueResponse,
   type CustomerAccessHistoryDto,
   type CustomerAccountDetailDto,
   type CustomerComplaintConfirmResponse,
@@ -17,6 +21,7 @@ import {
   type LoanExecutionResponse,
   type LoanPaymentResponse,
   type LoanDto,
+  type ThreeDsSimulationDto,
   type TransactionConfirmationDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -98,6 +103,19 @@ type LoanDomainState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type CardDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly issue: CardIssueResponse;
+      readonly threeDs: ThreeDsSimulationDto;
+      readonly authorization: CardAuthorizationResponse;
+      readonly capture: CardCaptureResponse;
+      readonly lostCard: CardDto;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -152,6 +170,7 @@ export function ApiBackedCustomerPanel() {
   const [historyStatusState, setHistoryStatusState] = useState<HistoryStatusState>({ status: "idle" });
   const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
   const [loanDomainState, setLoanDomainState] = useState<LoanDomainState>({ status: "idle" });
+  const [cardDomainState, setCardDomainState] = useState<CardDomainState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -703,6 +722,70 @@ export function ApiBackedCustomerPanel() {
       setLoanDomainState({ status: "loaded", application, execution, loan, repayment });
     } catch (error: unknown) {
       setLoanDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown loan domain failure" });
+    }
+  };
+
+  const runCardDomainSmoke = async () => {
+    if (!apiBaseUrl || cardDomainState.status === "running") {
+      return;
+    }
+    setCardDomainState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const runId = Date.now();
+      const issue = await client.issueCard({
+        customerId: "SYN-CUS-001",
+        accountId: "ACC-SYN-001-001",
+        panToken: `tok_pan_cwb_${runId}`,
+        panLast4: "4242",
+        dailyLimitMinor: 200_000,
+        monthlyLimitMinor: 400_000,
+        singleLimitMinor: 150_000,
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic card issue smoke",
+        idempotencyKey: `CWB-CARD-ISSUE-${runId}`
+      });
+      const threeDs = await client.simulateCardThreeDs({
+        cardId: issue.item.cardId,
+        amountMinor: 120_000,
+        idempotencyKey: `CWB-CARD-3DS-${runId}`
+      });
+      const authorization = await client.authorizeCard({
+        cardId: issue.item.cardId,
+        amountMinor: 120_000,
+        merchantName: "Synthetic Browser Merchant",
+        threeDsAuthenticationId: threeDs.authenticationId,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic card authorization smoke",
+        idempotencyKey: `CWB-CARD-AUTH-${runId}`
+      });
+      const capture = await client.captureCardAuthorization(authorization.item.authorizationId, {
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic card capture smoke",
+        idempotencyKey: `CWB-CARD-CAP-${runId}`
+      });
+      const lostCard = await client.reportCardLost(issue.item.cardId, {
+        requestedBy: "customer01",
+        requestedByRole: "CUSTOMER",
+        reason: "Browser synthetic card loss smoke"
+      });
+      if (capture.ledgerTransaction.value.transactionType !== "CARD_CAPTURE" || lostCard.status !== "LOST") {
+        setCardDomainState({ status: "failed", message: "card smoke did not complete capture/loss transitions" });
+        return;
+      }
+      setCardDomainState({ status: "loaded", issue, threeDs, authorization, capture, lostCard });
+    } catch (error: unknown) {
+      setCardDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown card domain failure" });
     }
   };
 
@@ -1396,6 +1479,47 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-card-domain">
+        <button type="button" onClick={runCardDomainSmoke} disabled={!apiBaseUrl || cardDomainState.status === "running"}>
+          Run card domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Card</dt>
+            <dd>{cardDomainLabel(cardDomainState)}</dd>
+          </div>
+          {cardDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Card ID</dt>
+                <dd>{cardDomainState.issue.item.cardId}</dd>
+              </div>
+              <div>
+                <dt>3DS</dt>
+                <dd>{cardDomainState.threeDs.authenticationId}</dd>
+              </div>
+              <div>
+                <dt>Authorization</dt>
+                <dd>{cardDomainState.authorization.item.authorizationId}</dd>
+              </div>
+              <div>
+                <dt>Capture</dt>
+                <dd>{cardDomainState.capture.ledgerTransaction.value.id}</dd>
+              </div>
+              <div>
+                <dt>Loss status</dt>
+                <dd>{cardDomainState.lostCard.status}</dd>
+              </div>
+            </>
+          ) : null}
+          {cardDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{cardDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1706,6 +1830,19 @@ function loanDomainLabel(state: LoanDomainState): string {
   }
   if (state.status === "loaded") {
     return "loan posted";
+  }
+  return "failed";
+}
+
+function cardDomainLabel(state: CardDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "card captured and lost";
   }
   return "failed";
 }

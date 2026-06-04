@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:abd9ff69-0487-4a4f-a85d-a80328817020",
+  "serialNumber": "urn:uuid:dd1336dc-2662-4a59-b1cf-908667f3fb2b",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-04T12:50:44+00:00",
+    "timestamp": "2026-06-04T13:09:41+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "fa2046fc-532b-4569-962b-1bd8fc8a24fd",
+      "bom-ref": "7e741099-60c6-4007-b1b7-234831d35df7",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "3359aa9d-939e-41ae-9dfb-ff9f13634b5a",
+      "bom-ref": "0b33d938-8777-4d9f-8164-0a0876ca491b",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -48,7 +48,7 @@
       ]
     },
     {
-      "bom-ref": "5d96d706-1ddd-460e-92a5-9224a7f9abe5",
+      "bom-ref": "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5",
       "type": "application",
       "name": "analytics/aml-fds-python/uv.lock",
       "properties": [
@@ -1874,7 +1874,7 @@
   ],
   "dependencies": [
     {
-      "ref": "3359aa9d-939e-41ae-9dfb-ff9f13634b5a",
+      "ref": "0b33d938-8777-4d9f-8164-0a0876ca491b",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
@@ -1891,16 +1891,16 @@
       ]
     },
     {
-      "ref": "5d96d706-1ddd-460e-92a5-9224a7f9abe5",
+      "ref": "7e741099-60c6-4007-b1b7-234831d35df7",
       "dependsOn": [
-        "pkg:pypi/banking-lab-aml-fds@0.1.0"
+        "0b33d938-8777-4d9f-8164-0a0876ca491b",
+        "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5"
       ]
     },
     {
-      "ref": "fa2046fc-532b-4569-962b-1bd8fc8a24fd",
+      "ref": "95838c6e-c7f8-4f5e-b3a7-7b914f6b0bb5",
       "dependsOn": [
-        "3359aa9d-939e-41ae-9dfb-ff9f13634b5a",
-        "5d96d706-1ddd-460e-92a5-9224a7f9abe5"
+        "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {

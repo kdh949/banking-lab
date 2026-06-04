@@ -9,6 +9,7 @@ import java.util.UUID
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.common.BankingLabDomainException
+import lab.banking.core.ledger.domain.BANK_CARD_CLEARING_ACCOUNT_ID
 import lab.banking.core.ledger.domain.BANK_LOAN_ASSET_ACCOUNT_ID
 import lab.banking.core.ledger.domain.BANK_SUSPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.DailyClosingDto
@@ -406,6 +407,41 @@ class LedgerCommandService(
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun captureCardPurchase(command: CardCaptureCommand): LedgerCommandResult =
+        postLedgerCommand("CARD_CAPTURE", command.idempotencyKey, command) {
+            requirePositiveAmount(command.amountMinor)
+            requireNonBlank(command.authorizationId, "authorizationId")
+            requireNonBlank(command.cardId, "cardId")
+            requireNonBlank(command.accountId, "accountId")
+            requireNonBlank(command.reason, "reason")
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankCardClearingAccount(command.currency)
+            val balances = lockActiveAccounts(listOf(command.accountId, BANK_CARD_CLEARING_ACCOUNT_ID))
+            val accountBalance = balances.getValue(command.accountId)
+            if (accountBalance.availableBalanceMinor < command.amountMinor) {
+                throw ledgerConflict(
+                    code = "LEDGER_INSUFFICIENT_AVAILABLE_BALANCE",
+                    message = "insufficient available balance for card capture on ${command.accountId}",
+                    invariant = "available_balance >= card capture amount after authorization hold release"
+                )
+            }
+            createPostedTransaction(
+                transactionType = "CARD_CAPTURE",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.authorizationId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = listOf(
+                    LedgerPostingInput(command.accountId, PostingDirection.DEBIT, command.amountMinor, command.currency, "CARD_PURCHASE"),
+                    LedgerPostingInput(BANK_CARD_CLEARING_ACCOUNT_ID, PostingDirection.CREDIT, command.amountMinor, command.currency, "CARD_PURCHASE")
+                )
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun closeBusinessDay(command: DailyClosingCommand): DailyClosingResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(command.idempotencyKey)
@@ -495,6 +531,7 @@ class LedgerCommandService(
                 "LOAN_DISBURSEMENT" -> "LoanDisbursed"
                 "LOAN_REPAYMENT" -> "LoanRepaymentPosted"
                 "LOAN_PREPAYMENT" -> "LoanPrepaymentPosted"
+                "CARD_CAPTURE" -> "CardCapturePosted"
                 else -> "LedgerTransactionPosted"
             },
             idempotencyKey = idempotencyKey,
@@ -672,6 +709,26 @@ class LedgerCommandService(
             mapOf("accountId" to BANK_LOAN_ASSET_ACCOUNT_ID, "currency" to currency)
         )
         ensureBalanceProjection(BANK_LOAN_ASSET_ACCOUNT_ID)
+    }
+
+    private fun ensureBankCardClearingAccount(currency: String) {
+        jdbc.update(
+            """
+            INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
+            VALUES ('BANK', 'Synthetic Bank Suspense', 'SYSTEM', 'LOW')
+            ON CONFLICT (customer_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
+            VALUES (:accountId, 'BANK', 'LAB-000-000002', :currency, 'ACTIVE')
+            ON CONFLICT (account_id) DO NOTHING
+            """.trimIndent(),
+            mapOf("accountId" to BANK_CARD_CLEARING_ACCOUNT_ID, "currency" to currency)
+        )
+        ensureBalanceProjection(BANK_CARD_CLEARING_ACCOUNT_ID)
     }
 
     private fun ensureBusinessDateOpen(businessDate: LocalDate) {
@@ -1201,6 +1258,7 @@ class LedgerCommandService(
             "LOAN_DISBURSEMENT" -> "TX-LOAN-DISB"
             "LOAN_REPAYMENT" -> "TX-LOAN-REPAY"
             "LOAN_PREPAYMENT" -> "TX-LOAN-PREPAY"
+            "CARD_CAPTURE" -> "TX-CARD-CAP"
             else -> "TX-LED"
         } + "-${UUID.randomUUID().toString().uppercase()}"
 
