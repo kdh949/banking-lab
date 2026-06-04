@@ -1,15 +1,34 @@
 package lab.banking.core.security
 
+import java.time.Instant
 import lab.banking.core.workflow.WorkflowErrors
 
 data class BankingLabPrincipal(
     val subject: String,
     val roles: Set<String>,
     val customerId: String? = null,
-    val issuer: String? = null
+    val issuer: String? = null,
+    val sessionId: String? = null,
+    val authTime: Instant? = null,
+    val issuedAt: Instant? = null,
+    val authenticationMethods: Set<String> = emptySet(),
+    val assuranceLevel: String? = null,
+    val deviceFingerprint: String? = null
 ) {
     fun hasAnyRole(allowed: Set<String>): Boolean =
         roles.any(allowed::contains)
+
+    fun hasStepUpAuthentication(): Boolean {
+        val normalizedMethods = authenticationMethods.map { it.lowercase() }.toSet()
+        val normalizedAssurance = assuranceLevel?.lowercase()
+        return normalizedMethods.any { it in STEP_UP_METHODS } ||
+            normalizedAssurance in STEP_UP_ASSURANCE_LEVELS
+    }
+
+    companion object {
+        private val STEP_UP_METHODS = setOf("otp", "totp", "webauthn", "passkey", "mfa")
+        private val STEP_UP_ASSURANCE_LEVELS = setOf("aal2", "banking-lab-step-up", "urn:banking-lab:step-up")
+    }
 }
 
 object BankingLabAuthContext {

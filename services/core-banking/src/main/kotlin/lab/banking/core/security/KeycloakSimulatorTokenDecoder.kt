@@ -1,6 +1,7 @@
 package lab.banking.core.security
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.time.Instant
 import java.util.Base64
 import org.springframework.stereotype.Component
 
@@ -42,7 +43,28 @@ class KeycloakSimulatorTokenDecoder(
             subject = subject,
             roles = roles,
             customerId = payload["customerId"]?.toString(),
-            issuer = payload["iss"]?.toString()
+            issuer = payload["iss"]?.toString(),
+            sessionId = payload["sid"]?.toString()?.takeIf { it.isNotBlank() },
+            authTime = epochInstant(payload["auth_time"]),
+            issuedAt = epochInstant(payload["iat"]),
+            authenticationMethods = stringSet(payload["amr"]),
+            assuranceLevel = payload["acr"]?.toString(),
+            deviceFingerprint = payload["deviceFingerprint"]?.toString()
+                ?: payload["device_fingerprint"]?.toString()
         )
     }
+
+    private fun stringSet(value: Any?): Set<String> =
+        when (value) {
+            is Collection<*> -> value.mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }.toSet()
+            is String -> value.split(" ", ",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+            else -> emptySet()
+        }
+
+    private fun epochInstant(value: Any?): Instant? =
+        when (value) {
+            is Number -> Instant.ofEpochSecond(value.toLong())
+            is String -> value.toLongOrNull()?.let(Instant::ofEpochSecond)
+            else -> null
+        }
 }

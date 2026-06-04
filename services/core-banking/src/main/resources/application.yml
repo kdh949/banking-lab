@@ -6,8 +6,16 @@ banking-lab:
   node-reference-runtime-retained: true
   migration-target: kotlin-spring-boot
   security:
-    enabled: ${BANKING_LAB_SECURITY_ENABLED:false}
-    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:true}
+    enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
+    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}
+    dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}
+    trusted-device-enforcement-enabled: ${BANKING_LAB_SECURITY_TRUSTED_DEVICE_ENFORCEMENT_ENABLED:true}
+    step-up:
+      enforcement-enabled: ${BANKING_LAB_SECURITY_STEP_UP_ENFORCEMENT_ENABLED:true}
+      max-age-seconds: ${BANKING_LAB_SECURITY_STEP_UP_MAX_AGE_SECONDS:300}
+    session:
+      enforcement-enabled: ${BANKING_LAB_SECURITY_SESSION_ENFORCEMENT_ENABLED:true}
+      max-age-seconds: ${BANKING_LAB_SECURITY_SESSION_MAX_AGE_SECONDS:3600}
     jwt:
       jwks-uri: ${BANKING_LAB_SECURITY_JWKS_URI:}
       issuer: ${BANKING_LAB_SECURITY_ISSUER:}

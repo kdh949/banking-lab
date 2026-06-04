@@ -11,5 +11,12 @@ data:
   BANKING_LAB_TEMPORAL_TASK_QUEUE: "banking-case-workflows"
   BANKING_LAB_OUTBOX_BOOTSTRAP_SERVERS: {{ .Values.outbox.bootstrapServers | quote }}
   BANKING_LAB_OUTBOX_TOPIC: {{ .Values.outbox.topic | quote }}
-  BANKING_LAB_SECURITY_ENABLED: "false"
-  BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: "true"
+  BANKING_LAB_SECURITY_ENABLED: {{ .Values.security.enabled | quote }}
+  BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: {{ .Values.security.simulatorTokensEnabled | quote }}
+  BANKING_LAB_DEV_SIMULATOR_TOKEN: {{ .Values.security.devSimulatorToken | quote }}
+  BANKING_LAB_SECURITY_JWKS_URI: {{ .Values.security.jwksUri | quote }}
+  BANKING_LAB_SECURITY_ISSUER: {{ .Values.security.issuer | quote }}
+  BANKING_LAB_SECURITY_AUDIENCE: {{ .Values.security.audience | quote }}
+  BANKING_LAB_SECURITY_TRUSTED_DEVICE_ENFORCEMENT_ENABLED: {{ .Values.security.trustedDeviceEnforcementEnabled | quote }}
+  BANKING_LAB_SECURITY_STEP_UP_ENFORCEMENT_ENABLED: {{ .Values.security.stepUpEnforcementEnabled | quote }}
+  BANKING_LAB_SECURITY_SESSION_ENFORCEMENT_ENABLED: {{ .Values.security.sessionEnforcementEnabled | quote }}

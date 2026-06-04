@@ -139,6 +139,15 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.postgres.storage": scalarFromSection(source, "postgres", ["storage"]),
     ".Values.temporal.target": scalarFromSection(source, "temporal", ["target"]),
     ".Values.outbox.bootstrapServers": scalarFromSection(source, "outbox", ["bootstrapServers"]),
-    ".Values.outbox.topic": scalarFromSection(source, "outbox", ["topic"])
+    ".Values.outbox.topic": scalarFromSection(source, "outbox", ["topic"]),
+    ".Values.security.enabled": scalarFromSection(source, "security", ["enabled"]),
+    ".Values.security.simulatorTokensEnabled": scalarFromSection(source, "security", ["simulatorTokensEnabled"]),
+    ".Values.security.devSimulatorToken": scalarFromSection(source, "security", ["devSimulatorToken"]),
+    ".Values.security.jwksUri": scalarFromSection(source, "security", ["jwksUri"]),
+    ".Values.security.issuer": scalarFromSection(source, "security", ["issuer"]),
+    ".Values.security.audience": scalarFromSection(source, "security", ["audience"]),
+    ".Values.security.trustedDeviceEnforcementEnabled": scalarFromSection(source, "security", ["trustedDeviceEnforcementEnabled"]),
+    ".Values.security.stepUpEnforcementEnabled": scalarFromSection(source, "security", ["stepUpEnforcementEnabled"]),
+    ".Values.security.sessionEnforcementEnabled": scalarFromSection(source, "security", ["sessionEnforcementEnabled"])
   };
 }

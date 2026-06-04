@@ -9,6 +9,7 @@
 | Closed day guard | `LedgerCore.assertBusinessDateOpen` | Phase 6 reconciliation test |
 | Staff sensitive access audit | staff APIs append audit events, `StaffAccessService` | Phase 3 tests, staff access API integration test |
 | Role and ownership authorization | `BankingLabAuthorizationFilter`, `BankingLabTokenDecoder`, `SignedJwtJwksTokenDecoder`, `BankingLabAuthContext`, `CustomerAccountService` | security authorization integration test, JWKS authorization integration test |
+| Secure auth defaults and session controls | `BankingLabSecurityPolicyEnforcer`, `AuthSessionController`, `trusted_devices`, `revoked_sessions`, secure Compose/Kubernetes/Helm defaults | security posture check, security defaults integration test, JWKS step-up/trusted-device/session integration test |
 | Masked PII by default | `maskCustomer`, `maskAccount`, `StaffAccessService` | audit/staff tests, staff access API integration test |
 | Maker-checker for high-risk operations | `ApprovalStore`, `PersistentApprovalService`, `/api/approvals`, `/api/staff/approvals`, `operator_approvals` | maker-checker, complaint, FDS/AML/recon tests, approval persistence/API integration tests, customer change, complaint answer, FDS execution, AML closure, and reconciliation adjustment integration tests |
 | Complaint answer approval | complaint workflow runtime, `ComplaintCaseService` | Phase 5 tests, complaint API integration test |
