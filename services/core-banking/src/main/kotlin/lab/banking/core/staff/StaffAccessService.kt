@@ -454,6 +454,68 @@ class StaffAccessService(
         )
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestCustomerKycReview(customerId: String, command: CustomerKycReviewRequestCommand): CustomerKycReviewRequestResponse {
+        val requestedBy = command.requestedBy ?: "manager01"
+        val requestedRole = command.requestedByRole ?: "BRANCH_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, CUSTOMER_KYC_REVIEW_REQUEST_ROLES, "actor role cannot request customer KYC review")
+        requireReason(command.reason, "CUSTOMER_KYC_REVIEW requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingCustomerKycReviewRequest(requestedBy, idempotencyKey)
+            ?.let { return customerKycReviewResponse(it) }
+
+        customer(customerId)
+        val current = customerKycProfile(customerId, forUpdate = true)
+        val requestId = nextCustomerKycReviewRequestId()
+        val reasonCode = command.reasonCode ?: "PERIODIC_RECONFIRMATION"
+        val reviewTrigger = command.reviewTrigger ?: "PERIODIC_REVIEW"
+        val requestedKycStatus = "REVIEW_REQUIRED"
+        val metadata = mapOf(
+            "description" to command.description.orEmpty(),
+            "realKycProviderCalled" to false,
+            "syntheticOnly" to true
+        )
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = current.snapshot(),
+                afterSnapshot = mapOf(
+                    "customerId" to customerId,
+                    "kycStatus" to requestedKycStatus,
+                    "reasonCode" to reasonCode,
+                    "reviewTrigger" to reviewTrigger,
+                    "description" to command.description.orEmpty(),
+                    "realKycProviderCalled" to false
+                ),
+                screenId = "KYC-101"
+            )
+        )
+        insertCustomerKycReviewRequest(
+            requestId = requestId,
+            customerId = customerId,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            reviewTrigger = reviewTrigger,
+            previousKycStatus = current.kycStatus,
+            requestedKycStatus = requestedKycStatus,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return CustomerKycReviewRequestResponse(
+            item = customerKycReviewRequest(requestId),
+            approval = approval,
+            kycProfile = current.toDto()
+        )
+    }
+
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         return runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
@@ -509,6 +571,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val kycExecution = if (approval.businessType == ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW) {
+            applyApprovedCustomerKycReviewRequest(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -517,12 +584,15 @@ class StaffAccessService(
                 amlCase != null ||
                 reconciliationExecution != null ||
                 accountHoldExecution != null ||
-                transferLimitExecution != null,
+                transferLimitExecution != null ||
+                kycExecution != null,
             customer = customer,
             account = accountHoldExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
             transferLimit = transferLimitExecution?.second,
             transferLimitChangeRequest = transferLimitExecution?.first,
+            kycProfile = kycExecution?.second,
+            kycReviewRequest = kycExecution?.first,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
@@ -605,6 +675,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.ACCOUNT_HOLD -> ACCOUNT_HOLD_CHECKER_ROLES
             ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE -> ACCOUNT_HOLD_RELEASE_CHECKER_ROLES
             ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE -> TRANSFER_LIMIT_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW -> CUSTOMER_KYC_REVIEW_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -622,6 +693,9 @@ class StaffAccessService(
 
     private fun nextTransferLimitChangeRequestId(): String =
         "TLR-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun nextCustomerKycReviewRequestId(): String =
+        "KYR-${UUID.randomUUID().toString().uppercase()}"
 
     private fun customer(customerId: String): StaffCustomerRecord =
         try {
@@ -692,6 +766,23 @@ class StaffAccessService(
           ON l.account_id = a.account_id
         $suffix
         """.trimIndent()
+
+    private fun customerKycProfile(customerId: String, forUpdate: Boolean): StaffKycProfileRecord =
+        try {
+            jdbc.queryForObject(
+                """
+                SELECT customer_id, kyc_status, source_of_funds_code, transaction_purpose_code,
+                       simulated_provider_reference, updated_at
+                FROM customer_kyc_profiles
+                WHERE customer_id = :customerId
+                ${if (forUpdate) "FOR UPDATE" else ""}
+                """.trimIndent(),
+                mapOf("customerId" to customerId),
+                this::mapKycProfileRecord
+            ) ?: throw WorkflowErrors.notFound("customer KYC profile not found: $customerId")
+        } catch (_: EmptyResultDataAccessException) {
+            throw WorkflowErrors.notFound("customer KYC profile not found: $customerId")
+        }
 
     private fun supportedCustomerInfoChange(afterSnapshot: Map<String, Any?>?): Map<String, Any?> {
         val allowed = linkedMapOf<String, Any?>()
@@ -1137,6 +1228,194 @@ class StaffAccessService(
             metadata = readMetadata(rs.getString("metadata_json"))
         )
 
+    private fun applyApprovedCustomerKycReviewRequest(
+        approval: OperatorApproval,
+        command: ApproveApprovalCommand
+    ): Pair<CustomerKycReviewRequestDto, StaffKycProfileDto> {
+        val request = customerKycReviewRequestForUpdate(approval.businessReferenceId)
+        if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match customer KYC review request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending customer KYC review requests can be executed")
+        }
+        customerKycProfile(request.targetCustomerId, forUpdate = true)
+        val rows = jdbc.update(
+            """
+            UPDATE customer_kyc_profiles
+            SET kyc_status = :requestedKycStatus,
+                updated_at = now()
+            WHERE customer_id = :customerId
+            """.trimIndent(),
+            mapOf(
+                "customerId" to request.targetCustomerId,
+                "requestedKycStatus" to request.requestedKycStatus
+            )
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("customer KYC profile changed before approval execution")
+        }
+        markCustomerKycReviewRequestRequested(request.requestId)
+        appendAudit(
+            eventType = "COMMAND_EXECUTED",
+            actorId = command.approvedBy,
+            actorRole = command.approvedByRole,
+            screenId = command.screenId ?: "KYC-101",
+            customerId = request.targetCustomerId,
+            accountId = null,
+            reason = request.reason,
+            payload = mapOf(
+                "businessType" to approval.businessType,
+                "requestId" to request.requestId,
+                "approvalId" to approval.approvalId,
+                "reviewTrigger" to request.reviewTrigger,
+                "previousKycStatus" to request.previousKycStatus,
+                "requestedKycStatus" to request.requestedKycStatus,
+                "realKycProviderCalled" to false,
+                "syntheticOnly" to true,
+                "ledgerSourceRowsMutated" to false
+            )
+        )
+        val updatedRequest = customerKycReviewRequest(request.requestId)
+        val updatedProfile = customerKycProfile(request.targetCustomerId, forUpdate = false)
+        return updatedRequest to updatedProfile.toDto()
+    }
+
+    private fun insertCustomerKycReviewRequest(
+        requestId: String,
+        customerId: String,
+        requestedBy: String,
+        requestedRole: String,
+        reason: String,
+        reasonCode: String,
+        reviewTrigger: String,
+        previousKycStatus: String,
+        requestedKycStatus: String,
+        approvalId: String,
+        idempotencyKey: String,
+        metadata: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO customer_kyc_review_requests (
+              request_id, business_type, business_reference_id, target_customer_id,
+              requested_by, requested_role, reason, reason_code, review_trigger,
+              previous_kyc_status, requested_kyc_status, status,
+              approval_id, idempotency_key, metadata_json
+            )
+            VALUES (
+              :requestId, :businessType, :requestId, :customerId,
+              :requestedBy, :requestedRole, :reason, :reasonCode, :reviewTrigger,
+              :previousKycStatus, :requestedKycStatus, 'PENDING_APPROVAL',
+              :approvalId, :idempotencyKey, CAST(:metadataJson AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "businessType" to ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW,
+                "customerId" to customerId,
+                "requestedBy" to requestedBy,
+                "requestedRole" to requestedRole,
+                "reason" to reason,
+                "reasonCode" to reasonCode,
+                "reviewTrigger" to reviewTrigger,
+                "previousKycStatus" to previousKycStatus,
+                "requestedKycStatus" to requestedKycStatus,
+                "approvalId" to approvalId,
+                "idempotencyKey" to idempotencyKey,
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+    }
+
+    private fun markCustomerKycReviewRequestRequested(requestId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE customer_kyc_review_requests
+            SET status = 'REVIEW_REQUESTED',
+                updated_at = now(),
+                executed_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("customer KYC review request is no longer pending")
+        }
+    }
+
+    private fun customerKycReviewResponse(request: CustomerKycReviewRequestDto): CustomerKycReviewRequestResponse =
+        CustomerKycReviewRequestResponse(
+            item = request,
+            approval = approvals.approval(request.approvalId ?: throw WorkflowErrors.stateViolation("customer KYC review request has no approval")),
+            kycProfile = customerKycProfile(request.targetCustomerId, forUpdate = false).toDto()
+        )
+
+    private fun existingCustomerKycReviewRequest(requestedBy: String, idempotencyKey: String): CustomerKycReviewRequestDto? =
+        jdbc.query(
+            customerKycReviewRequestSql(
+                """
+                WHERE business_type = :businessType
+                  AND requested_by = :requestedBy
+                  AND idempotency_key = :idempotencyKey
+                """.trimIndent()
+            ),
+            mapOf(
+                "businessType" to ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW,
+                "requestedBy" to requestedBy,
+                "idempotencyKey" to idempotencyKey
+            ),
+            this::mapCustomerKycReviewRequest
+        ).firstOrNull()
+
+    private fun customerKycReviewRequest(requestId: String): CustomerKycReviewRequestDto =
+        jdbc.queryForObject(
+            customerKycReviewRequestSql("WHERE request_id = :requestId"),
+            mapOf("requestId" to requestId),
+            this::mapCustomerKycReviewRequest
+        ) ?: throw WorkflowErrors.notFound("customer KYC review request not found: $requestId")
+
+    private fun customerKycReviewRequestForUpdate(requestId: String): CustomerKycReviewRequestDto =
+        jdbc.queryForObject(
+            customerKycReviewRequestSql("WHERE request_id = :requestId FOR UPDATE"),
+            mapOf("requestId" to requestId),
+            this::mapCustomerKycReviewRequest
+        ) ?: throw WorkflowErrors.notFound("customer KYC review request not found: $requestId")
+
+    private fun customerKycReviewRequestSql(suffix: String): String =
+        """
+        SELECT request_id, business_type, business_reference_id, target_customer_id,
+               target_account_id, target_transaction_id, requested_by, requested_role,
+               reason, reason_code, review_trigger, previous_kyc_status, requested_kyc_status,
+               status, approval_id, idempotency_key, created_at, updated_at, executed_at,
+               metadata_json::text AS metadata_json
+        FROM customer_kyc_review_requests
+        $suffix
+        """.trimIndent()
+
+    private fun mapCustomerKycReviewRequest(rs: ResultSet, rowNum: Int): CustomerKycReviewRequestDto =
+        CustomerKycReviewRequestDto(
+            requestId = rs.getString("request_id"),
+            businessType = rs.getString("business_type"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            targetCustomerId = rs.getString("target_customer_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedRole = rs.getString("requested_role"),
+            reason = rs.getString("reason"),
+            reasonCode = rs.getString("reason_code"),
+            reviewTrigger = rs.getString("review_trigger"),
+            previousKycStatus = rs.getString("previous_kyc_status"),
+            requestedKycStatus = rs.getString("requested_kyc_status"),
+            status = rs.getString("status"),
+            approvalId = rs.getString("approval_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            executedAt = rs.getObject("executed_at", OffsetDateTime::class.java),
+            metadata = readMetadata(rs.getString("metadata_json"))
+        )
+
     private fun accountHoldResponse(request: AccountHoldRequestDto): AccountHoldRequestResponse =
         AccountHoldRequestResponse(
             item = request,
@@ -1252,6 +1531,16 @@ class StaffAccessService(
             updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
         )
 
+    private fun mapKycProfileRecord(rs: ResultSet, rowNum: Int): StaffKycProfileRecord =
+        StaffKycProfileRecord(
+            customerId = rs.getString("customer_id"),
+            kycStatus = rs.getString("kyc_status"),
+            sourceOfFundsCode = rs.getString("source_of_funds_code"),
+            transactionPurposeCode = rs.getString("transaction_purpose_code"),
+            simulatedProviderReference = rs.getString("simulated_provider_reference"),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
     private fun StaffAccountRecord.toDto(): StaffAccountDto =
         StaffAccountDto(
             customerId = customerId,
@@ -1276,6 +1565,16 @@ class StaffAccessService(
             updatedAt = updatedAt
         )
 
+    private fun StaffKycProfileRecord.toDto(): StaffKycProfileDto =
+        StaffKycProfileDto(
+            customerId = customerId,
+            kycStatus = kycStatus,
+            sourceOfFundsCode = sourceOfFundsCode,
+            transactionPurposeCode = transactionPurposeCode,
+            simulatedProviderReference = simulatedProviderReference,
+            updatedAt = updatedAt
+        )
+
     private fun StaffAccountRecord.snapshot(): Map<String, Any?> =
         mapOf(
             "customerId" to customerId,
@@ -1297,6 +1596,15 @@ class StaffAccessService(
             "currency" to currency,
             "dailyTransferLimitMinor" to dailyTransferLimitMinor,
             "singleTransferLimitMinor" to singleTransferLimitMinor
+        )
+
+    private fun StaffKycProfileRecord.snapshot(): Map<String, Any?> =
+        mapOf(
+            "customerId" to customerId,
+            "kycStatus" to kycStatus,
+            "sourceOfFundsCode" to sourceOfFundsCode,
+            "transactionPurposeCode" to transactionPurposeCode,
+            "simulatedProviderReference" to simulatedProviderReference
         )
 
     private fun mapTransaction(rs: ResultSet, rowNum: Int): StaffTransactionDto =
@@ -1458,6 +1766,15 @@ class StaffAccessService(
         val updatedAt: OffsetDateTime
     )
 
+    private data class StaffKycProfileRecord(
+        val customerId: String,
+        val kycStatus: String,
+        val sourceOfFundsCode: String,
+        val transactionPurposeCode: String,
+        val simulatedProviderReference: String,
+        val updatedAt: OffsetDateTime
+    )
+
     private companion object {
         const val SERIALIZABLE_APPROVAL_MAX_ATTEMPTS = 5
         const val SERIALIZABLE_STAFF_ACCESS_MAX_ATTEMPTS = 5
@@ -1467,5 +1784,7 @@ class StaffAccessService(
         val ACCOUNT_HOLD_RELEASE_CHECKER_ROLES = setOf("OPS_MANAGER", "BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val TRANSFER_LIMIT_CHANGE_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER")
         val TRANSFER_LIMIT_CHANGE_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val CUSTOMER_KYC_REVIEW_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val CUSTOMER_KYC_REVIEW_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

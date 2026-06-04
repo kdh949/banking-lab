@@ -4,7 +4,7 @@ Date: 2026-06-04
 
 ## Scope
 
-This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
+This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
 
 ## Changes Proven
 
@@ -30,6 +30,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `staff-terminal` can execute a Spring API-backed browser command smoke by requesting a customer information change for `SYN-CUS-CMD-001`, proving self-approval rejection for the maker actor, approving with a separate manager actor, and observing a masked updated phone.
 - `staff-terminal` can execute a Spring API-backed account hold/release command smoke for `ACC-SYN-HOLD-001` by requesting an `ACCOUNT_HOLD` approval, proving maker self-approval rejection, approving as a separate branch manager, requesting an `ACCOUNT_HOLD_RELEASE` approval, proving release self-approval rejection, approving as a separate ops checker, and observing the account return to `ACTIVE` without ledger source-row mutation.
 - `staff-terminal` can execute a Spring API-backed transfer-limit command smoke for `ACC-SYN-LIMIT-001` by requesting a `TRANSFER_LIMIT_CHANGE` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `account_limits` update without ledger source-row mutation.
+- `staff-terminal` can execute a Spring API-backed KYC re-confirmation command smoke for `SYN-CUS-KYC-001` by requesting a `CUSTOMER_KYC_REVIEW` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `customer_kyc_profiles.kyc_status = REVIEW_REQUIRED` without ledger source-row mutation or real KYC provider calls.
 - `staff-terminal` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange branch and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render masked lookup with the `branch01` token, execute privileged unmask with the `manager01` token, request a customer information change as `branch01`, and approve it with the `manager01` token while Spring simulator tokens are disabled.
 - `staff-terminal` can complete a live Keycloak `webauthn-register` required action using a Chromium virtual authenticator, exchange the returned authorization code through the Next BFF route, and call Spring with the resulting signed Bearer token while Spring simulator tokens are disabled.
 - The synthetic Keycloak realm backing that WebAuthn smoke now has explicit local WebAuthn policy and `PASSKEY_RECOVERY_ADMIN` role segregation evidence in `docs/test-evidence/keycloak-live-realm-smoke.md`.
@@ -53,7 +54,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `fds-aml-console` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange risk reviewer and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, and execute FDS release, FDS block, AML closure, and duplicate workflow failure-state paths with Spring simulator tokens disabled.
 - The Spring API can seed synthetic customers/accounts when `BANKING_LAB_SYNTHETIC_SEED_ENABLED=true`.
 - The synthetic seed now includes deterministic complaint, FDS, AML, reconciliation, audit, command-only customer rows, account hold command rows, command-only complaint confirmation and failure-state rows, command-only FDS account rows, FDS release/block command rows, FDS/AML Keycloak command rows, command-only FDS failure-state rows, command-only AML case rows, command-only AML failure-state rows, command-only reconciliation command rows, and command-only reconciliation failure-state rows for repeatable live channel smoke without mutating read-model account assertions.
-- The synthetic seed now includes a dedicated transfer-limit command customer/account row so the `LIM102` browser smoke does not mutate existing account read-model assertions.
+- The synthetic seed now includes dedicated transfer-limit and KYC command rows so the `LIM102` and `KYC101` browser smokes do not mutate existing account/customer read-model assertions.
 - The Spring security filter keeps RBAC/ABAC enforcement enabled while allowing browser CORS preflight and CORS-readable structured denial responses for channel clients.
 - Audit event appends now use a PostgreSQL hash-chain lock row so concurrent browser API smoke paths keep `previous_event_hash` ordered instead of surfacing transient HTTP 500s.
 - Staff approval execution retries transient PostgreSQL SERIALIZABLE conflicts up to five times so parallel browser command approvals do not leak transient `40001` conflicts as HTTP 500s.
@@ -156,6 +157,41 @@ Not proven locally on 2026-06-04:
 
 - `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest` reached Testcontainers initialization but failed because Docker provider discovery failed.
 - API-backed LIM102 browser execution against a live Spring API was not run locally because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+
+## 2026-06-04 KYC101 KYC Review Update
+
+This update adds the next Phase B staff-command vertical slice from `docs/codex/implementation_missing_features_goals.md`.
+
+Changes:
+
+- `db/migrations/V015__customer_kyc_review_requests.sql` adds durable KYC review request state with idempotency keys.
+- `POST /api/staff/customers/{customerId}/kyc-review-requests` creates `CUSTOMER_KYC_REVIEW` maker-checker approvals.
+- Approval execution updates `customer_kyc_profiles.kyc_status` to `REVIEW_REQUIRED` only after checker approval.
+- The executed audit payload records `realKycProviderCalled=false`, `syntheticOnly=true`, and `ledgerSourceRowsMutated=false`.
+- The shared api-client and staff-terminal manifest renderer expose a conditional `KYC101` browser smoke.
+
+Commands run:
+
+- `npm run validate:manifests` passed with 67 manifests.
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed.
+- `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
+- `npm test` passed with 131 Node reference/oracle tests.
+- `npm run test:screen-engine` passed with 10 tests.
+- `npm run scripts:typecheck` passed.
+- `npm run next:staff-terminal:build` passed.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 10 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e` passed locally with 17 passed and 37 skipped because API/Keycloak variables were not configured.
+- `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
+- `docker compose config` passed.
+- `docker compose --profile platform config` passed.
+- `npm run evidence:refresh-check` passed.
+- `git diff --check` passed.
+
+Not proven locally on 2026-06-04:
+
+- `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest` compiled the integration sources, then failed at Testcontainers initialization because Docker provider discovery failed locally.
+- API-backed KYC101 browser execution against a live Spring API was not run locally because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 
 ## Commands
 

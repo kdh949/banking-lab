@@ -169,6 +169,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"
             path.startsWith("/api/staff/accounts") && path.contains("hold") -> "ACC-103"
+            path.startsWith("/api/staff/customers") && path.contains("kyc-review") -> "KYC-101"
             path.startsWith("/api/staff/customers") && path.contains("transfer-limits") -> "LIM-101"
             path.startsWith("/api/staff/customers") -> "CST-002"
             path.startsWith("/api/staff/pii") -> "CST-002"

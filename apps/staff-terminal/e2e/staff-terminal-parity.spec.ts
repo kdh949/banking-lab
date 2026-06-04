@@ -246,6 +246,22 @@ test("staff terminal LIM102 executes Spring API-backed transfer limit approval w
   await expect(panel).toContainText("After single");
 });
 
+test("staff terminal KYC101 executes Spring API-backed KYC re-confirmation approval when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed KYC review command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=KYC-101`);
+
+  const panel = page.getByTestId("manifest-kyc-review-api-panel");
+  await expect(panel).toContainText("KYC review API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run KYC review smoke" }).click();
+  await expect(panel).toContainText("KYC review requested", { timeout: 20_000 });
+  await expect(panel).toContainText("CUSTOMER_KYC_REVIEW");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("SYN-CUS-KYC-001");
+  await expect(panel).toContainText("REVIEW_REQUIRED");
+});
+
 test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run APR001 API-backed manifest smoke.");
 

@@ -34,7 +34,7 @@ Show:
 
 Narration:
 
-Sensitive staff access requires a reason and leaves an audit event. The approval inbox and audit log are no longer only declared screens; they have conditional Spring API-backed paths. Account hold, limit change, fee waiver, KYC review, and transaction correction remain follow-up command slices.
+Sensitive staff access requires a reason and leaves an audit event. The approval inbox and audit log are no longer only declared screens; they have conditional Spring API-backed paths. Account hold, limit change, and KYC review now have conditional Spring API-backed command slices; fee waiver and transaction correction remain follow-up command slices.
 
 ## Scene 3: Customer Web Transfer
 

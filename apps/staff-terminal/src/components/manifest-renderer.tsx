@@ -6,6 +6,7 @@ import {
   createBankingApiClient,
   type AccountHoldRequestResponse,
   type AuditEventDto,
+  type CustomerKycReviewRequestResponse,
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
   type TransferLimitChangeRequestResponse
@@ -84,6 +85,17 @@ type TransferLimitApiState =
       readonly beforeDailyLimit: number;
       readonly beforeSingleLimit: number;
       readonly request: TransferLimitChangeRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+type KycReviewApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly request: CustomerKycReviewRequestResponse;
       readonly selfApprovalCode: string;
       readonly execution: StaffApprovalExecutionResponse;
     }
@@ -718,6 +730,9 @@ function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   if (manifest.screenId === "LIM-102") {
     return <TransferLimitCommandApiPanel manifest={manifest} />;
   }
+  if (manifest.screenId === "KYC-101") {
+    return <KycReviewCommandApiPanel manifest={manifest} />;
+  }
   return null;
 }
 
@@ -1033,6 +1048,139 @@ function TransferLimitCommandApiPanel({ manifest }: { readonly manifest: ScreenM
               <div>
                 <dt>Executed</dt>
                 <dd>{state.execution.executed ? "transfer limit applied" : "not executed"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function KycReviewCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<KycReviewApiState>(() => initialKycReviewApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    try {
+      const makerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const selfCheckerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const checkerClient = createStaffCommandClient("manager02", ["BRANCH_MANAGER"]);
+
+      const request = await makerClient.requestCustomerKycReview("SYN-CUS-KYC-001", {
+        requestedBy: "manager01",
+        requestedByRole: "BRANCH_MANAGER",
+        reason: "Browser customer KYC review smoke",
+        reasonCode: "PERIODIC_RECONFIRMATION",
+        reviewTrigger: "PERIODIC_REVIEW",
+        description: "Synthetic KYC101 re-confirmation smoke",
+        idempotencyKey: `BROWSER-KYC-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(request.approval.approvalId, {
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER",
+          screenId: "KYC-101"
+        });
+        throw new Error("KYC review self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const execution = await checkerClient.approveStaffApproval(request.approval.approvalId, {
+        approvedBy: "manager02",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "KYC-101"
+      });
+
+      setState({
+        status: "completed",
+        request,
+        selfApprovalCode,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed KYC Review Command"
+      icon="person"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-kyc-review-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{kycReviewStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs KYC101 re-confirmation approval against Spring API and customer_kyc_profiles."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run KYC review smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Request</dt>
+                <dd>{state.execution.kycReviewRequest?.status ?? state.request.item.status}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.request.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{state.request.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Customer</dt>
+                <dd>{state.request.item.targetCustomerId}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Before KYC</dt>
+                <dd>{state.request.item.previousKycStatus}</dd>
+              </div>
+              <div>
+                <dt>After KYC</dt>
+                <dd>{state.execution.kycProfile?.kycStatus ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Trigger</dt>
+                <dd>{state.request.item.reviewTrigger}</dd>
+              </div>
+              <div>
+                <dt>Checker</dt>
+                <dd>{state.execution.item.approvedBy ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "KYC review requested" : "not executed"}</dd>
               </div>
             </dl>
           </div>
@@ -1690,6 +1838,16 @@ function initialTransferLimitApiState(): TransferLimitApiState {
   return { status: "idle" };
 }
 
+function initialKycReviewApiState(): KycReviewApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -1786,6 +1944,22 @@ function transferLimitStatusLabel(state: TransferLimitApiState): string {
     return "transfer limit API failed";
   }
   return "transfer limit applied";
+}
+
+function kycReviewStatusLabel(state: KycReviewApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "KYC review API ready";
+  }
+  if (state.status === "running") {
+    return "KYC review API running";
+  }
+  if (state.status === "failed") {
+    return "KYC review API failed";
+  }
+  return "KYC review requested";
 }
 
 function errorMessage(error: unknown): string {

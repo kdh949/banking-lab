@@ -84,6 +84,13 @@ class StaffAccessController(
     ): ResponseEntity<TransferLimitChangeRequestResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestTransferLimitChange(accountId, command))
 
+    @PostMapping("/customers/{customerId}/kyc-review-requests")
+    fun requestCustomerKycReview(
+        @PathVariable customerId: String,
+        @RequestBody command: CustomerKycReviewRequestCommand
+    ): ResponseEntity<CustomerKycReviewRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestCustomerKycReview(customerId, command))
+
     @PostMapping("/approvals/{approvalId}/approve")
     fun approveStaffRequest(
         @PathVariable approvalId: String,

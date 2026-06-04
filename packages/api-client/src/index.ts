@@ -325,6 +325,52 @@ export interface TransferLimitChangeRequestResponse {
   readonly limit: StaffTransferLimitDto;
 }
 
+export interface CustomerKycReviewRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly reviewTrigger?: string;
+  readonly description?: string;
+  readonly idempotencyKey?: string;
+}
+
+export interface StaffKycProfileDto {
+  readonly customerId: string;
+  readonly kycStatus: string;
+  readonly sourceOfFundsCode: string;
+  readonly transactionPurposeCode: string;
+  readonly simulatedProviderReference: string;
+  readonly updatedAt: string;
+}
+
+export interface CustomerKycReviewRequestDto {
+  readonly requestId: string;
+  readonly businessType: string;
+  readonly businessReferenceId: string;
+  readonly targetCustomerId: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly reasonCode: string;
+  readonly reviewTrigger: string;
+  readonly previousKycStatus: string;
+  readonly requestedKycStatus: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface CustomerKycReviewRequestResponse {
+  readonly item: CustomerKycReviewRequestDto;
+  readonly approval: OperatorApproval;
+  readonly kycProfile: StaffKycProfileDto;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -347,6 +393,8 @@ export interface StaffApprovalExecutionResponse {
   readonly accountHoldRequest?: AccountHoldRequestDto | null;
   readonly transferLimit?: StaffTransferLimitDto | null;
   readonly transferLimitChangeRequest?: TransferLimitChangeRequestDto | null;
+  readonly kycProfile?: StaffKycProfileDto | null;
+  readonly kycReviewRequest?: CustomerKycReviewRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -574,6 +622,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/accounts/${encodeURIComponent(accountId)}/limit-change-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestCustomerKycReview(customerId: string, command: CustomerKycReviewRequestCommand) {
+      return request<CustomerKycReviewRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/${encodeURIComponent(customerId)}/kyc-review-requests`,
         {},
         options.bearerToken,
         { method: "POST", body: command }
