@@ -68,6 +68,8 @@
     "validate:manifests": "node --experimental-strip-types scripts/validate-manifests.ts",
     "formal:ledger": "node --experimental-strip-types scripts/check-tla-model.ts",
     "security:evidence": "node --experimental-strip-types scripts/run-security-evidence.ts",
+    "analytics:fds-aml": "uv run --directory analytics/aml-fds-python --project . banking-lab-analytics --input sample-data/transactions.csv --output ../../docs/test-evidence/generated/fds-aml-analytics.json --csv-output ../../docs/test-evidence/generated/fds-aml-analytics.csv",
+    "analytics:fds-aml:test": "uv run --directory analytics/aml-fds-python --project . --extra dev pytest",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
     "evidence:phase2": "node scripts/generate-phase2-evidence.mjs",
