@@ -17,6 +17,7 @@ object ApprovalBusinessTypes {
     const val ACCOUNT_HOLD_RELEASE = "ACCOUNT_HOLD_RELEASE"
     const val CUSTOMER_KYC_REVIEW = "CUSTOMER_KYC_REVIEW"
     const val FEE_WAIVER = "FEE_WAIVER"
+    const val TRANSACTION_CORRECTION = "TRANSACTION_CORRECTION"
     const val PRODUCT_PARAMETER_CHANGE = "PRODUCT_PARAMETER_CHANGE"
     const val FDS_RELEASE = "FDS_RELEASE"
     const val FDS_BLOCK = "FDS_BLOCK"
@@ -34,6 +35,7 @@ object ApprovalBusinessTypes {
         ACCOUNT_HOLD_RELEASE,
         CUSTOMER_KYC_REVIEW,
         FEE_WAIVER,
+        TRANSACTION_CORRECTION,
         PRODUCT_PARAMETER_CHANGE,
         FDS_RELEASE,
         FDS_BLOCK,

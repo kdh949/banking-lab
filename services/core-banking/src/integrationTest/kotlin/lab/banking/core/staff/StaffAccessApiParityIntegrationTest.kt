@@ -39,6 +39,7 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              transaction_correction_requests,
               fee_waiver_requests,
               customer_kyc_review_requests,
               account_limit_change_requests,
@@ -1086,6 +1087,256 @@ class StaffAccessApiParityIntegrationTest {
         )
     }
 
+    @Test
+    fun `transaction correction approval posts balanced reversal without mutating finalized source rows`() {
+        seedCorrectionAccountAndTransaction("TX-CORR-001", 5000, "SEED-TX-CORR-001")
+        seedCorrectionAccountAndTransaction("TX-CORR-CLOSED-001", 7000, "SEED-TX-CORR-CLOSED-001")
+        val initialSourceBalance = accountLedgerBalance("ACC-SYN-001-001")
+        val initialTargetBalance = accountLedgerBalance("ACC-SYN-CORR-TO")
+        val initialLedgerPostings = countRows("ledger_postings")
+
+        mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .header("x-request-id", "REQ-CORRECTION-REASON")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reasonCode": "CUSTOMER_DISPUTE",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "idempotencyKey": "CORRECTION-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-CORRECTION-REASON"))
+        assertEquals(0, countRows("transaction_correction_requests"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'TRANSACTION_CORRECTION'"))
+
+        mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "branch01",
+                      "requestedByRole": "BRANCH_STAFF",
+                      "reason": "Unauthorized correction attempt",
+                      "reasonCode": "CUSTOMER_DISPUTE",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "idempotencyKey": "CORRECTION-KEY-DENIED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals(0, countRows("transaction_correction_requests"))
+
+        mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Invalid adjustment correction",
+                      "reasonCode": "CUSTOMER_DISPUTE",
+                      "correctionType": "ADJUSTMENT",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "idempotencyKey": "CORRECTION-KEY-INVALID"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+        assertEquals(0, countRows("transaction_correction_requests"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer disputed synthetic transfer",
+                      "reasonCode": "CUSTOMER_DISPUTE",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "description": "Synthetic transaction reversal request",
+                      "idempotencyKey": "CORRECTION-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("TRANSACTION_CORRECTION"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.item.targetTransactionId").value("TX-CORR-001"))
+            .andExpect(jsonPath("$.item.correctionType").value("REVERSAL"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andExpect(jsonPath("$.account.accountId").value("ACC-SYN-001-001"))
+            .andReturn()
+
+        val body = objectMapper.readTree(requestResponse.response.contentAsString)
+        val requestId = body.path("item").path("requestId").asText()
+        val approvalId = body.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer disputed synthetic transfer replay",
+                      "reasonCode": "CUSTOMER_DISPUTE",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "idempotencyKey": "CORRECTION-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.requestId").value(requestId))
+            .andExpect(jsonPath("$.approval.approvalId").value(approvalId))
+        assertEquals(1, countRows("transaction_correction_requests WHERE business_type = 'TRANSACTION_CORRECTION'"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"LED-103"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+        assertEquals("PENDING_APPROVAL", transactionCorrectionRequestStatus(requestId))
+        assertEquals("PENDING", approvalStatus(approvalId))
+        assertEquals(0, countRows("ledger_transactions WHERE original_transaction_id = 'TX-CORR-001'"))
+
+        jdbc.update(
+            """
+            INSERT INTO daily_closings (business_date, status, closed_by, closed_at)
+            VALUES (DATE '2099-01-31', 'CLOSED', 'ops01', now())
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        val closedRequestResponse = mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-CLOSED-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "ops01",
+                      "requestedByRole": "OPS_MANAGER",
+                      "reason": "Closed business date correction attempt",
+                      "reasonCode": "STAFF_INPUT_ERROR",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "businessDate": "2099-01-31",
+                      "idempotencyKey": "CORRECTION-KEY-CLOSED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andReturn()
+        val closedBody = objectMapper.readTree(closedRequestResponse.response.contentAsString)
+        val closedRequestId = closedBody.path("item").path("requestId").asText()
+        val closedApprovalId = closedBody.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$closedApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"LED-103"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("LEDGER_CLOSED_DAY_IMMUTABLE"))
+        assertEquals("PENDING_APPROVAL", transactionCorrectionRequestStatus(closedRequestId))
+        assertEquals("PENDING", approvalStatus(closedApprovalId))
+        assertEquals(0, countRows("ledger_transactions WHERE original_transaction_id = 'TX-CORR-CLOSED-001'"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$closedApprovalId/reject")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"rejectedBy":"manager02","rejectedByRole":"BRANCH_MANAGER","rejectReason":"Closed date reversal rejected by checker","screenId":"LED-103"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rejected").value(true))
+            .andExpect(jsonPath("$.transactionCorrectionRequest.status").value("REJECTED"))
+        assertEquals("REJECTED", transactionCorrectionRequestStatus(closedRequestId))
+        assertEquals("REJECTED", approvalStatus(closedApprovalId))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"LED-103"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.transactionCorrectionRequest.status").value("REVERSED"))
+            .andExpect(jsonPath("$.transactionCorrectionRequest.ledgerTransactionId").exists())
+            .andExpect(jsonPath("$.ledgerTransaction.value.transactionType").value("REVERSAL"))
+            .andExpect(jsonPath("$.ledgerTransaction.value.originalTransactionId").value("TX-CORR-001"))
+
+        val reversalTransactionId = transactionCorrectionLedgerTransactionId(requestId)
+        assertEquals("REVERSED", transactionCorrectionRequestStatus(requestId))
+        assertEquals("POSTED", ledgerTransactionStatus("TX-CORR-001"))
+        assertEquals(initialSourceBalance + 5000, accountLedgerBalance("ACC-SYN-001-001"))
+        assertEquals(initialTargetBalance - 5000, accountLedgerBalance("ACC-SYN-CORR-TO"))
+        assertEquals(initialLedgerPostings + 2, countRows("ledger_postings"))
+        assertEquals(0, signedLedgerAmount(reversalTransactionId))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"LED-103"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        mockMvc.perform(
+            post("/api/staff/transactions/TX-CORR-001/correction-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "ops01",
+                      "requestedByRole": "OPS_MANAGER",
+                      "reason": "Duplicate correction after reversal",
+                      "reasonCode": "STAFF_INPUT_ERROR",
+                      "correctionType": "REVERSAL",
+                      "targetAccountId": "ACC-SYN-001-001",
+                      "idempotencyKey": "CORRECTION-KEY-DUPLICATE"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED' AND screen_id = 'LED-103'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_REJECTED' AND screen_id = 'LED-103'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED' AND screen_id = 'LED-103'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'LED-103'"))
+        assertEquals(
+            1,
+            countRows(
+                "audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'LED-103' AND payload_json->>'ledgerSourceRowsMutated' = 'false'"
+            )
+        )
+    }
+
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM $tableExpression",
@@ -1128,6 +1379,43 @@ class StaffAccessApiParityIntegrationTest {
             String::class.java
         )
 
+    private fun transactionCorrectionRequestStatus(requestId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM transaction_correction_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        )
+
+    private fun transactionCorrectionLedgerTransactionId(requestId: String): String =
+        jdbc.queryForObject(
+            "SELECT ledger_transaction_id FROM transaction_correction_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        ) ?: error("transaction correction request has no ledger transaction")
+
+    private fun ledgerTransactionStatus(transactionId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM ledger_transactions WHERE ledger_transaction_id = :transactionId",
+            mapOf("transactionId" to transactionId),
+            String::class.java
+        )
+
+    private fun signedLedgerAmount(transactionId: String): Long =
+        jdbc.queryForObject(
+            """
+            SELECT COALESCE(SUM(
+              CASE direction
+                WHEN 'CREDIT' THEN amount_minor
+                ELSE -amount_minor
+              END
+            ), 0)
+            FROM ledger_postings
+            WHERE ledger_transaction_id = :transactionId
+            """.trimIndent(),
+            mapOf("transactionId" to transactionId),
+            Long::class.java
+        ) ?: 0
+
     private fun kycStatus(): String? =
         jdbc.queryForObject(
             "SELECT kyc_status FROM customer_kyc_profiles WHERE customer_id = 'SYN-CUS-001'",
@@ -1136,9 +1424,12 @@ class StaffAccessApiParityIntegrationTest {
         )
 
     private fun accountLedgerBalance(): Long =
+        accountLedgerBalance("ACC-SYN-001-001")
+
+    private fun accountLedgerBalance(accountId: String): Long =
         jdbc.queryForObject(
-            "SELECT ledger_balance_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
-            emptyMap<String, Any?>(),
+            "SELECT ledger_balance_minor FROM account_balance_projections WHERE account_id = :accountId",
+            mapOf("accountId" to accountId),
             Long::class.java
         ) ?: 0
 
@@ -1190,6 +1481,87 @@ class StaffAccessApiParityIntegrationTest {
             mapOf("approvalId" to approvalId),
             String::class.java
         )
+
+    private fun seedCorrectionAccountAndTransaction(transactionId: String, amountMinor: Long, idempotencyKey: String) {
+        jdbc.update(
+            """
+            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
+            VALUES ('ACC-SYN-CORR-TO', 'SYN-CUS-001', 'LAB-001-009901', 'KRW', 'ACTIVE')
+            ON CONFLICT (account_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO account_limits (account_id, daily_transfer_limit_minor, single_transfer_limit_minor)
+            VALUES ('ACC-SYN-CORR-TO', 100000000, 50000000)
+            ON CONFLICT (account_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO account_balance_projections (
+              account_id, currency, ledger_balance_minor, available_balance_minor, hold_amount_minor
+            )
+            VALUES ('ACC-SYN-CORR-TO', 'KRW', 0, 0, 0)
+            ON CONFLICT (account_id, currency) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO ledger_transactions (
+              ledger_transaction_id, transaction_type, business_reference_id, idempotency_key,
+              business_date, status, requested_by, requested_channel, posted_at, reason
+            )
+            VALUES (
+              :transactionId, 'INTERNAL_TRANSFER', :transactionId, :idempotencyKey,
+              CURRENT_DATE, 'POSTED', 'customer01', 'SYNTHETIC_TEST', now(),
+              'Synthetic posted transfer for transaction correction test'
+            )
+            """.trimIndent(),
+            mapOf("transactionId" to transactionId, "idempotencyKey" to idempotencyKey)
+        )
+        jdbc.update(
+            """
+            INSERT INTO ledger_postings (
+              ledger_posting_id, ledger_transaction_id, account_id, currency, direction, amount_minor, posting_type
+            )
+            VALUES
+              (:debitPostingId, :transactionId, 'ACC-SYN-001-001', 'KRW', 'DEBIT', :amountMinor, 'PRINCIPAL'),
+              (:creditPostingId, :transactionId, 'ACC-SYN-CORR-TO', 'KRW', 'CREDIT', :amountMinor, 'PRINCIPAL')
+            """.trimIndent(),
+            mapOf(
+                "debitPostingId" to "LP-$transactionId-D",
+                "creditPostingId" to "LP-$transactionId-C",
+                "transactionId" to transactionId,
+                "amountMinor" to amountMinor
+            )
+        )
+        jdbc.update(
+            """
+            UPDATE account_balance_projections
+            SET ledger_balance_minor = ledger_balance_minor - :amountMinor,
+                available_balance_minor = available_balance_minor - :amountMinor,
+                updated_at = now()
+            WHERE account_id = 'ACC-SYN-001-001'
+              AND currency = 'KRW'
+            """.trimIndent(),
+            mapOf("amountMinor" to amountMinor)
+        )
+        jdbc.update(
+            """
+            UPDATE account_balance_projections
+            SET ledger_balance_minor = ledger_balance_minor + :amountMinor,
+                available_balance_minor = available_balance_minor + :amountMinor,
+                updated_at = now()
+            WHERE account_id = 'ACC-SYN-CORR-TO'
+              AND currency = 'KRW'
+            """.trimIndent(),
+            mapOf("amountMinor" to amountMinor)
+        )
+    }
 
     companion object {
         @Container
