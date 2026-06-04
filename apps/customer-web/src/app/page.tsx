@@ -1,3 +1,16 @@
+import {
+  ChannelBadge,
+  ChannelCard,
+  ChannelCardGrid,
+  ChannelDefinitionList,
+  ChannelMetric,
+  ChannelMetricGrid,
+  ChannelPanel,
+  ChannelShell,
+  ChannelSplit,
+  ChannelTable,
+  ChannelWorkflow
+} from "../../../../packages/channel-ui/src";
 import { ApiBackedCustomerPanel } from "../components/ApiBackedCustomerPanel";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
@@ -8,99 +21,90 @@ export default async function CustomerWebPage() {
   const workflowManifests = manifests.filter((manifest) => "workflow" in manifest);
 
   return (
-    <main>
-      <div className="workbench">
-        <header className="toolbar">
-          <h1>Customer Web Banking</h1>
-          <span className="status">Synthetic only · Node reference retained</span>
-        </header>
+    <ChannelShell appId="customer-web" eyebrow="Customer channel" title="Customer Web Banking" status="Synthetic only · Node reference retained">
+      <ChannelMetricGrid>
+        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" />
+        <ChannelMetric label="Reason-required manifests" value={reasonRequired} />
+        <ChannelMetric label="Maker-checker manifests" value={makerChecker} />
+      </ChannelMetricGrid>
 
-        <section className="panel" aria-label="Customer channel control summary">
-          <h2>Control Summary</h2>
-          <dl>
-            <div>
-              <dt>Default PII masking</dt>
-              <dd>CUSTOMER_SELF</dd>
-            </div>
-            <div>
-              <dt>Reason-required manifests</dt>
-              <dd>{reasonRequired}</dd>
-            </div>
-            <div>
-              <dt>Maker-checker manifests</dt>
-              <dd>{makerChecker}</dd>
-            </div>
-          </dl>
-        </section>
+      <ApiBackedCustomerPanel />
 
-        <ApiBackedCustomerPanel />
-
-        <section className="grid" aria-label="Customer web manifest workbench">
-          <aside className="panel">
-            <h2>Manifest Screens</h2>
-            <div className="screen-list">
+      <ChannelSplit
+        aside={
+          <ChannelPanel title="Manifest Screens">
+            <ChannelCardGrid>
               {manifests.map((manifest) => (
-                <article className="screen-row" key={manifest.screenId}>
-                  <span className="screen-id">{manifest.screenId}</span>
-                  <span className="screen-meta">
-                    {manifest.type} · {manifest.domain}
-                  </span>
-                  <span>{manifest.title}</span>
-                </article>
+                <ChannelCard
+                  key={manifest.screenId}
+                  screenId={manifest.screenId}
+                  title={manifest.title}
+                  meta={`${manifest.type} · ${manifest.domain}`}
+                >
+                  <ChannelBadge tone={manifest.audit.reasonRequired ? "critical" : "neutral"}>
+                    {manifest.audit.reasonRequired ? "reason required" : "standard"}
+                  </ChannelBadge>
+                </ChannelCard>
               ))}
-            </div>
-          </aside>
-
-          <section className="panel">
-            <h2>Control Surface</h2>
-            <table className="policy-table">
-              <thead>
-                <tr>
-                  <th>Screen</th>
-                  <th>Roles</th>
-                  <th>Audit</th>
-                  <th>Masking</th>
-                  <th>Approval</th>
+            </ChannelCardGrid>
+          </ChannelPanel>
+        }
+      >
+        <ChannelPanel title="Control Surface">
+          <ChannelTable>
+            <thead>
+              <tr>
+                <th>Screen</th>
+                <th>Roles</th>
+                <th>Audit</th>
+                <th>Masking</th>
+                <th>Approval</th>
+              </tr>
+            </thead>
+            <tbody>
+              {manifests.map((manifest) => (
+                <tr key={manifest.screenId}>
+                  <td>{manifest.screenId}</td>
+                  <td>{manifest.requiredRoles.join(", ")}</td>
+                  <td>
+                    <ChannelBadge tone={manifest.audit.reasonRequired ? "critical" : "neutral"}>
+                      {manifest.audit.reasonRequired ? "reason required" : "standard"}
+                    </ChannelBadge>
+                  </td>
+                  <td>{manifest.audit.maskingPolicy}</td>
+                  <td>
+                    {manifest.approval?.required ? (
+                      <ChannelBadge tone="critical">maker-checker</ChannelBadge>
+                    ) : (
+                      <ChannelBadge>not required</ChannelBadge>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {manifests.map((manifest) => (
-                  <tr key={manifest.screenId}>
-                    <td>{manifest.screenId}</td>
-                    <td>{manifest.requiredRoles.join(", ")}</td>
-                    <td>
-                      <span className={manifest.audit.reasonRequired ? "badge critical" : "badge"}>
-                        {manifest.audit.reasonRequired ? "reason required" : "standard"}
-                      </span>
-                    </td>
-                    <td>{manifest.audit.maskingPolicy}</td>
-                    <td>
-                      {manifest.approval?.required ? (
-                        <span className="badge critical">maker-checker</span>
-                      ) : (
-                        <span className="badge">not required</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </section>
+              ))}
+            </tbody>
+          </ChannelTable>
+        </ChannelPanel>
+      </ChannelSplit>
 
-        {workflowManifests.length > 0 ? (
-          <section className="panel" aria-label="Customer workflow manifests">
-            <h2>Workflow Metadata</h2>
+      {workflowManifests.length > 0 ? (
+        <ChannelPanel title="Workflow Metadata">
+          <ChannelCardGrid>
             {workflowManifests.map((manifest) => (
-              <article className="screen-row" key={manifest.screenId}>
-                <span>{manifest.screenId}</span>
-                <span>workflow timeline</span>
-                <span>{manifest.workflow?.states?.join(", ")}</span>
-              </article>
+              <ChannelCard key={manifest.screenId} screenId={manifest.screenId} title={`${manifest.screenId} workflow`}>
+                <ChannelWorkflow states={manifest.workflow?.states ?? []} />
+                <ChannelDefinitionList
+                  items={[
+                    {
+                      term: "Template",
+                      detail: manifest.layout.template
+                    }
+                  ]}
+                />
+              </ChannelCard>
             ))}
-          </section>
-        ) : null}
-      </div>
-    </main>
+          </ChannelCardGrid>
+        </ChannelPanel>
+      ) : null}
+    </ChannelShell>
   );
 }

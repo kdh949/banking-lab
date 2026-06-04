@@ -1,0 +1,37 @@
+{
+  "screenId": "CWB-302",
+  "transactionCode": "CWB302",
+  "title": "My Complaint Cases",
+  "app": "customer-web",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["RECEIVED", "CLASSIFIED", "ASSIGNED", "IN_REVIEW", "WAITING_APPROVAL", "ANSWERED", "CLOSED", "REOPENED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["caseSummary", "status", "attachments", "timeline"],
+  "actions": [
+    {
+      "id": "openAnswer",
+      "label": "Open Answer",
+      "type": "navigate",
+      "target": "CWB-303"
+    }
+  ]
+}

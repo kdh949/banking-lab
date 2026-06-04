@@ -16,6 +16,7 @@ The lab models a simulated digital bank with:
 - audit console
 - core banking ledger service
 - workflow and maker-checker control
+- transaction-code staff workstation with reusable manifest renderers
 - evidence documents and generated test reports
 
 ## 2. Why This Is Not a Simple Bank Clone
@@ -29,6 +30,7 @@ The implementation prioritizes bank-grade controls over UI breadth:
 - staff sensitive access is reason-required and audited
 - high-risk operations require maker-checker approval
 - screens scale through manifests and reusable templates
+- screen manifests are validated for 60+ catalog breadth and unique transaction codes
 - every phase has tests and evidence
 
 ## 3. Overall Architecture
@@ -66,10 +68,13 @@ Implemented controls:
 The staff terminal includes:
 
 - transaction code input
+- transaction code and screen-name search results
 - tabbed manifest screens
 - customer context panel
 - masked PII by default
 - reason-required customer/account/transaction lookup
+- reusable inquiry, command, case, parameter, and dashboard rendering
+- declared-only status for screens without target API backing
 - approval inbox
 - audit log panel
 - customer information change through maker-checker approval
@@ -149,6 +154,10 @@ Run:
 npm run parity
 npm test
 npm run validate:manifests
+npm run test:screen-engine
+npm run packages:typecheck
+npm run scripts:typecheck
+npm run formal:ledger
 npm run evidence:phase1
 npm run evidence:phase2
 npm run evidence:phase3
@@ -160,6 +169,12 @@ docker compose config
 ```
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
+
+The current manifest catalog contains 66 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
+
+`npm run formal:ledger` checks the TLA+ ledger artifacts and attempts TLC if a local `tlc` command is available. When TLC is unavailable, the command records a static formal artifact check only; that is not a completed formal verification run.
+
+CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, Gradle core-banking tests, Playwright manifest E2E, security evidence, and formal model checks.
 
 ## 11.1 Kotlin + Next.js Migration
 

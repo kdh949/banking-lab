@@ -1,0 +1,39 @@
+{
+  "screenId": "CWB-401",
+  "transactionCode": "CWB401",
+  "title": "Security And Access History",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "security",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/security-events",
+    "fields": [
+      {
+        "name": "fromDate",
+        "label": "From Date",
+        "type": "date"
+      },
+      {
+        "name": "eventType",
+        "label": "Event Type",
+        "type": "select"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["eventId", "eventType", "channel", "createdAt", "status"]
+  },
+  "actions": []
+}

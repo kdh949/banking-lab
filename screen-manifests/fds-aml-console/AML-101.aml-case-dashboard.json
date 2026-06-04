@@ -1,0 +1,42 @@
+{
+  "screenId": "AML-101",
+  "transactionCode": "AML101",
+  "title": "AML Case Dashboard",
+  "app": "fds-aml-console",
+  "type": "CASE",
+  "domain": "aml",
+  "requiredRoles": ["AML_REVIEWER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "amlCaseWorkflow",
+    "states": ["OPEN", "ASSIGNED", "INVESTIGATING", "CLOSURE_REQUESTED", "CLOSED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 24
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["AML_CLOSURE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "sections": ["caseSummary", "customerContext", "riskSignals", "comments", "approvalTimeline", "timeline"],
+  "actions": [
+    {
+      "id": "openStrReview",
+      "label": "Open STR Review",
+      "type": "navigate",
+      "target": "AML-201"
+    }
+  ]
+}

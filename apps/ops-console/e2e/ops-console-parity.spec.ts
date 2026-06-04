@@ -33,6 +33,7 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Closing and reconciliation controls" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
@@ -40,7 +41,7 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
 
   await expect(page.getByText("Balanced adjustments only")).toBeVisible();
   await expect(page.getByText("Mismatch corrections require approval")).toBeVisible();
-  await expect(page.getByText("RECONCILIATION_ADJUSTMENT")).toBeVisible();
+  await expect(page.getByText("RECONCILIATION_ADJUSTMENT").first()).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true })).toBeVisible();
   await expect(page.getByText("ADJUSTMENT_REQUESTED")).toBeVisible();
   await expect(page.getByText("reason required").first()).toBeVisible();

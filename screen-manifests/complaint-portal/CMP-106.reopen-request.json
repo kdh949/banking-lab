@@ -1,0 +1,37 @@
+{
+  "screenId": "CMP-106",
+  "transactionCode": "CMP106",
+  "title": "Complaint Reopen Request",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": ["CLOSED", "REOPEN_REQUESTED", "REOPENED", "IN_REVIEW"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "sections": ["closureSummary", "reopenReason", "timeline"],
+  "actions": [
+    {
+      "id": "requestReopen",
+      "label": "Request Reopen",
+      "type": "command",
+      "target": "POST /api/customer/complaints/{caseId}/reopen-requests"
+    }
+  ]
+}

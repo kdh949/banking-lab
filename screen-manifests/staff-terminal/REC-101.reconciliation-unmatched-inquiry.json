@@ -1,0 +1,48 @@
+{
+  "screenId": "REC-101",
+  "transactionCode": "REC101",
+  "title": "Reconciliation Unmatched Inquiry",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "reconciliation",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["RECONCILIATION_VIEW"],
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "query": {
+    "endpoint": "GET /api/ops/reconciliation-items",
+    "fields": [
+      {
+        "name": "businessDate",
+        "label": "Business Date",
+        "type": "date"
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["itemId", "businessDate", "sourceSystem", "amountMinor", "status", "owner"]
+  },
+  "actions": [
+    {
+      "id": "requestAdjustment",
+      "label": "Request Adjustment",
+      "type": "navigate",
+      "target": "REC-102"
+    }
+  ]
+}

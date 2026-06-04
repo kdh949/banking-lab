@@ -1,0 +1,49 @@
+{
+  "screenId": "ACC-102",
+  "transactionCode": "ACC102",
+  "title": "Account Detail",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "account",
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["ACCOUNT_VIEW"],
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/staff/accounts/{accountId}/detail",
+    "fields": [
+      {
+        "name": "accountId",
+        "label": "Account ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["accountId", "maskedAccountNo", "status", "ledgerBalanceMinor", "availableBalanceMinor"]
+  },
+  "actions": [
+    {
+      "id": "openHold",
+      "label": "Open Hold",
+      "type": "navigate",
+      "target": "ACC-103"
+    }
+  ]
+}

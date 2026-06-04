@@ -1,0 +1,41 @@
+{
+  "screenId": "CMP-107",
+  "transactionCode": "CMP107",
+  "title": "Complaint Type Guide",
+  "app": "complaint-portal",
+  "type": "INQUIRY",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/customer/complaint-types",
+    "fields": [
+      {
+        "name": "category",
+        "label": "Category",
+        "type": "select"
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["category", "description", "slaHours", "requiredMaterials"]
+  },
+  "actions": [
+    {
+      "id": "startIntake",
+      "label": "Start Intake",
+      "type": "navigate",
+      "target": "CMP-101"
+    }
+  ]
+}

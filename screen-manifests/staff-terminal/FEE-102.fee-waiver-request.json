@@ -1,0 +1,51 @@
+{
+  "screenId": "FEE-102",
+  "transactionCode": "FEE102",
+  "title": "Fee Waiver Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "fee",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["FEE_WAIVER"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "fields": [
+    {
+      "name": "accountId",
+      "label": "Account ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "feeCode",
+      "label": "Fee Code",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Waiver Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/fees/waiver-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

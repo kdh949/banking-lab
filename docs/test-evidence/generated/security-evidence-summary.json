@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-02T23:30:35.306Z",
+  "generatedAt": "2026-06-04T00:46:26.654Z",
   "syntheticOnly": true,
   "checks": [
     {
@@ -32,15 +32,14 @@
     },
     {
       "id": "dast-zap-baseline",
-      "status": "pass",
-      "command": "docker run --rm -v <generated>:/zap/wrk -v <repo>:/workspace:ro ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t <url> -J zap-baseline.json -c /workspace/infra/security/zap-baseline.conf",
-      "outputPath": "docs/test-evidence/generated/zap-baseline.log",
-      "exitCode": 0
+      "status": "skipped",
+      "command": "BANKING_LAB_DAST_URL=<url> zap-baseline.py -t <url>",
+      "reason": "BANKING_LAB_DAST_URL is not set; no live target was supplied for DAST."
     }
   ],
   "totals": {
-    "pass": 5,
+    "pass": 4,
     "fail": 0,
-    "skipped": 0
+    "skipped": 1
   }
 }

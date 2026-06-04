@@ -1,5 +1,6 @@
 {
   "screenId": "FDS-201",
+  "transactionCode": "FDS201",
   "title": "FDS Held Transfer Review",
   "app": "fds-aml-console",
   "type": "CASE",

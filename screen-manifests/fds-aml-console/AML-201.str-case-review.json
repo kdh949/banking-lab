@@ -1,5 +1,6 @@
 {
   "screenId": "AML-201",
+  "transactionCode": "AML201",
   "title": "AML STR Simulation Review",
   "app": "fds-aml-console",
   "type": "CASE",

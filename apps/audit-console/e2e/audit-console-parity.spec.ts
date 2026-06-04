@@ -33,6 +33,7 @@ test("audit console renders hash-chain evidence and retention approval metadata 
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hash-chain review workspace" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
@@ -43,7 +44,7 @@ test("audit console renders hash-chain evidence and retention approval metadata 
   await expect(page.getByText("payloadHash")).toBeVisible();
   await expect(page.getByText("AUDIT_PARAMETER_CHANGE")).toBeVisible();
   await expect(page.getByText("maker-checker")).toBeVisible();
-  await expect(page.getByText("reason required")).toBeVisible();
+  await expect(page.getByText("reason required").first()).toBeVisible();
 });
 
 test("audit console shell has no app-router one-off business screens", async () => {

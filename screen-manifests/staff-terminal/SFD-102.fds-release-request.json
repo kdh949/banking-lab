@@ -1,0 +1,45 @@
+{
+  "screenId": "SFD-102",
+  "transactionCode": "SFD102",
+  "title": "FDS Release Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "fds",
+  "highRisk": true,
+  "requiredRoles": ["FDS_REVIEWER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["FDS_RELEASE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "fields": [
+    {
+      "name": "caseId",
+      "label": "Case ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Release Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/fds-cases/{caseId}/release-requests"
+  },
+  "postActions": ["createApprovalRequest", "createAuditEvent"]
+}

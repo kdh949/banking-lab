@@ -1,0 +1,42 @@
+{
+  "screenId": "FDS-202",
+  "transactionCode": "FDS202",
+  "title": "FDS Release Block Approval Flow",
+  "app": "fds-aml-console",
+  "type": "CASE",
+  "domain": "fds",
+  "requiredRoles": ["FDS_REVIEWER", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "fdsApprovalWorkflow",
+    "states": ["HELD", "RELEASE_REQUESTED", "BLOCK_REQUESTED", "APPROVED", "RELEASED", "BLOCKED", "REJECTED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 4
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["FDS_RELEASE", "FDS_BLOCK"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CUSTOMER_PII"
+  },
+  "sections": ["heldTransfer", "decisionRequest", "approvalTimeline", "ledgerPostingOutcome", "timeline"],
+  "actions": [
+    {
+      "id": "approveDecision",
+      "label": "Approve Decision",
+      "type": "command",
+      "target": "POST /api/staff/approvals/{approvalId}/approve"
+    }
+  ]
+}

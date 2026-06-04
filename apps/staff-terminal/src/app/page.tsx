@@ -1,5 +1,4 @@
-import { StaffManifestScreenRenderer } from "../components/manifest-renderer";
-import { TerminalNavigationWorkbench } from "../components/terminal-screens";
+import { StaffIntegratedWorkspace } from "../components/manifest-renderer";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
 type StaffTerminalPageProps = {
@@ -16,20 +15,6 @@ export default async function StaffTerminalPage({ searchParams }: StaffTerminalP
   const manifests = await loadChannelManifests();
   const resolvedSearchParams = await searchParams;
   const screen = firstParam(resolvedSearchParams?.screen);
-  const selectedManifest = screen ? manifests.find((manifest) => manifest.screenId === screen || manifest.transactionCode === screen) : null;
 
-  if (selectedManifest) {
-    return <StaffManifestScreenRenderer manifest={selectedManifest} />;
-  }
-
-  return (
-    <TerminalNavigationWorkbench
-      evidence={{
-        transactionCode: manifests[0]?.transactionCode || "",
-        screenCount: manifests.length,
-        reasonRequired: manifests.filter((manifest) => manifest.audit.reasonRequired).length,
-        makerChecker: manifests.filter((manifest) => manifest.approval?.required).length
-      }}
-    />
-  );
+  return <StaffIntegratedWorkspace manifests={manifests} initialScreen={screen} />;
 }

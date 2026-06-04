@@ -33,6 +33,7 @@ test("admin console renders platform control and parameter manifests", async ({ 
   const screens = manifests();
   await page.goto(baseUrl);
 
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Platform controls and privileged parameters" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
@@ -41,7 +42,7 @@ test("admin console renders platform control and parameter manifests", async ({ 
   await expect(page.getByText("Synthetic operations only")).toBeVisible();
   await expect(page.getByText("PASSKEY_RECOVERY_ADMIN").first()).toBeVisible();
   await expect(page.getByText("SECURITY_POLICY_PARAMETER_CHANGE")).toBeVisible();
-  await expect(page.getByText("reason required")).toBeVisible();
+  await expect(page.getByText("reason required").first()).toBeVisible();
 });
 
 test("admin console shell has no app-router one-off business screens", async () => {

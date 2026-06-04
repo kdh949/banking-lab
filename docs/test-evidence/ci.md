@@ -1,0 +1,28 @@
+# CI Evidence
+
+Date: 2026-06-04
+
+## Workflow
+
+`.github/workflows/ci.yml` now defines:
+
+- `node-and-manifests`
+- `next-builds`
+- `backend-core-banking`
+- `playwright-manifest-e2e`
+- `security-evidence`
+- `formal-model`
+
+Triggers:
+
+- `pull_request`
+- `push` to `main`
+- `workflow_dispatch`
+
+Permissions default to `contents: read`.
+
+## Notes
+
+The security job runs `npm audit --audit-level=high` and `npm run security:evidence`. Tool-specific skips from Semgrep, Trivy, SBOM, or DAST are recorded by the wrapper and uploaded as artifacts; they are not described as completed security scans unless the tools actually ran.
+
+The formal job runs `npm run formal:ledger`. If TLC is unavailable, the generated evidence records a static artifact check only.

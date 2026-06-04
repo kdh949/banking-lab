@@ -1,5 +1,6 @@
 {
   "screenId": "FDS-301",
+  "transactionCode": "FDS301",
   "title": "FDS Rule Parameter Change",
   "app": "fds-aml-console",
   "type": "PARAMETER",

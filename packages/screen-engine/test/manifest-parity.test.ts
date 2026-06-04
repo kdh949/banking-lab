@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { loadExpandedManifests, loadManifests, validateManifest } from "../src/manifest.ts";
+import { MINIMUM_MANIFEST_COUNTS, loadExpandedManifests, loadManifests, validateManifest } from "../src/manifest.ts";
 
 const manifestRoot = "../../screen-manifests";
 const repositoryRoot = "../..";
@@ -13,7 +13,53 @@ test("target screen manifests validate and cover channel shells", async () => {
   for (const app of ["customer-web", "staff-terminal", "complaint-portal", "ops-console", "audit-console", "fds-aml-console", "admin-console"]) {
     assert.equal(apps.has(app), true, `${app} must have target manifest coverage`);
   }
-  assert.equal(manifests.length >= 28, true);
+  assert.equal(manifests.length >= MINIMUM_MANIFEST_COUNTS.total, true);
+});
+
+test("target screen manifest catalog enforces minimum breadth and unique codes", async () => {
+  const manifests = await loadManifests(manifestRoot);
+  const screenIds = new Set(manifests.map((manifest) => manifest.screenId));
+  const transactionCodes = new Set(manifests.map((manifest) => manifest.transactionCode));
+  const appCounts = new Map<string, number>();
+
+  for (const manifest of manifests) {
+    appCounts.set(manifest.app, (appCounts.get(manifest.app) || 0) + 1);
+  }
+
+  assert.equal(manifests.length, screenIds.size, "screenId values must be unique");
+  assert.equal(manifests.length, transactionCodes.size, "transactionCode values must be present and unique");
+  assert.equal(manifests.length >= 60, true, "screen manifest total must be >= 60");
+  for (const [app, minimum] of Object.entries(MINIMUM_MANIFEST_COUNTS.byApp)) {
+    assert.equal((appCounts.get(app) || 0) >= minimum, true, `${app} must have at least ${minimum} manifests`);
+  }
+});
+
+test("target screen manifest catalog validates reusable template shapes", async () => {
+  const manifests = await loadExpandedManifests(manifestRoot);
+
+  assert.equal(manifests.some((manifest) => manifest.type === "INQUIRY"), true);
+  assert.equal(manifests.some((manifest) => manifest.type === "COMMAND"), true);
+  assert.equal(manifests.some((manifest) => manifest.type === "CASE"), true);
+  assert.equal(manifests.some((manifest) => manifest.type === "PARAMETER"), true);
+
+  for (const manifest of manifests) {
+    if (manifest.type === "INQUIRY") {
+      assert.equal(Boolean(manifest.query || manifest.resultTable), true, `${manifest.screenId} inquiry must declare query or result table`);
+      assert.equal(manifest.templateContract.regions.includes("auditPanel"), true);
+    }
+    if (manifest.type === "COMMAND") {
+      assert.equal(Boolean(manifest.api?.command || manifest.actions?.length), true, `${manifest.screenId} command must declare api.command or actions`);
+      assert.equal(manifest.formContract.fields.length > 0, true, `${manifest.screenId} command must expose form fields`);
+    }
+    if (manifest.type === "CASE") {
+      assert.equal(Boolean(manifest.workflow || manifest.actions?.length), true, `${manifest.screenId} case must declare workflow or actions`);
+      assert.equal(manifest.controlMetadata.workflow.timelineRequired, true);
+    }
+    if (manifest.type === "PARAMETER") {
+      assert.equal(Boolean(manifest.parameter?.namespace || manifest.parameter?.currentValueEndpoint || manifest.parameter?.historyEndpoint), true);
+      assert.equal(manifest.controlMetadata.approval.makerChecker, true);
+    }
+  }
 });
 
 test("target admin manifests cover privileged platform controls without one-off screens", async () => {

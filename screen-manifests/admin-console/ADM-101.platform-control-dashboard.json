@@ -1,5 +1,6 @@
 {
   "screenId": "ADM-101",
+  "transactionCode": "ADM101",
   "title": "Platform Control Dashboard",
   "app": "admin-console",
   "type": "DASHBOARD",
