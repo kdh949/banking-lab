@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component
 class BankingLabTokenDecoder(
     private val signedJwtJwksTokenDecoder: SignedJwtJwksTokenDecoder,
     private val simulatorTokenDecoder: KeycloakSimulatorTokenDecoder,
-    @param:Value("\${banking-lab.security.simulator-tokens-enabled:true}")
-    private val simulatorTokensEnabled: Boolean
+    @param:Value("\${banking-lab.security.simulator-tokens-enabled:false}")
+    private val simulatorTokensEnabled: Boolean,
+    @param:Value("\${banking-lab.security.dev-simulator-token-enabled:false}")
+    private val devSimulatorTokenEnabled: Boolean
 ) {
     fun decode(authorizationHeader: String?): BankingLabPrincipal? {
         val token = authorizationHeader
@@ -22,7 +24,7 @@ class BankingLabTokenDecoder(
     }
 
     private fun simulatorPrincipal(token: String): BankingLabPrincipal? =
-        if (simulatorTokensEnabled) {
+        if (simulatorTokensEnabled && devSimulatorTokenEnabled) {
             simulatorTokenDecoder.decodeToken(token)
         } else {
             null

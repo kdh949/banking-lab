@@ -67,6 +67,7 @@
     "test:e2e": "playwright test",
     "validate:manifests": "node --experimental-strip-types scripts/validate-manifests.ts",
     "formal:ledger": "node --experimental-strip-types scripts/check-tla-model.ts",
+    "security:posture-check": "node --experimental-strip-types scripts/check-security-posture.ts",
     "security:evidence": "node --experimental-strip-types scripts/run-security-evidence.ts",
     "security:evidence:docker": "node --experimental-strip-types scripts/run-security-evidence-docker.ts",
     "postgres:backup-drill": "node --experimental-strip-types scripts/run-postgres-backup-drill.ts",

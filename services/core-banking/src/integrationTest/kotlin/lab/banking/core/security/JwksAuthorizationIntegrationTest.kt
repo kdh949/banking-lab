@@ -14,6 +14,7 @@ import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.util.Base64
 import java.util.concurrent.Executors
+import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -21,11 +22,13 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.MediaType
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.containers.PostgreSQLContainer
@@ -37,7 +40,10 @@ import org.testcontainers.junit.jupiter.Testcontainers
         "banking-lab.security.enabled=true",
         "banking-lab.security.simulator-tokens-enabled=false",
         "banking-lab.security.jwt.issuer=http://keycloak.local/realms/banking-lab",
-        "banking-lab.security.jwt.audience=banking-lab-api"
+        "banking-lab.security.jwt.audience=banking-lab-api",
+        "banking-lab.security.trusted-device-enforcement-enabled=true",
+        "banking-lab.security.step-up.enforcement-enabled=true",
+        "banking-lab.security.session.enforcement-enabled=true"
     ]
 )
 @AutoConfigureMockMvc
@@ -54,6 +60,8 @@ class JwksAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              revoked_sessions,
+              trusted_devices,
               reconciliation_adjustment_requests,
               reconciliation_items,
               operator_approvals,
@@ -69,6 +77,7 @@ class JwksAuthorizationIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        ParameterSeedSupport.reseedFdsRuleParameters(jdbc)
         seedCustomersAndAccounts()
     }
 
@@ -104,6 +113,133 @@ class JwksAuthorizationIntegrationTest {
             .andExpect(jsonPath("$.error.requestId").value("REQ-JWKS-BAD-SIG"))
 
         assertEquals(2, countRows("audit_events WHERE event_type = 'AUTHORIZATION_DENIED'"))
+    }
+
+    @Test
+    fun `signed JWKS token enforces step up trusted device and session revocation`() {
+        mockMvc.perform(
+            post("/api/staff/pii/unmask")
+                .header(
+                    "Authorization",
+                    signedBearer(
+                        subject = "manager01",
+                        roles = listOf("BRANCH_MANAGER"),
+                        sessionId = "SID-STAFF-H2",
+                        deviceFingerprint = "staff-device-h2",
+                        authenticationMethods = listOf("pwd"),
+                        authTime = Instant.now()
+                    )
+                )
+                .header("x-request-id", "REQ-H2-NO-STEP-UP")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "requestedBy": "manager01",
+                      "actorRole": "BRANCH_MANAGER",
+                      "reason": "H2 step-up denial smoke"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("STEP_UP_REQUIRED"))
+            .andExpect(jsonPath("$.error.policy").value("STEP_UP_REAUTHENTICATION_REQUIRED"))
+
+        val staffStepUpToken = signedBearer(
+            subject = "manager01",
+            roles = listOf("BRANCH_MANAGER"),
+            sessionId = "SID-STAFF-H2",
+            deviceFingerprint = "staff-device-h2",
+            authenticationMethods = listOf("pwd", "otp"),
+            assuranceLevel = "aal2",
+            authTime = Instant.now()
+        )
+
+        mockMvc.perform(
+            get("/api/auth/session")
+                .header("Authorization", staffStepUpToken)
+                .header("x-request-id", "REQ-H2-UNKNOWN-DEVICE")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("TRUSTED_DEVICE_REQUIRED"))
+
+        insertTrustedDevice("STAFF", "manager01", null, "staff-device-h2")
+
+        mockMvc.perform(get("/api/auth/session").header("Authorization", staffStepUpToken))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.subject").value("manager01"))
+            .andExpect(jsonPath("$.stepUpSatisfied").value(true))
+
+        mockMvc.perform(
+            post("/api/staff/pii/unmask")
+                .header("Authorization", staffStepUpToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "requestedBy": "manager01",
+                      "actorRole": "BRANCH_MANAGER",
+                      "reason": "H2 step-up success smoke"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.piiExposure").value("UNMASKED_TIMEBOXED"))
+
+        val unknownCustomerDeviceToken = signedBearer(
+            subject = "customer01",
+            roles = listOf("CUSTOMER"),
+            customerId = "SYN-CUS-001",
+            sessionId = "SID-CUSTOMER-H2",
+            deviceFingerprint = "customer-device-h2"
+        )
+        val transferBody = """
+            {
+              "customerId": "SYN-CUS-001",
+              "fromAccountId": "ACC-SYN-001-001",
+              "toAccountId": "ACC-SYN-002-001",
+              "amountMinor": 1000,
+              "idempotencyKey": "H2-TRUSTED-DEVICE-TRANSFER",
+              "requestedBy": "SYN-CUS-001",
+              "reason": "H2 trusted device customer transfer smoke"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/customer/transfers")
+                .header("Authorization", unknownCustomerDeviceToken)
+                .header("x-request-id", "REQ-H2-CUSTOMER-UNKNOWN-DEVICE")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(transferBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("TRUSTED_DEVICE_REQUIRED"))
+
+        insertTrustedDevice("CUSTOMER", "SYN-CUS-001", "SYN-CUS-001", "customer-device-h2")
+
+        mockMvc.perform(
+            post("/api/customer/transfers")
+                .header("Authorization", unknownCustomerDeviceToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(transferBody)
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.status").value("POSTED"))
+
+        revokeSession("SID-STAFF-H2", "manager01", "STAFF")
+
+        mockMvc.perform(
+            get("/api/auth/session")
+                .header("Authorization", staffStepUpToken)
+                .header("x-request-id", "REQ-H2-REVOKED-SESSION")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("SESSION_REVOKED"))
+            .andExpect(jsonPath("$.error.policy").value("SESSION_REVOCATION"))
     }
 
     @Test
@@ -184,6 +320,11 @@ class JwksAuthorizationIntegrationTest {
         subject: String,
         roles: List<String>,
         customerId: String? = null,
+        sessionId: String? = null,
+        deviceFingerprint: String? = null,
+        authenticationMethods: List<String> = emptyList(),
+        assuranceLevel: String? = null,
+        authTime: Instant? = null,
         expiresAt: Instant = Instant.now().plusSeconds(300)
     ): String {
         val header = mapOf("alg" to "RS256", "typ" to "JWT", "kid" to keyId)
@@ -199,6 +340,21 @@ class JwksAuthorizationIntegrationTest {
             "customerId" to customerId,
             "active" to true
         )
+        if (sessionId != null) {
+            payload["sid"] = sessionId
+        }
+        if (deviceFingerprint != null) {
+            payload["deviceFingerprint"] = deviceFingerprint
+        }
+        if (authenticationMethods.isNotEmpty()) {
+            payload["amr"] = authenticationMethods
+        }
+        if (assuranceLevel != null) {
+            payload["acr"] = assuranceLevel
+        }
+        if (authTime != null) {
+            payload["auth_time"] = authTime.epochSecond
+        }
         val encodedHeader = base64Url(objectMapper.writeValueAsBytes(header))
         val encodedPayload = base64Url(objectMapper.writeValueAsBytes(payload))
         val signingInput = "$encodedHeader.$encodedPayload"
@@ -228,6 +384,48 @@ class JwksAuthorizationIntegrationTest {
             emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
+
+    private fun insertTrustedDevice(
+        actorType: String,
+        actorId: String,
+        customerId: String?,
+        deviceFingerprint: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO trusted_devices (
+              trusted_device_id, actor_type, actor_id, customer_id, device_fingerprint, status, metadata_json
+            )
+            VALUES (
+              :trustedDeviceId, :actorType, :actorId, :customerId, :deviceFingerprint, 'ACTIVE',
+              '{"syntheticOnly": true}'::jsonb
+            )
+            """.trimIndent(),
+            mapOf(
+                "trustedDeviceId" to "TD-$actorType-$actorId-$deviceFingerprint",
+                "actorType" to actorType,
+                "actorId" to actorId,
+                "customerId" to customerId,
+                "deviceFingerprint" to deviceFingerprint
+            )
+        )
+    }
+
+    private fun revokeSession(sessionId: String, actorId: String, actorType: String) {
+        jdbc.update(
+            """
+            INSERT INTO revoked_sessions (
+              session_id, actor_id, actor_type, revoked_by, reason, metadata_json
+            )
+            VALUES (
+              :sessionId, :actorId, :actorType, 'security-admin01',
+              'H2 synthetic forced logout smoke',
+              '{"syntheticOnly": true}'::jsonb
+            )
+            """.trimIndent(),
+            mapOf("sessionId" to sessionId, "actorId" to actorId, "actorType" to actorType)
+        )
+    }
 
     private fun base64Url(bytes: ByteArray): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)

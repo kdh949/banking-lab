@@ -57,7 +57,14 @@ class SignedJwtJwksTokenDecoder(
                 subject = subject,
                 roles = roles,
                 customerId = customerIdFromClaims(claims),
-                issuer = claims["iss"]?.toString()
+                issuer = claims["iss"]?.toString(),
+                sessionId = claims["sid"]?.toString()?.takeIf { it.isNotBlank() },
+                authTime = epochInstant(claims["auth_time"]),
+                issuedAt = epochInstant(claims["iat"]),
+                authenticationMethods = stringSet(claims["amr"]),
+                assuranceLevel = claims["acr"]?.toString(),
+                deviceFingerprint = claims["deviceFingerprint"]?.toString()
+                    ?: claims["device_fingerprint"]?.toString()
             )
         }.getOrNull()
     }
@@ -149,6 +156,9 @@ class SignedJwtJwksTokenDecoder(
             is String -> value.toLongOrNull()
             else -> null
         }
+
+    private fun epochInstant(value: Any?): Instant? =
+        epochSeconds(value)?.let(Instant::ofEpochSecond)
 
     private fun decodeJson(segment: String): ByteArray =
         base64Url.decode(segment)

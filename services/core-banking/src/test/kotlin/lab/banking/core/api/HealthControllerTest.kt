@@ -22,7 +22,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
     properties = [
         "banking-lab.synthetic-only=true",
         "banking-lab.node-reference-runtime-retained=true",
-        "banking-lab.migration-target=kotlin-spring-boot"
+        "banking-lab.migration-target=kotlin-spring-boot",
+        "banking-lab.security.enabled=false"
     ]
 )
 class HealthControllerTest {

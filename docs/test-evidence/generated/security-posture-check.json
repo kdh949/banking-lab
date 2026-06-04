@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-06-04T18:33:28.257Z",
+  "command": "npm run security:posture-check",
+  "status": "pass",
+  "syntheticOnly": true,
+  "productionClaim": false,
+  "checks": [
+    {
+      "file": "services/core-banking/src/main/resources/application.yml",
+      "description": "Spring Boot defaults security on and simulator fallback off.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "docker-compose.yml",
+      "description": "Docker Compose platform uses secure auth defaults.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/configmap.yaml",
+      "description": "Kubernetes configmap keeps secure defaults and Keycloak JWKS settings.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/configmap.yaml",
+      "description": "Helm configmap renders secure auth values from chart values.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/values.yaml",
+      "description": "Helm chart values default to secure auth posture.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "db/migrations/V026__security_auth_hardening_controls.sql",
+      "description": "Flyway migration adds trusted device and revoked session registries.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    }
+  ],
+  "errors": []
+}

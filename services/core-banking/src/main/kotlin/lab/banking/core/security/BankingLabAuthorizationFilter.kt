@@ -22,6 +22,7 @@ class BankingLabAuthorizationFilter(
     @param:Value("\${banking-lab.cors.allowed-origins:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006,http://127.0.0.1:3007}")
     private val allowedCorsOrigins: String,
     private val decoder: BankingLabTokenDecoder,
+    private val securityPolicyEnforcer: BankingLabSecurityPolicyEnforcer,
     private val auditEvents: AuditEventAppender,
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
@@ -46,6 +47,11 @@ class BankingLabAuthorizationFilter(
         }
         if (customerOwnershipDenied(request, principal)) {
             deny(request, response, principal, HttpStatus.FORBIDDEN, "customer token cannot access another customer")
+            return
+        }
+        val policyDenial = securityPolicyEnforcer.denialFor(request, principal)
+        if (policyDenial != null) {
+            deny(request, response, principal, policyDenial)
             return
         }
         try {
@@ -84,6 +90,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "BRANCH_MANAGER")
             path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
+            path.startsWith("/api/auth/session") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
@@ -107,8 +114,51 @@ class BankingLabAuthorizationFilter(
         status: HttpStatus,
         message: String
     ) {
+        deny(
+            request = request,
+            response = response,
+            principal = principal,
+            status = status,
+            code = "AUTHORIZATION_POLICY_VIOLATION",
+            policy = "RBAC_ABAC_POLICY_REQUIRED",
+            message = message,
+            cause = "The Keycloak/OIDC token did not satisfy the modeled route policy.",
+            fix = "Retry with a valid synthetic Bearer token whose signature, subject, role, and ownership context match the route."
+        )
+    }
+
+    private fun deny(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        principal: BankingLabPrincipal?,
+        denial: SecurityPolicyDenial
+    ) {
+        deny(
+            request = request,
+            response = response,
+            principal = principal,
+            status = denial.status,
+            code = denial.code,
+            policy = denial.policy,
+            message = denial.message,
+            cause = denial.cause,
+            fix = denial.fix
+        )
+    }
+
+    private fun deny(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        principal: BankingLabPrincipal?,
+        status: HttpStatus,
+        code: String,
+        policy: String,
+        message: String,
+        cause: String,
+        fix: String
+    ) {
         val requestId = request.getHeader("x-request-id") ?: "REQ-${UUID.randomUUID()}"
-        appendDeniedAudit(request, principal, requestId, status, message)
+        appendDeniedAudit(request, principal, requestId, status, code, policy, message)
         response.status = status.value()
         response.contentType = "application/json"
         applyCorsHeaders(request, response)
@@ -116,13 +166,13 @@ class BankingLabAuthorizationFilter(
             response.outputStream,
             StructuredApiErrorEnvelope(
                 error = StructuredApiError(
-                    code = "AUTHORIZATION_POLICY_VIOLATION",
+                    code = code,
                     message = message,
                     statusCode = status.value(),
                     domain = "auth",
-                    policy = "RBAC_ABAC_POLICY_REQUIRED",
-                    cause = "The Keycloak/OIDC token did not satisfy the modeled route policy.",
-                    fix = "Retry with a valid synthetic Bearer token whose signature, subject, role, and ownership context match the route.",
+                    policy = policy,
+                    cause = cause,
+                    fix = fix,
                     requestId = requestId,
                     route = request.requestURI
                 )
@@ -150,6 +200,8 @@ class BankingLabAuthorizationFilter(
         principal: BankingLabPrincipal?,
         requestId: String,
         status: HttpStatus,
+        code: String,
+        policy: String,
         message: String
     ) {
         val payload = mapOf(
@@ -157,6 +209,8 @@ class BankingLabAuthorizationFilter(
             "route" to request.requestURI,
             "method" to request.method,
             "statusCode" to status.value(),
+            "code" to code,
+            "policy" to policy,
             "message" to message,
             "syntheticOnly" to true
         )
@@ -175,6 +229,7 @@ class BankingLabAuthorizationFilter(
     private fun screenId(path: String): String =
         when {
             path.startsWith("/api/staff/approvals") -> "APR-201"
+            path.startsWith("/api/auth/session") -> "AUTH-SESSION"
             path.startsWith("/api/products/deposits") -> "PRD-101"
             path.startsWith("/api/staff/products/deposits") -> "PRD-102"
             path.startsWith("/api/fees/policies") -> "FEE-101"

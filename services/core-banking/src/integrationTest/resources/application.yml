@@ -1,0 +1,16 @@
+banking-lab:
+  security:
+    enabled: false
+    dev-simulator-token-enabled: true
+    simulator-tokens-enabled: true
+    trusted-device-enforcement-enabled: false
+    step-up:
+      enforcement-enabled: false
+    session:
+      enforcement-enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

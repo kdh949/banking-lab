@@ -50,6 +50,11 @@ Kotlin/Spring Boot controllers and the current Node reference runtime must repor
 | --- | --- | --- |
 | `POLICY_REASON_REQUIRED` | audit | Staff sensitive access or high-risk command lacks a business reason. |
 | `AUTHORIZATION_POLICY_VIOLATION` | auth | Actor role or customer/case context is not allowed. |
+| `STEP_UP_REQUIRED` | auth | Fresh MFA/WebAuthn step-up is required for a privileged staff/ops command. |
+| `TRUSTED_DEVICE_REQUIRED` | auth | Customer transfer or staff session validation requires an active synthetic trusted-device binding. |
+| `SESSION_REQUIRED` | auth | Session validation requires a session id and freshness claim. |
+| `SESSION_EXPIRED` | auth | The modeled synthetic session TTL has elapsed. |
+| `SESSION_REVOKED` | auth | The session id is present in the synthetic revoked-session registry. |
 | `MAKER_CHECKER_SELF_APPROVAL_REJECTED` | maker-checker | Requester tries to approve their own high-risk operation. |
 | `LEDGER_INSUFFICIENT_AVAILABLE_BALANCE` | ledger | Debit command would overdraw projected available balance. |
 | `LEDGER_CLOSED_DAY_IMMUTABLE` | ledger | Direct posting is attempted on a closed business date. |

@@ -37,5 +37,16 @@ outbox:
   bootstrapServers: redpanda:9092
   topic: banking.lab.domain-events
 
+security:
+  enabled: "true"
+  simulatorTokensEnabled: "false"
+  devSimulatorToken: "false"
+  jwksUri: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs
+  issuer: http://keycloak:8080/realms/banking-lab
+  audience: core-banking-api
+  trustedDeviceEnforcementEnabled: "true"
+  stepUpEnforcementEnabled: "true"
+  sessionEnforcementEnabled: "true"
+
 analytics:
   image: banking-lab/aml-fds-python:local

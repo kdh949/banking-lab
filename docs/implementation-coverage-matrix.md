@@ -1,6 +1,6 @@
 # Implementation Coverage Matrix
 
-Review date: 2026-06-04
+Review date: 2026-06-05
 
 Scope: target-stack Banking Lab implementation only. The legacy Node runtime is treated as a reference oracle and is not counted as target-path implementation coverage.
 
@@ -59,17 +59,19 @@ Status values are limited to `complete`, `api-backed-read`, `api-backed-command`
 | operations-evidence | Phase G synthetic load smoke | no | no | no | local synthetic handler runner only | not-applicable | not-applicable | load smoke validates audit hash chain | not-applicable | `npm run load:synthetic` and `tests/loadEvidence.test.mjs` pass | `docs/test-evidence/load-test-summary.md`, `docs/test-evidence/generated/load-test-summary.json` | complete |
 | operations-evidence | PostgreSQL backup/restore drill contract and live restore path | no | no | no | live mode is executed by `npm run postgres:backup-drill:docker-live`, which invokes the canonical `npm run postgres:backup-drill -- --mode=live` against disposable source/restore PostgreSQL URLs | live `pg_dump --format=custom`, `pg_restore --clean --if-exists`, and `psql` verification over migrated synthetic schema | not-applicable | live restore validates audit hash-chain continuity | not-applicable | `npm run postgres:backup-drill:docker-live` passed locally with `postgresLive=true`, ledger transaction/posting/count parity, `account_balance_projections == Σ signed postings`, customer availability checks, audit hash-chain continuity, approval/workflow/customer-transfer-result parity, and synthetic-boundary proof | `docs/test-evidence/postgres-backup-restore-drill.md`, `docs/test-evidence/generated/postgres-backup-restore-drill.json` | complete |
 | hardening-h1 | Spring canonical lock and Node oracle-only guard | not-applicable | target apps remain Next.js/React source | shared API/auth/screen packages remain TypeScript target contracts | `services/core-banking` remains the Spring canonical backend | Flyway/PostgreSQL target path only; Node oracle not counted | target auth stack anchors include signed JWT/JWKS and Keycloak | retirement audits and parity evidence retained | not-applicable | `node --test tests/stackRetirementAreaAudit.test.mjs`, `npm run node:retirement-gate`, and `npm run parity` passed; node gate now invokes stack-area audit and rejects an injected target-path `legacy-node-reference/runtime/server.mjs` canary | `docs/test-evidence/hardening-h1-spring-canonical-lock.md`, `docs/test-evidence/stack-retirement-area-audit.md` | complete |
+| hardening-h2 | Secure-default auth, step-up, trusted-device, and session-revocation controls | not-applicable | protected channel calls continue to use JWT/Keycloak paths; `/api/auth/session` exposes synthetic session/device status | existing protected API clients remain compatible with Bearer tokens; new session endpoint is Spring-backed | yes; security defaults on, simulator tokens double opt-in, JWKS path defaulted, high-risk step-up/device/session policy enforced before domain execution | `V026__security_auth_hardening_controls.sql`, `trusted_devices`, `revoked_sessions` | Keycloak/JWKS default path, simulator fallback disabled by default, MFA/WebAuthn `amr`/`acr` step-up, trusted-device and revoked-session gates | structured auth denial audit includes `STEP_UP_REQUIRED`, `TRUSTED_DEVICE_REQUIRED`, `SESSION_REQUIRED`, `SESSION_EXPIRED`, and `SESSION_REVOKED` | high-risk approval/ops/PII/parameter routes are denied before checker/domain mutation when fresh step-up is absent | `npm run security:posture-check`, `SecurityDefaultsIntegrationTest`, `JwksAuthorizationIntegrationTest`, full Spring integration, unit, manifest, screen-engine, formal ledger, security evidence, and node retirement gates passed locally | `docs/test-evidence/hardening-h2-secure-auth.md`, `docs/test-evidence/generated/security-posture-check.json` | complete |
 
 ## Baseline Commands
 
 Commands run through 2026-06-05 for this review:
 
 - `npm ci`: pass.
-- `npm test`: pass, 131 tests.
+- `npm test`: pass, 142 tests.
 - `npm run validate:manifests`: pass, 87 manifests after Phase 3 card manifest update.
 - `npm run test:screen-engine`: pass, 10 tests.
 - `npm run packages:typecheck`: pass.
 - `npm run scripts:typecheck`: pass.
+- `npm run security:posture-check`: pass, 6 secure-default controls verified for Spring, Docker Compose, Kubernetes, Helm, and Flyway migration posture.
 - `npm run next:staff-terminal:typecheck`: pass.
 - `npm run next:staff-terminal:build`: pass.
 - `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after Phase C fee policy/posting update with 5 passed and 14 skipped because API/Keycloak variables were not configured.
@@ -89,7 +91,8 @@ Commands run through 2026-06-05 for this review:
 - `npm run test:core-banking:integration -- --tests lab.banking.core.analytics.FdsAnalyticsEvidenceIntegrationTest`: pass after Phase 5 FDS analytics Spring read API update and sandbox escalation for Gradle file-lock socket access.
 - `npm run analytics:fds-aml:test`: pass, 6 Python tests for DuckDB feature generation, rules, and scoring artifact.
 - `npm run analytics:fds-aml`: pass, generated `docs/test-evidence/generated/fds-aml-analytics.json` and `.csv`.
-- `npm run test:core-banking`: not rerun after the LED-103 slice; prior full-suite integration execution depended on local Docker availability.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.security.SecurityDefaultsIntegrationTest --tests lab.banking.core.security.JwksAuthorizationIntegrationTest --rerun-tasks`: pass after H2 secure-auth update and sandbox escalation; first run exposed a missing FDS parameter seed for the transfer success path, which was fixed before rerun.
+- `npm run test:core-banking:integration -- --rerun-tasks`: pass after H2 secure-auth update; first full run exposed integration-test actuator exposure shadowing, which was fixed before rerun.
 - `npm run formal:ledger`: pass, actual TLC ran through the supplied `~/Downloads/tla2tools.jar` for `formal/Ledger.tla` and `formal/Idempotency.tla`; the bounded state-search checker also covered 3335 states, 8241 transitions, and 15 invariants including posting-time limit usage.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest`: pass after Phase 1A limit enforcement update; initial sandboxed Gradle run failed with `java.net.SocketException: Operation not permitted`, then passed outside the sandbox.
 - `npm run k8s:validate`: pass; structural validation covered 15 Kubernetes resources and the final cluster-backed run recorded `kubectlClientDryRun.status=pass`.
@@ -103,6 +106,7 @@ Commands run through 2026-06-05 for this review:
 - `npm run load:synthetic`: pass, 74 local synthetic requests across 54 scenario runs; ledger invariant and audit hash-chain checks passed.
 - `npm run next:fds-aml-console:typecheck`: pass after the analytics panel switched from direct JSON import to `fdsAnalyticsEvidence(...)`.
 - `env BANKING_LAB_DAST_URL=http://host.docker.internal:18132/health npm run security:evidence:docker`: pass after sandbox escalation against a disposable synthetic core-banking target; npm audit, Docker-forced Semgrep, Trivy, CycloneDX SBOM, and ZAP baseline all passed with 0 skipped.
+- `npm run security:evidence`: pass after H2 sandbox escalation; npm audit, Semgrep, Trivy, and CycloneDX SBOM passed, while DAST was explicitly skipped because `BANKING_LAB_DAST_URL` was not set.
 - `npm run postgres:backup-drill`: pass in fixture mode after adding `account_balance_projections == Σ signed postings` and customer available-balance checks to the drill contract.
 - `npm run postgres:backup-drill:docker-live`: pass after sandbox escalation; started disposable Compose `postgres:16-alpine` source/restore databases, applied migrations, seeded synthetic balanced rows, invoked canonical `npm run postgres:backup-drill -- --mode=live`, and generated `docs/test-evidence/generated/postgres-backup-restore-drill.json` with `postgresLive=true`.
 - `npm run evidence:refresh-check`: pass.
