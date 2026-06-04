@@ -170,9 +170,9 @@ docker compose config
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
 
-The current manifest catalog contains 66 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
+The current manifest catalog contains 74 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
 
-`npm run formal:ledger` checks the TLA+ ledger artifacts and attempts TLC if a local `tlc` command is available. When TLC is unavailable, the command records a static formal artifact check only; that is not a completed formal verification run.
+`npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC if a local `tlc` command is available, and otherwise runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
 
 CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, Gradle core-banking tests, Playwright manifest E2E, security evidence, and formal model checks.
 
@@ -182,10 +182,10 @@ The current implementation coverage is tracked in `docs/implementation-coverage-
 
 Important current gaps are intentionally not marked complete:
 
-- several staff-terminal command screens are still manifest-only or missing API-backed workflows, including account hold/release, transfer limit change, KYC review, fee waiver, and transaction correction;
-- deposit product, fee policy, interest accrual, and fee/interest posting modules are not implemented yet;
-- Python AML/FDS analytics currently has deterministic scoring tests but not a DuckDB mart, generated analytics artifact, or Spring/FDS console adapter;
-- `npm run formal:ledger` can still fall back to a static artifact check when TLC is unavailable;
+- remaining staff-terminal depth should be expanded only as later platform/operations workflows add new operator commands;
+- deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
+- Python AML/FDS analytics has a DuckDB mart and generated batch evidence, but not a live Spring/FDS console adapter;
+- `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable;
 - Kubernetes/Helm files exist, but executable `k8s:validate` and `helm:template` npm scripts are still a follow-up;
 - load testing and PostgreSQL backup/restore drill evidence are still missing.
 

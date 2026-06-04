@@ -1,0 +1,208 @@
+{
+  "generatedAt": "2026-06-04T08:18:57.351Z",
+  "modelCheckerRun": "formal-ledger",
+  "models": [
+    {
+      "model": "formal/Ledger.tla",
+      "config": "formal/Ledger.cfg"
+    },
+    {
+      "model": "formal/Idempotency.tla",
+      "config": "formal/Idempotency.cfg"
+    }
+  ],
+  "staticCheck": "pass",
+  "staticOnly": false,
+  "tlc": [
+    {
+      "status": "not_available",
+      "command": "tlc -config <cfg> <model>",
+      "reason": "local tlc command was not found"
+    }
+  ],
+  "boundedModelChecker": {
+    "status": "pass",
+    "engine": "bounded-state-search",
+    "models": [
+      {
+        "model": "Ledger",
+        "status": "pass",
+        "engine": "bounded-state-search",
+        "maxDepth": 3,
+        "statesExplored": 3292,
+        "transitionsExplored": 8181,
+        "invariants": [
+          {
+            "model": "Ledger",
+            "name": "BalancedDoubleEntry",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "IdempotencySingleBusinessResult",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "AvailableBalanceNonNegative",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "ReversalReferencesOriginal",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "ReversalMirrorsOriginal",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "ClosedDateNoDirectPosting",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "BalanceProjectionRecalculable",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "HeldOrFailedCommandNoPosting",
+            "status": "pass",
+            "checkedStates": 3292
+          },
+          {
+            "model": "Ledger",
+            "name": "AdjustmentRequiresApprovalReference",
+            "status": "pass",
+            "checkedStates": 3292
+          }
+        ]
+      },
+      {
+        "model": "Idempotency",
+        "status": "pass",
+        "engine": "bounded-state-search",
+        "maxDepth": 4,
+        "statesExplored": 79,
+        "transitionsExplored": 132,
+        "invariants": [
+          {
+            "model": "Idempotency",
+            "name": "SingleBusinessResultPerKey",
+            "status": "pass",
+            "checkedStates": 79
+          },
+          {
+            "model": "Idempotency",
+            "name": "RetryReturnsSameBusinessResult",
+            "status": "pass",
+            "checkedStates": 79
+          },
+          {
+            "model": "Idempotency",
+            "name": "NoDuplicateSideEffectForRetry",
+            "status": "pass",
+            "checkedStates": 79
+          },
+          {
+            "model": "Idempotency",
+            "name": "FailedOrHeldCommandNoPosting",
+            "status": "pass",
+            "checkedStates": 79
+          }
+        ]
+      }
+    ]
+  },
+  "invariantResults": [
+    {
+      "model": "Ledger",
+      "name": "BalancedDoubleEntry",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "IdempotencySingleBusinessResult",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "AvailableBalanceNonNegative",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "ReversalReferencesOriginal",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "ReversalMirrorsOriginal",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "ClosedDateNoDirectPosting",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "BalanceProjectionRecalculable",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "HeldOrFailedCommandNoPosting",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Ledger",
+      "name": "AdjustmentRequiresApprovalReference",
+      "status": "pass",
+      "checkedStates": 3292
+    },
+    {
+      "model": "Idempotency",
+      "name": "SingleBusinessResultPerKey",
+      "status": "pass",
+      "checkedStates": 79
+    },
+    {
+      "model": "Idempotency",
+      "name": "RetryReturnsSameBusinessResult",
+      "status": "pass",
+      "checkedStates": 79
+    },
+    {
+      "model": "Idempotency",
+      "name": "NoDuplicateSideEffectForRetry",
+      "status": "pass",
+      "checkedStates": 79
+    },
+    {
+      "model": "Idempotency",
+      "name": "FailedOrHeldCommandNoPosting",
+      "status": "pass",
+      "checkedStates": 79
+    }
+  ],
+  "note": "Executable bounded state model checker passed. This is not a static-only artifact check; TLC is used when available."
+}
