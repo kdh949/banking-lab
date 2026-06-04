@@ -5,6 +5,8 @@
 | Double-entry posting balance | `legacy-node-reference/packages/banking-domain/src/ledger.mjs` | `tests/ledger.test.mjs`, Phase 2 evidence |
 | DB-enforced posted transaction balance | `validate_ledger_transaction_balance_at_commit`, `ledger_transactions_balance_at_commit`, `ledger_postings_balance_at_commit` | `LedgerDatabaseIntegrityIntegrationTest`, `npm run ledger:integrity-check` |
 | Chart of accounts and system routing | `accounts.account_class`, `accounts.system_account_kind`, `LedgerCommandService` system account routing | `LedgerDatabaseIntegrityIntegrationTest`, product/loan/card integration regression |
+| Cross-instance ledger HA/DR convergence | `LedgerCommandService` bounded retry around SERIALIZABLE/REPEATABLE READ withdrawal transactions, shared PostgreSQL source of truth | `MultiInstanceLedgerHaDrIntegrationTest`, `npm run dr:multi-instance-drill`, `docs/test-evidence/generated/ha-dr-multi-instance-drill.json` |
+| PostgreSQL backup/restore RPO | live disposable source/restore PostgreSQL containers and canonical restore parity checks | `npm run postgres:backup-drill:docker-live`, `docs/test-evidence/generated/postgres-backup-restore-drill.json`, `docs/test-evidence/postgres-backup-restore-drill.md` |
 | Balance projection from postings | `projectBalances` | ledger tests |
 | Idempotent transfer commands | `IdempotencyStore`, transfer result store | customer/runtime tests |
 | Reversal instead of mutation | `createReversalTransaction` | ledger core tests |

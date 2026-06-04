@@ -69,7 +69,7 @@ test("Spring Boot scaffold declares structured errors and PostgreSQL Flyway migr
     assert.match(ledgerController, new RegExp(route.replaceAll("/", "\\/")));
   }
   assert.match(ledgerService, /Isolation\.SERIALIZABLE/);
-  assert.match(ledgerService, /Isolation\.REPEATABLE_READ/);
+  assert.match(ledgerService, /Isolation\.REPEATABLE_READ|TransactionDefinition\.ISOLATION_REPEATABLE_READ/);
   assert.match(ledgerService, /account_balance_projections/);
   assert.match(ledgerService, /outbox_events/);
 });

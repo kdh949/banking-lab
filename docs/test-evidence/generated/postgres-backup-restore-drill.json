@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T14:31:37.590Z",
+  "generatedAt": "2026-06-04T19:44:25.689Z",
   "command": "npm run postgres:backup-drill -- --mode=live",
   "mode": "live",
   "syntheticOnly": true,
@@ -19,8 +19,8 @@
       "restored": 4
     },
     "accountBalanceProjections": {
-      "source": 3,
-      "restored": 3
+      "source": 10,
+      "restored": 10
     },
     "auditEvents": {
       "source": 2,
@@ -53,7 +53,7 @@
     {
       "id": "accountBalanceProjections-count-parity",
       "status": "pass",
-      "details": "3 source, 3 restored"
+      "details": "10 source, 10 restored"
     },
     {
       "id": "auditEvents-count-parity",

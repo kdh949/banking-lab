@@ -24,18 +24,24 @@ import lab.banking.core.ledger.domain.LedgerPostingDto
 import lab.banking.core.ledger.domain.LedgerPostingInput
 import lab.banking.core.ledger.domain.LedgerTransactionDto
 import lab.banking.core.ledger.domain.PostingDirection
+import org.springframework.dao.PessimisticLockingFailureException
+import org.springframework.dao.TransientDataAccessException
 import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.ResultSetExtractor
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 @Service
 class LedgerCommandService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val objectMapper: ObjectMapper,
-    private val auditEvents: AuditEventAppender
+    private val auditEvents: AuditEventAppender,
+    private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun deposit(command: DepositCommand): LedgerCommandResult =
@@ -60,13 +66,15 @@ class LedgerCommandService(
             )
         }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun withdraw(command: WithdrawalCommand): LedgerCommandResult =
-        withdrawSerializable(command)
+        runRetryableLedgerTransaction(TransactionDefinition.ISOLATION_SERIALIZABLE) {
+            withdrawSerializable(command)
+        }
 
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
     fun withdrawRepeatableReadForIsolationTest(command: WithdrawalCommand): LedgerCommandResult =
-        withdrawSerializable(command)
+        runRetryableLedgerTransaction(TransactionDefinition.ISOLATION_REPEATABLE_READ) {
+            withdrawSerializable(command)
+        }
 
     private fun withdrawSerializable(command: WithdrawalCommand): LedgerCommandResult =
         postLedgerCommand("WITHDRAWAL", command.idempotencyKey, command) {
@@ -103,6 +111,44 @@ class LedgerCommandService(
                 )
             )
         }
+
+    private fun <T> runRetryableLedgerTransaction(isolationLevel: Int, operation: () -> T): T {
+        var attempt = 1
+        while (true) {
+            try {
+                val template = TransactionTemplate(transactionManager).apply {
+                    this.isolationLevel = isolationLevel
+                }
+                return template.execute { operation() }
+                    ?: error("ledger command transaction returned no result")
+            } catch (error: RuntimeException) {
+                if (attempt >= SERIALIZABLE_LEDGER_COMMAND_MAX_ATTEMPTS || !isRetryableSerializationFailure(error)) {
+                    throw error
+                }
+                Thread.sleep(75L * attempt * attempt)
+                attempt += 1
+            }
+        }
+    }
+
+    private fun isRetryableSerializationFailure(error: Throwable): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is TransientDataAccessException || current is PessimisticLockingFailureException) {
+                return true
+            }
+            val message = current.message.orEmpty()
+            if (
+                message.contains("could not serialize access", ignoreCase = true) ||
+                message.contains("SQLSTATE 40001", ignoreCase = true) ||
+                message.contains("deadlock detected", ignoreCase = true)
+            ) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun internalTransfer(command: InternalTransferCommand): LedgerCommandResult =
@@ -1429,4 +1475,8 @@ class LedgerCommandService(
         val monthlyTransferLimitMinor: Long,
         val singleTransferLimitMinor: Long
     )
+
+    private companion object {
+        const val SERIALIZABLE_LEDGER_COMMAND_MAX_ATTEMPTS = 5
+    }
 }

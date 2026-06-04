@@ -1,6 +1,6 @@
 # PostgreSQL Backup/Restore Drill Evidence
 
-Date: 2026-06-04
+Date: 2026-06-05
 
 ## Commands
 
@@ -69,7 +69,7 @@ The default fixture mode is not a live PostgreSQL durability proof. Live mode re
 
 Live mode writes the same generated JSON evidence after running `pg_dump --format=custom`, restoring with `pg_restore --clean --if-exists`, and querying restored table counts, ledger posting balance, account-balance projection equality, customer available-balance validity, and audit hash-chain continuity.
 
-## 2026-06-04 Live Run
+## 2026-06-05 H4 Live Run
 
 The reusable Docker Compose live command was run locally:
 
@@ -82,6 +82,7 @@ Result:
 - pass;
 - exact canonical drill invoked by the wrapper: `npm run postgres:backup-drill -- --mode=live`;
 - `ledgerTransactions`, `ledgerPostings`, `accountBalanceProjections`, `auditEvents`, `operatorApprovals`, `workflowInstances`, and `customerTransferResults` count parity passed;
+- the V027 chart-of-accounts/system-account seed increased restored `accountBalanceProjections` parity to `10 source, 10 restored`;
 - balanced postings, balance projection equality, non-negative customer availability, audit hash-chain continuity, and source readability passed;
 - the wrapper removed the disposable Docker Compose containers and volumes after the run.
 
