@@ -2,21 +2,54 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-core-banking
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: {{ .Release.Name }}-core-banking
 spec:
-  replicas: 1
+  replicas: {{ .Values.coreBanking.replicas }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-core-banking
+      app.kubernetes.io/name: {{ .Release.Name }}-core-banking
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-core-banking
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: {{ .Release.Name }}-core-banking
     spec:
       containers:
         - name: core-banking
           image: {{ .Values.coreBanking.image | quote }}
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: {{ .Values.coreBanking.port }}
+            - name: http
+              containerPort: {{ .Values.coreBanking.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
           env:
             - name: BANKING_LAB_SYNTHETIC_ONLY
               value: {{ .Values.syntheticOnly | quote }}
+            - name: BANKING_LAB_TEMPORAL_WORKER_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: {{ .Values.coreBanking.resources.requests.cpu | quote }}
+              memory: {{ .Values.coreBanking.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.coreBanking.resources.limits.cpu | quote }}
+              memory: {{ .Values.coreBanking.resources.limits.memory | quote }}

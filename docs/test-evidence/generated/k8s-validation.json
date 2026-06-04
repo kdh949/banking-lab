@@ -1,0 +1,134 @@
+{
+  "generatedAt": "2026-06-04T08:39:52.355Z",
+  "command": "npm run k8s:validate",
+  "structuralValidation": "pass",
+  "kubectlClientDryRun": {
+    "status": "skipped_no_cluster",
+    "command": "kubectl apply --dry-run=client --validate=false -f infra/k8s",
+    "stdout": "",
+    "stderr": "kubectl client is installed, but no local Kubernetes API server was reachable; structural validation was used."
+  },
+  "requiredFiles": [
+    "namespace.yaml",
+    "configmap.yaml",
+    "secret.example.yaml",
+    "core-banking-deployment.yaml",
+    "core-banking-service.yaml",
+    "core-banking-temporal-worker-deployment.yaml",
+    "postgres-statefulset.yaml",
+    "keycloak-deployment.yaml",
+    "redpanda-deployment.yaml",
+    "temporal-deployment.yaml",
+    "network-policy.yaml"
+  ],
+  "documentCount": 15,
+  "resources": [
+    {
+      "file": "infra/k8s/configmap.yaml",
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "name": "banking-lab-config",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/core-banking-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "core-banking-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/core-banking-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "core-banking-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/core-banking-temporal-worker-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "core-banking-temporal-worker",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/keycloak-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "keycloak",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/keycloak-deployment.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "keycloak",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/namespace.yaml",
+      "apiVersion": "v1",
+      "kind": "Namespace",
+      "name": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/network-policy.yaml",
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "name": "banking-lab-default-deny-and-app-allow",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/postgres-statefulset.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "postgres",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/postgres-statefulset.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "name": "postgres",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/redpanda-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "redpanda",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/redpanda-deployment.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "redpanda",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/secret.example.yaml",
+      "apiVersion": "v1",
+      "kind": "Secret",
+      "name": "banking-lab-secret",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/temporal-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "temporal",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/temporal-deployment.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "temporal",
+      "namespace": "banking-lab"
+    }
+  ],
+  "productionClaim": false,
+  "syntheticOnly": true,
+  "errors": []
+}

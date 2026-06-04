@@ -119,7 +119,7 @@ Show:
 - product-ledger Phase C now includes deposit interest, fee policy versioning, fee posting, and targeted fee refund reversal
 - Python/DuckDB analytics now has batch evidence; live Spring/FDS-console linkage remains
 - formal model-checker evidence is executable through bounded state search; local TLC binary is still optional
-- Kubernetes/Helm validation and load or backup/restore drill gap
+- Kubernetes/Helm structural validation evidence is present; load or backup/restore drill gap remains
 
 Narration:
 

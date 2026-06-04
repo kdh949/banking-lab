@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: core-banking-service
+  namespace: banking-lab
   labels:
+    app.kubernetes.io/part-of: banking-lab
     app.kubernetes.io/name: core-banking-service
 spec:
   replicas: 1
@@ -17,8 +19,36 @@ spec:
       containers:
         - name: core-banking-service
           image: banking-lab/core-banking-service:local
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
+              name: http
+          envFrom:
+            - configMapRef:
+                name: banking-lab-config
+            - secretRef:
+                name: banking-lab-secret
           env:
             - name: BANKING_LAB_SYNTHETIC_ONLY
               value: "true"
+            - name: BANKING_LAB_TEMPORAL_WORKER_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

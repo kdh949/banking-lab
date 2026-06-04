@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-06-04T08:39:35.666Z",
+  "command": "npm run helm:template",
+  "renderer": "node-structural",
+  "helmCommand": "helm template banking-lab infra/helm/banking-lab",
+  "helmAvailable": false,
+  "structuralValidation": "pass",
+  "documentCount": 9,
+  "resources": [
+    {
+      "kind": "ConfigMap",
+      "name": "banking-lab-config",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-core-banking",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Service",
+      "name": "banking-lab-core-banking",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Namespace",
+      "name": "banking-lab"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "banking-lab-app-allow",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Service",
+      "name": "banking-lab-postgres",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "StatefulSet",
+      "name": "banking-lab-postgres",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Secret",
+      "name": "banking-lab-secret",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-temporal-worker",
+      "namespace": "banking-lab"
+    }
+  ],
+  "productionClaim": false,
+  "syntheticOnly": true,
+  "note": "Helm CLI was not installed; Node fallback rendered this chart's limited template subset for structural validation only.",
+  "errors": []
+}
