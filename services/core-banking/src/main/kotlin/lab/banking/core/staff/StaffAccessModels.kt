@@ -189,6 +189,48 @@ data class CustomerKycReviewRequestResponse(
     val kycProfile: StaffKycProfileDto
 )
 
+data class FeeWaiverRequestCommand(
+    val requestedBy: String? = null,
+    val requestedByRole: String? = null,
+    val reason: String? = null,
+    val reasonCode: String? = null,
+    val feeCode: String? = null,
+    val waivedAmountMinor: Long? = null,
+    val currency: String? = null,
+    val targetTransactionId: String? = null,
+    val description: String? = null,
+    val idempotencyKey: String? = null
+)
+
+data class FeeWaiverRequestDto(
+    val requestId: String,
+    val businessType: String,
+    val businessReferenceId: String,
+    val targetCustomerId: String,
+    val targetAccountId: String,
+    val targetTransactionId: String?,
+    val requestedBy: String,
+    val requestedRole: String,
+    val reason: String,
+    val reasonCode: String,
+    val feeCode: String,
+    val waivedAmountMinor: Long,
+    val currency: String,
+    val status: String,
+    val approvalId: String?,
+    val idempotencyKey: String,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val executedAt: OffsetDateTime?,
+    val metadata: Map<String, Any?>
+)
+
+data class FeeWaiverRequestResponse(
+    val item: FeeWaiverRequestDto,
+    val approval: OperatorApproval,
+    val account: StaffAccountDto
+)
+
 data class StaffApprovalExecutionResponse(
     val item: OperatorApproval,
     val executed: Boolean,
@@ -199,11 +241,18 @@ data class StaffApprovalExecutionResponse(
     val transferLimitChangeRequest: TransferLimitChangeRequestDto?,
     val kycProfile: StaffKycProfileDto?,
     val kycReviewRequest: CustomerKycReviewRequestDto?,
+    val feeWaiverRequest: FeeWaiverRequestDto?,
     val complaint: ComplaintCaseDto?,
     val fdsCase: FdsCaseDto?,
     val amlCase: AmlCaseDto?,
     val reconciliationItem: ReconciliationItemDto?,
     val ledgerTransaction: LedgerCommandResult?
+)
+
+data class StaffApprovalRejectionResponse(
+    val item: OperatorApproval,
+    val rejected: Boolean,
+    val feeWaiverRequest: FeeWaiverRequestDto?
 )
 
 data class StaffCustomerRecord(

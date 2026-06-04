@@ -11,6 +11,7 @@ import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApproveApprovalCommand
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
+import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.complaint.ComplaintCaseService
 import lab.banking.core.fds.FdsCaseService
@@ -516,6 +517,85 @@ class StaffAccessService(
         )
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestFeeWaiver(accountId: String, command: FeeWaiverRequestCommand): FeeWaiverRequestResponse {
+        val requestedBy = command.requestedBy ?: "manager01"
+        val requestedRole = command.requestedByRole ?: "BRANCH_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, FEE_WAIVER_REQUEST_ROLES, "actor role cannot request fee waiver")
+        requireReason(command.reason, "FEE_WAIVER requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingFeeWaiverRequest(requestedBy, idempotencyKey)
+            ?.let { return feeWaiverResponse(it) }
+
+        val account = account(accountId, forUpdate = true)
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can request fee waiver")
+        }
+        val feeCode = requireField(command.feeCode, "feeCode").uppercase()
+        val waivedAmount = command.waivedAmountMinor ?: throw WorkflowErrors.validation("waivedAmountMinor is required")
+        if (waivedAmount <= 0) {
+            throw WorkflowErrors.validation("waivedAmountMinor must be positive")
+        }
+        val currency = (command.currency ?: account.currency).uppercase()
+        if (currency != account.currency) {
+            throw WorkflowErrors.validation("currency must match account currency")
+        }
+        val targetTransactionId = command.targetTransactionId?.takeIf { it.isNotBlank() }
+        if (targetTransactionId != null && !ledgerPostingBelongsToAccount(targetTransactionId, accountId)) {
+            throw WorkflowErrors.validation("targetTransactionId must belong to the target account")
+        }
+        val requestId = nextFeeWaiverRequestId()
+        val reasonCode = command.reasonCode ?: "CUSTOMER_SERVICE_RECOVERY"
+        val metadata = mapOf(
+            "description" to command.description.orEmpty(),
+            "feePostingCreated" to false,
+            "syntheticOnly" to true
+        )
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.FEE_WAIVER,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = account.snapshot(),
+                afterSnapshot = mapOf(
+                    "accountId" to account.accountId,
+                    "feeCode" to feeCode,
+                    "waivedAmountMinor" to waivedAmount,
+                    "currency" to currency,
+                    "reasonCode" to reasonCode,
+                    "targetTransactionId" to targetTransactionId,
+                    "description" to command.description.orEmpty(),
+                    "feePostingCreated" to false,
+                    "ledgerSourceRowsMutated" to false
+                ),
+                screenId = "FEE-102"
+            )
+        )
+        insertFeeWaiverRequest(
+            requestId = requestId,
+            account = account,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            feeCode = feeCode,
+            waivedAmountMinor = waivedAmount,
+            currency = currency,
+            targetTransactionId = targetTransactionId,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return FeeWaiverRequestResponse(
+            item = feeWaiverRequest(requestId),
+            approval = approval,
+            account = account.toDto()
+        )
+    }
+
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         return runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
@@ -576,6 +656,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val feeWaiverExecution = if (approval.businessType == ApprovalBusinessTypes.FEE_WAIVER) {
+            applyApprovedFeeWaiverRequest(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -585,19 +670,53 @@ class StaffAccessService(
                 reconciliationExecution != null ||
                 accountHoldExecution != null ||
                 transferLimitExecution != null ||
-                kycExecution != null,
+                kycExecution != null ||
+                feeWaiverExecution != null,
             customer = customer,
-            account = accountHoldExecution?.second,
+            account = accountHoldExecution?.second ?: feeWaiverExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
             transferLimit = transferLimitExecution?.second,
             transferLimitChangeRequest = transferLimitExecution?.first,
             kycProfile = kycExecution?.second,
             kycReviewRequest = kycExecution?.first,
+            feeWaiverRequest = feeWaiverExecution?.first,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
             reconciliationItem = reconciliationExecution?.item,
             ledgerTransaction = fdsExecution?.ledgerTransaction ?: reconciliationExecution?.ledgerTransaction
+        )
+    }
+
+    fun rejectStaffRequest(approvalId: String, command: RejectApprovalCommand): StaffApprovalRejectionResponse {
+        return runSerializableApprovalExecution {
+            rejectStaffRequestInTransaction(approvalId, command)
+        }
+    }
+
+    private fun rejectStaffRequestInTransaction(approvalId: String, command: RejectApprovalCommand): StaffApprovalRejectionResponse {
+        BankingLabAuthContext.requireActor(command.rejectedBy, command.rejectedByRole)
+        val pendingApproval = approvals.approval(approvalId)
+        requireCheckerRole(pendingApproval.businessType, command.rejectedByRole)
+        if (pendingApproval.requestedBy == command.rejectedBy) {
+            throw WorkflowErrors.selfApprovalRejected()
+        }
+        if (pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER) {
+            throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
+        }
+        val request = feeWaiverRequestForUpdate(pendingApproval.businessReferenceId)
+        if (request.approvalId != pendingApproval.approvalId || request.businessType != pendingApproval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match fee waiver request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending fee waiver requests can be rejected")
+        }
+        val approval = approvals.reject(approvalId, command)
+        markFeeWaiverRequestRejected(request.requestId)
+        return StaffApprovalRejectionResponse(
+            item = approval,
+            rejected = true,
+            feeWaiverRequest = feeWaiverRequest(request.requestId)
         )
     }
 
@@ -676,6 +795,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE -> ACCOUNT_HOLD_RELEASE_CHECKER_ROLES
             ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE -> TRANSFER_LIMIT_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.CUSTOMER_KYC_REVIEW -> CUSTOMER_KYC_REVIEW_CHECKER_ROLES
+            ApprovalBusinessTypes.FEE_WAIVER -> FEE_WAIVER_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -696,6 +816,9 @@ class StaffAccessService(
 
     private fun nextCustomerKycReviewRequestId(): String =
         "KYR-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun nextFeeWaiverRequestId(): String =
+        "FWR-${UUID.randomUUID().toString().uppercase()}"
 
     private fun customer(customerId: String): StaffCustomerRecord =
         try {
@@ -783,6 +906,20 @@ class StaffAccessService(
         } catch (_: EmptyResultDataAccessException) {
             throw WorkflowErrors.notFound("customer KYC profile not found: $customerId")
         }
+
+    private fun ledgerPostingBelongsToAccount(ledgerTransactionId: String, accountId: String): Boolean =
+        (
+            jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM ledger_postings
+                WHERE ledger_transaction_id = :ledgerTransactionId
+                  AND account_id = :accountId
+                """.trimIndent(),
+                mapOf("ledgerTransactionId" to ledgerTransactionId, "accountId" to accountId),
+                Int::class.java
+            ) ?: 0
+            ) > 0
 
     private fun supportedCustomerInfoChange(afterSnapshot: Map<String, Any?>?): Map<String, Any?> {
         val allowed = linkedMapOf<String, Any?>()
@@ -1416,6 +1553,201 @@ class StaffAccessService(
             metadata = readMetadata(rs.getString("metadata_json"))
         )
 
+    private fun applyApprovedFeeWaiverRequest(
+        approval: OperatorApproval,
+        command: ApproveApprovalCommand
+    ): Pair<FeeWaiverRequestDto, StaffAccountDto> {
+        val request = feeWaiverRequestForUpdate(approval.businessReferenceId)
+        if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match fee waiver request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending fee waiver requests can be executed")
+        }
+        val account = account(request.targetAccountId, forUpdate = true)
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can apply fee waiver")
+        }
+        markFeeWaiverRequestApproved(request.requestId)
+        appendAudit(
+            eventType = "COMMAND_EXECUTED",
+            actorId = command.approvedBy,
+            actorRole = command.approvedByRole,
+            screenId = command.screenId ?: "FEE-102",
+            customerId = request.targetCustomerId,
+            accountId = request.targetAccountId,
+            reason = request.reason,
+            payload = mapOf(
+                "businessType" to approval.businessType,
+                "requestId" to request.requestId,
+                "approvalId" to approval.approvalId,
+                "feeCode" to request.feeCode,
+                "waivedAmountMinor" to request.waivedAmountMinor,
+                "currency" to request.currency,
+                "feePostingCreated" to false,
+                "syntheticOnly" to true,
+                "ledgerSourceRowsMutated" to false
+            )
+        )
+        val updatedRequest = feeWaiverRequest(request.requestId)
+        val updatedAccount = account(request.targetAccountId, forUpdate = false)
+        return updatedRequest to updatedAccount.toDto()
+    }
+
+    private fun insertFeeWaiverRequest(
+        requestId: String,
+        account: StaffAccountRecord,
+        requestedBy: String,
+        requestedRole: String,
+        reason: String,
+        reasonCode: String,
+        feeCode: String,
+        waivedAmountMinor: Long,
+        currency: String,
+        targetTransactionId: String?,
+        approvalId: String,
+        idempotencyKey: String,
+        metadata: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO fee_waiver_requests (
+              request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+              target_transaction_id, requested_by, requested_role, reason, reason_code,
+              fee_code, waived_amount_minor, currency, status, approval_id, idempotency_key, metadata_json
+            )
+            VALUES (
+              :requestId, :businessType, :requestId, :customerId, :accountId,
+              :targetTransactionId, :requestedBy, :requestedRole, :reason, :reasonCode,
+              :feeCode, :waivedAmountMinor, :currency, 'PENDING_APPROVAL',
+              :approvalId, :idempotencyKey, CAST(:metadataJson AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "businessType" to ApprovalBusinessTypes.FEE_WAIVER,
+                "customerId" to account.customerId,
+                "accountId" to account.accountId,
+                "targetTransactionId" to targetTransactionId,
+                "requestedBy" to requestedBy,
+                "requestedRole" to requestedRole,
+                "reason" to reason,
+                "reasonCode" to reasonCode,
+                "feeCode" to feeCode,
+                "waivedAmountMinor" to waivedAmountMinor,
+                "currency" to currency,
+                "approvalId" to approvalId,
+                "idempotencyKey" to idempotencyKey,
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+    }
+
+    private fun markFeeWaiverRequestApproved(requestId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE fee_waiver_requests
+            SET status = 'APPROVED',
+                updated_at = now(),
+                executed_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("fee waiver request is no longer pending")
+        }
+    }
+
+    private fun markFeeWaiverRequestRejected(requestId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE fee_waiver_requests
+            SET status = 'REJECTED',
+                updated_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("fee waiver request is no longer pending")
+        }
+    }
+
+    private fun feeWaiverResponse(request: FeeWaiverRequestDto): FeeWaiverRequestResponse =
+        FeeWaiverRequestResponse(
+            item = request,
+            approval = approvals.approval(request.approvalId ?: throw WorkflowErrors.stateViolation("fee waiver request has no approval")),
+            account = account(request.targetAccountId, forUpdate = false).toDto()
+        )
+
+    private fun existingFeeWaiverRequest(requestedBy: String, idempotencyKey: String): FeeWaiverRequestDto? =
+        jdbc.query(
+            feeWaiverRequestSql(
+                """
+                WHERE business_type = :businessType
+                  AND requested_by = :requestedBy
+                  AND idempotency_key = :idempotencyKey
+                """.trimIndent()
+            ),
+            mapOf(
+                "businessType" to ApprovalBusinessTypes.FEE_WAIVER,
+                "requestedBy" to requestedBy,
+                "idempotencyKey" to idempotencyKey
+            ),
+            this::mapFeeWaiverRequest
+        ).firstOrNull()
+
+    private fun feeWaiverRequest(requestId: String): FeeWaiverRequestDto =
+        jdbc.queryForObject(
+            feeWaiverRequestSql("WHERE request_id = :requestId"),
+            mapOf("requestId" to requestId),
+            this::mapFeeWaiverRequest
+        ) ?: throw WorkflowErrors.notFound("fee waiver request not found: $requestId")
+
+    private fun feeWaiverRequestForUpdate(requestId: String): FeeWaiverRequestDto =
+        jdbc.queryForObject(
+            feeWaiverRequestSql("WHERE request_id = :requestId FOR UPDATE"),
+            mapOf("requestId" to requestId),
+            this::mapFeeWaiverRequest
+        ) ?: throw WorkflowErrors.notFound("fee waiver request not found: $requestId")
+
+    private fun feeWaiverRequestSql(suffix: String): String =
+        """
+        SELECT request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+               target_transaction_id, requested_by, requested_role, reason, reason_code,
+               fee_code, waived_amount_minor, currency, status, approval_id, idempotency_key,
+               created_at, updated_at, executed_at, metadata_json::text AS metadata_json
+        FROM fee_waiver_requests
+        $suffix
+        """.trimIndent()
+
+    private fun mapFeeWaiverRequest(rs: ResultSet, rowNum: Int): FeeWaiverRequestDto =
+        FeeWaiverRequestDto(
+            requestId = rs.getString("request_id"),
+            businessType = rs.getString("business_type"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            targetCustomerId = rs.getString("target_customer_id"),
+            targetAccountId = rs.getString("target_account_id"),
+            targetTransactionId = rs.getString("target_transaction_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedRole = rs.getString("requested_role"),
+            reason = rs.getString("reason"),
+            reasonCode = rs.getString("reason_code"),
+            feeCode = rs.getString("fee_code"),
+            waivedAmountMinor = rs.getLong("waived_amount_minor"),
+            currency = rs.getString("currency"),
+            status = rs.getString("status"),
+            approvalId = rs.getString("approval_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            executedAt = rs.getObject("executed_at", OffsetDateTime::class.java),
+            metadata = readMetadata(rs.getString("metadata_json"))
+        )
+
     private fun accountHoldResponse(request: AccountHoldRequestDto): AccountHoldRequestResponse =
         AccountHoldRequestResponse(
             item = request,
@@ -1786,5 +2118,7 @@ class StaffAccessService(
         val TRANSFER_LIMIT_CHANGE_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val CUSTOMER_KYC_REVIEW_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val CUSTOMER_KYC_REVIEW_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val FEE_WAIVER_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER")
+        val FEE_WAIVER_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

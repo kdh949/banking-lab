@@ -39,6 +39,7 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              fee_waiver_requests,
               customer_kyc_review_requests,
               account_limit_change_requests,
               account_hold_requests,
@@ -861,6 +862,230 @@ class StaffAccessApiParityIntegrationTest {
         )
     }
 
+    @Test
+    fun `fee waiver request supports checker approval and rejection without ledger source mutation`() {
+        val initialLedgerBalance = accountLedgerBalance()
+        val initialAvailableBalance = accountAvailableBalance()
+        val initialLedgerPostings = countRows("ledger_postings")
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .header("x-request-id", "REQ-FEE-REASON")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reasonCode": "CUSTOMER_SERVICE_RECOVERY",
+                      "feeCode": "MONTHLY_SERVICE_FEE",
+                      "waivedAmountMinor": 1200,
+                      "currency": "KRW",
+                      "idempotencyKey": "FEE-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-FEE-REASON"))
+        assertEquals(0, countRows("fee_waiver_requests"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'FEE_WAIVER'"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "ops01",
+                      "requestedByRole": "OPS_MANAGER",
+                      "reason": "Unauthorized fee waiver attempt",
+                      "reasonCode": "CUSTOMER_SERVICE_RECOVERY",
+                      "feeCode": "MONTHLY_SERVICE_FEE",
+                      "waivedAmountMinor": 1200,
+                      "currency": "KRW",
+                      "idempotencyKey": "FEE-KEY-DENIED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals(0, countRows("fee_waiver_requests"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Invalid synthetic fee waiver",
+                      "reasonCode": "CUSTOMER_SERVICE_RECOVERY",
+                      "feeCode": "MONTHLY_SERVICE_FEE",
+                      "waivedAmountMinor": 0,
+                      "currency": "KRW",
+                      "idempotencyKey": "FEE-KEY-INVALID"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+        assertEquals(0, countRows("fee_waiver_requests"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer requested monthly service fee waiver",
+                      "reasonCode": "CUSTOMER_SERVICE_RECOVERY",
+                      "feeCode": "MONTHLY_SERVICE_FEE",
+                      "waivedAmountMinor": 1200,
+                      "currency": "KRW",
+                      "description": "Synthetic fee waiver approval",
+                      "idempotencyKey": "FEE-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("FEE_WAIVER"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.item.feeCode").value("MONTHLY_SERVICE_FEE"))
+            .andExpect(jsonPath("$.item.waivedAmountMinor").value(1200))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andExpect(jsonPath("$.account.status").value("ACTIVE"))
+            .andReturn()
+
+        val body = objectMapper.readTree(requestResponse.response.contentAsString)
+        val requestId = body.path("item").path("requestId").asText()
+        val approvalId = body.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Customer requested monthly service fee waiver replay",
+                      "reasonCode": "CUSTOMER_SERVICE_RECOVERY",
+                      "feeCode": "MONTHLY_SERVICE_FEE",
+                      "waivedAmountMinor": 1200,
+                      "currency": "KRW",
+                      "idempotencyKey": "FEE-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.requestId").value(requestId))
+            .andExpect(jsonPath("$.approval.approvalId").value(approvalId))
+        assertEquals(1, countRows("fee_waiver_requests WHERE business_type = 'FEE_WAIVER'"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"FEE-102"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+        assertEquals("PENDING_APPROVAL", feeWaiverRequestStatus(requestId))
+        assertEquals("PENDING", approvalStatus(approvalId))
+
+        val rejectResponse = mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/fee-waiver-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "branch01",
+                      "requestedByRole": "BRANCH_STAFF",
+                      "reason": "Relationship pricing fee waiver review",
+                      "reasonCode": "RELATIONSHIP_PRICING",
+                      "feeCode": "ATM_WITHDRAWAL_FEE",
+                      "waivedAmountMinor": 800,
+                      "currency": "KRW",
+                      "description": "Synthetic fee waiver rejection",
+                      "idempotencyKey": "FEE-KEY-REJECT"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andReturn()
+
+        val rejectBody = objectMapper.readTree(rejectResponse.response.contentAsString)
+        val rejectedRequestId = rejectBody.path("item").path("requestId").asText()
+        val rejectedApprovalId = rejectBody.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$rejectedApprovalId/reject")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"rejectedBy":"branch01","rejectedByRole":"BRANCH_STAFF","rejectReason":"Maker cannot reject own request","screenId":"FEE-102"}""")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals("PENDING_APPROVAL", feeWaiverRequestStatus(rejectedRequestId))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$rejectedApprovalId/reject")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"rejectedBy":"manager02","rejectedByRole":"BRANCH_MANAGER","rejectReason":"Synthetic fee waiver rejected by checker","screenId":"FEE-102"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rejected").value(true))
+            .andExpect(jsonPath("$.item.status").value("REJECTED"))
+            .andExpect(jsonPath("$.feeWaiverRequest.status").value("REJECTED"))
+        assertEquals("REJECTED", feeWaiverRequestStatus(rejectedRequestId))
+        assertEquals("REJECTED", approvalStatus(rejectedApprovalId))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"FEE-102"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.feeWaiverRequest.status").value("APPROVED"))
+            .andExpect(jsonPath("$.feeWaiverRequest.feeCode").value("MONTHLY_SERVICE_FEE"))
+            .andExpect(jsonPath("$.account.accountId").value("ACC-SYN-001-001"))
+
+        assertEquals("APPROVED", feeWaiverRequestStatus(requestId))
+        assertEquals("APPROVED", approvalStatus(approvalId))
+        assertEquals(initialLedgerBalance, accountLedgerBalance())
+        assertEquals(initialAvailableBalance, accountAvailableBalance())
+        assertEquals(initialLedgerPostings, countRows("ledger_postings"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"FEE-102"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED' AND screen_id = 'FEE-102'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_REJECTED' AND screen_id = 'FEE-102'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED' AND screen_id = 'FEE-102'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'FEE-102'"))
+        assertEquals(
+            1,
+            countRows(
+                "audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'FEE-102' AND payload_json->>'feePostingCreated' = 'false'"
+            )
+        )
+    }
+
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM $tableExpression",
@@ -892,6 +1117,13 @@ class StaffAccessApiParityIntegrationTest {
     private fun kycReviewRequestStatus(requestId: String): String? =
         jdbc.queryForObject(
             "SELECT status FROM customer_kyc_review_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        )
+
+    private fun feeWaiverRequestStatus(requestId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM fee_waiver_requests WHERE request_id = :requestId",
             mapOf("requestId" to requestId),
             String::class.java
         )

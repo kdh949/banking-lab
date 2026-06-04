@@ -212,6 +212,13 @@ export interface ApproveApprovalCommand {
   readonly screenId?: string;
 }
 
+export interface RejectApprovalCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
 export interface CustomerInfoChangeCommand {
   readonly requestedBy?: string;
   readonly requestedByRole?: string;
@@ -371,6 +378,48 @@ export interface CustomerKycReviewRequestResponse {
   readonly kycProfile: StaffKycProfileDto;
 }
 
+export interface FeeWaiverRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly feeCode?: string;
+  readonly waivedAmountMinor?: number;
+  readonly currency?: string;
+  readonly targetTransactionId?: string;
+  readonly description?: string;
+  readonly idempotencyKey?: string;
+}
+
+export interface FeeWaiverRequestDto {
+  readonly requestId: string;
+  readonly businessType: string;
+  readonly businessReferenceId: string;
+  readonly targetCustomerId: string;
+  readonly targetAccountId: string;
+  readonly targetTransactionId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly reasonCode: string;
+  readonly feeCode: string;
+  readonly waivedAmountMinor: number;
+  readonly currency: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface FeeWaiverRequestResponse {
+  readonly item: FeeWaiverRequestDto;
+  readonly approval: OperatorApproval;
+  readonly account: CustomerAccountDetailDto;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -395,11 +444,18 @@ export interface StaffApprovalExecutionResponse {
   readonly transferLimitChangeRequest?: TransferLimitChangeRequestDto | null;
   readonly kycProfile?: StaffKycProfileDto | null;
   readonly kycReviewRequest?: CustomerKycReviewRequestDto | null;
+  readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
   readonly reconciliationItem?: ReconciliationItemDto | null;
   readonly ledgerTransaction?: LedgerCommandResult | null;
+}
+
+export interface StaffApprovalRejectionResponse {
+  readonly item: OperatorApproval;
+  readonly rejected: boolean;
+  readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
 }
 
 export interface ReconciliationItemsResponse {
@@ -639,6 +695,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    requestFeeWaiver(accountId: string, command: FeeWaiverRequestCommand) {
+      return request<FeeWaiverRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/${encodeURIComponent(accountId)}/fee-waiver-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
     unmaskStaffCustomer(command: PiiUnmaskCommand) {
       return request<StaffUnmaskResponse>(
         fetchImpl,
@@ -769,6 +836,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/approvals/${encodeURIComponent(approvalId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectStaffApproval(approvalId: string, command: RejectApprovalCommand) {
+      return request<StaffApprovalRejectionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/approvals/${encodeURIComponent(approvalId)}/reject`,
         {},
         options.bearerToken,
         { method: "POST", body: command }
