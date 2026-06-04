@@ -36,7 +36,7 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Closing and reconciliation controls" })).toBeVisible();
   for (const screen of screens) {
-    await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
+    await expect(page.locator(".channel-card-heading > span", { hasText: screen.screenId })).toBeVisible();
   }
 
   await expect(page.getByText("Balanced adjustments only")).toBeVisible();

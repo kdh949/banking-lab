@@ -11,7 +11,8 @@ test("coverage matrix uses split API-backed and deployment evidence statuses", a
   assert.match(matrix, /browser-e2e-backed/);
   assert.match(matrix, /live-keycloak-backed/);
   assert.doesNotMatch(matrix, /\|\s*api-backed\s*\|/);
-  assert.match(row("| analytics | Python AML/FDS scoring"), /\| api-backed-read \|$/);
+  assert.match(row("| analytics | Python AML/FDS scoring"), /GET \/api\/fds\/analytics/);
+  assert.match(row("| analytics | Python AML/FDS scoring"), /\| complete \|$/);
   assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /bounded state-search/);
   assert.match(row("| formal | Executable ledger and idempotency model checking gate"), /\| partial \|$/);
   assert.match(row("| platform | Kubernetes/Helm/Argo CD structural validation"), /\| complete \|$/);
