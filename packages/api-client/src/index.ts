@@ -1133,6 +1133,27 @@ export interface ParameterChangeRequestResponse {
   readonly replayed: boolean;
 }
 
+export interface FdsAnalyticsEvidenceResultDto {
+  readonly transactionId: string;
+  readonly customerId: string;
+  readonly riskBand: string;
+  readonly totalScore: number;
+  readonly alerts: readonly string[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface FdsAnalyticsEvidenceDto {
+  readonly engine: string;
+  readonly generatedAt: string;
+  readonly controls: Record<string, boolean>;
+  readonly scoredTransactions: number;
+  readonly highRiskResults: number;
+  readonly alertCounts: Record<string, number>;
+  readonly highestRisk?: FdsAnalyticsEvidenceResultDto | null;
+  readonly auditEventId: string;
+  readonly syntheticOnly: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -1783,6 +1804,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
 
     requestFdsParameterChange(command: ParameterChangeRequestCommand) {
       return requestParameterChange("/api/staff/fds-parameters/change-requests", command);
+    },
+
+    fdsAnalyticsEvidence(reason: string) {
+      return request<FdsAnalyticsEvidenceDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/fds/analytics",
+        { reason },
+        options.bearerToken
+      );
     },
 
     securityParameters(reason: string, asOf?: string) {

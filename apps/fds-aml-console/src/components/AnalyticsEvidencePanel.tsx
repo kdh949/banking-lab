@@ -1,60 +1,87 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createBankingApiClient, type FdsAnalyticsEvidenceDto } from "@banking-lab/api-client";
+import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import {
   ChannelCard,
   ChannelDefinitionList,
   ChannelMetric,
   ChannelMetricGrid
 } from "../../../../packages/channel-ui/src";
-import analyticsArtifact from "../../../../docs/test-evidence/generated/fds-aml-analytics.json";
 
-interface AnalyticsControls {
-  readonly realMoneyUsed: boolean;
-  readonly realPiiUsed: boolean;
-  readonly realBankNetworkUsed: boolean;
-}
+type AnalyticsState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly evidence: FdsAnalyticsEvidenceDto }
+  | { readonly status: "failed"; readonly message: string };
 
-interface AnalyticsResult {
-  readonly transactionId: string;
-  readonly customerId: string;
-  readonly riskBand: string;
-  readonly totalScore: number;
-  readonly alerts: readonly string[];
-}
-
-interface AnalyticsArtifact {
-  readonly engine: string;
-  readonly generatedAt: string;
-  readonly controls: AnalyticsControls;
-  readonly alertCounts: Record<string, number>;
-  readonly results: readonly AnalyticsResult[];
-}
+const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 
 export function AnalyticsEvidencePanel() {
-  const artifact = analyticsArtifact as AnalyticsArtifact;
-  const highRiskCount = artifact.results.filter((result) => result.riskBand === "HIGH").length;
-  const alertCount = Object.values(artifact.alertCounts).reduce((total, count) => total + count, 0);
-  const highestRisk = [...artifact.results].sort((left, right) => right.totalScore - left.totalScore)[0];
+  const [state, setState] = useState<AnalyticsState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "fds01",
+        roles: ["FDS_REVIEWER", "AML_REVIEWER"]
+      })
+    });
+
+    client
+      .fdsAnalyticsEvidence("Synthetic FDS/AML console analytics evidence view")
+      .then((evidence) => {
+        if (!cancelled) {
+          setState({ status: "loaded", evidence });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown analytics API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const evidence = state.status === "loaded" ? state.evidence : null;
+  const alertCount = evidence ? Object.values(evidence.alertCounts).reduce((total, count) => total + count, 0) : 0;
 
   return (
-    <ChannelCard screenId="ANL-EVID" title="Analytics evidence" meta={artifact.engine}>
+    <ChannelCard screenId="ANL-EVID" title="Analytics evidence" meta={evidence?.engine ?? "Spring API"}>
       <div data-testid="analytics-evidence-panel">
         <ChannelMetricGrid>
-          <ChannelMetric label="Scored transactions" value={artifact.results.length} />
-          <ChannelMetric label="High-risk results" value={highRiskCount} />
+          <ChannelMetric label="Scored transactions" value={evidence?.scoredTransactions ?? 0} />
+          <ChannelMetric label="High-risk results" value={evidence?.highRiskResults ?? 0} />
           <ChannelMetric label="Rule alerts" value={alertCount} />
         </ChannelMetricGrid>
         <ChannelDefinitionList
           items={[
-            { term: "Generated", detail: artifact.generatedAt },
-            { term: "Synthetic controls", detail: syntheticControlSummary(artifact.controls) },
+            { term: "Spring API", detail: apiBaseUrl || "not configured" },
+            { term: "Status", detail: statusLabel(state) },
+            { term: "Generated", detail: evidence?.generatedAt ?? "pending" },
+            { term: "Synthetic controls", detail: evidence ? syntheticControlSummary(evidence.controls) : "pending" },
             {
               term: "Highest risk",
-              detail: highestRisk
-                ? `${highestRisk.transactionId} · ${highestRisk.riskBand} · score ${highestRisk.totalScore}`
+              detail: evidence?.highestRisk
+                ? `${evidence.highestRisk.transactionId} · ${evidence.highestRisk.riskBand} · score ${evidence.highestRisk.totalScore}`
                 : "none"
             },
             {
               term: "Top alerts",
-              detail: highestRisk && highestRisk.alerts.length > 0 ? highestRisk.alerts.join(", ") : "none"
+              detail: evidence?.highestRisk && evidence.highestRisk.alerts.length > 0 ? evidence.highestRisk.alerts.join(", ") : "none"
+            },
+            {
+              term: "Audit event",
+              detail: evidence?.auditEventId ?? "pending"
             }
           ]}
         />
@@ -63,10 +90,23 @@ export function AnalyticsEvidencePanel() {
   );
 }
 
-function syntheticControlSummary(controls: AnalyticsControls): string {
+function syntheticControlSummary(controls: Record<string, boolean>): string {
   return [
     `realMoneyUsed=${String(controls.realMoneyUsed)}`,
     `realPiiUsed=${String(controls.realPiiUsed)}`,
     `realBankNetworkUsed=${String(controls.realBankNetworkUsed)}`
   ].join(", ");
+}
+
+function statusLabel(state: AnalyticsState): string {
+  switch (state.status) {
+    case "offline":
+      return "API not configured";
+    case "loading":
+      return "loading";
+    case "loaded":
+      return state.evidence.syntheticOnly ? "synthetic API evidence loaded" : "unsafe";
+    case "failed":
+      return state.message;
+  }
 }

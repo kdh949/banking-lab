@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:afaaa4df-5180-43de-aaa5-f516b485ad97",
+  "serialNumber": "urn:uuid:d4b87475-5715-4afb-9dd6-c2d73ee6d222",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-04T13:31:59+00:00",
+    "timestamp": "2026-06-04T13:39:08+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "08d23836-00ab-4f30-8a44-1411da119f20",
+      "bom-ref": "913f7e0e-afc4-4297-a2b8-dcf71ab1aa7e",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "767563aa-f237-4975-985e-064f57e59c14",
+      "bom-ref": "95a4d6f9-7e73-4925-8f5e-99fab7f6a02b",
       "type": "application",
       "name": "analytics/aml-fds-python/uv.lock",
       "properties": [
@@ -48,7 +48,7 @@
       ]
     },
     {
-      "bom-ref": "e7c09408-65d3-4d84-b223-7d360e3206df",
+      "bom-ref": "a2715e44-686e-4805-946f-f8df96e2e941",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -1874,20 +1874,20 @@
   ],
   "dependencies": [
     {
-      "ref": "08d23836-00ab-4f30-8a44-1411da119f20",
+      "ref": "913f7e0e-afc4-4297-a2b8-dcf71ab1aa7e",
       "dependsOn": [
-        "767563aa-f237-4975-985e-064f57e59c14",
-        "e7c09408-65d3-4d84-b223-7d360e3206df"
+        "95a4d6f9-7e73-4925-8f5e-99fab7f6a02b",
+        "a2715e44-686e-4805-946f-f8df96e2e941"
       ]
     },
     {
-      "ref": "767563aa-f237-4975-985e-064f57e59c14",
+      "ref": "95a4d6f9-7e73-4925-8f5e-99fab7f6a02b",
       "dependsOn": [
         "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {
-      "ref": "e7c09408-65d3-4d84-b223-7d360e3206df",
+      "ref": "a2715e44-686e-4805-946f-f8df96e2e941",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",

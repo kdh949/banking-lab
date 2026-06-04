@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T10:03:52.448Z",
+  "generatedAt": "2026-06-04T13:39:22.219Z",
   "command": "npm run postgres:backup-drill",
   "mode": "fixture",
   "syntheticOnly": true,
