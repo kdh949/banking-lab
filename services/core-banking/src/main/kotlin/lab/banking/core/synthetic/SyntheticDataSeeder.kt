@@ -6,12 +6,17 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 
 @Component
 @ConditionalOnProperty(prefix = "banking-lab.synthetic-seed", name = ["enabled"], havingValue = "true")
 class SyntheticDataSeeder(
-    private val jdbc: NamedParameterJdbcTemplate
+    private val jdbc: NamedParameterJdbcTemplate,
+    transactionManager: PlatformTransactionManager
 ) : ApplicationRunner {
+    private val transactions = TransactionTemplate(transactionManager)
+
     override fun run(args: ApplicationArguments) {
         seedCustomers()
         seedKycProfiles()
@@ -140,33 +145,35 @@ class SyntheticDataSeeder(
     }
 
     private fun seedLedgerCorrectionTransactions() {
-        jdbc.update(
-            """
-            INSERT INTO ledger_transactions (
-              ledger_transaction_id, transaction_type, business_reference_id, idempotency_key,
-              business_date, status, requested_by, requested_channel, posted_at, reason
+        transactions.executeWithoutResult {
+            jdbc.update(
+                """
+                INSERT INTO ledger_transactions (
+                  ledger_transaction_id, transaction_type, business_reference_id, idempotency_key,
+                  business_date, status, requested_by, requested_channel, posted_at, reason
+                )
+                VALUES (
+                  'TX-SYN-CORR-001', 'INTERNAL_TRANSFER', 'TRF-SYN-CORR-001', 'SEED-TX-SYN-CORR-001',
+                  CURRENT_DATE, 'POSTED', 'customer21', 'SYNTHETIC_DATA_GENERATOR', now(),
+                  'Synthetic posted transfer for LED103 correction smoke'
+                )
+                ON CONFLICT (ledger_transaction_id) DO NOTHING
+                """.trimIndent(),
+                emptyMap<String, Any?>()
             )
-            VALUES (
-              'TX-SYN-CORR-001', 'INTERNAL_TRANSFER', 'TRF-SYN-CORR-001', 'SEED-TX-SYN-CORR-001',
-              CURRENT_DATE, 'POSTED', 'customer21', 'SYNTHETIC_DATA_GENERATOR', now(),
-              'Synthetic posted transfer for LED103 correction smoke'
+            jdbc.update(
+                """
+                INSERT INTO ledger_postings (
+                  ledger_posting_id, ledger_transaction_id, account_id, currency, direction, amount_minor, posting_type
+                )
+                VALUES
+                  ('LP-SYN-CORR-001-D', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-FROM', 'KRW', 'DEBIT', 9000, 'PRINCIPAL'),
+                  ('LP-SYN-CORR-001-C', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-TO', 'KRW', 'CREDIT', 9000, 'PRINCIPAL')
+                ON CONFLICT (ledger_posting_id) DO NOTHING
+                """.trimIndent(),
+                emptyMap<String, Any?>()
             )
-            ON CONFLICT (ledger_transaction_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
-        )
-        jdbc.update(
-            """
-            INSERT INTO ledger_postings (
-              ledger_posting_id, ledger_transaction_id, account_id, currency, direction, amount_minor, posting_type
-            )
-            VALUES
-              ('LP-SYN-CORR-001-D', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-FROM', 'KRW', 'DEBIT', 9000, 'PRINCIPAL'),
-              ('LP-SYN-CORR-001-C', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-TO', 'KRW', 'CREDIT', 9000, 'PRINCIPAL')
-            ON CONFLICT (ledger_posting_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
-        )
+        }
     }
 
     private fun seedDepositProducts() {

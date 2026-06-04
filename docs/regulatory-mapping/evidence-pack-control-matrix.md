@@ -3,6 +3,8 @@
 | Control | Implementation | Automated evidence |
 | --- | --- | --- |
 | Double-entry posting balance | `legacy-node-reference/packages/banking-domain/src/ledger.mjs` | `tests/ledger.test.mjs`, Phase 2 evidence |
+| DB-enforced posted transaction balance | `validate_ledger_transaction_balance_at_commit`, `ledger_transactions_balance_at_commit`, `ledger_postings_balance_at_commit` | `LedgerDatabaseIntegrityIntegrationTest`, `npm run ledger:integrity-check` |
+| Chart of accounts and system routing | `accounts.account_class`, `accounts.system_account_kind`, `LedgerCommandService` system account routing | `LedgerDatabaseIntegrityIntegrationTest`, product/loan/card integration regression |
 | Balance projection from postings | `projectBalances` | ledger tests |
 | Idempotent transfer commands | `IdempotencyStore`, transfer result store | customer/runtime tests |
 | Reversal instead of mutation | `createReversalTransaction` | ledger core tests |

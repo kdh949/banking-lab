@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -33,6 +35,9 @@ class StaffAccessApiParityIntegrationTest {
 
     @Autowired
     lateinit var jdbc: NamedParameterJdbcTemplate
+
+    @Autowired
+    lateinit var transactionManager: PlatformTransactionManager
 
     @BeforeEach
     fun resetDatabase() {
@@ -60,6 +65,7 @@ class StaffAccessApiParityIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        TransactionTemplate(transactionManager).executeWithoutResult {
         jdbc.update(
             """
             INSERT INTO customers (
@@ -129,6 +135,7 @@ class StaffAccessApiParityIntegrationTest {
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
+        }
     }
 
     @Test
@@ -1483,6 +1490,7 @@ class StaffAccessApiParityIntegrationTest {
         )
 
     private fun seedCorrectionAccountAndTransaction(transactionId: String, amountMinor: Long, idempotencyKey: String) {
+        TransactionTemplate(transactionManager).executeWithoutResult {
         jdbc.update(
             """
             INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
@@ -1561,6 +1569,7 @@ class StaffAccessApiParityIntegrationTest {
             """.trimIndent(),
             mapOf("amountMinor" to amountMinor)
         )
+        }
     }
 
     companion object {

@@ -12,7 +12,7 @@ This mapping is scoped to the current synthetic local lab. It is not a certifica
 | V7 Error Handling | API errors return structured JSON | runtime tests |
 | V8 Data Protection | masked PII by default, unmask reason and role gate | staff terminal tests |
 | V10 Malicious Code | no third-party runtime service integration | synthetic-only boundary |
-| V11 Business Logic | double-entry ledger, idempotency, reversal, maker-checker | Phase 2/3/6 tests |
+| V11 Business Logic | service and DB-enforced double-entry ledger, idempotency, reversal, maker-checker, typed synthetic chart-of-accounts routing | Phase 2/3/6 tests, `LedgerDatabaseIntegrityIntegrationTest`, `docs/test-evidence/hardening-h3-ledger-db-integrity.md` |
 | V12 Files | attachment fields are modeled but not stored | Phase 5 residual risk |
 | V13 API | HTTP APIs for customer, staff, complaint, risk, ops | runtime tests |
 | V14 Configuration | Docker Compose config validates local runtime; security evidence wrapper records SCA/SAST/container/SBOM/DAST status; Spring HTTP, all-current-case Temporal signal/completion workflow trace/log correlation, and live Temporal rejection/self-approval failure trace/log correlation are proven through OTLP trace export to Tempo; Temporal workflow failure logs are ingested by Loki with a firing local ruler alert and provisioned Grafana dashboard | `docker compose config`, `npm run security:evidence`, `docs/test-evidence/opentelemetry-trace-log-correlation.md`, `docs/test-evidence/temporal-workflow-trace-log-correlation.md`, `docs/test-evidence/observability-stack-smoke.md` |

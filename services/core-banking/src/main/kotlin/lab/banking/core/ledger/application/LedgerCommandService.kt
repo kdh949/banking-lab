@@ -10,7 +10,11 @@ import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.common.BankingLabDomainException
 import lab.banking.core.ledger.domain.BANK_CARD_CLEARING_ACCOUNT_ID
+import lab.banking.core.ledger.domain.BANK_FEE_INCOME_ACCOUNT_ID
+import lab.banking.core.ledger.domain.BANK_INTEREST_EXPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.BANK_LOAN_ASSET_ACCOUNT_ID
+import lab.banking.core.ledger.domain.BANK_LOAN_INTEREST_INCOME_ACCOUNT_ID
+import lab.banking.core.ledger.domain.BANK_SETTLEMENT_ACCOUNT_ID
 import lab.banking.core.ledger.domain.BANK_SUSPENSE_ACCOUNT_ID
 import lab.banking.core.ledger.domain.DailyClosingDto
 import lab.banking.core.ledger.domain.DailyClosingResult
@@ -266,8 +270,8 @@ class LedgerCommandService(
             }
             val businessDate = command.businessDate ?: LocalDate.now()
             ensureBusinessDateOpen(businessDate)
-            ensureBankSuspenseAccount(command.currency)
-            lockActiveAccounts(listOf(BANK_SUSPENSE_ACCOUNT_ID) + groupedCredits.keys)
+            ensureBankInterestExpenseAccount(command.currency)
+            lockActiveAccounts(listOf(BANK_INTEREST_EXPENSE_ACCOUNT_ID) + groupedCredits.keys)
             val totalInterestMinor = groupedCredits.values.sum()
             createPostedTransaction(
                 transactionType = "INTEREST_POSTING",
@@ -278,7 +282,7 @@ class LedgerCommandService(
                 requestedChannel = command.requestedChannel,
                 reason = command.reason,
                 postings = listOf(
-                    LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.DEBIT, totalInterestMinor, command.currency, "INTEREST")
+                    LedgerPostingInput(BANK_INTEREST_EXPENSE_ACCOUNT_ID, PostingDirection.DEBIT, totalInterestMinor, command.currency, "INTEREST")
                 ) + groupedCredits.map { (accountId, amountMinor) ->
                     LedgerPostingInput(accountId, PostingDirection.CREDIT, amountMinor, command.currency, "INTEREST")
                 }
@@ -302,8 +306,8 @@ class LedgerCommandService(
             }
             val businessDate = command.businessDate ?: LocalDate.now()
             ensureBusinessDateOpen(businessDate)
-            ensureBankSuspenseAccount(command.currency)
-            val balances = lockActiveAccounts(groupedCharges.keys.toList() + BANK_SUSPENSE_ACCOUNT_ID)
+            ensureBankFeeIncomeAccount(command.currency)
+            val balances = lockActiveAccounts(groupedCharges.keys.toList() + BANK_FEE_INCOME_ACCOUNT_ID)
             groupedCharges.forEach { (accountId, amountMinor) ->
                 val balance = balances.getValue(accountId)
                 if (balance.availableBalanceMinor < amountMinor) {
@@ -325,7 +329,7 @@ class LedgerCommandService(
                 reason = command.reason,
                 postings = groupedCharges.map { (accountId, amountMinor) ->
                     LedgerPostingInput(accountId, PostingDirection.DEBIT, amountMinor, command.currency, "FEE")
-                } + LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.CREDIT, totalFeeMinor, command.currency, "FEE")
+                } + LedgerPostingInput(BANK_FEE_INCOME_ACCOUNT_ID, PostingDirection.CREDIT, totalFeeMinor, command.currency, "FEE")
             )
         }
 
@@ -373,10 +377,10 @@ class LedgerCommandService(
             }
             val businessDate = command.businessDate ?: LocalDate.now()
             ensureBusinessDateOpen(businessDate)
-            ensureBankSuspenseAccount(command.currency)
+            ensureBankLoanInterestIncomeAccount(command.currency)
             ensureBankLoanAssetAccount(command.currency)
             val totalMinor = command.principalMinor + command.interestMinor
-            val balances = lockActiveAccounts(listOf(command.depositAccountId, BANK_LOAN_ASSET_ACCOUNT_ID, BANK_SUSPENSE_ACCOUNT_ID))
+            val balances = lockActiveAccounts(listOf(command.depositAccountId, BANK_LOAN_ASSET_ACCOUNT_ID, BANK_LOAN_INTEREST_INCOME_ACCOUNT_ID))
             val depositBalance = balances.getValue(command.depositAccountId)
             if (depositBalance.availableBalanceMinor < totalMinor) {
                 throw ledgerConflict(
@@ -392,7 +396,7 @@ class LedgerCommandService(
                 postings += LedgerPostingInput(BANK_LOAN_ASSET_ACCOUNT_ID, PostingDirection.CREDIT, command.principalMinor, command.currency, "LOAN_PRINCIPAL")
             }
             if (command.interestMinor > 0) {
-                postings += LedgerPostingInput(BANK_SUSPENSE_ACCOUNT_ID, PostingDirection.CREDIT, command.interestMinor, command.currency, "LOAN_INTEREST")
+                postings += LedgerPostingInput(BANK_LOAN_INTEREST_INCOME_ACCOUNT_ID, PostingDirection.CREDIT, command.interestMinor, command.currency, "LOAN_INTEREST")
             }
             createPostedTransaction(
                 transactionType = if (command.prepayment) "LOAN_PREPAYMENT" else "LOAN_REPAYMENT",
@@ -672,63 +676,119 @@ class LedgerCommandService(
     }
 
     private fun ensureBankSuspenseAccount(currency: String) {
-        jdbc.update(
-            """
-            INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
-            VALUES ('BANK', 'Synthetic Bank Suspense', 'SYSTEM', 'LOW')
-            ON CONFLICT (customer_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
+        ensureSystemAccount(
+            accountId = BANK_SUSPENSE_ACCOUNT_ID,
+            accountNo = "LAB-000-000000",
+            currency = currency,
+            accountClass = "LIABILITY",
+            systemAccountKind = "SUSPENSE"
         )
-        jdbc.update(
-            """
-            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
-            VALUES (:accountId, 'BANK', 'LAB-000-000000', :currency, 'ACTIVE')
-            ON CONFLICT (account_id) DO NOTHING
-            """.trimIndent(),
-            mapOf("accountId" to BANK_SUSPENSE_ACCOUNT_ID, "currency" to currency)
-        )
-        ensureBalanceProjection(BANK_SUSPENSE_ACCOUNT_ID)
     }
 
     private fun ensureBankLoanAssetAccount(currency: String) {
-        jdbc.update(
-            """
-            INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
-            VALUES ('BANK', 'Synthetic Bank Suspense', 'SYSTEM', 'LOW')
-            ON CONFLICT (customer_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
+        ensureSystemAccount(
+            accountId = BANK_LOAN_ASSET_ACCOUNT_ID,
+            accountNo = "LAB-000-000001",
+            currency = currency,
+            accountClass = "ASSET",
+            systemAccountKind = "LOAN_ASSET"
         )
-        jdbc.update(
-            """
-            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
-            VALUES (:accountId, 'BANK', 'LAB-000-000001', :currency, 'ACTIVE')
-            ON CONFLICT (account_id) DO NOTHING
-            """.trimIndent(),
-            mapOf("accountId" to BANK_LOAN_ASSET_ACCOUNT_ID, "currency" to currency)
-        )
-        ensureBalanceProjection(BANK_LOAN_ASSET_ACCOUNT_ID)
     }
 
     private fun ensureBankCardClearingAccount(currency: String) {
+        ensureSystemAccount(
+            accountId = BANK_CARD_CLEARING_ACCOUNT_ID,
+            accountNo = "LAB-000-000002",
+            currency = currency,
+            accountClass = "LIABILITY",
+            systemAccountKind = "CLEARING"
+        )
+    }
+
+    @Suppress("unused")
+    private fun ensureBankSettlementAccount(currency: String) {
+        ensureSystemAccount(
+            accountId = BANK_SETTLEMENT_ACCOUNT_ID,
+            accountNo = "LAB-000-000003",
+            currency = currency,
+            accountClass = "ASSET",
+            systemAccountKind = "SETTLEMENT"
+        )
+    }
+
+    private fun ensureBankInterestExpenseAccount(currency: String) {
+        ensureSystemAccount(
+            accountId = BANK_INTEREST_EXPENSE_ACCOUNT_ID,
+            accountNo = "LAB-000-000004",
+            currency = currency,
+            accountClass = "EXPENSE",
+            systemAccountKind = "INTEREST_EXPENSE"
+        )
+    }
+
+    private fun ensureBankFeeIncomeAccount(currency: String) {
+        ensureSystemAccount(
+            accountId = BANK_FEE_INCOME_ACCOUNT_ID,
+            accountNo = "LAB-000-000005",
+            currency = currency,
+            accountClass = "INCOME",
+            systemAccountKind = "FEE_INCOME"
+        )
+    }
+
+    private fun ensureBankLoanInterestIncomeAccount(currency: String) {
+        ensureSystemAccount(
+            accountId = BANK_LOAN_INTEREST_INCOME_ACCOUNT_ID,
+            accountNo = "LAB-000-000006",
+            currency = currency,
+            accountClass = "INCOME",
+            systemAccountKind = "LOAN_INTEREST_INCOME"
+        )
+    }
+
+    private fun ensureSystemAccount(
+        accountId: String,
+        accountNo: String,
+        currency: String,
+        accountClass: String,
+        systemAccountKind: String
+    ) {
         jdbc.update(
             """
             INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
-            VALUES ('BANK', 'Synthetic Bank Suspense', 'SYSTEM', 'LOW')
-            ON CONFLICT (customer_id) DO NOTHING
+            VALUES ('BANK', 'Synthetic Bank System Accounts', 'SYSTEM', 'LOW')
+            ON CONFLICT (customer_id) DO UPDATE SET
+              customer_name = EXCLUDED.customer_name,
+              customer_grade = EXCLUDED.customer_grade,
+              risk_grade = EXCLUDED.risk_grade
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
         jdbc.update(
             """
-            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
-            VALUES (:accountId, 'BANK', 'LAB-000-000002', :currency, 'ACTIVE')
-            ON CONFLICT (account_id) DO NOTHING
+            INSERT INTO accounts (
+              account_id, customer_id, account_no, currency, status,
+              account_class, system_account_kind, synthetic_system_account
+            )
+            VALUES (
+              :accountId, 'BANK', :accountNo, :currency, 'ACTIVE',
+              :accountClass, :systemAccountKind, TRUE
+            )
+            ON CONFLICT (account_id) DO UPDATE SET
+              account_class = EXCLUDED.account_class,
+              system_account_kind = EXCLUDED.system_account_kind,
+              synthetic_system_account = TRUE,
+              status = 'ACTIVE'
             """.trimIndent(),
-            mapOf("accountId" to BANK_CARD_CLEARING_ACCOUNT_ID, "currency" to currency)
+            mapOf(
+                "accountId" to accountId,
+                "accountNo" to accountNo,
+                "currency" to currency,
+                "accountClass" to accountClass,
+                "systemAccountKind" to systemAccountKind
+            )
         )
-        ensureBalanceProjection(BANK_CARD_CLEARING_ACCOUNT_ID)
+        ensureBalanceProjection(accountId)
     }
 
     private fun ensureBusinessDateOpen(businessDate: LocalDate) {

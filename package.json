@@ -22,6 +22,7 @@
     "test:core-banking:rerun": "scripts/run-core-banking-tests.sh --rerun-tasks",
     "test:core-banking:unit": "scripts/run-core-banking-tests.sh :services:core-banking:test",
     "test:core-banking:integration": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest",
+    "ledger:integrity-check": "npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --rerun-tasks",
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",
