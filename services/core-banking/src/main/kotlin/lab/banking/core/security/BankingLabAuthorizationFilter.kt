@@ -71,12 +71,12 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/customer/") -> setOf("CUSTOMER")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
-            path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "BRANCH_MANAGER")
             path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
             else -> emptySet()
         }
@@ -166,6 +166,8 @@ class BankingLabAuthorizationFilter(
     private fun screenId(path: String): String =
         when {
             path.startsWith("/api/staff/approvals") -> "APR-201"
+            path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"
+            path.startsWith("/api/staff/accounts") && path.contains("hold") -> "ACC-103"
             path.startsWith("/api/staff/customers") -> "CST-002"
             path.startsWith("/api/staff/pii") -> "CST-002"
             path.startsWith("/api/ops/") -> "OPS-201"

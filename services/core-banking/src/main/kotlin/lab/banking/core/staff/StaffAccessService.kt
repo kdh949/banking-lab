@@ -240,6 +240,132 @@ class StaffAccessService(
         return CustomerInfoChangeResponse(item = approval, customer = customerDetail(customer, unmasked = false))
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestAccountHold(accountId: String, command: AccountHoldRequestCommand): AccountHoldRequestResponse {
+        val requestedBy = command.requestedBy ?: "manager01"
+        val requestedRole = command.requestedByRole ?: "BRANCH_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, ACCOUNT_HOLD_REQUEST_ROLES, "actor role cannot request account hold")
+        requireReason(command.reason, "ACCOUNT_HOLD requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingAccountHoldRequest(ApprovalBusinessTypes.ACCOUNT_HOLD, requestedBy, idempotencyKey)
+            ?.let { return accountHoldResponse(it) }
+
+        val account = account(accountId, forUpdate = true)
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can be held")
+        }
+        val holdAmount = command.holdAmountMinor ?: account.availableBalanceMinor
+        if (holdAmount <= 0) {
+            throw WorkflowErrors.validation("holdAmountMinor must be positive")
+        }
+        if (holdAmount > account.availableBalanceMinor) {
+            throw WorkflowErrors.validation("holdAmountMinor cannot exceed available balance")
+        }
+        val requestId = nextAccountHoldRequestId()
+        val reasonCode = requireField(command.reasonCode, "reasonCode")
+        val metadata = mapOf("description" to command.description.orEmpty(), "syntheticOnly" to true)
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.ACCOUNT_HOLD,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = account.snapshot(),
+                afterSnapshot = mapOf(
+                    "accountId" to account.accountId,
+                    "targetStatus" to "HOLD",
+                    "reasonCode" to reasonCode,
+                    "holdAmountMinor" to holdAmount,
+                    "description" to command.description.orEmpty()
+                ),
+                screenId = "ACC-103"
+            )
+        )
+        insertAccountHoldRequest(
+            requestId = requestId,
+            businessType = ApprovalBusinessTypes.ACCOUNT_HOLD,
+            account = account,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            holdAmountMinor = holdAmount,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return AccountHoldRequestResponse(
+            item = accountHoldRequest(requestId),
+            approval = approval,
+            account = account.toDto()
+        )
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestAccountHoldRelease(accountId: String, command: AccountHoldReleaseRequestCommand): AccountHoldRequestResponse {
+        val requestedBy = command.requestedBy ?: "ops01"
+        val requestedRole = command.requestedByRole ?: "OPS_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, ACCOUNT_HOLD_RELEASE_REQUEST_ROLES, "actor role cannot request account hold release")
+        requireReason(command.reason, "ACCOUNT_HOLD_RELEASE requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingAccountHoldRequest(ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE, requestedBy, idempotencyKey)
+            ?.let { return accountHoldResponse(it) }
+
+        val account = account(accountId, forUpdate = true)
+        if (account.status != "HOLD" || account.holdAmountMinor <= 0) {
+            throw WorkflowErrors.stateViolation("only held accounts can be released")
+        }
+        val releaseAmount = command.holdAmountMinor ?: account.holdAmountMinor
+        if (releaseAmount <= 0) {
+            throw WorkflowErrors.validation("holdAmountMinor must be positive")
+        }
+        if (releaseAmount != account.holdAmountMinor) {
+            throw WorkflowErrors.validation("account hold release must release the full held amount")
+        }
+        val requestId = nextAccountHoldRequestId()
+        val reasonCode = command.reasonCode ?: "CUSTOMER_REQUEST"
+        val metadata = mapOf("description" to command.description.orEmpty(), "syntheticOnly" to true)
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = account.snapshot(),
+                afterSnapshot = mapOf(
+                    "accountId" to account.accountId,
+                    "targetStatus" to "ACTIVE",
+                    "reasonCode" to reasonCode,
+                    "holdAmountMinor" to releaseAmount,
+                    "description" to command.description.orEmpty()
+                ),
+                screenId = "ACC-104"
+            )
+        )
+        insertAccountHoldRequest(
+            requestId = requestId,
+            businessType = ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE,
+            account = account,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            holdAmountMinor = releaseAmount,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return AccountHoldRequestResponse(
+            item = accountHoldRequest(requestId),
+            approval = approval,
+            account = account.toDto()
+        )
+    }
+
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         return runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
@@ -249,6 +375,7 @@ class StaffAccessService(
     private fun approveStaffRequestInTransaction(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         BankingLabAuthContext.requireActor(command.approvedBy, command.approvedByRole)
         val approval = approvals.approve(approvalId, command)
+        requireCheckerRole(approval.businessType, command.approvedByRole)
         val customerExecuted = if (approval.businessType == ApprovalBusinessTypes.CUSTOMER_INFO_CHANGE) {
             applyCustomerInfoChange(approval.businessReferenceId, approval.afterSnapshot, command)
             true
@@ -280,10 +407,25 @@ class StaffAccessService(
         } else {
             null
         }
+        val accountHoldExecution = if (
+            approval.businessType == ApprovalBusinessTypes.ACCOUNT_HOLD ||
+            approval.businessType == ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE
+        ) {
+            applyApprovedAccountHoldRequest(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
-            executed = customerExecuted || complaint != null || fdsExecution != null || amlCase != null || reconciliationExecution != null,
+            executed = customerExecuted ||
+                complaint != null ||
+                fdsExecution != null ||
+                amlCase != null ||
+                reconciliationExecution != null ||
+                accountHoldExecution != null,
             customer = customer,
+            account = accountHoldExecution?.second,
+            accountHoldRequest = accountHoldExecution?.first,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
@@ -355,6 +497,31 @@ class StaffAccessService(
         }
     }
 
+    private fun requireRole(role: String, allowedRoles: Set<String>, message: String) {
+        if (role !in allowedRoles) {
+            throw WorkflowErrors.authorizationViolation(message)
+        }
+    }
+
+    private fun requireCheckerRole(businessType: String, approvedByRole: String) {
+        val allowedRoles = when (businessType) {
+            ApprovalBusinessTypes.ACCOUNT_HOLD -> ACCOUNT_HOLD_CHECKER_ROLES
+            ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE -> ACCOUNT_HOLD_RELEASE_CHECKER_ROLES
+            else -> return
+        }
+        requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
+    }
+
+    private fun requireField(value: String?, field: String): String {
+        if (value.isNullOrBlank()) {
+            throw WorkflowErrors.validation("$field is required")
+        }
+        return value
+    }
+
+    private fun nextAccountHoldRequestId(): String =
+        "AHR-${UUID.randomUUID().toString().uppercase()}"
+
     private fun customer(customerId: String): StaffCustomerRecord =
         try {
             jdbc.queryForObject(
@@ -369,6 +536,34 @@ class StaffAccessService(
         } catch (_: EmptyResultDataAccessException) {
             throw WorkflowErrors.notFound("customer not found: $customerId")
         }
+
+    private fun account(accountId: String, forUpdate: Boolean): StaffAccountRecord =
+        try {
+            jdbc.queryForObject(
+                accountSql(
+                    if (forUpdate) {
+                        "WHERE a.account_id = :accountId FOR UPDATE OF a, p"
+                    } else {
+                        "WHERE a.account_id = :accountId"
+                    }
+                ),
+                mapOf("accountId" to accountId),
+                this::mapAccountRecord
+            ) ?: throw WorkflowErrors.notFound("account not found: $accountId")
+        } catch (_: EmptyResultDataAccessException) {
+            throw WorkflowErrors.notFound("account not found: $accountId")
+        }
+
+    private fun accountSql(suffix: String): String =
+        """
+        SELECT a.customer_id, a.account_id, a.account_no, a.status, a.currency,
+               p.ledger_balance_minor, p.available_balance_minor, p.hold_amount_minor
+        FROM accounts a
+        JOIN account_balance_projections p
+          ON p.account_id = a.account_id
+         AND p.currency = a.currency
+        $suffix
+        """.trimIndent()
 
     private fun supportedCustomerInfoChange(afterSnapshot: Map<String, Any?>?): Map<String, Any?> {
         val allowed = linkedMapOf<String, Any?>()
@@ -421,6 +616,263 @@ class StaffAccessService(
         )
     }
 
+    private fun applyApprovedAccountHoldRequest(
+        approval: lab.banking.core.approval.OperatorApproval,
+        command: ApproveApprovalCommand
+    ): Pair<AccountHoldRequestDto, StaffAccountDto> {
+        val request = accountHoldRequestForUpdate(approval.businessReferenceId)
+        if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match account hold request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending account hold requests can be executed")
+        }
+        val account = account(request.targetAccountId, forUpdate = true)
+        when (approval.businessType) {
+            ApprovalBusinessTypes.ACCOUNT_HOLD -> applyAccountHold(request, account)
+            ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE -> applyAccountHoldRelease(request, account)
+            else -> throw WorkflowErrors.stateViolation("approval is not an account hold approval")
+        }
+        val screenId = command.screenId ?: if (approval.businessType == ApprovalBusinessTypes.ACCOUNT_HOLD) "ACC-103" else "ACC-104"
+        appendAudit(
+            eventType = "COMMAND_EXECUTED",
+            actorId = command.approvedBy,
+            actorRole = command.approvedByRole,
+            screenId = screenId,
+            customerId = request.targetCustomerId,
+            accountId = request.targetAccountId,
+            reason = request.reason,
+            payload = mapOf(
+                "businessType" to approval.businessType,
+                "requestId" to request.requestId,
+                "approvalId" to approval.approvalId,
+                "holdAmountMinor" to request.holdAmountMinor,
+                "status" to if (approval.businessType == ApprovalBusinessTypes.ACCOUNT_HOLD) "ACTIVE" else "RELEASED",
+                "syntheticOnly" to true,
+                "ledgerSourceRowsMutated" to false
+            )
+        )
+        val updatedRequest = accountHoldRequest(request.requestId)
+        val updatedAccount = account(request.targetAccountId, forUpdate = false)
+        return updatedRequest to updatedAccount.toDto()
+    }
+
+    private fun applyAccountHold(request: AccountHoldRequestDto, account: StaffAccountRecord) {
+        if (account.status != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can be held")
+        }
+        val accountRows = jdbc.update(
+            """
+            UPDATE accounts
+            SET status = 'HOLD'
+            WHERE account_id = :accountId
+              AND status = 'ACTIVE'
+            """.trimIndent(),
+            mapOf("accountId" to request.targetAccountId)
+        )
+        if (accountRows != 1) {
+            throw WorkflowErrors.stateViolation("account hold state changed before approval execution")
+        }
+        val projectionRows = jdbc.update(
+            """
+            UPDATE account_balance_projections
+            SET hold_amount_minor = hold_amount_minor + :holdAmountMinor,
+                available_balance_minor = available_balance_minor - :holdAmountMinor,
+                version = version + 1,
+                updated_at = now()
+            WHERE account_id = :accountId
+              AND currency = :currency
+              AND available_balance_minor >= :holdAmountMinor
+            """.trimIndent(),
+            mapOf(
+                "accountId" to request.targetAccountId,
+                "currency" to account.currency,
+                "holdAmountMinor" to request.holdAmountMinor
+            )
+        )
+        if (projectionRows != 1) {
+            throw WorkflowErrors.stateViolation("account hold amount exceeds available projection")
+        }
+        markAccountHoldRequestExecuted(request.requestId, "ACTIVE")
+    }
+
+    private fun applyAccountHoldRelease(request: AccountHoldRequestDto, account: StaffAccountRecord) {
+        if (account.status != "HOLD" || account.holdAmountMinor <= 0) {
+            throw WorkflowErrors.stateViolation("only held accounts can be released")
+        }
+        if (request.holdAmountMinor != account.holdAmountMinor) {
+            throw WorkflowErrors.stateViolation("account hold release amount no longer matches current hold")
+        }
+        val projectionRows = jdbc.update(
+            """
+            UPDATE account_balance_projections
+            SET hold_amount_minor = hold_amount_minor - :holdAmountMinor,
+                available_balance_minor = available_balance_minor + :holdAmountMinor,
+                version = version + 1,
+                updated_at = now()
+            WHERE account_id = :accountId
+              AND currency = :currency
+              AND hold_amount_minor >= :holdAmountMinor
+            """.trimIndent(),
+            mapOf(
+                "accountId" to request.targetAccountId,
+                "currency" to account.currency,
+                "holdAmountMinor" to request.holdAmountMinor
+            )
+        )
+        if (projectionRows != 1) {
+            throw WorkflowErrors.stateViolation("account hold projection changed before release")
+        }
+        val accountRows = jdbc.update(
+            """
+            UPDATE accounts
+            SET status = 'ACTIVE'
+            WHERE account_id = :accountId
+              AND status = 'HOLD'
+            """.trimIndent(),
+            mapOf("accountId" to request.targetAccountId)
+        )
+        if (accountRows != 1) {
+            throw WorkflowErrors.stateViolation("account hold status changed before release")
+        }
+        markAccountHoldRequestExecuted(request.requestId, "RELEASED")
+    }
+
+    private fun insertAccountHoldRequest(
+        requestId: String,
+        businessType: String,
+        account: StaffAccountRecord,
+        requestedBy: String,
+        requestedRole: String,
+        reason: String,
+        reasonCode: String,
+        holdAmountMinor: Long,
+        approvalId: String,
+        idempotencyKey: String,
+        metadata: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO account_hold_requests (
+              request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+              requested_by, requested_role, reason, reason_code, hold_amount_minor, status,
+              approval_id, idempotency_key, metadata_json
+            )
+            VALUES (
+              :requestId, :businessType, :requestId, :customerId, :accountId,
+              :requestedBy, :requestedRole, :reason, :reasonCode, :holdAmountMinor, 'PENDING_APPROVAL',
+              :approvalId, :idempotencyKey, CAST(:metadataJson AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "businessType" to businessType,
+                "customerId" to account.customerId,
+                "accountId" to account.accountId,
+                "requestedBy" to requestedBy,
+                "requestedRole" to requestedRole,
+                "reason" to reason,
+                "reasonCode" to reasonCode,
+                "holdAmountMinor" to holdAmountMinor,
+                "approvalId" to approvalId,
+                "idempotencyKey" to idempotencyKey,
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+    }
+
+    private fun markAccountHoldRequestExecuted(requestId: String, status: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE account_hold_requests
+            SET status = :status,
+                updated_at = now(),
+                executed_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId, "status" to status)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("account hold request is no longer pending")
+        }
+    }
+
+    private fun accountHoldResponse(request: AccountHoldRequestDto): AccountHoldRequestResponse =
+        AccountHoldRequestResponse(
+            item = request,
+            approval = approvals.approval(request.approvalId ?: throw WorkflowErrors.stateViolation("account hold request has no approval")),
+            account = account(request.targetAccountId, forUpdate = false).toDto()
+        )
+
+    private fun existingAccountHoldRequest(businessType: String, requestedBy: String, idempotencyKey: String): AccountHoldRequestDto? =
+        jdbc.query(
+            accountHoldRequestSql(
+                """
+                WHERE business_type = :businessType
+                  AND requested_by = :requestedBy
+                  AND idempotency_key = :idempotencyKey
+                """.trimIndent()
+            ),
+            mapOf("businessType" to businessType, "requestedBy" to requestedBy, "idempotencyKey" to idempotencyKey),
+            this::mapAccountHoldRequest
+        ).firstOrNull()
+
+    private fun accountHoldRequest(requestId: String): AccountHoldRequestDto =
+        jdbc.queryForObject(
+            accountHoldRequestSql("WHERE request_id = :requestId"),
+            mapOf("requestId" to requestId),
+            this::mapAccountHoldRequest
+        ) ?: throw WorkflowErrors.notFound("account hold request not found: $requestId")
+
+    private fun accountHoldRequestForUpdate(requestId: String): AccountHoldRequestDto =
+        jdbc.queryForObject(
+            accountHoldRequestSql("WHERE request_id = :requestId FOR UPDATE"),
+            mapOf("requestId" to requestId),
+            this::mapAccountHoldRequest
+        ) ?: throw WorkflowErrors.notFound("account hold request not found: $requestId")
+
+    private fun accountHoldRequestSql(suffix: String): String =
+        """
+        SELECT request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+               target_transaction_id, requested_by, requested_role, reason, reason_code, hold_amount_minor,
+               status, approval_id, idempotency_key, created_at, updated_at, executed_at,
+               metadata_json::text AS metadata_json
+        FROM account_hold_requests
+        $suffix
+        """.trimIndent()
+
+    private fun mapAccountHoldRequest(rs: ResultSet, rowNum: Int): AccountHoldRequestDto =
+        AccountHoldRequestDto(
+            requestId = rs.getString("request_id"),
+            businessType = rs.getString("business_type"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            targetCustomerId = rs.getString("target_customer_id"),
+            targetAccountId = rs.getString("target_account_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedRole = rs.getString("requested_role"),
+            reason = rs.getString("reason"),
+            reasonCode = rs.getString("reason_code"),
+            holdAmountMinor = rs.getLong("hold_amount_minor"),
+            status = rs.getString("status"),
+            approvalId = rs.getString("approval_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            executedAt = rs.getObject("executed_at", OffsetDateTime::class.java),
+            metadata = readMetadata(rs.getString("metadata_json"))
+        )
+
+    private fun readMetadata(metadataJson: String?): Map<String, Any?> {
+        if (metadataJson.isNullOrBlank()) {
+            return emptyMap()
+        }
+        return objectMapper.readValue(
+            metadataJson,
+            objectMapper.typeFactory.constructMapType(LinkedHashMap::class.java, String::class.java, Any::class.java)
+        )
+    }
+
     private fun mapCustomer(rs: ResultSet, rowNum: Int): StaffCustomerRecord =
         StaffCustomerRecord(
             customerId = rs.getString("customer_id"),
@@ -432,15 +884,42 @@ class StaffAccessService(
         )
 
     private fun mapAccount(rs: ResultSet, rowNum: Int): StaffAccountDto =
-        StaffAccountDto(
+        mapAccountRecord(rs, rowNum).toDto()
+
+    private fun mapAccountRecord(rs: ResultSet, rowNum: Int): StaffAccountRecord =
+        StaffAccountRecord(
             customerId = rs.getString("customer_id"),
             accountId = rs.getString("account_id"),
-            maskedAccountNo = maskAccountNo(rs.getString("account_no")),
+            accountNo = rs.getString("account_no"),
             status = rs.getString("status"),
             currency = rs.getString("currency"),
             ledgerBalanceMinor = rs.getLong("ledger_balance_minor"),
             availableBalanceMinor = rs.getLong("available_balance_minor"),
             holdAmountMinor = rs.getLong("hold_amount_minor")
+        )
+
+    private fun StaffAccountRecord.toDto(): StaffAccountDto =
+        StaffAccountDto(
+            customerId = customerId,
+            accountId = accountId,
+            maskedAccountNo = maskAccountNo(accountNo),
+            status = status,
+            currency = currency,
+            ledgerBalanceMinor = ledgerBalanceMinor,
+            availableBalanceMinor = availableBalanceMinor,
+            holdAmountMinor = holdAmountMinor
+        )
+
+    private fun StaffAccountRecord.snapshot(): Map<String, Any?> =
+        mapOf(
+            "customerId" to customerId,
+            "accountId" to accountId,
+            "maskedAccountNo" to maskAccountNo(accountNo),
+            "status" to status,
+            "currency" to currency,
+            "ledgerBalanceMinor" to ledgerBalanceMinor,
+            "availableBalanceMinor" to availableBalanceMinor,
+            "holdAmountMinor" to holdAmountMinor
         )
 
     private fun mapTransaction(rs: ResultSet, rowNum: Int): StaffTransactionDto =
@@ -580,8 +1059,23 @@ class StaffAccessService(
         return listOfNotNull(parts.getOrNull(0), parts.getOrNull(1), "***").joinToString(" ")
     }
 
+    private data class StaffAccountRecord(
+        val customerId: String,
+        val accountId: String,
+        val accountNo: String,
+        val status: String,
+        val currency: String,
+        val ledgerBalanceMinor: Long,
+        val availableBalanceMinor: Long,
+        val holdAmountMinor: Long
+    )
+
     private companion object {
         const val SERIALIZABLE_APPROVAL_MAX_ATTEMPTS = 5
         const val SERIALIZABLE_STAFF_ACCESS_MAX_ATTEMPTS = 5
+        val ACCOUNT_HOLD_REQUEST_ROLES = setOf("BRANCH_MANAGER", "CALL_CENTER_MANAGER")
+        val ACCOUNT_HOLD_RELEASE_REQUEST_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER")
+        val ACCOUNT_HOLD_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val ACCOUNT_HOLD_RELEASE_CHECKER_ROLES = setOf("OPS_MANAGER", "BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

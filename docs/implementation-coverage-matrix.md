@@ -20,7 +20,7 @@ Status values are limited to `complete`, `api-backed`, `manifest-only`, `partial
 | staff-terminal | Complaint workflow screens: `CMP-201`, `CMP-202` | yes | yes | yes | yes | complaint tables and approvals | complaint/checker roles | workflow audit | yes | Node oracle, Spring integration, conditional Playwright | `docs/test-evidence/phase-5-complaint-workflow.md` | api-backed |
 | staff-terminal | FDS release/block and AML closure: `SFD-101`, `SFD-102`, `SFD-103`, `SAM-101`, `SAM-102` | yes | yes | yes | yes | FDS/AML case tables and ledger release posting | reviewer/checker roles | workflow audit | yes | Node oracle, Spring integration, conditional Playwright | `docs/test-evidence/fds-aml-reconciliation.md` | api-backed |
 | staff-terminal | Reconciliation inquiry/adjustment: `REC-101`, `REC-102` | yes | yes | yes | yes | reconciliation and adjustment request tables | ops/checker roles | workflow audit | yes | Node oracle, Spring integration, conditional Playwright | `docs/reconciliation-reports/phase-6-eod-reconciliation.md` | api-backed |
-| staff-terminal | Account hold request/release: `ACC-103`, `ACC-104` | yes | manifest renderer | no dedicated client method found | no dedicated route found | balance projection has hold column, request tables missing | declared role only | declared | declared | manifest validation only | target goal Phase B | manifest-only |
+| staff-terminal | Account hold request/release: `ACC-103`, `ACC-104` | yes | yes | yes | yes | `account_hold_requests` plus account/projection state | manager/call-center/ops route and service policy | request/approve/execute audit | yes | Spring integration test added; integration runtime pending Docker/CI, conditional Playwright smoke added | this matrix and `docs/test-evidence/api-backed-channel-smoke.md` | api-backed |
 | staff-terminal | Transfer limit inquiry/change: `LIM-101`, `LIM-102` | yes | manifest renderer | no dedicated client method found | no dedicated route found | `account_limits` seed exists, request workflow missing | declared role only | declared | declared for change | manifest validation only | target goal Phase B | partial |
 | staff-terminal | Fee inquiry/waiver: `FEE-101`, `FEE-102` | yes | manifest renderer | no dedicated client method found | no dedicated route found | fee policy/request tables missing | declared role only | declared | declared for waiver | manifest validation only | target goal Phase B/C | manifest-only |
 | staff-terminal | KYC re-confirmation request | no dedicated manifest found | no | no | no | `customer_kyc_profiles` seed exists, request workflow missing | no endpoint policy | no | no | none | target goal Phase B | missing |
@@ -56,11 +56,13 @@ Commands run on 2026-06-04 for this review:
 - `npm run scripts:typecheck`: pass.
 - `npm run next:staff-terminal:typecheck`: pass.
 - `npm run next:staff-terminal:build`: pass.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass, 5 passed and 7 skipped because API/Keycloak variables were not configured.
-- `npm run test:e2e`: pass after rerun as a single process, 17 passed and 34 skipped because API/Keycloak variables were not configured. A first parallel attempt failed with port 3001 already in use and is not counted as product failure.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after Phase B ACC-103/104 update, 5 passed and 8 skipped because API/Keycloak variables were not configured.
+- `npm run test:e2e`: pass after Phase B ACC-103/104 update, 17 passed and 35 skipped because API/Keycloak variables were not configured. A first parallel attempt in the previous PR failed with port 3001 already in use and is not counted as product failure.
 - `docker compose config`: pass.
 - `docker compose --profile platform config`: pass.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass after sandbox escalation.
+- `scripts/run-core-banking-tests.sh :services:core-banking:compileIntegrationTestKotlin`: pass after sandbox escalation.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest`: failed at Testcontainers initialization because Docker provider discovery failed locally; integration source compiled successfully and CI must provide the runtime result.
 - `npm run test:core-banking`: integration phase failed because Testcontainers could not find a Docker provider in this environment.
 - `npm run formal:ledger`: static artifact check passed, TLC skipped.
 - `npm run security:evidence`: npm audit passed after escalation; Semgrep, Trivy, and SBOM generation could not run because Docker was unavailable; DAST skipped because `BANKING_LAB_DAST_URL` was not set.

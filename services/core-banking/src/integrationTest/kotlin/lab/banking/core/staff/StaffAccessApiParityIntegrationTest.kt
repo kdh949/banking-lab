@@ -39,6 +39,7 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              account_hold_requests,
               masking_access_logs,
               screen_access_logs,
               operator_approvals,
@@ -321,11 +322,242 @@ class StaffAccessApiParityIntegrationTest {
         assertEquals(1, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id = 'CST-103'"))
     }
 
+    @Test
+    fun `account hold and release execute only after maker-checker approval without ledger source mutation`() {
+        val initialLedgerBalance = accountLedgerBalance()
+        val initialLedgerPostings = countRows("ledger_postings")
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-requests")
+                .header("x-request-id", "REQ-ACCOUNT-HOLD-REASON")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reasonCode": "FRAUD",
+                      "holdAmountMinor": 40000000,
+                      "idempotencyKey": "HOLD-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+        assertEquals(0, countRows("account_hold_requests"))
+        assertEquals(0, countRows("operator_approvals WHERE business_type = 'ACCOUNT_HOLD'"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "branch01",
+                      "requestedByRole": "BRANCH_STAFF",
+                      "reason": "Unauthorized branch hold attempt",
+                      "reasonCode": "FRAUD",
+                      "holdAmountMinor": 40000000,
+                      "idempotencyKey": "HOLD-KEY-DENIED"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+        assertEquals(0, countRows("account_hold_requests"))
+
+        val holdResponse = mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Fraud team requested temporary hold",
+                      "reasonCode": "FRAUD",
+                      "description": "Synthetic fraud case",
+                      "holdAmountMinor": 40000000,
+                      "idempotencyKey": "HOLD-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("ACCOUNT_HOLD"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andExpect(jsonPath("$.account.status").value("ACTIVE"))
+            .andReturn()
+
+        val holdBody = objectMapper.readTree(holdResponse.response.contentAsString)
+        val holdRequestId = holdBody.path("item").path("requestId").asText()
+        val holdApprovalId = holdBody.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "manager01",
+                      "requestedByRole": "BRANCH_MANAGER",
+                      "reason": "Fraud team requested temporary hold",
+                      "reasonCode": "FRAUD",
+                      "description": "Synthetic fraud case replay",
+                      "holdAmountMinor": 40000000,
+                      "idempotencyKey": "HOLD-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.requestId").value(holdRequestId))
+            .andExpect(jsonPath("$.approval.approvalId").value(holdApprovalId))
+        assertEquals(1, countRows("account_hold_requests WHERE business_type = 'ACCOUNT_HOLD'"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$holdApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"ACC-103"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+        assertEquals("PENDING_APPROVAL", accountHoldRequestStatus(holdRequestId))
+        assertEquals("ACTIVE", accountStatus())
+        assertEquals(0, accountHoldAmount())
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$holdApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"ACC-103"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.accountHoldRequest.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.account.status").value("HOLD"))
+            .andExpect(jsonPath("$.account.holdAmountMinor").value(40000000))
+
+        assertEquals("ACTIVE", accountHoldRequestStatus(holdRequestId))
+        assertEquals("HOLD", accountStatus())
+        assertEquals(40000000, accountHoldAmount())
+        assertEquals(60000000, accountAvailableBalance())
+        assertEquals(initialLedgerBalance, accountLedgerBalance())
+        assertEquals(initialLedgerPostings, countRows("ledger_postings"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$holdApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager02","approvedByRole":"BRANCH_MANAGER","screenId":"ACC-103"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("WORKFLOW_STATE_VIOLATION"))
+
+        mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"requestedBy":"ops01","requestedByRole":"OPS_MANAGER","idempotencyKey":"RELEASE-KEY-001"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        val releaseResponse = mockMvc.perform(
+            post("/api/staff/accounts/ACC-SYN-001-001/hold-release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "ops01",
+                      "requestedByRole": "OPS_MANAGER",
+                      "reason": "Fraud hold cleared",
+                      "reasonCode": "FRAUD_CLEARED",
+                      "description": "Synthetic release",
+                      "idempotencyKey": "RELEASE-KEY-001"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.businessType").value("ACCOUNT_HOLD_RELEASE"))
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+            .andReturn()
+
+        val releaseBody = objectMapper.readTree(releaseResponse.response.contentAsString)
+        val releaseRequestId = releaseBody.path("item").path("requestId").asText()
+        val releaseApprovalId = releaseBody.path("approval").path("approvalId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$releaseApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"ops01","approvedByRole":"OPS_MANAGER","screenId":"ACC-104"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$releaseApprovalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"ops02","approvedByRole":"OPS_MANAGER","screenId":"ACC-104"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.accountHoldRequest.status").value("RELEASED"))
+            .andExpect(jsonPath("$.account.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.account.holdAmountMinor").value(0))
+
+        assertEquals("RELEASED", accountHoldRequestStatus(releaseRequestId))
+        assertEquals("ACTIVE", accountStatus())
+        assertEquals(0, accountHoldAmount())
+        assertEquals(initialLedgerBalance, accountLedgerBalance())
+        assertEquals(initialLedgerPostings, countRows("ledger_postings"))
+        assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_REQUESTED' AND screen_id IN ('ACC-103', 'ACC-104')"))
+        assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_APPROVED' AND screen_id IN ('ACC-103', 'ACC-104')"))
+        assertEquals(2, countRows("audit_events WHERE event_type = 'COMMAND_EXECUTED' AND screen_id IN ('ACC-103', 'ACC-104')"))
+    }
+
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject(
             "SELECT count(*) FROM $tableExpression",
             emptyMap<String, Any?>(),
             Int::class.java
+        ) ?: 0
+
+    private fun accountStatus(): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM accounts WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            String::class.java
+        )
+
+    private fun accountHoldRequestStatus(requestId: String): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM account_hold_requests WHERE request_id = :requestId",
+            mapOf("requestId" to requestId),
+            String::class.java
+        )
+
+    private fun accountLedgerBalance(): Long =
+        jdbc.queryForObject(
+            "SELECT ledger_balance_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            Long::class.java
+        ) ?: 0
+
+    private fun accountAvailableBalance(): Long =
+        jdbc.queryForObject(
+            "SELECT available_balance_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            Long::class.java
+        ) ?: 0
+
+    private fun accountHoldAmount(): Long =
+        jdbc.queryForObject(
+            "SELECT hold_amount_minor FROM account_balance_projections WHERE account_id = 'ACC-SYN-001-001'",
+            emptyMap<String, Any?>(),
+            Long::class.java
         ) ?: 0
 
     private fun customerPhone(): String? =

@@ -15,7 +15,8 @@
   "approval": {
     "required": true,
     "approverRole": "BRANCH_MANAGER",
-    "makerChecker": true
+    "makerChecker": true,
+    "businessTypes": ["ACCOUNT_HOLD"]
   },
   "audit": {
     "enabled": true,
@@ -25,9 +26,9 @@
   },
   "fields": [
     {
-      "name": "accountNo",
-      "label": "Account Number",
-      "type": "account-search",
+      "name": "accountId",
+      "label": "Account ID",
+      "type": "text",
       "required": true,
       "mask": "accountNo"
     },
@@ -43,10 +44,16 @@
       "label": "Description",
       "type": "textarea",
       "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
     }
   ],
   "api": {
-    "command": "POST /api/staff/accounts/{accountNo}/holds"
+    "command": "POST /api/staff/accounts/{accountId}/hold-requests"
   },
   "postActions": ["createAuditEvent", "notifyCustomer"]
 }
