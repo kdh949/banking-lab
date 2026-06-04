@@ -23,6 +23,9 @@ type Area = {
 };
 
 const gatePath = "docs/migration/node-retirement-gate.json";
+const canaryArea = process.env.BANKING_LAB_STACK_AUDIT_CANARY_AREA;
+const canaryPath = process.env.BANKING_LAB_STACK_AUDIT_CANARY_PATH;
+const canarySource = process.env.BANKING_LAB_STACK_AUDIT_CANARY_SOURCE;
 const ignoredDirs = new Set([
   ".git",
   ".gradle",
@@ -230,6 +233,9 @@ function isTextFile(path: string): boolean {
 async function validateArea(area: Area): Promise<string[]> {
   const errors: string[] = [];
   const files = (await Promise.all(area.roots.map((root) => listFiles(root)))).flat();
+  if (canaryArea === area.id && canaryPath && canarySource) {
+    files.push(normalizePath(canaryPath));
+  }
   const missingAnchors = [];
   for (const anchor of area.anchors) {
     if (!await exists(anchor)) {
@@ -257,7 +263,9 @@ async function validateArea(area: Area): Promise<string[]> {
 
   const legacyDependencies = [];
   for (const file of files.filter(isTextFile)) {
-    const source = await readFile(file, "utf8").catch(() => "");
+    const source = file === normalizePath(canaryPath ?? "") && canarySource
+      ? canarySource
+      : await readFile(file, "utf8").catch(() => "");
     if (area.dependencyPatterns.some((pattern) => pattern.test(source))) {
       legacyDependencies.push(file);
     }

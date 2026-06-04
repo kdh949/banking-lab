@@ -6,7 +6,9 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const script = "scripts/check-stack-retirement-by-area.ts";
+const gateScript = "scripts/check-node-retirement-gate.ts";
 const doc = "docs/test-evidence/stack-retirement-area-audit.md";
+const plantedImportPath = "apps/customer-web/src/__legacy_node_reference_canary.ts";
 
 test("stack retirement area audit proves target areas do not use legacy Node MVP stack", async () => {
   const { stdout, stderr } = await execFileAsync(
@@ -51,4 +53,36 @@ test("stack retirement area audit is wired into scripts and retirement evidence"
   assert.match(source, /legacy-node-reference/);
   assert.match(evidenceDoc, /Status:\s+pass/i);
   assert.match(evidenceDoc, /Status:\s+pass/i);
+});
+
+test("node retirement gate rejects a planted target-path Node dependency", async () => {
+  const result = await execFileAsync(
+    process.execPath,
+    ["--experimental-strip-types", gateScript],
+    {
+      env: {
+        ...process.env,
+        BANKING_LAB_STACK_AUDIT_CANARY_AREA: "frontend-channels",
+        BANKING_LAB_STACK_AUDIT_CANARY_PATH: plantedImportPath,
+        BANKING_LAB_STACK_AUDIT_CANARY_SOURCE: [
+          "import legacyRuntime from '../../../legacy-node-reference/runtime/server.mjs';",
+          "export const canary = legacyRuntime;"
+        ].join("\n")
+      },
+      maxBuffer: 1024 * 1024 * 2
+    }
+  ).then(
+    ({ stdout, stderr }) => ({ code: 0, stdout, stderr }),
+    (error) => ({
+      code: typeof error.code === "number" ? error.code : 1,
+      stdout: String(error.stdout ?? ""),
+      stderr: String(error.stderr ?? "")
+    })
+  );
+
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /Node reference retirement gate: failed/);
+  assert.match(result.stderr, /Ready stack-area audit failed/);
+  assert.match(result.stderr, /legacy Node reference\/runtime dependencies found/);
+  assert.match(result.stderr, new RegExp(plantedImportPath.replaceAll("/", "\\/")));
 });
