@@ -1,0 +1,28 @@
+services:
+  postgres-source:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: banking_lab
+      POSTGRES_USER: banking_lab
+      POSTGRES_PASSWORD: banking_lab
+    ports:
+      - "${BANKING_LAB_BACKUP_DRILL_SOURCE_PORT:-15432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banking_lab -d banking_lab"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  postgres-restore:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: banking_lab
+      POSTGRES_USER: banking_lab
+      POSTGRES_PASSWORD: banking_lab
+    ports:
+      - "${BANKING_LAB_BACKUP_DRILL_RESTORE_PORT:-15433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banking_lab -d banking_lab"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

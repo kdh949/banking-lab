@@ -19,7 +19,7 @@ test("coverage matrix uses split API-backed and deployment evidence statuses", a
   assert.match(row("| platform | Live cluster deployment validation"), /\| missing \|$/);
 });
 
-test("security evidence has a Docker-forced rerun path and exact skipped DAST boundary", async () => {
+test("security evidence has a Docker-forced rerun path and live DAST evidence", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const runner = await readFile("scripts/run-security-evidence.ts", "utf8");
   const dockerRunner = await readFile("scripts/run-security-evidence-docker.ts", "utf8");
@@ -32,26 +32,45 @@ test("security evidence has a Docker-forced rerun path and exact skipped DAST bo
   assert.match(dockerRunner, /docker/);
   assert.match(dockerRunner, /BANKING_LAB_SECURITY_FORCE_DOCKER/);
   assert.match(doc, /npm run security:evidence:docker/);
-  assert.equal(dast?.status, "skipped");
-  assert.equal(dast?.reason, "BANKING_LAB_DAST_URL is not set; no live target was supplied for DAST.");
+  assert.match(doc, /BANKING_LAB_DAST_URL/);
+  assert.equal(summary.forcedDockerScanners, true);
+  assert.equal(summary.totals.skipped, 0);
+  assert.equal(dast?.status, "pass");
+  assert.equal(dast?.outputPath, "docs/test-evidence/generated/zap-baseline.log");
 });
 
-test("PostgreSQL backup restore drill records fixture evidence and live prerequisites", async () => {
+test("PostgreSQL backup restore drill records live evidence and reusable Docker prerequisites", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const script = await readFile("scripts/run-postgres-backup-drill.ts", "utf8");
+  const dockerLiveScript = await readFile("scripts/run-postgres-docker-live-drill.ts", "utf8");
+  const dockerCompose = await readFile("infra/docker-compose/postgres-backup-drill.yml", "utf8");
   const doc = await readFile("docs/test-evidence/postgres-backup-restore-drill.md", "utf8");
   const evidence = JSON.parse(await readFile("docs/test-evidence/generated/postgres-backup-restore-drill.json", "utf8"));
 
   assert.equal(packageJson.scripts["postgres:backup-drill"], "node --experimental-strip-types scripts/run-postgres-backup-drill.ts");
+  assert.equal(
+    packageJson.scripts["postgres:backup-drill:docker-live"],
+    "node --experimental-strip-types scripts/run-postgres-docker-live-drill.ts"
+  );
   assert.match(script, /pg_dump/);
   assert.match(script, /pg_restore/);
   assert.match(script, /BANKING_LAB_POSTGRES_URL/);
   assert.match(script, /BANKING_LAB_RESTORE_POSTGRES_URL/);
+  assert.match(script, /accountBalanceProjectionMismatchQuery/);
+  assert.match(dockerLiveScript, /--mode=live/);
+  assert.match(dockerLiveScript, /seedSyntheticBackupFixture/);
+  assert.match(dockerCompose, /postgres-source/);
+  assert.match(dockerCompose, /postgres-restore/);
   assert.match(doc, /not a live PostgreSQL durability proof/);
   assert.equal(evidence.status, "pass");
-  assert.equal(evidence.mode, "fixture");
-  assert.equal(evidence.postgresLive, false);
+  assert.equal(evidence.mode, "live");
+  assert.equal(evidence.postgresLive, true);
   assert.equal(evidence.syntheticOnly, true);
+  assert.ok(evidence.checks.some((check) => check.id === "ledgerTransactions-count-parity" && check.status === "pass"));
+  assert.ok(evidence.checks.some((check) => check.id === "accountBalanceProjections-count-parity" && check.status === "pass"));
   assert.ok(evidence.checks.some((check) => check.id === "ledger-posting-balance-valid" && check.status === "pass"));
+  assert.ok(evidence.checks.some((check) => check.id === "account-balance-projection-valid" && check.status === "pass"));
+  assert.ok(evidence.checks.some((check) => check.id === "available-balance-projection-valid" && check.status === "pass"));
   assert.ok(evidence.checks.some((check) => check.id === "audit-hash-chain-valid" && check.status === "pass"));
+  assert.ok(evidence.checks.some((check) => check.id === "synthetic-boundary-valid" && check.status === "pass"));
 });

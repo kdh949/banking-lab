@@ -1,77 +1,110 @@
 {
-  "generatedAt": "2026-06-04T13:39:22.219Z",
-  "command": "npm run postgres:backup-drill",
-  "mode": "fixture",
+  "generatedAt": "2026-06-04T14:31:37.590Z",
+  "command": "npm run postgres:backup-drill -- --mode=live",
+  "mode": "live",
   "syntheticOnly": true,
-  "postgresLive": false,
+  "postgresLive": true,
   "backup": {
-    "format": "logical-fixture",
-    "source": "synthetic in-script PostgreSQL-shaped fixture",
-    "restoredInto": "in-memory restored fixture copy"
+    "format": "pg_dump custom format",
+    "source": "BANKING_LAB_POSTGRES_URL",
+    "restoredInto": "BANKING_LAB_RESTORE_POSTGRES_URL"
   },
   "counts": {
     "ledgerTransactions": {
-      "source": 3,
-      "restored": 3
+      "source": 2,
+      "restored": 2
     },
     "ledgerPostings": {
-      "source": 6,
-      "restored": 6
+      "source": 4,
+      "restored": 4
+    },
+    "accountBalanceProjections": {
+      "source": 3,
+      "restored": 3
     },
     "auditEvents": {
-      "source": 3,
-      "restored": 3
+      "source": 2,
+      "restored": 2
     },
     "operatorApprovals": {
-      "source": 2,
-      "restored": 2
+      "source": 1,
+      "restored": 1
     },
     "workflowInstances": {
-      "source": 2,
-      "restored": 2
+      "source": 1,
+      "restored": 1
     },
     "customerTransferResults": {
-      "source": 3,
-      "restored": 3
+      "source": 1,
+      "restored": 1
     }
   },
   "checks": [
     {
-      "id": "ledger-transaction-count-parity",
+      "id": "ledgerTransactions-count-parity",
+      "status": "pass",
+      "details": "2 source, 2 restored"
+    },
+    {
+      "id": "ledgerPostings-count-parity",
+      "status": "pass",
+      "details": "4 source, 4 restored"
+    },
+    {
+      "id": "accountBalanceProjections-count-parity",
       "status": "pass",
       "details": "3 source, 3 restored"
+    },
+    {
+      "id": "auditEvents-count-parity",
+      "status": "pass",
+      "details": "2 source, 2 restored"
+    },
+    {
+      "id": "operatorApprovals-count-parity",
+      "status": "pass",
+      "details": "1 source, 1 restored"
+    },
+    {
+      "id": "workflowInstances-count-parity",
+      "status": "pass",
+      "details": "1 source, 1 restored"
+    },
+    {
+      "id": "customerTransferResults-count-parity",
+      "status": "pass",
+      "details": "1 source, 1 restored"
     },
     {
       "id": "ledger-posting-balance-valid",
       "status": "pass",
-      "details": "each restored ledger transaction nets debit and credit postings to zero by currency"
+      "details": "restored PostgreSQL ledger_postings have no debit/credit imbalance by transaction and currency"
+    },
+    {
+      "id": "account-balance-projection-valid",
+      "status": "pass",
+      "details": "restored PostgreSQL account_balance_projections match signed ledger_postings by account and currency"
+    },
+    {
+      "id": "available-balance-projection-valid",
+      "status": "pass",
+      "details": "restored PostgreSQL customer account availability is non-negative and equals ledger balance minus holds"
     },
     {
       "id": "audit-hash-chain-valid",
       "status": "pass",
-      "details": "restored audit previous_event_hash values match preceding payload_hash values"
+      "details": "restored PostgreSQL audit_events retain previous_event_hash continuity"
     },
     {
-      "id": "approval-state-parity",
+      "id": "source-database-readable",
       "status": "pass",
-      "details": "2 source, 2 restored"
-    },
-    {
-      "id": "workflow-state-parity",
-      "status": "pass",
-      "details": "2 source, 2 restored"
-    },
-    {
-      "id": "customer-transfer-result-parity",
-      "status": "pass",
-      "details": "3 source, 3 restored"
+      "details": "source PostgreSQL database was queried after dump"
     },
     {
       "id": "synthetic-boundary-valid",
       "status": "pass",
-      "details": "fixture contains synthetic identifiers only and no real customer money or PII"
+      "details": "live drill source and restore databases are disposable synthetic PostgreSQL instances with no real money, PII, KYC, financial networks, or external bank APIs"
     }
   ],
-  "status": "pass",
-  "skippedLiveReason": "Live PostgreSQL mode requires BANKING_LAB_POSTGRES_URL, BANKING_LAB_RESTORE_POSTGRES_URL, pg_dump, pg_restore, and psql."
+  "status": "pass"
 }

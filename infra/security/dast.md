@@ -15,3 +15,15 @@ docker run --rm -v <generated>:/zap/wrk -v <repo>:/workspace:ro ghcr.io/zaproxy/
 ```
 
 `infra/security/zap-baseline.conf` ignores ZAP rule `10049` because this banking API intentionally uses `Cache-Control: no-store` for synthetic financial responses.
+
+## 2026-06-04 Live Synthetic Run
+
+The current generated DAST evidence was produced against a disposable local
+synthetic core-banking target:
+
+```bash
+env BANKING_LAB_DAST_URL=http://host.docker.internal:18132/health npm run security:evidence:docker
+```
+
+Result: pass, with `docs/test-evidence/generated/security-evidence-summary.json`
+recording 5 passed checks and 0 skipped checks.

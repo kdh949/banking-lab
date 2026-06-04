@@ -30,7 +30,25 @@ Current generated summary: `docs/test-evidence/generated/security-evidence-summa
 - `semgrep-sast`: pass through Docker fallback in the committed generated evidence.
 - `trivy-fs`: pass through Docker fallback in the committed generated evidence.
 - `sbom-cyclonedx`: pass through Docker fallback in the committed generated evidence.
-- `dast-zap-baseline`: skipped because no `BANKING_LAB_DAST_URL` was supplied.
+- `dast-zap-baseline`: pass through Docker ZAP baseline against the local synthetic target `http://host.docker.internal:18132/health`.
+
+The DAST evidence was produced after starting disposable local synthetic containers:
+
+```bash
+docker network create banking-lab-dast-live
+docker run -d --rm --name banking-lab-dast-postgres --network banking-lab-dast-live -e POSTGRES_DB=banking_lab -e POSTGRES_USER=banking_lab -e POSTGRES_PASSWORD=banking_lab postgres:16-alpine
+docker run -d --rm --name banking-lab-dast-core --network banking-lab-dast-live -p 18132:8081 -e BANKING_LAB_DATABASE_URL=jdbc:postgresql://banking-lab-dast-postgres:5432/banking_lab -e BANKING_LAB_DATABASE_USER=banking_lab -e BANKING_LAB_DATABASE_PASSWORD=banking_lab -e BANKING_LAB_SYNTHETIC_ONLY=true -e BANKING_LAB_SECURITY_ENABLED=false -e BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false -e BANKING_LAB_TRACING_ENABLED=false banking-lab-dast-smoke-core-banking:latest
+curl -sf http://127.0.0.1:18132/health
+env BANKING_LAB_DAST_URL=http://host.docker.internal:18132/health npm run security:evidence:docker
+docker stop banking-lab-dast-core
+docker stop banking-lab-dast-postgres
+docker network rm banking-lab-dast-live
+```
+
+Generated ZAP artifacts:
+
+- `docs/test-evidence/generated/zap-baseline.json`
+- `docs/test-evidence/generated/zap-baseline.log`
 
 ## Synthetic Boundary
 
