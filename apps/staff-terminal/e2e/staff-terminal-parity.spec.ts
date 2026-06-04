@@ -229,6 +229,23 @@ test("staff terminal ACC103 executes Spring API-backed account hold and release 
   await expect(panel).toContainText("ACTIVE");
 });
 
+test("staff terminal LIM102 executes Spring API-backed transfer limit approval when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed transfer limit command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=LIM-102`);
+
+  const panel = page.getByTestId("manifest-transfer-limit-api-panel");
+  await expect(panel).toContainText("transfer limit API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run transfer limit smoke" }).click();
+  await expect(panel).toContainText("transfer limit applied", { timeout: 20_000 });
+  await expect(panel).toContainText("TRANSFER_LIMIT_CHANGE");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("ACC-SYN-LIMIT-001");
+  await expect(panel).toContainText("After daily");
+  await expect(panel).toContainText("After single");
+});
+
 test("staff terminal APR001 tab lists selects approves and shows audit events from Spring API", async ({ page, request }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run APR001 API-backed manifest smoke.");
 

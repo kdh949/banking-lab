@@ -45,6 +45,13 @@ class StaffAccessController(
     ): StaffAccessListResponse<StaffTransactionDto> =
         staffAccessService.searchTransactions(accountId, reason)
 
+    @GetMapping("/customers/{customerId}/transfer-limits")
+    fun transferLimits(
+        @PathVariable customerId: String,
+        @RequestParam(required = false) reason: String?
+    ): StaffAccessListResponse<StaffTransferLimitDto> =
+        staffAccessService.transferLimits(customerId, reason)
+
     @PostMapping("/pii/unmask")
     fun unmask(@RequestBody command: PiiUnmaskCommand): StaffUnmaskResponse =
         staffAccessService.unmaskCustomer(command)
@@ -69,6 +76,13 @@ class StaffAccessController(
         @RequestBody command: AccountHoldReleaseRequestCommand
     ): ResponseEntity<AccountHoldRequestResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestAccountHoldRelease(accountId, command))
+
+    @PostMapping("/accounts/{accountId}/limit-change-requests")
+    fun requestTransferLimitChange(
+        @PathVariable accountId: String,
+        @RequestBody command: TransferLimitChangeRequestCommand
+    ): ResponseEntity<TransferLimitChangeRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestTransferLimitChange(accountId, command))
 
     @PostMapping("/approvals/{approvalId}/approve")
     fun approveStaffRequest(

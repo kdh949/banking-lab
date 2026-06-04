@@ -26,16 +26,29 @@
   },
   "fields": [
     {
-      "name": "customerId",
-      "label": "Customer ID",
+      "name": "accountId",
+      "label": "Account ID",
       "type": "text",
       "required": true
     },
     {
-      "name": "dailyLimitMinor",
+      "name": "dailyTransferLimitMinor",
       "label": "Daily Limit",
       "type": "amount",
       "required": true
+    },
+    {
+      "name": "singleTransferLimitMinor",
+      "label": "Single Transfer Limit",
+      "type": "amount",
+      "required": true
+    },
+    {
+      "name": "reasonCode",
+      "label": "Reason Code",
+      "type": "select",
+      "required": true,
+      "options": ["CUSTOMER_REQUEST", "RISK_REVIEW", "BRANCH_POLICY"]
     },
     {
       "name": "reason",
@@ -45,7 +58,7 @@
     }
   ],
   "api": {
-    "command": "POST /api/staff/customers/{customerId}/limit-change-requests"
+    "command": "POST /api/staff/accounts/{accountId}/limit-change-requests"
   },
   "postActions": ["createApprovalRequest", "createAuditEvent"]
 }

@@ -9,6 +9,11 @@ export interface StaffAccessItemResponse<T> {
   readonly item: T;
 }
 
+export interface StaffAccessListResponse<T> {
+  readonly auditEventId: string;
+  readonly items: readonly T[];
+}
+
 export interface StaffCustomerDetailDto {
   readonly customerId: string;
   readonly piiExposure: string;
@@ -269,6 +274,57 @@ export interface AccountHoldRequestResponse {
   readonly account: CustomerAccountDetailDto;
 }
 
+export interface TransferLimitChangeRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly reasonCode?: string;
+  readonly description?: string;
+  readonly dailyTransferLimitMinor?: number;
+  readonly singleTransferLimitMinor?: number;
+  readonly idempotencyKey?: string;
+}
+
+export interface StaffTransferLimitDto {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly accountStatus: string;
+  readonly currency: string;
+  readonly dailyTransferLimitMinor: number;
+  readonly singleTransferLimitMinor: number;
+  readonly updatedAt: string;
+}
+
+export interface TransferLimitChangeRequestDto {
+  readonly requestId: string;
+  readonly businessType: string;
+  readonly businessReferenceId: string;
+  readonly targetCustomerId: string;
+  readonly targetAccountId: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly reasonCode: string;
+  readonly currentDailyTransferLimitMinor: number;
+  readonly currentSingleTransferLimitMinor: number;
+  readonly requestedDailyTransferLimitMinor: number;
+  readonly requestedSingleTransferLimitMinor: number;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly idempotencyKey: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly executedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface TransferLimitChangeRequestResponse {
+  readonly item: TransferLimitChangeRequestDto;
+  readonly approval: OperatorApproval;
+  readonly limit: StaffTransferLimitDto;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -289,6 +345,8 @@ export interface StaffApprovalExecutionResponse {
   readonly customer?: StaffCustomerDetailDto | null;
   readonly account?: CustomerAccountDetailDto | null;
   readonly accountHoldRequest?: AccountHoldRequestDto | null;
+  readonly transferLimit?: StaffTransferLimitDto | null;
+  readonly transferLimitChangeRequest?: TransferLimitChangeRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -495,6 +553,27 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/accounts/${encodeURIComponent(accountId)}/hold-release-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    staffTransferLimits(customerId: string, reason: string) {
+      return request<StaffAccessListResponse<StaffTransferLimitDto>>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/${encodeURIComponent(customerId)}/transfer-limits`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    requestTransferLimitChange(accountId: string, command: TransferLimitChangeRequestCommand) {
+      return request<TransferLimitChangeRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/${encodeURIComponent(accountId)}/limit-change-requests`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

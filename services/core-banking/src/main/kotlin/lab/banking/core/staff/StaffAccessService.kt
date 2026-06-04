@@ -9,6 +9,7 @@ import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.aml.AmlCaseService
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApproveApprovalCommand
+import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.complaint.ComplaintCaseService
@@ -171,6 +172,33 @@ class StaffAccessService(
             payload = mapOf("resultCount" to transactions.size, "syntheticOnly" to true)
         )
         return StaffAccessListResponse(auditEventId = auditEventId, items = transactions)
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun transferLimits(customerId: String, reason: String?): StaffAccessListResponse<StaffTransferLimitDto> {
+        requireReason(reason, "LIMIT_VIEW requires a business reason")
+        customer(customerId)
+        val limits = jdbc.query(
+            transferLimitSql(
+                """
+                WHERE a.customer_id = :customerId
+                ORDER BY a.account_id
+                """.trimIndent()
+            ),
+            mapOf("customerId" to customerId),
+            this::mapTransferLimit
+        )
+        val auditEventId = appendAudit(
+            eventType = "LIMIT_VIEW",
+            actorId = "branch01",
+            actorRole = "BRANCH_STAFF",
+            screenId = "LIM-101",
+            customerId = customerId,
+            accountId = null,
+            reason = reason,
+            payload = mapOf("resultCount" to limits.size, "syntheticOnly" to true)
+        )
+        return StaffAccessListResponse(auditEventId = auditEventId, items = limits)
     }
 
     fun unmaskCustomer(command: PiiUnmaskCommand): StaffUnmaskResponse =
@@ -366,6 +394,66 @@ class StaffAccessService(
         )
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun requestTransferLimitChange(accountId: String, command: TransferLimitChangeRequestCommand): TransferLimitChangeRequestResponse {
+        val requestedBy = command.requestedBy ?: "manager01"
+        val requestedRole = command.requestedByRole ?: "BRANCH_MANAGER"
+        BankingLabAuthContext.requireActor(requestedBy, requestedRole)
+        requireRole(requestedRole, TRANSFER_LIMIT_CHANGE_REQUEST_ROLES, "actor role cannot request transfer limit change")
+        requireReason(command.reason, "TRANSFER_LIMIT_CHANGE requires a business reason")
+        val idempotencyKey = requireField(command.idempotencyKey, "idempotencyKey")
+        existingTransferLimitChangeRequest(requestedBy, idempotencyKey)
+            ?.let { return transferLimitChangeResponse(it) }
+
+        val current = accountLimit(accountId, forUpdate = true)
+        if (current.accountStatus != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can change transfer limits")
+        }
+        val requestedDaily = command.dailyTransferLimitMinor ?: current.dailyTransferLimitMinor
+        val requestedSingle = command.singleTransferLimitMinor ?: current.singleTransferLimitMinor
+        validateTransferLimitChange(current, requestedDaily, requestedSingle)
+
+        val requestId = nextTransferLimitChangeRequestId()
+        val reasonCode = command.reasonCode ?: "CUSTOMER_REQUEST"
+        val metadata = mapOf("description" to command.description.orEmpty(), "syntheticOnly" to true)
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE,
+                businessReferenceId = requestId,
+                requestedBy = requestedBy,
+                requestedByRole = requestedRole,
+                requestReason = command.reason,
+                beforeSnapshot = current.snapshot(),
+                afterSnapshot = mapOf(
+                    "accountId" to current.accountId,
+                    "dailyTransferLimitMinor" to requestedDaily,
+                    "singleTransferLimitMinor" to requestedSingle,
+                    "reasonCode" to reasonCode,
+                    "description" to command.description.orEmpty()
+                ),
+                screenId = "LIM-102"
+            )
+        )
+        insertTransferLimitChangeRequest(
+            requestId = requestId,
+            current = current,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole,
+            reason = command.reason.orEmpty(),
+            reasonCode = reasonCode,
+            requestedDaily = requestedDaily,
+            requestedSingle = requestedSingle,
+            approvalId = approval.approvalId,
+            idempotencyKey = idempotencyKey,
+            metadata = metadata
+        )
+        return TransferLimitChangeRequestResponse(
+            item = transferLimitChangeRequest(requestId),
+            approval = approval,
+            limit = current.toDto()
+        )
+    }
+
     fun approveStaffRequest(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         return runSerializableApprovalExecution {
             approveStaffRequestInTransaction(approvalId, command)
@@ -374,8 +462,9 @@ class StaffAccessService(
 
     private fun approveStaffRequestInTransaction(approvalId: String, command: ApproveApprovalCommand): StaffApprovalExecutionResponse {
         BankingLabAuthContext.requireActor(command.approvedBy, command.approvedByRole)
+        val pendingApproval = approvals.approval(approvalId)
+        requireCheckerRole(pendingApproval.businessType, command.approvedByRole)
         val approval = approvals.approve(approvalId, command)
-        requireCheckerRole(approval.businessType, command.approvedByRole)
         val customerExecuted = if (approval.businessType == ApprovalBusinessTypes.CUSTOMER_INFO_CHANGE) {
             applyCustomerInfoChange(approval.businessReferenceId, approval.afterSnapshot, command)
             true
@@ -415,6 +504,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val transferLimitExecution = if (approval.businessType == ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE) {
+            applyApprovedTransferLimitChangeRequest(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -422,10 +516,13 @@ class StaffAccessService(
                 fdsExecution != null ||
                 amlCase != null ||
                 reconciliationExecution != null ||
-                accountHoldExecution != null,
+                accountHoldExecution != null ||
+                transferLimitExecution != null,
             customer = customer,
             account = accountHoldExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
+            transferLimit = transferLimitExecution?.second,
+            transferLimitChangeRequest = transferLimitExecution?.first,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
@@ -507,6 +604,7 @@ class StaffAccessService(
         val allowedRoles = when (businessType) {
             ApprovalBusinessTypes.ACCOUNT_HOLD -> ACCOUNT_HOLD_CHECKER_ROLES
             ApprovalBusinessTypes.ACCOUNT_HOLD_RELEASE -> ACCOUNT_HOLD_RELEASE_CHECKER_ROLES
+            ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE -> TRANSFER_LIMIT_CHANGE_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -521,6 +619,9 @@ class StaffAccessService(
 
     private fun nextAccountHoldRequestId(): String =
         "AHR-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun nextTransferLimitChangeRequestId(): String =
+        "TLR-${UUID.randomUUID().toString().uppercase()}"
 
     private fun customer(customerId: String): StaffCustomerRecord =
         try {
@@ -562,6 +663,33 @@ class StaffAccessService(
         JOIN account_balance_projections p
           ON p.account_id = a.account_id
          AND p.currency = a.currency
+        $suffix
+        """.trimIndent()
+
+    private fun accountLimit(accountId: String, forUpdate: Boolean): StaffTransferLimitRecord =
+        try {
+            jdbc.queryForObject(
+                transferLimitSql(
+                    if (forUpdate) {
+                        "WHERE a.account_id = :accountId FOR UPDATE OF a, l"
+                    } else {
+                        "WHERE a.account_id = :accountId"
+                    }
+                ),
+                mapOf("accountId" to accountId),
+                this::mapTransferLimitRecord
+            ) ?: throw WorkflowErrors.notFound("transfer limit not found for account: $accountId")
+        } catch (_: EmptyResultDataAccessException) {
+            throw WorkflowErrors.notFound("transfer limit not found for account: $accountId")
+        }
+
+    private fun transferLimitSql(suffix: String): String =
+        """
+        SELECT a.customer_id, a.account_id, a.account_no, a.status AS account_status, a.currency,
+               l.daily_transfer_limit_minor, l.single_transfer_limit_minor, l.updated_at
+        FROM accounts a
+        JOIN account_limits l
+          ON l.account_id = a.account_id
         $suffix
         """.trimIndent()
 
@@ -798,6 +926,217 @@ class StaffAccessService(
         }
     }
 
+    private fun applyApprovedTransferLimitChangeRequest(
+        approval: OperatorApproval,
+        command: ApproveApprovalCommand
+    ): Pair<TransferLimitChangeRequestDto, StaffTransferLimitDto> {
+        val request = transferLimitChangeRequestForUpdate(approval.businessReferenceId)
+        if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
+            throw WorkflowErrors.stateViolation("approval does not match transfer limit change request")
+        }
+        if (request.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending transfer limit change requests can be executed")
+        }
+        val current = accountLimit(request.targetAccountId, forUpdate = true)
+        if (current.accountStatus != "ACTIVE") {
+            throw WorkflowErrors.stateViolation("only active accounts can apply transfer limit changes")
+        }
+        val rows = jdbc.update(
+            """
+            UPDATE account_limits
+            SET daily_transfer_limit_minor = :dailyTransferLimitMinor,
+                single_transfer_limit_minor = :singleTransferLimitMinor,
+                updated_at = now()
+            WHERE account_id = :accountId
+            """.trimIndent(),
+            mapOf(
+                "accountId" to request.targetAccountId,
+                "dailyTransferLimitMinor" to request.requestedDailyTransferLimitMinor,
+                "singleTransferLimitMinor" to request.requestedSingleTransferLimitMinor
+            )
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("transfer limit row changed before approval execution")
+        }
+        markTransferLimitChangeRequestApplied(request.requestId)
+        appendAudit(
+            eventType = "COMMAND_EXECUTED",
+            actorId = command.approvedBy,
+            actorRole = command.approvedByRole,
+            screenId = command.screenId ?: "LIM-102",
+            customerId = request.targetCustomerId,
+            accountId = request.targetAccountId,
+            reason = request.reason,
+            payload = mapOf(
+                "businessType" to approval.businessType,
+                "requestId" to request.requestId,
+                "approvalId" to approval.approvalId,
+                "dailyTransferLimitMinor" to request.requestedDailyTransferLimitMinor,
+                "singleTransferLimitMinor" to request.requestedSingleTransferLimitMinor,
+                "syntheticOnly" to true,
+                "ledgerSourceRowsMutated" to false
+            )
+        )
+        val updatedRequest = transferLimitChangeRequest(request.requestId)
+        val updatedLimit = accountLimit(request.targetAccountId, forUpdate = false)
+        return updatedRequest to updatedLimit.toDto()
+    }
+
+    private fun validateTransferLimitChange(current: StaffTransferLimitRecord, requestedDaily: Long, requestedSingle: Long) {
+        if (requestedDaily < 0 || requestedSingle < 0) {
+            throw WorkflowErrors.validation("transfer limits cannot be negative")
+        }
+        if (requestedSingle > requestedDaily) {
+            throw WorkflowErrors.validation("singleTransferLimitMinor cannot exceed dailyTransferLimitMinor")
+        }
+        if (
+            requestedDaily == current.dailyTransferLimitMinor &&
+            requestedSingle == current.singleTransferLimitMinor
+        ) {
+            throw WorkflowErrors.validation("requested transfer limits must change at least one value")
+        }
+    }
+
+    private fun insertTransferLimitChangeRequest(
+        requestId: String,
+        current: StaffTransferLimitRecord,
+        requestedBy: String,
+        requestedRole: String,
+        reason: String,
+        reasonCode: String,
+        requestedDaily: Long,
+        requestedSingle: Long,
+        approvalId: String,
+        idempotencyKey: String,
+        metadata: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO account_limit_change_requests (
+              request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+              requested_by, requested_role, reason, reason_code,
+              current_daily_transfer_limit_minor, current_single_transfer_limit_minor,
+              requested_daily_transfer_limit_minor, requested_single_transfer_limit_minor,
+              status, approval_id, idempotency_key, metadata_json
+            )
+            VALUES (
+              :requestId, :businessType, :requestId, :customerId, :accountId,
+              :requestedBy, :requestedRole, :reason, :reasonCode,
+              :currentDaily, :currentSingle, :requestedDaily, :requestedSingle,
+              'PENDING_APPROVAL', :approvalId, :idempotencyKey, CAST(:metadataJson AS jsonb)
+            )
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "businessType" to ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE,
+                "customerId" to current.customerId,
+                "accountId" to current.accountId,
+                "requestedBy" to requestedBy,
+                "requestedRole" to requestedRole,
+                "reason" to reason,
+                "reasonCode" to reasonCode,
+                "currentDaily" to current.dailyTransferLimitMinor,
+                "currentSingle" to current.singleTransferLimitMinor,
+                "requestedDaily" to requestedDaily,
+                "requestedSingle" to requestedSingle,
+                "approvalId" to approvalId,
+                "idempotencyKey" to idempotencyKey,
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+    }
+
+    private fun markTransferLimitChangeRequestApplied(requestId: String) {
+        val rows = jdbc.update(
+            """
+            UPDATE account_limit_change_requests
+            SET status = 'APPLIED',
+                updated_at = now(),
+                executed_at = now()
+            WHERE request_id = :requestId
+              AND status = 'PENDING_APPROVAL'
+            """.trimIndent(),
+            mapOf("requestId" to requestId)
+        )
+        if (rows != 1) {
+            throw WorkflowErrors.stateViolation("transfer limit change request is no longer pending")
+        }
+    }
+
+    private fun transferLimitChangeResponse(request: TransferLimitChangeRequestDto): TransferLimitChangeRequestResponse =
+        TransferLimitChangeRequestResponse(
+            item = request,
+            approval = approvals.approval(request.approvalId ?: throw WorkflowErrors.stateViolation("transfer limit change request has no approval")),
+            limit = accountLimit(request.targetAccountId, forUpdate = false).toDto()
+        )
+
+    private fun existingTransferLimitChangeRequest(requestedBy: String, idempotencyKey: String): TransferLimitChangeRequestDto? =
+        jdbc.query(
+            transferLimitChangeRequestSql(
+                """
+                WHERE business_type = :businessType
+                  AND requested_by = :requestedBy
+                  AND idempotency_key = :idempotencyKey
+                """.trimIndent()
+            ),
+            mapOf(
+                "businessType" to ApprovalBusinessTypes.TRANSFER_LIMIT_CHANGE,
+                "requestedBy" to requestedBy,
+                "idempotencyKey" to idempotencyKey
+            ),
+            this::mapTransferLimitChangeRequest
+        ).firstOrNull()
+
+    private fun transferLimitChangeRequest(requestId: String): TransferLimitChangeRequestDto =
+        jdbc.queryForObject(
+            transferLimitChangeRequestSql("WHERE request_id = :requestId"),
+            mapOf("requestId" to requestId),
+            this::mapTransferLimitChangeRequest
+        ) ?: throw WorkflowErrors.notFound("transfer limit change request not found: $requestId")
+
+    private fun transferLimitChangeRequestForUpdate(requestId: String): TransferLimitChangeRequestDto =
+        jdbc.queryForObject(
+            transferLimitChangeRequestSql("WHERE request_id = :requestId FOR UPDATE"),
+            mapOf("requestId" to requestId),
+            this::mapTransferLimitChangeRequest
+        ) ?: throw WorkflowErrors.notFound("transfer limit change request not found: $requestId")
+
+    private fun transferLimitChangeRequestSql(suffix: String): String =
+        """
+        SELECT request_id, business_type, business_reference_id, target_customer_id, target_account_id,
+               target_transaction_id, requested_by, requested_role, reason, reason_code,
+               current_daily_transfer_limit_minor, current_single_transfer_limit_minor,
+               requested_daily_transfer_limit_minor, requested_single_transfer_limit_minor,
+               status, approval_id, idempotency_key, created_at, updated_at, executed_at,
+               metadata_json::text AS metadata_json
+        FROM account_limit_change_requests
+        $suffix
+        """.trimIndent()
+
+    private fun mapTransferLimitChangeRequest(rs: ResultSet, rowNum: Int): TransferLimitChangeRequestDto =
+        TransferLimitChangeRequestDto(
+            requestId = rs.getString("request_id"),
+            businessType = rs.getString("business_type"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            targetCustomerId = rs.getString("target_customer_id"),
+            targetAccountId = rs.getString("target_account_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedRole = rs.getString("requested_role"),
+            reason = rs.getString("reason"),
+            reasonCode = rs.getString("reason_code"),
+            currentDailyTransferLimitMinor = rs.getLong("current_daily_transfer_limit_minor"),
+            currentSingleTransferLimitMinor = rs.getLong("current_single_transfer_limit_minor"),
+            requestedDailyTransferLimitMinor = rs.getLong("requested_daily_transfer_limit_minor"),
+            requestedSingleTransferLimitMinor = rs.getLong("requested_single_transfer_limit_minor"),
+            status = rs.getString("status"),
+            approvalId = rs.getString("approval_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            executedAt = rs.getObject("executed_at", OffsetDateTime::class.java),
+            metadata = readMetadata(rs.getString("metadata_json"))
+        )
+
     private fun accountHoldResponse(request: AccountHoldRequestDto): AccountHoldRequestResponse =
         AccountHoldRequestResponse(
             item = request,
@@ -898,6 +1237,21 @@ class StaffAccessService(
             holdAmountMinor = rs.getLong("hold_amount_minor")
         )
 
+    private fun mapTransferLimit(rs: ResultSet, rowNum: Int): StaffTransferLimitDto =
+        mapTransferLimitRecord(rs, rowNum).toDto()
+
+    private fun mapTransferLimitRecord(rs: ResultSet, rowNum: Int): StaffTransferLimitRecord =
+        StaffTransferLimitRecord(
+            customerId = rs.getString("customer_id"),
+            accountId = rs.getString("account_id"),
+            accountNo = rs.getString("account_no"),
+            accountStatus = rs.getString("account_status"),
+            currency = rs.getString("currency"),
+            dailyTransferLimitMinor = rs.getLong("daily_transfer_limit_minor"),
+            singleTransferLimitMinor = rs.getLong("single_transfer_limit_minor"),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
     private fun StaffAccountRecord.toDto(): StaffAccountDto =
         StaffAccountDto(
             customerId = customerId,
@@ -910,6 +1264,18 @@ class StaffAccessService(
             holdAmountMinor = holdAmountMinor
         )
 
+    private fun StaffTransferLimitRecord.toDto(): StaffTransferLimitDto =
+        StaffTransferLimitDto(
+            customerId = customerId,
+            accountId = accountId,
+            maskedAccountNo = maskAccountNo(accountNo),
+            accountStatus = accountStatus,
+            currency = currency,
+            dailyTransferLimitMinor = dailyTransferLimitMinor,
+            singleTransferLimitMinor = singleTransferLimitMinor,
+            updatedAt = updatedAt
+        )
+
     private fun StaffAccountRecord.snapshot(): Map<String, Any?> =
         mapOf(
             "customerId" to customerId,
@@ -920,6 +1286,17 @@ class StaffAccessService(
             "ledgerBalanceMinor" to ledgerBalanceMinor,
             "availableBalanceMinor" to availableBalanceMinor,
             "holdAmountMinor" to holdAmountMinor
+        )
+
+    private fun StaffTransferLimitRecord.snapshot(): Map<String, Any?> =
+        mapOf(
+            "customerId" to customerId,
+            "accountId" to accountId,
+            "maskedAccountNo" to maskAccountNo(accountNo),
+            "accountStatus" to accountStatus,
+            "currency" to currency,
+            "dailyTransferLimitMinor" to dailyTransferLimitMinor,
+            "singleTransferLimitMinor" to singleTransferLimitMinor
         )
 
     private fun mapTransaction(rs: ResultSet, rowNum: Int): StaffTransactionDto =
@@ -1070,6 +1447,17 @@ class StaffAccessService(
         val holdAmountMinor: Long
     )
 
+    private data class StaffTransferLimitRecord(
+        val customerId: String,
+        val accountId: String,
+        val accountNo: String,
+        val accountStatus: String,
+        val currency: String,
+        val dailyTransferLimitMinor: Long,
+        val singleTransferLimitMinor: Long,
+        val updatedAt: OffsetDateTime
+    )
+
     private companion object {
         const val SERIALIZABLE_APPROVAL_MAX_ATTEMPTS = 5
         const val SERIALIZABLE_STAFF_ACCESS_MAX_ATTEMPTS = 5
@@ -1077,5 +1465,7 @@ class StaffAccessService(
         val ACCOUNT_HOLD_RELEASE_REQUEST_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER")
         val ACCOUNT_HOLD_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
         val ACCOUNT_HOLD_RELEASE_CHECKER_ROLES = setOf("OPS_MANAGER", "BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val TRANSFER_LIMIT_CHANGE_REQUEST_ROLES = setOf("BRANCH_STAFF", "BRANCH_MANAGER")
+        val TRANSFER_LIMIT_CHANGE_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

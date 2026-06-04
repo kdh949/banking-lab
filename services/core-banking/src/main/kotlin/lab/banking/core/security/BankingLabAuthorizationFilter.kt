@@ -166,8 +166,10 @@ class BankingLabAuthorizationFilter(
     private fun screenId(path: String): String =
         when {
             path.startsWith("/api/staff/approvals") -> "APR-201"
+            path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"
             path.startsWith("/api/staff/accounts") && path.contains("hold") -> "ACC-103"
+            path.startsWith("/api/staff/customers") && path.contains("transfer-limits") -> "LIM-101"
             path.startsWith("/api/staff/customers") -> "CST-002"
             path.startsWith("/api/staff/pii") -> "CST-002"
             path.startsWith("/api/ops/") -> "OPS-201"

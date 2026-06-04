@@ -36,7 +36,7 @@
     ]
   },
   "resultTable": {
-    "columns": ["customerId", "dailyLimitMinor", "perTransferLimitMinor", "status", "effectiveAt"]
+    "columns": ["customerId", "accountId", "dailyTransferLimitMinor", "singleTransferLimitMinor", "accountStatus", "updatedAt"]
   },
   "actions": [
     {

@@ -11,6 +11,7 @@ enum class ApprovalStatus {
 
 object ApprovalBusinessTypes {
     const val CUSTOMER_INFO_CHANGE = "CUSTOMER_INFO_CHANGE"
+    const val TRANSFER_LIMIT_CHANGE = "TRANSFER_LIMIT_CHANGE"
     const val TRANSFER_LIMIT_INCREASE = "TRANSFER_LIMIT_INCREASE"
     const val ACCOUNT_HOLD = "ACCOUNT_HOLD"
     const val ACCOUNT_HOLD_RELEASE = "ACCOUNT_HOLD_RELEASE"
@@ -26,6 +27,7 @@ object ApprovalBusinessTypes {
 
     val highRisk: Set<String> = setOf(
         CUSTOMER_INFO_CHANGE,
+        TRANSFER_LIMIT_CHANGE,
         TRANSFER_LIMIT_INCREASE,
         ACCOUNT_HOLD,
         ACCOUNT_HOLD_RELEASE,
