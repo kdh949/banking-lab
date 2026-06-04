@@ -90,6 +90,97 @@ export interface CustomerTransactionHistoryResponse {
   readonly items: readonly CustomerTransactionDto[];
 }
 
+export interface StatementLineDto {
+  readonly transactionId: string;
+  readonly transactionType: string;
+  readonly businessDate: string;
+  readonly postedAt?: string | null;
+  readonly accountId: string;
+  readonly direction: "DEBIT" | "CREDIT";
+  readonly amountMinor: number;
+  readonly signedAmountMinor: number;
+  readonly currency: string;
+  readonly postingType: string;
+  readonly requestedChannel: string;
+  readonly reason?: string | null;
+}
+
+export interface CustomerStatementDto {
+  readonly customerId: string;
+  readonly from: string;
+  readonly to: string;
+  readonly currency: string;
+  readonly openingBalanceMinor: number;
+  readonly closingBalanceMinor: number;
+  readonly debitTotalMinor: number;
+  readonly creditTotalMinor: number;
+  readonly netAmountMinor: number;
+  readonly lineCount: number;
+  readonly lines: readonly StatementLineDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface TransactionConfirmationPostingDto {
+  readonly accountId: string;
+  readonly customerId: string;
+  readonly direction: "DEBIT" | "CREDIT";
+  readonly amountMinor: number;
+  readonly signedAmountMinor: number;
+  readonly currency: string;
+  readonly postingType: string;
+}
+
+export interface TransactionConfirmationDto {
+  readonly confirmationId: string;
+  readonly transactionId: string;
+  readonly transactionType: string;
+  readonly businessReferenceId: string;
+  readonly businessDate: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly requestedChannel: string;
+  readonly postedAt?: string | null;
+  readonly originalTransactionId?: string | null;
+  readonly currency: string;
+  readonly totalDebitMinor: number;
+  readonly totalCreditMinor: number;
+  readonly balanced: boolean;
+  readonly postings: readonly TransactionConfirmationPostingDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface BalanceCertificateDto {
+  readonly certificateId: string;
+  readonly accountId: string;
+  readonly customerId: string;
+  readonly currency: string;
+  readonly date: string;
+  readonly balanceAsOfMinor: number;
+  readonly currentLedgerBalanceMinor: number;
+  readonly currentAvailableBalanceMinor: number;
+  readonly deterministicInputHash: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAccessHistoryItemDto {
+  readonly auditEventId: string;
+  readonly eventType: string;
+  readonly actorType: string;
+  readonly actorId: string;
+  readonly actorRole: string;
+  readonly screenId?: string | null;
+  readonly businessReferenceId?: string | null;
+  readonly accountId?: string | null;
+  readonly reasonPresent: boolean;
+  readonly createdAt: string;
+}
+
+export interface CustomerAccessHistoryDto {
+  readonly customerId: string;
+  readonly items: readonly CustomerAccessHistoryItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
 export interface CustomerTransferStatusDto {
   readonly resultId?: string | null;
   readonly transactionId?: string | null;
@@ -1180,6 +1271,46 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         "/api/customer/transactions",
         { customerId, accountId },
+        options.bearerToken
+      );
+    },
+
+    customerStatement(customerId: string, from: string, to: string, reason?: string) {
+      return request<CustomerStatementDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customers/${encodeURIComponent(customerId)}/statements`,
+        reason ? { from, to, reason } : { from, to },
+        options.bearerToken
+      );
+    },
+
+    transactionConfirmation(transactionId: string, reason?: string) {
+      return request<TransactionConfirmationDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/transactions/${encodeURIComponent(transactionId)}/confirmation`,
+        reason ? { reason } : {},
+        options.bearerToken
+      );
+    },
+
+    balanceCertificate(accountId: string, date: string, reason?: string) {
+      return request<BalanceCertificateDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/accounts/${encodeURIComponent(accountId)}/balance-certificate`,
+        reason ? { date, reason } : { date },
+        options.bearerToken
+      );
+    },
+
+    customerAccessHistory(customerId: string, reason?: string) {
+      return request<CustomerAccessHistoryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customers/${encodeURIComponent(customerId)}/access-history`,
+        reason ? { reason } : {},
         options.bearerToken
       );
     },

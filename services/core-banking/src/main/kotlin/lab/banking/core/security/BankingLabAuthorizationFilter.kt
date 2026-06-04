@@ -69,6 +69,9 @@ class BankingLabAuthorizationFilter(
         val path = request.requestURI
         return when {
             path.startsWith("/api/customer/") -> setOf("CUSTOMER")
+            path.startsWith("/api/customers/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/transactions/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/accounts/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/products/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/fees/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
@@ -177,6 +180,10 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"
             path.startsWith("/api/ops/fee-posting-batches") -> "OPS-403"
             path.startsWith("/api/ops/eod") -> "OPS-101"
+            path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
+            path.startsWith("/api/customers/") && path.contains("statements") -> "CWB-103"
+            path.startsWith("/api/transactions/") && path.contains("confirmation") -> "LED-102"
+            path.startsWith("/api/accounts/") && path.contains("balance-certificate") -> "ACC-102"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"

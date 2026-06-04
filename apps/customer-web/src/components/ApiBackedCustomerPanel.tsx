@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type BalanceCertificateDto,
+  type CustomerAccessHistoryDto,
   type CustomerAccountDetailDto,
   type CustomerComplaintConfirmResponse,
   type CustomerComplaintEntryResponse,
+  type CustomerStatementDto,
   type CustomerTransactionDto,
   type CustomerTransferStatusDto,
-  type CustomerTransferResponse
+  type CustomerTransferResponse,
+  type TransactionConfirmationDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
@@ -66,6 +70,18 @@ type HistoryStatusState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type StatementReadModelState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly statement: CustomerStatementDto;
+      readonly confirmation: TransactionConfirmationDto;
+      readonly certificate: BalanceCertificateDto;
+      readonly accessHistory: CustomerAccessHistoryDto;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -118,6 +134,7 @@ export function ApiBackedCustomerPanel() {
   const [transferRetryState, setTransferRetryState] = useState<TransferRetryState>({ status: "idle" });
   const [transferFailureState, setTransferFailureState] = useState<TransferFailureState>({ status: "idle" });
   const [historyStatusState, setHistoryStatusState] = useState<HistoryStatusState>({ status: "idle" });
+  const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -553,6 +570,50 @@ export function ApiBackedCustomerPanel() {
       setHistoryStatusState({ status: "loaded", idempotencyKey, historyItem, heldTransfer });
     } catch (error: unknown) {
       setHistoryStatusState({ status: "failed", message: error instanceof Error ? error.message : "Unknown history/status failure" });
+    }
+  };
+
+  const runStatementReadModelSmoke = async () => {
+    if (!apiBaseUrl || statementReadModelState.status === "running") {
+      return;
+    }
+    setStatementReadModelState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const businessDate = "2026-02-06";
+      const transfer = await client.requestCustomerTransfer({
+        customerId: "SYN-CUS-001",
+        fromAccountId: "ACC-SYN-001-001",
+        toAccountId: "ACC-SYN-002-001",
+        amountMinor: 777,
+        idempotencyKey: `CWB-STMT-${Date.now()}`,
+        requestedBy: "SYN-CUS-001",
+        businessDate,
+        reason: "Browser customer statement read-model smoke"
+      });
+      const transactionId = transfer.item.transactionId;
+      if (!transactionId) {
+        setStatementReadModelState({ status: "failed", message: "statement smoke transfer did not post a transaction" });
+        return;
+      }
+      const statement = await client.customerStatement("SYN-CUS-001", businessDate, businessDate);
+      const confirmation = await client.transactionConfirmation(transactionId);
+      const certificate = await client.balanceCertificate("ACC-SYN-001-001", businessDate);
+      const accessHistory = await client.customerAccessHistory("SYN-CUS-001");
+      if (!confirmation.balanced || statement.lineCount === 0 || !accessHistory.items.some((item) => item.eventType === "STATEMENT_VIEW")) {
+        setStatementReadModelState({ status: "failed", message: "statement read-model outputs were incomplete" });
+        return;
+      }
+      setStatementReadModelState({ status: "loaded", statement, confirmation, certificate, accessHistory });
+    } catch (error: unknown) {
+      setStatementReadModelState({ status: "failed", message: error instanceof Error ? error.message : "Unknown statement read-model failure" });
     }
   };
 
@@ -1152,6 +1213,55 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-statement-read-model">
+        <button type="button" onClick={runStatementReadModelSmoke} disabled={!apiBaseUrl || statementReadModelState.status === "running"}>
+          Run statement read model smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Statement</dt>
+            <dd>{statementReadModelLabel(statementReadModelState)}</dd>
+          </div>
+          {statementReadModelState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Period</dt>
+                <dd>{statementReadModelState.statement.from}</dd>
+              </div>
+              <div>
+                <dt>Lines</dt>
+                <dd>{statementReadModelState.statement.lineCount}</dd>
+              </div>
+              <div>
+                <dt>Net</dt>
+                <dd>{statementReadModelState.statement.netAmountMinor}</dd>
+              </div>
+              <div>
+                <dt>Confirmation</dt>
+                <dd>{statementReadModelState.confirmation.confirmationId}</dd>
+              </div>
+              <div>
+                <dt>Balanced</dt>
+                <dd>{statementReadModelState.confirmation.balanced ? "yes" : "no"}</dd>
+              </div>
+              <div>
+                <dt>Certificate</dt>
+                <dd>{statementReadModelState.certificate.certificateId}</dd>
+              </div>
+              <div>
+                <dt>Access events</dt>
+                <dd>{statementReadModelState.accessHistory.items.length}</dd>
+              </div>
+            </>
+          ) : null}
+          {statementReadModelState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{statementReadModelState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1436,6 +1546,19 @@ function historyStatusLabel(state: HistoryStatusState): string {
   }
   if (state.status === "loaded") {
     return "history and held status loaded";
+  }
+  return "failed";
+}
+
+function statementReadModelLabel(state: StatementReadModelState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "statement artifacts loaded";
   }
   return "failed";
 }
