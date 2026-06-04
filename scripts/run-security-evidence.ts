@@ -16,6 +16,7 @@ type SecurityCheck = {
 type SecuritySummary = {
   generatedAt: string;
   syntheticOnly: boolean;
+  forcedDockerScanners: boolean;
   checks: SecurityCheck[];
   totals: {
     pass: number;
@@ -32,6 +33,8 @@ type DockerFallback = {
 
 const rootDir = process.cwd();
 const generatedDir = join(rootDir, "docs/test-evidence/generated");
+const forceDockerScanners = process.env.BANKING_LAB_SECURITY_FORCE_DOCKER === "true";
+const dockerForcedTools = new Set(["semgrep", "trivy", "syft", "zap-baseline.py"]);
 
 mkdirSync(generatedDir, { recursive: true });
 
@@ -132,6 +135,7 @@ if (process.env.BANKING_LAB_DAST_URL && commandExists("zap-baseline.py")) {
 const summary: SecuritySummary = {
   generatedAt: new Date().toISOString(),
   syntheticOnly: true,
+  forcedDockerScanners: forceDockerScanners,
   checks,
   totals: {
     pass: checks.filter((check) => check.status === "pass").length,
@@ -280,6 +284,9 @@ function runZapDockerTool(targetUrl: string) {
 }
 
 function commandExists(tool: string): boolean {
+  if (forceDockerScanners && dockerForcedTools.has(tool)) {
+    return false;
+  }
   return spawnSync("which", [tool], { encoding: "utf8" }).status === 0;
 }
 
@@ -297,6 +304,8 @@ function markdownSummary(summary: SecuritySummary): string {
     "# Security Evidence Summary",
     "",
     `Generated at: ${summary.generatedAt}`,
+    "",
+    `Forced Docker scanner fallbacks: ${String(summary.forcedDockerScanners)}`,
     "",
     "| Check | Status | Evidence | Reason |",
     "| --- | --- | --- | --- |"

@@ -8,6 +8,7 @@ import {
   ChannelShell,
   ChannelWorkflow
 } from "../../../../packages/channel-ui/src";
+import { AnalyticsEvidencePanel } from "../components/AnalyticsEvidencePanel";
 import { ApiBackedRiskPanel } from "../components/ApiBackedRiskPanel";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
@@ -29,6 +30,8 @@ export default async function FdsAmlConsolePage() {
       </ChannelMetricGrid>
 
       <ApiBackedRiskPanel />
+
+      <AnalyticsEvidencePanel />
 
       <ChannelCardGrid density="wide">
         {manifests.map((manifest) => (
