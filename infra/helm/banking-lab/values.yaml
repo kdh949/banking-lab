@@ -1,8 +1,41 @@
+namespace: banking-lab
 syntheticOnly: true
 
 coreBanking:
+  replicas: 1
   image: banking-lab/core-banking-service:local
   port: 8081
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+temporalWorker:
+  replicas: 1
+  image: banking-lab/core-banking-service:local
+  resources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+
+postgres:
+  image: postgres:16-alpine
+  database: banking_lab
+  username: banking_lab
+  storage: 2Gi
+
+temporal:
+  target: temporal:7233
+
+outbox:
+  bootstrapServers: redpanda:9092
+  topic: banking.lab.domain-events
 
 analytics:
   image: banking-lab/aml-fds-python:local

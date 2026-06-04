@@ -47,7 +47,7 @@ Status values are limited to `complete`, `api-backed`, `manifest-only`, `partial
 | product-ledger | Fee policy, fee policy versioning, fee posting, fee refund | yes | staff/ops manifest renderer | yes | yes | fee policy/version/change/batch migrations plus refund reversal reference | fee read/staff/ops route and service policy | fee view, parameter approval, posting, and refund audit | policy changes and targeted refunds through fee waiver approval | `FeePolicyApiIntegrationTest` passed locally | target goal Phase C | api-backed |
 | analytics | Python AML/FDS scoring, DuckDB mart, exports, console/evidence linkage | not-applicable | evidence-linked, no live console adapter yet | batch CLI and artifact reader | batch CLI only | DuckDB in-memory mart, sample transactions, JSON/CSV export | not-applicable | generated analytics artifact | not-applicable | `npm run analytics:fds-aml:test` passed; `npm run analytics:fds-aml` generated evidence | `docs/test-evidence/generated/fds-aml-analytics.json`, `docs/test-evidence/fds-aml-reconciliation.md` | partial |
 | formal | Executable ledger and idempotency model checking gate | not-applicable | not-applicable | not-applicable | not-applicable | not-applicable | not-applicable | not-applicable | not-applicable | `npm run formal:ledger` runs bounded state-search when TLC is unavailable and fails static-only in CI | `docs/test-evidence/generated/formal-ledger-tlc-result.json`, `docs/test-evidence/formal-ledger-verification.md` | complete |
-| platform | Kubernetes/Helm/Argo CD skeleton and validation scripts | partial files exist | not-applicable | not-applicable | not-applicable | partial manifests | not-applicable | not-applicable | not-applicable | `docker compose config` passes; `k8s:validate` and `helm:template` scripts missing | `infra/k8s`, `infra/helm`, `infra/argocd` | partial |
+| platform | Kubernetes/Helm/Argo CD skeleton and validation scripts | k8s/helm manifests | not-applicable | not-applicable | not-applicable | structural manifests for PostgreSQL and services | not-applicable | not-applicable | not-applicable | `npm run k8s:validate` and `npm run helm:template` pass with structural fallback when kubectl/helm runtime is unavailable | `docs/test-evidence/platform-deployment-validation.md`, `docs/test-evidence/generated/k8s-validation.json`, `docs/test-evidence/generated/helm-template-validation.json` | complete |
 | operations-evidence | Load test and backup/restore drill | no | no | no | no | no executable drill found | not-applicable | no generated evidence | not-applicable | scripts missing | target goal Phase G | missing |
 
 ## Baseline Commands
@@ -75,6 +75,8 @@ Commands run on 2026-06-04 for this review:
 - `npm run analytics:fds-aml`: pass, generated `docs/test-evidence/generated/fds-aml-analytics.json` and `.csv`.
 - `npm run test:core-banking`: not rerun after the LED-103 slice; prior full-suite integration execution depended on local Docker availability.
 - `npm run formal:ledger`: pass, executable bounded state-search covered 3371 states, 8313 transitions, and 13 invariants; local TLC command was unavailable but static-only was not used.
+- `npm run k8s:validate`: pass, structural validation covered 15 Kubernetes resources; kubectl dry-run skipped because no local cluster API server was reachable.
+- `npm run helm:template`: pass, Helm CLI unavailable locally so Node structural renderer validated 9 rendered resources.
 - `npm run security:evidence`: npm audit passed after escalation; Semgrep, Trivy, and SBOM generation could not run because Docker was unavailable; DAST skipped because `BANKING_LAB_DAST_URL` was not set.
 - `npm run evidence:refresh-check`: pass.
 - `npm run retirement:audit`: pass.
@@ -88,4 +90,4 @@ Commands run on 2026-06-04 for this review:
 2. Phase C now covers deposit products, rate versioning, interest accrual/posting, fee policy versioning, fee posting, and targeted fee refund reversal through approved fee waivers.
 3. Phase D now has a first DuckDB batch analytics slice with generated evidence. The next analytics step should wire the artifact into the FDS/AML console or Spring read API before introducing a long-running Python service.
 4. Phase E now has executable model-checker evidence with static-only disallowed in CI; future improvement can add a pinned TLC install path for exact TLA+ runtime execution in addition to bounded search.
-5. Phase F/G should add validation scripts before adding more Kubernetes, load, or backup artifacts, so structural claims remain executable.
+5. Phase F now has Kubernetes/Helm structure and executable structural validation. Phase G should add load or backup/restore drill evidence next.

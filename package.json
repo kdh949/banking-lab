@@ -70,6 +70,8 @@
     "security:evidence": "node --experimental-strip-types scripts/run-security-evidence.ts",
     "analytics:fds-aml": "uv run --directory analytics/aml-fds-python --project . banking-lab-analytics --input sample-data/transactions.csv --output ../../docs/test-evidence/generated/fds-aml-analytics.json --csv-output ../../docs/test-evidence/generated/fds-aml-analytics.csv",
     "analytics:fds-aml:test": "uv run --directory analytics/aml-fds-python --project . --extra dev pytest",
+    "k8s:validate": "node --experimental-strip-types scripts/validate-k8s-manifests.ts",
+    "helm:template": "node --experimental-strip-types scripts/render-helm-template.ts",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
     "evidence:phase2": "node scripts/generate-phase2-evidence.mjs",

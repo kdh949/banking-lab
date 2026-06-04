@@ -186,7 +186,7 @@ Important current gaps are intentionally not marked complete:
 - deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
 - Python AML/FDS analytics has a DuckDB mart and generated batch evidence, but not a live Spring/FDS console adapter;
 - `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable;
-- Kubernetes/Helm files exist, but executable `k8s:validate` and `helm:template` npm scripts are still a follow-up;
+- Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, but no live cluster deployment proof;
 - load testing and PostgreSQL backup/restore drill evidence are still missing.
 
 The Node retirement evidence remains valid for the previous target-stack migration scope. It does not mean the broader missing-features goal is complete.

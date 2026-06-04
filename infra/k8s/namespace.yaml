@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: banking-lab
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    banking-lab/synthetic-only: "true"
