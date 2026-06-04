@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-06-04T08:54:17.900Z",
+  "schemaVersion": 1,
+  "command": "npm run load:synthetic",
+  "scenario": "mixed-banking-traffic",
+  "syntheticDataOnly": true,
+  "targetMode": "local-synthetic-handler",
+  "evidenceBoundary": [
+    "Synthetic smoke load only; not a capacity benchmark or production readiness claim.",
+    "The default runner invokes the in-process lab request handler and uses synthetic seed data only.",
+    "No real money, real PII, real KYC, payment network, or external financial institution API is used."
+  ],
+  "config": {
+    "iterations": 3,
+    "concurrency": 3,
+    "latencyBudgetMs": 5000,
+    "scenarios": [
+      "customer-account-lookup",
+      "customer-transfer-request",
+      "idempotency-retry-burst",
+      "staff-customer-lookup",
+      "fds-held-transfer-lookup",
+      "approval-inbox-lookup"
+    ]
+  },
+  "setup": {
+    "requests": 2,
+    "fdsCaseSeeded": true,
+    "approvalInboxSeeded": true
+  },
+  "results": {
+    "status": "pass",
+    "scenarioRuns": 54,
+    "totalRequests": 74,
+    "failedScenarioRuns": 0,
+    "latencyBudgetBreaches": 0,
+    "statusCounts": {
+      "200": 54,
+      "201": 18
+    },
+    "scenarios": [
+      {
+        "name": "customer-account-lookup",
+        "runs": 9,
+        "requests": 9,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "200": 9
+        }
+      },
+      {
+        "name": "customer-transfer-request",
+        "runs": 9,
+        "requests": 9,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "201": 9
+        }
+      },
+      {
+        "name": "idempotency-retry-burst",
+        "runs": 9,
+        "requests": 27,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "200": 18,
+          "201": 9
+        }
+      },
+      {
+        "name": "staff-customer-lookup",
+        "runs": 9,
+        "requests": 9,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "200": 9
+        }
+      },
+      {
+        "name": "fds-held-transfer-lookup",
+        "runs": 9,
+        "requests": 9,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "200": 9
+        }
+      },
+      {
+        "name": "approval-inbox-lookup",
+        "runs": 9,
+        "requests": 9,
+        "failures": 0,
+        "latencyBudgetBreaches": 0,
+        "statusCounts": {
+          "200": 9
+        }
+      }
+    ]
+  },
+  "domainChecks": {
+    "ledgerInvariantValid": true,
+    "auditHashChainValid": true,
+    "ledgerTransactionsAdded": 18,
+    "idempotencyReplayResponses": 18,
+    "fdsHeldCaseVisible": true,
+    "approvalInboxVisible": true,
+    "auditEventsAppended": 36
+  }
+}
