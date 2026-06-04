@@ -18,6 +18,7 @@ class SyntheticDataSeeder(
         seedAccounts()
         seedAccountLimits()
         seedBalanceProjections()
+        seedDepositProducts()
         seedLedgerCorrectionTransactions()
         seedWorkflowCases()
         seedAuditEvent()
@@ -162,6 +163,55 @@ class SyntheticDataSeeder(
               ('LP-SYN-CORR-001-D', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-FROM', 'KRW', 'DEBIT', 9000, 'PRINCIPAL'),
               ('LP-SYN-CORR-001-C', 'TX-SYN-CORR-001', 'ACC-SYN-CORR-TO', 'KRW', 'CREDIT', 9000, 'PRINCIPAL')
             ON CONFLICT (ledger_posting_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedDepositProducts() {
+        jdbc.update(
+            """
+            INSERT INTO deposit_products (
+              product_id, product_code, product_name, currency, status,
+              minimum_opening_balance_minor, synthetic_only
+            )
+            VALUES (
+              'DP-SYN-SAVINGS', 'SYN-SAVINGS-001', 'Synthetic Savings Product',
+              'KRW', 'ACTIVE', 0, TRUE
+            )
+            ON CONFLICT (product_id) DO UPDATE
+            SET product_code = EXCLUDED.product_code,
+                product_name = EXCLUDED.product_name,
+                currency = EXCLUDED.currency,
+                status = EXCLUDED.status,
+                minimum_opening_balance_minor = EXCLUDED.minimum_opening_balance_minor,
+                synthetic_only = EXCLUDED.synthetic_only
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO product_interest_rate_versions (
+              rate_version_id, product_id, annual_rate_bps, effective_from,
+              effective_to, status, approval_id, created_by
+            )
+            VALUES (
+              'RATE-SYN-SAVINGS-001', 'DP-SYN-SAVINGS', 365, DATE '2026-01-01',
+              NULL, 'ACTIVE', NULL, 'synthetic-seeder'
+            )
+            ON CONFLICT (rate_version_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO account_product_enrollments (
+              enrollment_id, account_id, product_id, status
+            )
+            VALUES (
+              'ENR-SYN-SAVINGS-001', 'ACC-SYN-001-001', 'DP-SYN-SAVINGS', 'ACTIVE'
+            )
+            ON CONFLICT (account_id, product_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
         )

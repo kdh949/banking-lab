@@ -1,0 +1,44 @@
+{
+  "screenId": "OPS-402",
+  "transactionCode": "OPS402",
+  "title": "Interest Posting Batch",
+  "app": "ops-console",
+  "type": "COMMAND",
+  "domain": "product-ledger",
+  "highRisk": false,
+  "requiredRoles": ["OPS_OPERATOR", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "businessDate",
+      "label": "Business Date",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Posting Reason",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/interest-posting-batches"
+  },
+  "postActions": ["createBalancedLedgerPosting", "createAuditEvent", "createOutboxEvent"]
+}

@@ -461,6 +461,110 @@ export interface TransactionCorrectionRequestResponse {
   readonly account: CustomerAccountDetailDto;
 }
 
+export interface DepositProductDto {
+  readonly productId: string;
+  readonly productCode: string;
+  readonly productName: string;
+  readonly currency: string;
+  readonly status: string;
+  readonly minimumOpeningBalanceMinor: number;
+  readonly currentRateVersionId?: string | null;
+  readonly annualRateBps?: number | null;
+  readonly rateEffectiveFrom?: string | null;
+  readonly rateEffectiveTo?: string | null;
+  readonly syntheticOnly: boolean;
+}
+
+export interface DepositProductListResponse {
+  readonly items: readonly DepositProductDto[];
+}
+
+export interface DepositRateChangeRequestCommand {
+  readonly requestedAnnualRateBps: number;
+  readonly effectiveFrom: string;
+  readonly requestedBy: string;
+  readonly actorRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface DepositRateChangeRequestDto {
+  readonly requestId: string;
+  readonly productId: string;
+  readonly approvalId?: string | null;
+  readonly requestedAnnualRateBps: number;
+  readonly effectiveFrom: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly idempotencyKey: string;
+  readonly appliedRateVersionId?: string | null;
+  readonly createdAt?: string | null;
+  readonly updatedAt?: string | null;
+  readonly appliedAt?: string | null;
+}
+
+export interface DepositRateChangeRequestResponse {
+  readonly item: DepositRateChangeRequestDto;
+  readonly approval?: OperatorApproval | null;
+  readonly replayed: boolean;
+}
+
+export interface InterestAccrualRunCommand {
+  readonly accrualDate: string;
+  readonly requestedBy: string;
+  readonly actorRole?: string;
+  readonly reason: string;
+}
+
+export interface InterestAccrualDto {
+  readonly accrualId: string;
+  readonly accountId: string;
+  readonly productId: string;
+  readonly rateVersionId: string;
+  readonly accrualDate: string;
+  readonly balanceMinor: number;
+  readonly annualRateBps: number;
+  readonly accruedInterestMinor: number;
+  readonly status: string;
+  readonly batchId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+}
+
+export interface InterestAccrualRunResponse {
+  readonly accrualDate: string;
+  readonly items: readonly InterestAccrualDto[];
+  readonly totalInterestMinor: number;
+}
+
+export interface InterestPostingBatchCommand {
+  readonly businessDate: string;
+  readonly requestedBy: string;
+  readonly actorRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface InterestPostingBatchDto {
+  readonly batchId: string;
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly status: string;
+  readonly ledgerTransactionId: string;
+  readonly totalInterestMinor: number;
+  readonly accountCount: number;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly postedAt?: string | null;
+}
+
+export interface InterestPostingBatchResponse {
+  readonly item: InterestPostingBatchDto;
+  readonly ledgerTransaction?: LedgerTransactionDto | null;
+  readonly replayed: boolean;
+}
+
 export interface PiiUnmaskCommand {
   readonly customerId: string;
   readonly requestedBy?: string;
@@ -487,6 +591,7 @@ export interface StaffApprovalExecutionResponse {
   readonly kycReviewRequest?: CustomerKycReviewRequestDto | null;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
+  readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
   readonly complaint?: ComplaintCaseDto | null;
   readonly fdsCase?: FdsCaseDto | null;
   readonly amlCase?: AmlCaseDto | null;
@@ -499,6 +604,7 @@ export interface StaffApprovalRejectionResponse {
   readonly rejected: boolean;
   readonly feeWaiverRequest?: FeeWaiverRequestDto | null;
   readonly transactionCorrectionRequest?: TransactionCorrectionRequestDto | null;
+  readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
 }
 
 export interface ReconciliationItemsResponse {
@@ -599,12 +705,33 @@ export interface FdsDecisionRequestResponse {
   readonly approval: OperatorApproval;
 }
 
+export interface LedgerPostingDto {
+  readonly id: string;
+  readonly ledgerTransactionId: string;
+  readonly accountId: string;
+  readonly currency: string;
+  readonly direction: "DEBIT" | "CREDIT";
+  readonly amountMinor: number;
+  readonly postingType: string;
+  readonly createdAt?: string | null;
+}
+
+export interface LedgerTransactionDto {
+  readonly id: string;
+  readonly transactionType: string;
+  readonly businessReferenceId?: string;
+  readonly idempotencyKey?: string;
+  readonly businessDate?: string;
+  readonly status: string;
+  readonly requestedBy?: string;
+  readonly requestedChannel?: string;
+  readonly postedAt?: string | null;
+  readonly originalTransactionId?: string | null;
+  readonly postings?: readonly LedgerPostingDto[];
+}
+
 export interface LedgerCommandResult {
-  readonly value: {
-    readonly id: string;
-    readonly transactionType: string;
-    readonly status: string;
-  };
+  readonly value: LedgerTransactionDto;
   readonly replayed: boolean;
 }
 
@@ -754,6 +881,59 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/transactions/${encodeURIComponent(transactionId)}/correction-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    depositProducts(asOf?: string) {
+      return request<DepositProductListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/products/deposits",
+        asOf ? { asOf } : {},
+        options.bearerToken
+      );
+    },
+
+    depositProduct(productId: string, asOf?: string) {
+      return request<DepositProductDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/products/deposits/${encodeURIComponent(productId)}`,
+        asOf ? { asOf } : {},
+        options.bearerToken
+      );
+    },
+
+    requestDepositRateChange(productId: string, command: DepositRateChangeRequestCommand) {
+      return request<DepositRateChangeRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/products/deposits/${encodeURIComponent(productId)}/rate-change-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    runInterestAccrual(command: InterestAccrualRunCommand) {
+      return request<InterestAccrualRunResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/interest-accruals/run",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    postInterestBatch(command: InterestPostingBatchCommand) {
+      return request<InterestPostingBatchResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/interest-posting-batches",
         {},
         options.bearerToken,
         { method: "POST", body: command }

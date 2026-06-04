@@ -1,0 +1,38 @@
+{
+  "screenId": "OPS-401",
+  "transactionCode": "OPS401",
+  "title": "Interest Accrual Run",
+  "app": "ops-console",
+  "type": "COMMAND",
+  "domain": "product-ledger",
+  "highRisk": false,
+  "requiredRoles": ["OPS_OPERATOR", "BRANCH_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "accrualDate",
+      "label": "Accrual Date",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Run Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/interest-accruals/run"
+  },
+  "postActions": ["createAuditEvent", "createInterestAccruals"]
+}

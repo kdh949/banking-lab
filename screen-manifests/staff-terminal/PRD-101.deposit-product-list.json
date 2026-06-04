@@ -1,0 +1,35 @@
+{
+  "screenId": "PRD-101",
+  "transactionCode": "PRD101",
+  "title": "Deposit Product List",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "product-ledger",
+  "highRisk": false,
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "query": {
+    "endpoint": "GET /api/products/deposits",
+    "fields": [
+      {
+        "name": "asOf",
+        "label": "As-of Date",
+        "type": "date",
+        "required": false
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["productCode", "productName", "currency", "status", "annualRateBps", "rateEffectiveFrom"]
+  }
+}
