@@ -158,6 +158,12 @@ test("staff terminal renders command and maker-checker approval screens without 
   await expect(page.getByRole("heading", { name: "Deposit Rate Change Request" })).toBeVisible();
   await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
   await expect(page.getByTestId("manifest-deposit-rate-api-panel")).toBeAttached();
+
+  await page.getByLabel("Transaction code search").fill("FEE103");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Fee Policy Change Request" })).toBeVisible();
+  await expect(page.getByText("API-backed via @banking-lab/api-client").first()).toBeVisible();
+  await expect(page.getByTestId("manifest-fee-policy-api-panel")).toBeAttached();
 });
 
 test("staff terminal shell has no app-router one-off business screens", async () => {
@@ -322,6 +328,22 @@ test("staff terminal PRD102 executes Spring API-backed deposit rate change appro
   await expect(panel).toContainText("PRODUCT_PARAMETER_CHANGE");
   await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
   await expect(panel).toContainText("DP-SYN-SAVINGS");
+  await expect(panel).toContainText("APPLIED");
+});
+
+test("staff terminal FEE103 executes Spring API-backed fee policy change approval when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed fee policy change command smoke.");
+
+  await page.goto(`${baseUrl}/?screen=FEE-103`);
+
+  const panel = page.getByTestId("manifest-fee-policy-api-panel");
+  await expect(panel).toContainText("fee policy API ready", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Run fee policy smoke" }).click();
+  await expect(panel).toContainText("fee policy version applied", { timeout: 20_000 });
+  await expect(panel).toContainText("FEE_POLICY_PARAMETER_CHANGE");
+  await expect(panel).toContainText("MAKER_CHECKER_SELF_APPROVAL_REJECTED");
+  await expect(panel).toContainText("FEE-SYN-MONTHLY");
   await expect(panel).toContainText("APPLIED");
 });
 

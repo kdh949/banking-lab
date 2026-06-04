@@ -35,7 +35,7 @@
     ]
   },
   "resultTable": {
-    "columns": ["feeCode", "feeName", "amountMinor", "waiverEligible", "effectiveAt"]
+    "columns": ["feeCode", "feeName", "amountMinor", "waiverEligible", "effectiveFrom"]
   },
   "actions": [
     {
@@ -43,6 +43,12 @@
       "label": "Request Waiver",
       "type": "navigate",
       "target": "FEE-102"
+    },
+    {
+      "id": "requestPolicyChange",
+      "label": "Request Policy Change",
+      "type": "navigate",
+      "target": "FEE-103"
     }
   ]
 }

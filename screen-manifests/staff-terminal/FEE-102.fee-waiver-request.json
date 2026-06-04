@@ -44,6 +44,12 @@
       "required": true
     },
     {
+      "name": "targetTransactionId",
+      "label": "Target Fee Transaction",
+      "type": "text",
+      "required": false
+    },
+    {
       "name": "reasonCode",
       "label": "Reason Code",
       "type": "select",

@@ -19,6 +19,7 @@ import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.application.ReversalCommand
 import lab.banking.core.ledger.domain.LedgerCommandResult
 import lab.banking.core.product.DepositProductService
+import lab.banking.core.product.FeePolicyService
 import lab.banking.core.reconciliation.ReconciliationOpsService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
@@ -45,6 +46,7 @@ class StaffAccessService(
     private val reconciliationOpsService: ReconciliationOpsService,
     private val ledgerCommandService: LedgerCommandService,
     private val depositProductService: DepositProductService,
+    private val feePolicyService: FeePolicyService,
     private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -761,6 +763,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val feePolicyChangeExecution = if (approval.businessType == ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE) {
+            feePolicyService.applyApprovedPolicyChange(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -773,7 +780,8 @@ class StaffAccessService(
                 kycExecution != null ||
                 feeWaiverExecution != null ||
                 transactionCorrectionExecution != null ||
-                depositRateChangeExecution != null,
+                depositRateChangeExecution != null ||
+                feePolicyChangeExecution != null,
             customer = customer,
             account = accountHoldExecution?.second ?: feeWaiverExecution?.second ?: transactionCorrectionExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
@@ -784,6 +792,7 @@ class StaffAccessService(
             feeWaiverRequest = feeWaiverExecution?.first,
             transactionCorrectionRequest = transactionCorrectionExecution?.first,
             depositRateChangeRequest = depositRateChangeExecution,
+            feePolicyChangeRequest = feePolicyChangeExecution,
             complaint = complaint,
             fdsCase = fdsExecution?.item,
             amlCase = amlCase,
@@ -791,6 +800,7 @@ class StaffAccessService(
             ledgerTransaction = fdsExecution?.ledgerTransaction
                 ?: reconciliationExecution?.ledgerTransaction
                 ?: transactionCorrectionExecution?.third
+                ?: feeWaiverExecution?.third
         )
     }
 
@@ -810,7 +820,8 @@ class StaffAccessService(
         if (
             pendingApproval.businessType != ApprovalBusinessTypes.FEE_WAIVER &&
             pendingApproval.businessType != ApprovalBusinessTypes.TRANSACTION_CORRECTION &&
-            pendingApproval.businessType != ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE
+            pendingApproval.businessType != ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE &&
+            pendingApproval.businessType != ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
         }
@@ -846,12 +857,18 @@ class StaffAccessService(
         } else {
             null
         }
+        val feePolicyChangeRequest = if (pendingApproval.businessType == ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE) {
+            feePolicyService.rejectPolicyChange(approval)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
             feeWaiverRequest = feeWaiverRequest,
             transactionCorrectionRequest = transactionCorrectionRequest,
-            depositRateChangeRequest = depositRateChangeRequest
+            depositRateChangeRequest = depositRateChangeRequest,
+            feePolicyChangeRequest = feePolicyChangeRequest
         )
     }
 
@@ -933,6 +950,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.FEE_WAIVER -> FEE_WAIVER_CHECKER_ROLES
             ApprovalBusinessTypes.TRANSACTION_CORRECTION -> TRANSACTION_CORRECTION_CHECKER_ROLES
             ApprovalBusinessTypes.PRODUCT_PARAMETER_CHANGE -> PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES
+            ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE -> FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -1696,7 +1714,7 @@ class StaffAccessService(
     private fun applyApprovedFeeWaiverRequest(
         approval: OperatorApproval,
         command: ApproveApprovalCommand
-    ): Pair<FeeWaiverRequestDto, StaffAccountDto> {
+    ): Triple<FeeWaiverRequestDto, StaffAccountDto, LedgerCommandResult?> {
         val request = feeWaiverRequestForUpdate(approval.businessReferenceId)
         if (request.approvalId != approval.approvalId || request.businessType != approval.businessType) {
             throw WorkflowErrors.stateViolation("approval does not match fee waiver request")
@@ -1708,7 +1726,8 @@ class StaffAccessService(
         if (account.status != "ACTIVE") {
             throw WorkflowErrors.stateViolation("only active accounts can apply fee waiver")
         }
-        markFeeWaiverRequestApproved(request.requestId)
+        val refundLedgerResult = applyFeeRefundIfTargeted(request, command)
+        markFeeWaiverRequestApproved(request.requestId, refundLedgerResult?.value?.id)
         appendAudit(
             eventType = "COMMAND_EXECUTED",
             actorId = command.approvedBy,
@@ -1724,14 +1743,75 @@ class StaffAccessService(
                 "feeCode" to request.feeCode,
                 "waivedAmountMinor" to request.waivedAmountMinor,
                 "currency" to request.currency,
-                "feePostingCreated" to false,
+                "feePostingCreated" to (refundLedgerResult != null),
+                "refundLedgerTransactionId" to refundLedgerResult?.value?.id,
                 "syntheticOnly" to true,
                 "ledgerSourceRowsMutated" to false
             )
         )
         val updatedRequest = feeWaiverRequest(request.requestId)
         val updatedAccount = account(request.targetAccountId, forUpdate = false)
-        return updatedRequest to updatedAccount.toDto()
+        return Triple(updatedRequest, updatedAccount.toDto(), refundLedgerResult)
+    }
+
+    private fun applyFeeRefundIfTargeted(
+        request: FeeWaiverRequestDto,
+        command: ApproveApprovalCommand
+    ): LedgerCommandResult? {
+        val targetTransactionId = request.targetTransactionId ?: return null
+        requireSingleAccountFeePostingTarget(request)
+        return ledgerCommandService.reverseTransaction(
+            ReversalCommand(
+                originalTransactionId = targetTransactionId,
+                idempotencyKey = "FEE-REFUND-${request.requestId}",
+                requestedBy = command.approvedBy,
+                requestedChannel = "STAFF_TERMINAL",
+                businessDate = LocalDate.now(),
+                reason = request.reason,
+                businessReferenceId = "${request.requestId}-REFUND"
+            )
+        )
+    }
+
+    private fun requireSingleAccountFeePostingTarget(request: FeeWaiverRequestDto) {
+        val summary = jdbc.query(
+            """
+            SELECT lt.transaction_type,
+                   COALESCE(SUM(CASE
+                     WHEN lp.account_id = :accountId
+                      AND lp.direction = 'DEBIT'
+                      AND lp.posting_type = 'FEE'
+                     THEN lp.amount_minor ELSE 0 END), 0) AS account_fee_debit_minor,
+                   COUNT(DISTINCT CASE
+                     WHEN lp.direction = 'DEBIT'
+                      AND lp.posting_type = 'FEE'
+                      AND lp.account_id <> 'BANK-SUSPENSE'
+                     THEN lp.account_id ELSE NULL END) AS debited_account_count
+            FROM ledger_transactions lt
+            JOIN ledger_postings lp ON lp.ledger_transaction_id = lt.ledger_transaction_id
+            WHERE lt.ledger_transaction_id = :transactionId
+            GROUP BY lt.transaction_type
+            """.trimIndent(),
+            mapOf(
+                "transactionId" to request.targetTransactionId,
+                "accountId" to request.targetAccountId
+            )
+        ) { rs, _ ->
+            FeeRefundTargetSummary(
+                transactionType = rs.getString("transaction_type"),
+                accountFeeDebitMinor = rs.getLong("account_fee_debit_minor"),
+                debitedAccountCount = rs.getInt("debited_account_count")
+            )
+        }.firstOrNull() ?: throw WorkflowErrors.notFound("target fee transaction not found: ${request.targetTransactionId}")
+        if (summary.transactionType != "FEE_POSTING") {
+            throw WorkflowErrors.stateViolation("fee refund target must be a FEE_POSTING ledger transaction")
+        }
+        if (summary.debitedAccountCount != 1) {
+            throw WorkflowErrors.stateViolation("fee refund via waiver supports single-account fee posting transactions in this phase")
+        }
+        if (summary.accountFeeDebitMinor != request.waivedAmountMinor) {
+            throw WorkflowErrors.stateViolation("fee waiver amount must match the targeted fee posting amount")
+        }
     }
 
     private fun insertFeeWaiverRequest(
@@ -1783,17 +1863,18 @@ class StaffAccessService(
         )
     }
 
-    private fun markFeeWaiverRequestApproved(requestId: String) {
+    private fun markFeeWaiverRequestApproved(requestId: String, refundLedgerTransactionId: String?) {
         val rows = jdbc.update(
             """
             UPDATE fee_waiver_requests
             SET status = 'APPROVED',
+                refund_ledger_transaction_id = :refundLedgerTransactionId,
                 updated_at = now(),
                 executed_at = now()
             WHERE request_id = :requestId
               AND status = 'PENDING_APPROVAL'
             """.trimIndent(),
-            mapOf("requestId" to requestId)
+            mapOf("requestId" to requestId, "refundLedgerTransactionId" to refundLedgerTransactionId)
         )
         if (rows != 1) {
             throw WorkflowErrors.stateViolation("fee waiver request is no longer pending")
@@ -1858,7 +1939,7 @@ class StaffAccessService(
         """
         SELECT request_id, business_type, business_reference_id, target_customer_id, target_account_id,
                target_transaction_id, requested_by, requested_role, reason, reason_code,
-               fee_code, waived_amount_minor, currency, status, approval_id, idempotency_key,
+               fee_code, waived_amount_minor, currency, status, approval_id, refund_ledger_transaction_id, idempotency_key,
                created_at, updated_at, executed_at, metadata_json::text AS metadata_json
         FROM fee_waiver_requests
         $suffix
@@ -1881,6 +1962,7 @@ class StaffAccessService(
             currency = rs.getString("currency"),
             status = rs.getString("status"),
             approvalId = rs.getString("approval_id"),
+            refundLedgerTransactionId = rs.getString("refund_ledger_transaction_id"),
             idempotencyKey = rs.getString("idempotency_key"),
             createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
@@ -2592,6 +2674,12 @@ class StaffAccessService(
             )
     }
 
+    private data class FeeRefundTargetSummary(
+        val transactionType: String,
+        val accountFeeDebitMinor: Long,
+        val debitedAccountCount: Int
+    )
+
     private companion object {
         const val SERIALIZABLE_APPROVAL_MAX_ATTEMPTS = 5
         const val SERIALIZABLE_STAFF_ACCESS_MAX_ATTEMPTS = 5
@@ -2608,5 +2696,6 @@ class StaffAccessService(
         val TRANSACTION_CORRECTION_REQUEST_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER")
         val TRANSACTION_CORRECTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
         val PRODUCT_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+        val FEE_POLICY_PARAMETER_CHANGE_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
     }
 }

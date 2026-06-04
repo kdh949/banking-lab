@@ -1,0 +1,50 @@
+{
+  "screenId": "OPS-403",
+  "transactionCode": "OPS403",
+  "title": "Fee Posting Batch",
+  "app": "ops-console",
+  "type": "COMMAND",
+  "domain": "product-ledger",
+  "highRisk": false,
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "policyId",
+      "label": "Policy ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "businessDate",
+      "label": "Business Date",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Posting Reason",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/fee-posting-batches"
+  },
+  "postActions": ["createBalancedLedgerPosting", "createAuditEvent", "createOutboxEvent"]
+}
