@@ -7,8 +7,10 @@ import {
   type AccountHoldRequestResponse,
   type AuditEventDto,
   type CustomerKycReviewRequestResponse,
+  type FeeWaiverRequestResponse,
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
+  type StaffApprovalRejectionResponse,
   type TransferLimitChangeRequestResponse
 } from "@banking-lab/api-client";
 import { createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -97,6 +99,19 @@ type KycReviewApiState =
       readonly status: "completed";
       readonly request: CustomerKycReviewRequestResponse;
       readonly selfApprovalCode: string;
+      readonly execution: StaffApprovalExecutionResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+type FeeWaiverApiState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly approvedRequest: FeeWaiverRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly rejectedRequest: FeeWaiverRequestResponse;
+      readonly rejection: StaffApprovalRejectionResponse;
       readonly execution: StaffApprovalExecutionResponse;
     }
   | { readonly status: "failed"; readonly message: string };
@@ -733,6 +748,9 @@ function CommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   if (manifest.screenId === "KYC-101") {
     return <KycReviewCommandApiPanel manifest={manifest} />;
   }
+  if (manifest.screenId === "FEE-102") {
+    return <FeeWaiverCommandApiPanel manifest={manifest} />;
+  }
   return null;
 }
 
@@ -1181,6 +1199,167 @@ function KycReviewCommandApiPanel({ manifest }: { readonly manifest: ScreenManif
               <div>
                 <dt>Executed</dt>
                 <dd>{state.execution.executed ? "KYC review requested" : "not executed"}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function FeeWaiverCommandApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
+  const [state, setState] = useState<FeeWaiverApiState>(() => initialFeeWaiverApiState());
+
+  const runSmoke = async () => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled || state.status === "running") {
+      return;
+    }
+    setState({ status: "running" });
+    const suffix = Date.now().toString(36);
+    try {
+      const makerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const branchMakerClient = createStaffCommandClient("branch01", ["BRANCH_STAFF"]);
+      const selfCheckerClient = createStaffCommandClient("manager01", ["BRANCH_MANAGER"]);
+      const checkerClient = createStaffCommandClient("manager02", ["BRANCH_MANAGER"]);
+
+      const approvedRequest = await makerClient.requestFeeWaiver("ACC-SYN-FEE-001", {
+        requestedBy: "manager01",
+        requestedByRole: "BRANCH_MANAGER",
+        reason: "Browser fee waiver approval smoke",
+        reasonCode: "CUSTOMER_SERVICE_RECOVERY",
+        feeCode: "MONTHLY_SERVICE_FEE",
+        waivedAmountMinor: 1200,
+        currency: "KRW",
+        description: "Synthetic FEE102 approval smoke",
+        idempotencyKey: `BROWSER-FEE-APPROVE-${suffix}`
+      });
+
+      let selfApprovalCode = "not_checked";
+      try {
+        await selfCheckerClient.approveStaffApproval(approvedRequest.approval.approvalId, {
+          approvedBy: "manager01",
+          approvedByRole: "BRANCH_MANAGER",
+          screenId: "FEE-102"
+        });
+        throw new Error("fee waiver self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "MAKER_CHECKER_SELF_APPROVAL_REJECTED") {
+          throw error;
+        }
+      }
+
+      const rejectedRequest = await branchMakerClient.requestFeeWaiver("ACC-SYN-FEE-001", {
+        requestedBy: "branch01",
+        requestedByRole: "BRANCH_STAFF",
+        reason: "Browser fee waiver rejection smoke",
+        reasonCode: "RELATIONSHIP_PRICING",
+        feeCode: "ATM_WITHDRAWAL_FEE",
+        waivedAmountMinor: 800,
+        currency: "KRW",
+        description: "Synthetic FEE102 rejection smoke",
+        idempotencyKey: `BROWSER-FEE-REJECT-${suffix}`
+      });
+
+      const rejection = await checkerClient.rejectStaffApproval(rejectedRequest.approval.approvalId, {
+        rejectedBy: "manager02",
+        rejectedByRole: "BRANCH_MANAGER",
+        rejectReason: "Synthetic checker rejected fee waiver",
+        screenId: "FEE-102"
+      });
+
+      const execution = await checkerClient.approveStaffApproval(approvedRequest.approval.approvalId, {
+        approvedBy: "manager02",
+        approvedByRole: "BRANCH_MANAGER",
+        screenId: "FEE-102"
+      });
+
+      setState({
+        status: "completed",
+        approvedRequest,
+        selfApprovalCode,
+        rejectedRequest,
+        rejection,
+        execution
+      });
+    } catch (error: unknown) {
+      setState({ status: "failed", message: errorMessage(error) });
+    }
+  };
+
+  return (
+    <TerminalPanel
+      title="API-backed Fee Waiver Command"
+      icon="currency_exchange"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? manifest.api?.command : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-fee-waiver-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{feeWaiverStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Runs FEE102 request, rejection, and approval against Spring API without ledger postings."}</span>
+        </div>
+        <div className="manifest-action-bar">
+          <TerminalButton
+            variant="panelAction"
+            icon="play_arrow"
+            type="button"
+            onClick={runSmoke}
+            disabled={state.status === "offline" || state.status === "running"}
+          >
+            Run fee waiver smoke
+          </TerminalButton>
+        </div>
+        {state.status === "completed" ? (
+          <div className="manifest-api-detail-grid">
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Approved request</dt>
+                <dd>{state.execution.feeWaiverRequest?.status ?? state.approvedRequest.item.status}</dd>
+              </div>
+              <div>
+                <dt>Business type</dt>
+                <dd>{state.approvedRequest.item.businessType}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{state.approvedRequest.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{state.selfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Account</dt>
+                <dd>{state.execution.account?.accountId ?? state.approvedRequest.account.accountId}</dd>
+              </div>
+            </dl>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Rejected request</dt>
+                <dd>{state.rejection.feeWaiverRequest?.status ?? state.rejectedRequest.item.status}</dd>
+              </div>
+              <div>
+                <dt>Rejected by</dt>
+                <dd>{state.rejection.item.rejectedBy ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Fee code</dt>
+                <dd>{state.execution.feeWaiverRequest?.feeCode ?? state.approvedRequest.item.feeCode}</dd>
+              </div>
+              <div>
+                <dt>Waived amount</dt>
+                <dd>{state.execution.feeWaiverRequest?.waivedAmountMinor ?? state.approvedRequest.item.waivedAmountMinor}</dd>
+              </div>
+              <div>
+                <dt>Fee posting</dt>
+                <dd>feePostingCreated=false</dd>
+              </div>
+              <div>
+                <dt>Executed</dt>
+                <dd>{state.execution.executed ? "fee waiver approved" : "not executed"}</dd>
               </div>
             </dl>
           </div>
@@ -1848,6 +2027,16 @@ function initialKycReviewApiState(): KycReviewApiState {
   return { status: "idle" };
 }
 
+function initialFeeWaiverApiState(): FeeWaiverApiState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "idle" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -1960,6 +2149,22 @@ function kycReviewStatusLabel(state: KycReviewApiState): string {
     return "KYC review API failed";
   }
   return "KYC review requested";
+}
+
+function feeWaiverStatusLabel(state: FeeWaiverApiState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "idle") {
+    return "fee waiver API ready";
+  }
+  if (state.status === "running") {
+    return "fee waiver API running";
+  }
+  if (state.status === "failed") {
+    return "fee waiver API failed";
+  }
+  return "fee waiver approved and rejected";
 }
 
 function errorMessage(error: unknown): string {

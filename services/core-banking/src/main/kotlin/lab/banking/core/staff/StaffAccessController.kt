@@ -1,6 +1,7 @@
 package lab.banking.core.staff
 
 import lab.banking.core.approval.ApproveApprovalCommand
+import lab.banking.core.approval.RejectApprovalCommand
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -91,10 +92,24 @@ class StaffAccessController(
     ): ResponseEntity<CustomerKycReviewRequestResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestCustomerKycReview(customerId, command))
 
+    @PostMapping("/accounts/{accountId}/fee-waiver-requests")
+    fun requestFeeWaiver(
+        @PathVariable accountId: String,
+        @RequestBody command: FeeWaiverRequestCommand
+    ): ResponseEntity<FeeWaiverRequestResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestFeeWaiver(accountId, command))
+
     @PostMapping("/approvals/{approvalId}/approve")
     fun approveStaffRequest(
         @PathVariable approvalId: String,
         @RequestBody command: ApproveApprovalCommand
     ): StaffApprovalExecutionResponse =
         staffAccessService.approveStaffRequest(approvalId, command)
+
+    @PostMapping("/approvals/{approvalId}/reject")
+    fun rejectStaffRequest(
+        @PathVariable approvalId: String,
+        @RequestBody command: RejectApprovalCommand
+    ): StaffApprovalRejectionResponse =
+        staffAccessService.rejectStaffRequest(approvalId, command)
 }

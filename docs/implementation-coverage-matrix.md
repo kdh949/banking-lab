@@ -22,7 +22,8 @@ Status values are limited to `complete`, `api-backed`, `manifest-only`, `partial
 | staff-terminal | Reconciliation inquiry/adjustment: `REC-101`, `REC-102` | yes | yes | yes | yes | reconciliation and adjustment request tables | ops/checker roles | workflow audit | yes | Node oracle, Spring integration, conditional Playwright | `docs/reconciliation-reports/phase-6-eod-reconciliation.md` | api-backed |
 | staff-terminal | Account hold request/release: `ACC-103`, `ACC-104` | yes | yes | yes | yes | `account_hold_requests` plus account/projection state | manager/call-center/ops route and service policy | request/approve/execute audit | yes | Spring integration test added; integration runtime pending Docker/CI, conditional Playwright smoke added | this matrix and `docs/test-evidence/api-backed-channel-smoke.md` | api-backed |
 | staff-terminal | Transfer limit inquiry/change: `LIM-101`, `LIM-102` | yes | yes | yes | yes | `account_limits` plus `account_limit_change_requests` | branch/manager route and service policy | `LIMIT_VIEW`, request/approve/execute audit | yes | Spring integration test added; conditional Playwright smoke added; local integration runtime depends on Docker/CI | this matrix and `docs/test-evidence/api-backed-channel-smoke.md` | api-backed |
-| staff-terminal | Fee inquiry/waiver: `FEE-101`, `FEE-102` | yes | manifest renderer | no dedicated client method found | no dedicated route found | fee policy/request tables missing | declared role only | declared | declared for waiver | manifest validation only | target goal Phase B/C | manifest-only |
+| staff-terminal | Fee inquiry: `FEE-101` | yes | manifest renderer | no dedicated client method found | no dedicated route found | fee policy read model missing | declared role only | declared | not-applicable | manifest validation only | target goal Phase C | manifest-only |
+| staff-terminal | Fee waiver request/approval/rejection: `FEE-102` | yes | yes | yes | yes | `fee_waiver_requests` | branch/manager/call-center request roles; manager/compliance checker roles | request/reject/approve/execute audit with `feePostingCreated=false` | yes | Spring integration test added; conditional Playwright smoke added; local integration runtime depends on Docker/CI | this matrix and `docs/test-evidence/api-backed-channel-smoke.md` | api-backed |
 | staff-terminal | KYC re-confirmation request: `KYC-101` | yes | yes | yes | yes | `customer_kyc_profiles` plus `customer_kyc_review_requests` | branch/manager/compliance route and service policy | request/approve/execute audit with `realKycProviderCalled=false` | yes | Spring integration test added; conditional Playwright smoke added; local integration runtime depends on Docker/CI | this matrix and `docs/test-evidence/api-backed-channel-smoke.md` | api-backed |
 | staff-terminal | Transaction correction request and approved reversal/adjustment | no dedicated manifest found | no | no | generic ledger adjustment exists only | ledger supports reversal/adjustment | no dedicated workflow policy | ledger audit only | no dedicated correction approval | ledger tests only | target goal Phase B | missing |
 | complaint-portal | Complaint intake/status/answer/closure: `CMP-101`, `CMP-102`, `CMP-104`, `CMP-105`, `CMP-108` | yes | yes | yes | yes | complaint tables | customer ownership policy | timeline/audit | staff approval before answer | Node oracle, Spring integration, conditional Playwright | `docs/test-evidence/phase-5-complaint-workflow.md` | api-backed |
@@ -56,8 +57,8 @@ Commands run on 2026-06-04 for this review:
 - `npm run scripts:typecheck`: pass.
 - `npm run next:staff-terminal:typecheck`: pass.
 - `npm run next:staff-terminal:build`: pass.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after Phase B KYC-101 update, 5 passed and 10 skipped because API/Keycloak variables were not configured.
-- `npm run test:e2e`: pass after Phase B KYC-101 update, 17 passed and 37 skipped because API/Keycloak variables were not configured. A first parallel attempt in a previous PR failed with port 3001 already in use and is not counted as product failure.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after Phase B FEE-102 update, 5 passed and 11 skipped because API/Keycloak variables were not configured.
+- `npm run test:e2e`: pass after Phase B FEE-102 update, 17 passed and 38 skipped because API/Keycloak variables were not configured. A first parallel attempt in a previous PR failed with port 3001 already in use and is not counted as product failure.
 - `docker compose config`: pass.
 - `docker compose --profile platform config`: pass.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass after sandbox escalation.
@@ -74,8 +75,8 @@ Commands run on 2026-06-04 for this review:
 
 ## Immediate Implementation Plan
 
-1. Phase B PRs should continue one staff command at a time: fee waiver, then transaction correction. Account hold/release, transfer limit change, and KYC review now have migration, Spring service/controller, api-client method, manifest wiring, staff-terminal panel, integration test source, and conditional Playwright smoke.
-2. Phase C should add product/fee/interest tables only after fee waiver request semantics are in place, so fee posting and fee waiver policy share one approval model.
+1. Phase B PRs should continue one staff command at a time: transaction correction is next. Account hold/release, transfer limit change, KYC review, and fee waiver now have migration, Spring service/controller, api-client method, manifest wiring, staff-terminal panel, integration test source, and conditional Playwright smoke.
+2. Phase C should add product/fee/interest tables after the remaining transaction-correction slice, so fee posting/refund and fee waiver policy share one approval model.
 3. Phase D should expand the current Python scoring rule into DuckDB feature generation and generated evidence before trying to make the Spring/FDS console depend on a live Python service.
 4. Phase E should replace the current static-only formal check with TLC or an explicit Docker/TLC runner that fails closed in CI.
 5. Phase F/G should add validation scripts before adding more Kubernetes, load, or backup artifacts, so structural claims remain executable.

@@ -6,7 +6,7 @@
   "type": "COMMAND",
   "domain": "fee",
   "highRisk": true,
-  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER"],
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER"],
   "layout": {
     "template": "command",
     "customerContext": true,
@@ -38,14 +38,33 @@
       "required": true
     },
     {
+      "name": "waivedAmountMinor",
+      "label": "Waived Amount",
+      "type": "amount",
+      "required": true
+    },
+    {
+      "name": "reasonCode",
+      "label": "Reason Code",
+      "type": "select",
+      "required": true,
+      "options": ["CUSTOMER_SERVICE_RECOVERY", "RELATIONSHIP_PRICING", "SYSTEM_ERROR"]
+    },
+    {
       "name": "reason",
       "label": "Waiver Reason",
       "type": "textarea",
       "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
     }
   ],
   "api": {
-    "command": "POST /api/staff/fees/waiver-requests"
+    "command": "POST /api/staff/accounts/{accountId}/fee-waiver-requests"
   },
   "postActions": ["createApprovalRequest", "createAuditEvent"]
 }
