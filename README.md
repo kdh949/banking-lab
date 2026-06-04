@@ -187,7 +187,7 @@ Important current gaps are intentionally not marked complete:
 - Python AML/FDS analytics has a DuckDB mart and generated batch evidence, but not a live Spring/FDS console adapter;
 - `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable;
 - Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, but no live cluster deployment proof;
-- load testing and PostgreSQL backup/restore drill evidence are still missing.
+- `npm run load:synthetic` now produces local synthetic load-smoke evidence; PostgreSQL backup/restore drill evidence is still missing.
 
 The Node retirement evidence remains valid for the previous target-stack migration scope. It does not mean the broader missing-features goal is complete.
 
