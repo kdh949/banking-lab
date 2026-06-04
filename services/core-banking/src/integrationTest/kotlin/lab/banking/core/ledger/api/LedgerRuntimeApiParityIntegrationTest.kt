@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
 import java.util.Base64
 import lab.banking.core.ledger.application.LedgerCommandService
+import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -71,6 +72,7 @@ class LedgerRuntimeApiParityIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        ParameterSeedSupport.reseedFdsRuleParameters(jdbc)
     }
 
     @AfterEach

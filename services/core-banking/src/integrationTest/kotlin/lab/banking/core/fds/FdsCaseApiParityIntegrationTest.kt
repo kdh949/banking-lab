@@ -2,6 +2,7 @@ package lab.banking.core.fds
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
+import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -58,6 +59,7 @@ class FdsCaseApiParityIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        ParameterSeedSupport.reseedFdsRuleParameters(jdbc)
         seedAccountsAndBalances()
     }
 

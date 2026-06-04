@@ -3,6 +3,7 @@ package lab.banking.core.customer
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
 import java.util.Base64
+import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -56,6 +57,7 @@ class CustomerTransferApiParityIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        ParameterSeedSupport.reseedFdsRuleParameters(jdbc)
         seedCustomersAndAccounts()
     }
 
