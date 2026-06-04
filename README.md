@@ -187,9 +187,9 @@ Important current gaps are intentionally not marked complete:
 - Python AML/FDS analytics has a DuckDB mart and generated batch evidence, but not a live Spring/FDS console adapter;
 - `npm run formal:ledger` now produces executable bounded model-checker evidence when TLC is unavailable;
 - Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, but no live cluster deployment proof;
-- `npm run load:synthetic` now produces local synthetic load-smoke evidence; PostgreSQL backup/restore drill evidence is still missing.
+- `npm run load:synthetic` now produces local synthetic load-smoke evidence; PostgreSQL backup/restore remains optional future hardening and is not claimed here.
 
-The Node retirement evidence remains valid for the previous target-stack migration scope. It does not mean the broader missing-features goal is complete.
+The Node retirement evidence remains valid for the previous target-stack migration scope. The broader missing-features goal in `docs/codex/implementation_missing_features_goals.md` is now covered through phased implementation evidence, with future hardening items called out separately where they are not claimed.
 
 ## 11.2 Kotlin + Next.js Migration
 
