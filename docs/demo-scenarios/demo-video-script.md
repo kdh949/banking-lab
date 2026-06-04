@@ -115,9 +115,9 @@ Open:
 Show:
 
 - API-backed, manifest-only, partial, and missing classifications
-- remaining analytics, formal, platform, and operations evidence gaps
+- remaining analytics integration, formal, platform, and operations evidence gaps
 - product-ledger Phase C now includes deposit interest, fee policy versioning, fee posting, and targeted fee refund reversal
-- Python/DuckDB analytics gap
+- Python/DuckDB analytics now has batch evidence; live Spring/FDS-console linkage remains
 - formal TLC gap
 - Kubernetes/Helm validation and load or backup/restore drill gap
 

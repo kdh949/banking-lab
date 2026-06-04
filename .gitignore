@@ -6,6 +6,8 @@ node_modules/
 *.log
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
 coverage/
 test-results/
 .nyc_output/
