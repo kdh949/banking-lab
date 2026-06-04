@@ -83,6 +83,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/loans/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/cards/") || path == "/api/cards" -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/fds/analytics" -> setOf("FDS_REVIEWER", "AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/aml/governance") -> setOf("AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -255,6 +256,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/audit-parameters") -> "AUD-201"
             path.startsWith("/api/staff/fds-parameters") -> "FDS-301"
             path == "/api/fds/analytics" -> "FDS-301"
+            path.startsWith("/api/aml/governance") -> "AML-301"
             path.startsWith("/api/ops/security") -> "OPS-SEC-101"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"

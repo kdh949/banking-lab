@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-06-04T20:46:05.639Z",
+  "reportType": "SYNTHETIC_STR",
+  "reportId": "STR-SYN-3389C83FEF6565BA",
+  "amlCaseId": "AML-SYN-4D4AC605F074",
+  "regulatorFormat": "SYNTHETIC_STR_V1",
+  "submitted": false,
+  "syntheticOnly": true,
+  "realRegulatorSubmission": false,
+  "realSanctionsDataUsed": false,
+  "customerId": "CUS-HIGH-001",
+  "transactionId": "TX-AML-003",
+  "riskBand": "HIGH",
+  "totalScore": 1000,
+  "alerts": [
+    "FDS_LARGE_TRANSFER",
+    "FDS_NEW_DEVICE",
+    "FDS_FIRST_TIME_BENEFICIARY",
+    "AML_HIGH_RISK_CUSTOMER"
+  ],
+  "anomalyReasons": [
+    "AMOUNT_TO_MEDIAN_GE_20X",
+    "HIGH_AMOUNT_ABSOLUTE_THRESHOLD",
+    "NEW_BENEFICIARY_HIGH_AMOUNT"
+  ],
+  "evidenceHash": "53613dd3533e40e609f2c2c4eac9396e92c66812d13832dda9edb237e62d1924",
+  "filingBoundary": "not sent to any regulator; generated as lab evidence only"
+}
