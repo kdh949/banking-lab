@@ -1,0 +1,51 @@
+groups:
+  - name: operational-security-alerts
+    interval: 5s
+    rules:
+      - alert: FailedAuthBurst
+        expr: |
+          count_over_time({compose_service="core-banking"} |= "AUTHORIZATION_DENIED" |= "AUTHENTICATION_FAILURE" [5m]) > 5
+        for: 0s
+        labels:
+          severity: warning
+          control: failed-auth-burst
+          synthetic_only: "true"
+        annotations:
+          summary: Failed authentication burst observed in synthetic banking lab
+          description: More than five synthetic authentication failures were observed in five minutes. Validate source IP/device claims and session revocation state.
+
+      - alert: PrivilegeChangeObserved
+        expr: |
+          count_over_time({compose_service="core-banking"} |= "COMMAND_APPROVED" |= "ROLE_GRANT" [5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          control: privilege-change
+          synthetic_only: "true"
+        annotations:
+          summary: Privileged role change observed in synthetic banking lab
+          description: A synthetic role-grant approval was observed. Confirm maker-checker separation, reason, and audit hash-chain continuity.
+
+      - alert: MassPiiAccess
+        expr: |
+          count_over_time({compose_service="core-banking"} |= "PII_UNMASK_GRANTED" [10m]) > 10
+        for: 0s
+        labels:
+          severity: critical
+          control: mass-pii-access
+          synthetic_only: "true"
+        annotations:
+          summary: Mass PII access pattern observed in synthetic banking lab
+          description: More than ten synthetic PII unmask events were observed in ten minutes. Review business reasons and break-glass state.
+
+      - alert: BreakGlassUsage
+        expr: |
+          count_over_time({compose_service="core-banking"} |= "BREAK_GLASS_GRANTED" [1m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          control: break-glass
+          synthetic_only: "true"
+        annotations:
+          summary: Break-glass access used in synthetic banking lab
+          description: A synthetic break-glass grant was created. Confirm expiry and independent post-hoc review case closure.

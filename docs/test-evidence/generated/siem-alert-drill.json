@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-06-04T20:18:38.210Z",
+  "command": "npm run siem:alert-drill",
+  "status": "pass",
+  "syntheticOnly": true,
+  "lokiRulesFile": "infra/observability/loki/rules/fake/operational-security-alerts.yml",
+  "liveLokiRequired": false,
+  "controlsVerified": [
+    "failed-auth-burst",
+    "privilege-change",
+    "mass-pii-access",
+    "break-glass"
+  ],
+  "drills": [
+    {
+      "alert": "FailedAuthBurst",
+      "control": "failed-auth-burst",
+      "rulePresent": true,
+      "simulatedFired": true,
+      "sampleCount": 6,
+      "threshold": 5
+    },
+    {
+      "alert": "PrivilegeChangeObserved",
+      "control": "privilege-change",
+      "rulePresent": true,
+      "simulatedFired": true,
+      "sampleCount": 1,
+      "threshold": 0
+    },
+    {
+      "alert": "MassPiiAccess",
+      "control": "mass-pii-access",
+      "rulePresent": true,
+      "simulatedFired": true,
+      "sampleCount": 11,
+      "threshold": 10
+    },
+    {
+      "alert": "BreakGlassUsage",
+      "control": "break-glass",
+      "rulePresent": true,
+      "simulatedFired": true,
+      "sampleCount": 1,
+      "threshold": 0
+    }
+  ]
+}

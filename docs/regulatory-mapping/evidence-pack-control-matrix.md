@@ -14,6 +14,10 @@
 | Staff sensitive access audit | staff APIs append audit events, `StaffAccessService` | Phase 3 tests, staff access API integration test |
 | Role and ownership authorization | `BankingLabAuthorizationFilter`, `BankingLabTokenDecoder`, `SignedJwtJwksTokenDecoder`, `BankingLabAuthContext`, `CustomerAccountService` | security authorization integration test, JWKS authorization integration test |
 | Secure auth defaults and session controls | `BankingLabSecurityPolicyEnforcer`, `AuthSessionController`, `trusted_devices`, `revoked_sessions`, secure Compose/Kubernetes/Helm defaults | security posture check, security defaults integration test, JWKS step-up/trusted-device/session integration test |
+| Operational-security WORM export | `audit_worm_export_segments`, `OperationalSecurityService.exportAuditSegment`, segment hash verification | `OperationalSecurityIntegrationTest`, `docs/test-evidence/hardening-h5-operational-security.md` |
+| Synthetic KMS/HSM rotation | `synthetic_kms_keys`, `/api/ops/security/kms/rotate`, synthetic key hashes without real key material | `OperationalSecurityIntegrationTest`, `docs/security/synthetic-secret-rotation-runbook.md` |
+| PAM break-glass post-review | `break_glass_grants`, `break_glass_review_cases`, `/api/ops/security/break-glass/*` | `OperationalSecurityIntegrationTest` |
+| Synthetic SIEM alert drill | `infra/observability/loki/rules/fake/operational-security-alerts.yml`, `scripts/run-siem-alert-drill.ts` | `npm run siem:alert-drill`, `docs/test-evidence/generated/siem-alert-drill.json` |
 | Masked PII by default | `maskCustomer`, `maskAccount`, `StaffAccessService` | audit/staff tests, staff access API integration test |
 | Maker-checker for high-risk operations | `ApprovalStore`, `PersistentApprovalService`, `/api/approvals`, `/api/staff/approvals`, `operator_approvals` | maker-checker, complaint, FDS/AML/recon tests, approval persistence/API integration tests, customer change, complaint answer, FDS execution, AML closure, and reconciliation adjustment integration tests |
 | Complaint answer approval | complaint workflow runtime, `ComplaintCaseService` | Phase 5 tests, complaint API integration test |
