@@ -30,6 +30,7 @@
     "test:notification-service:unit": "scripts/run-core-banking-tests.sh :services:notification-service:test",
     "test:notification-service:integration": "scripts/run-core-banking-tests.sh :services:notification-service:integrationTest",
     "test:notification-service:keycloak-service-token": "bash scripts/run-notification-keycloak-service-token-smoke.sh",
+    "test:notification-service:provider-dead-letter-compose": "bash scripts/run-notification-provider-dead-letter-compose-smoke.sh",
     "test:reporting-service:unit": "scripts/run-core-banking-tests.sh :services:reporting-service:test",
     "test:reporting-service:integration": "scripts/run-core-banking-tests.sh :services:reporting-service:integrationTest",
     "test:reporting-service:domain-publisher-compose": "bash scripts/run-reporting-domain-publisher-compose-smoke.sh",

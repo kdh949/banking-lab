@@ -25,6 +25,10 @@ This evidence covers the first synthetic Notification Service slice:
   audience, `notification_flyway_schema_history`, and synthetic provider
   disablement.
 - Retry/failure and dead-letter state transitions.
+- Live Compose provider-sink retry/dead-letter smoke that creates a masked
+  pending delivery through the Keycloak-protected API, records retryable and
+  terminal synthetic provider failures, verifies the durable dead-letter row,
+  and proves delivered-state mutation is rejected after dead-letter.
 - Admin template change requests with maker-checker approval/rejection,
   append-only template versioning, and the synthetic `CHAT` sink.
 - Recipient notification preferences with wildcard and event-specific channel
@@ -77,6 +81,7 @@ npm run next:customer-web:typecheck
 npm run packages:typecheck
 npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks
 npm run test:notification-service:keycloak-service-token
+npm run test:notification-service:provider-dead-letter-compose
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 docker compose --profile platform config
@@ -164,6 +169,15 @@ were rerun sequentially with `--rerun-tasks`.
   and `notification-service-api` audience, and the notification API accepted it
   on `POST /api/notifications/events` to create one `PENDING`,
   `syntheticOnly=true` delivery item without exposing the raw phone number.
+- `npm run test:notification-service:provider-dead-letter-compose`: pass; a
+  disposable Compose project started PostgreSQL, Redpanda, Keycloak, and
+  `notification-service` with simulator tokens disabled. The smoke used a signed
+  `notification-service-api` client-credentials token to create one masked
+  pending delivery, record a retryable synthetic provider failure, record a
+  terminal failure at threshold `2`, verify one durable
+  `notification_dead_letters` row and two failure/dead-letter attempts, and
+  prove a delivered-state command on the dead-letter delivery returns structured
+  `NOTIFICATION_STATE_TRANSITION_REJECTED`.
 - `npm test`: pass; the Node oracle/static scaffold suite verifies the
   notification-service Dockerfile, Compose API/consumer services, disabled API
   consumer setting, enabled worker setting, and Prometheus scrape targets.
@@ -349,6 +363,10 @@ The Docker Compose services explicitly set
 The Keycloak service-token smoke explicitly disables simulator tokens and uses
 only the synthetic `notification-service-api` service account to create a masked
 pending delivery through the REST event route.
+The provider dead-letter Compose smoke also disables simulator tokens and uses
+only the synthetic `notification-service-api` service account to drive provider
+failure and dead-letter state through the REST delivery endpoints. It verifies
+raw phone values are not exposed by live API responses or delivery history.
 The raw Kubernetes and Helm deployment manifests also set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`, use the
 service-specific `notification-service-api` audience, and keep the event
@@ -357,6 +375,5 @@ consumer on the synthetic `redpanda:9092` domain-events stream.
 ## Remaining Risk
 
 This is still a partial feature slice. Browser E2E for live notification
-customer/admin/audit API paths remains conditional on local service URLs,
-retry/dead-letter behavior in a live Compose provider-sink loop, and live
-Kubernetes/Helm rollout of the notification API/worker remain future work.
+customer/admin/audit API paths remains conditional on local service URLs, and
+live Kubernetes/Helm rollout of the notification API/worker remains future work.

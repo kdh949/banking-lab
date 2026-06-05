@@ -83,6 +83,7 @@ test("notification-service platform profile includes API and Redpanda consumer w
   const packageJson = await readFile("package.json", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-notification-keycloak-service-token-smoke.sh", "utf8");
+  const providerDeadLetterSmoke = await readFile("scripts/run-notification-provider-dead-letter-compose-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:notification-service"\)/);
   assert.match(serviceBuild, /org\.apache\.kafka:kafka-clients/);
@@ -104,6 +105,7 @@ test("notification-service platform profile includes API and Redpanda consumer w
   assert.match(compose, /BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED: "false"/);
   assert.match(compose, /BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS: redpanda:9092/);
   assert.match(packageJson, /test:notification-service:keycloak-service-token/);
+  assert.match(packageJson, /test:notification-service:provider-dead-letter-compose/);
   assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
   assert.match(keycloakServiceTokenSmoke, /client_id=notification-service-api/);
   assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
@@ -112,6 +114,14 @@ test("notification-service platform profile includes API and Redpanda consumer w
   assert.match(keycloakServiceTokenSmoke, /\/api\/notifications\/events/);
   assert.match(keycloakServiceTokenSmoke, /PENDING/);
   assert.match(keycloakServiceTokenSmoke, /maskedMessage/);
+  assert.match(providerDeadLetterSmoke, /BANKING_LAB_NOTIFICATION_PROVIDER_DEAD_LETTER_COMPOSE_PROJECT/);
+  assert.match(providerDeadLetterSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(providerDeadLetterSmoke, /\/api\/notifications\/deliveries\/\$\{DELIVERY_REQUEST_ID\}\/failures/);
+  assert.match(providerDeadLetterSmoke, /deadLetterThreshold/);
+  assert.match(providerDeadLetterSmoke, /DEAD_LETTER/);
+  assert.match(providerDeadLetterSmoke, /notification_dead_letters/);
+  assert.match(providerDeadLetterSmoke, /NOTIFICATION_STATE_TRANSITION_REJECTED/);
+  assert.match(providerDeadLetterSmoke, /010-5555-9090/);
   assert.match(prometheus, /job_name: notification-service/);
   assert.match(prometheus, /notification-service:8089/);
   assert.match(prometheus, /notification-event-consumer:8089/);
