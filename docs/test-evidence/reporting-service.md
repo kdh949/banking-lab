@@ -1,0 +1,37 @@
+# Reporting Service Evidence
+
+Review date: 2026-06-05
+
+Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-platform-completion/supporting/03-reporting-service.md`. The service is target-stack Kotlin/Spring Boot with PostgreSQL metadata persistence. It does not generate real regulatory filings, real statements, real PII, or real external-bank artifacts.
+
+## Implemented Surface
+
+- `services/reporting-service` is registered in Gradle as a standalone Spring Boot service.
+- `GET /api/reports/catalog` returns seeded synthetic report definitions and requires a business reason.
+- `POST /api/reports/artifacts` creates metadata-only report artifacts with idempotency by `(requested_by, idempotency_key)`.
+- `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
+- `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway.
+- Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.
+- Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
+- Structured errors include the reporting docs pointer and `syntheticOnly=true`.
+
+## Controls
+
+- Report access and generation require a business reason.
+- Report artifacts are metadata-only and `masked_by_default=true`.
+- The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
+- Idempotent report generation prevents duplicate artifacts for an external retry key.
+- Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, and `REPORT_ARTIFACT_LIST_VIEW` audit rows.
+
+## Verification
+
+- `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
+- `npm test`
+- `npm run evidence:refresh-check`
+- `npm run node:retirement-gate`
+
+## Remaining Risk
+
+- This slice stores artifact metadata only; runnable report rendering, retention lifecycle, export packaging, and channel UI wiring remain pending.
+- No Kafka/Outbox dispatch is added for report-generated events yet.
+- No live Keycloak smoke was run for this new service in this slice.

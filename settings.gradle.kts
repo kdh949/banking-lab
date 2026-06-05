@@ -17,3 +17,4 @@ rootProject.name = "banking-lab"
 include(":services:core-banking")
 include(":services:payment-service")
 include(":services:notification-service")
+include(":services:reporting-service")

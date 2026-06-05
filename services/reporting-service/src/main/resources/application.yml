@@ -1,0 +1,48 @@
+server:
+  port: ${PORT:8090}
+
+banking-lab:
+  synthetic-only: true
+  migration-target: kotlin-spring-boot
+  reporting-service:
+    real-regulatory-reporting-enabled: false
+    artifact-root: ${BANKING_LAB_REPORTING_ARTIFACT_ROOT:reports/synthetic}
+  security:
+    enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
+    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}
+    dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}
+    jwt:
+      jwks-uri: ${BANKING_LAB_SECURITY_JWKS_URI:}
+      issuer: ${BANKING_LAB_SECURITY_ISSUER:}
+      audience: ${BANKING_LAB_SECURITY_AUDIENCE:}
+
+spring:
+  application:
+    name: banking-lab-reporting-service
+  datasource:
+    url: ${BANKING_LAB_REPORTING_DATABASE_URL:jdbc:postgresql://localhost:5432/banking_lab_reporting}
+    username: ${BANKING_LAB_REPORTING_DATABASE_USER:banking_lab}
+    password: ${BANKING_LAB_REPORTING_DATABASE_PASSWORD:banking_lab}
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    enabled: ${BANKING_LAB_TRACING_ENABLED:false}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${BANKING_LAB_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      export:
+        enabled: ${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:false}
+      endpoint: ${BANKING_LAB_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${BANKING_LAB_OTEL_SERVICE_NAME:banking-lab-reporting-service}
+      synthetic.only: "true"
