@@ -1,0 +1,34 @@
+{
+  "screenId": "ADM-501",
+  "transactionCode": "ADM501",
+  "title": "Platform Evidence Coverage",
+  "app": "admin-console",
+  "type": "DASHBOARD",
+  "domain": "platform-admin",
+  "requiredRoles": ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["ADMIN_EVIDENCE_COVERAGE_VIEW"],
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "widgets": [
+    "implementation-coverage-matrix",
+    "admin-evidence-links",
+    "api-backed-feature-coverage",
+    "node-retirement-boundary"
+  ],
+  "actions": [
+    {
+      "id": "view-evidence-coverage",
+      "label": "View Evidence Coverage",
+      "type": "inquiry",
+      "target": "GET /api/admin/platform/evidence-coverage"
+    }
+  ]
+}

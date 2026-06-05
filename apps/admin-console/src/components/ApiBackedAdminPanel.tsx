@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   createBankingApiClient,
+  type AdminEvidenceCoverageResponse,
   type AdminPlatformSummaryResponse,
   type NotificationPreferenceDto,
   type NotificationTemplateDto
@@ -12,7 +13,11 @@ import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken 
 type ApiState =
   | { readonly status: "offline" }
   | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly summary: AdminPlatformSummaryResponse }
+  | {
+      readonly status: "loaded";
+      readonly summary: AdminPlatformSummaryResponse;
+      readonly evidence: AdminEvidenceCoverageResponse;
+    }
   | { readonly status: "failed"; readonly message: string };
 
 type KeycloakAdminState =
@@ -62,11 +67,13 @@ export function ApiBackedAdminPanel() {
       })
     });
 
-    client
-      .adminPlatformSummary()
-      .then((summary) => {
+    Promise.all([
+      client.adminPlatformSummary(),
+      client.adminEvidenceCoverage("Synthetic admin evidence coverage review")
+    ])
+      .then(([summary, evidence]) => {
         if (!cancelled) {
-          setState({ status: "loaded", summary });
+          setState({ status: "loaded", summary, evidence });
         }
       })
       .catch((error: unknown) => {
@@ -258,6 +265,36 @@ export function ApiBackedAdminPanel() {
           </div>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-admin-evidence-coverage">
+        <div>
+          <dt>Evidence Coverage</dt>
+          <dd>{evidenceCoverageStatusLabel(state)}</dd>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Audit</dt>
+              <dd>{state.evidence.auditEventId}</dd>
+            </div>
+            <div>
+              <dt>Evidence Links</dt>
+              <dd>{state.evidence.evidenceLinks.length}</dd>
+            </div>
+            <div>
+              <dt>Feature Screens</dt>
+              <dd>{state.evidence.featureCoverage.map((item) => `${item.screenId}:${item.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Evidence Sample</dt>
+              <dd>
+                {state.evidence.evidenceLinks[2]
+                  ? `${state.evidence.evidenceLinks[2].evidenceId}:${state.evidence.evidenceLinks[2].status}`
+                  : "none"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
       <dl data-testid="api-backed-notification-admin">
         <div>
           <dt>Notification API</dt>
@@ -346,6 +383,19 @@ function statusLabel(state: ApiState): string {
       return "admin summary loaded";
     case "failed":
       return "API request failed";
+  }
+}
+
+function evidenceCoverageStatusLabel(state: ApiState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading evidence coverage";
+    case "loaded":
+      return "evidence coverage loaded";
+    case "failed":
+      return "evidence coverage request failed";
   }
 }
 

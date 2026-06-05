@@ -80,12 +80,15 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   const securityManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-201.security-policy-parameters.json", "utf8"));
   const notificationTemplateManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-401.notification-template-approval.json", "utf8"));
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-402.notification-preference-management.json", "utf8"));
+  const evidenceCoverageManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-501.platform-evidence-coverage.json", "utf8"));
 
   assert.equal(appPackage.name, "@banking-lab/admin-console");
   assert.match(appPackage.scripts.dev, /3007/);
   assert.equal(rootPackage.scripts["next:admin-console:typecheck"], "npm --workspace @banking-lab/admin-console run typecheck");
   assert.match(page, /loadChannelManifests/);
   assert.match(page, /ApiBackedAdminPanel/);
+  assert.match(panel, /adminEvidenceCoverage/);
+  assert.match(panel, /data-testid="api-backed-admin-evidence-coverage"/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
   assert.match(panel, /listNotificationTemplates/);
   assert.match(panel, /listNotificationPreferences/);
@@ -95,6 +98,9 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(securityManifest.approval.makerChecker, true);
   assert.equal(notificationTemplateManifest.approval.makerChecker, true);
   assert.equal(notificationPreferenceManifest.audit.reasonRequired, true);
+  assert.equal(evidenceCoverageManifest.type, "DASHBOARD");
+  assert.equal(evidenceCoverageManifest.audit.reasonRequired, true);
+  assert.equal(evidenceCoverageManifest.audit.eventTypes[0], "ADMIN_EVIDENCE_COVERAGE_VIEW");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
 });

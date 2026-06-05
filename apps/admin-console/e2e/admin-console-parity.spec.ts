@@ -67,6 +67,11 @@ test("admin console loads a Spring API-backed platform summary when configured",
   await expect(panel).toContainText("synthetic only");
   await expect(panel).toContainText("kotlin-spring-boot");
   await expect(panel).toContainText("NODE_REFERENCE_BOUNDARY:BLOCKED");
+
+  const evidencePanel = page.getByTestId("api-backed-admin-evidence-coverage");
+  await expect(evidencePanel).toContainText("evidence coverage loaded", { timeout: 15_000 });
+  await expect(evidencePanel).toContainText("ADM-501:API_BACKED");
+  await expect(evidencePanel).toContainText("PARAMETER_ADMIN_APIS:TRACKED");
 });
 
 test("admin console propagates interactive Keycloak security admin token when configured", async ({ page }) => {

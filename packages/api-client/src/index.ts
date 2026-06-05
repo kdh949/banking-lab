@@ -1649,6 +1649,31 @@ export interface AdminPlatformSummaryResponse {
   readonly controls: readonly AdminPlatformControlDto[];
 }
 
+export interface AdminEvidenceLinkDto {
+  readonly evidenceId: string;
+  readonly title: string;
+  readonly path: string;
+  readonly status: string;
+  readonly controlArea: string;
+}
+
+export interface AdminFeatureCoverageDto {
+  readonly featureId: string;
+  readonly title: string;
+  readonly screenId: string;
+  readonly apiContract: string;
+  readonly evidencePath: string;
+  readonly status: string;
+}
+
+export interface AdminEvidenceCoverageResponse {
+  readonly auditEventId: string;
+  readonly generatedAt: string;
+  readonly syntheticOnly: boolean;
+  readonly evidenceLinks: readonly AdminEvidenceLinkDto[];
+  readonly featureCoverage: readonly AdminFeatureCoverageDto[];
+}
+
 export interface FdsCaseDto {
   readonly caseId: string;
   readonly transferReferenceId: string;
@@ -2825,6 +2850,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         "/api/admin/platform/summary",
         {},
+        options.bearerToken
+      );
+    },
+
+    adminEvidenceCoverage(reason: string) {
+      return request<AdminEvidenceCoverageResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/admin/platform/evidence-coverage",
+        { reason },
         options.bearerToken
       );
     },

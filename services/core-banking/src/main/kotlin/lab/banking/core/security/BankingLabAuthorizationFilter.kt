@@ -264,6 +264,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/ops/security") -> "OPS-SEC-101"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
+            path.startsWith("/api/admin/platform/evidence-coverage") -> "ADM-501"
             path.startsWith("/api/customer/complaint-types") -> "CMP-107"
             path.startsWith("/api/customer/complaints/") && path.contains("/materials") -> "CMP-103"
             path.startsWith("/api/customer/complaints/") && path.contains("/reopen-requests") -> "CMP-106"
