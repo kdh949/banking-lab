@@ -28,13 +28,16 @@ This evidence covers the first synthetic Payment Service slice:
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
   commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
-  and ops payment outbox dispatch manifests, plus TypeScript API client methods
-  for the payment-service OpenAPI operations.
+  staff payment cancellation approval, and ops payment outbox dispatch manifests,
+  plus TypeScript API client methods for the payment-service OpenAPI operations.
 - Customer Web API-backed payment panel that uses the payment-service client for
   idempotent bill-payment creation/replay, instruction read/outbox visibility,
   and customer autopay create/pause/resume/cancel smoke coverage.
 - Staff Terminal API-backed PAY-101 payment instruction inquiry that requires a
   business reason and returns a durable `PAU-*` payment access audit id.
+- Staff Terminal API-backed PAY-102 payment cancellation approval smoke that
+  creates a durable `PCR-*` request, rejects maker self-approval, and cancels the
+  instruction only after independent checker approval.
 - Ops Console API-backed OPS-404 payment Outbox dispatch panel that calls the
   durable dispatch route and displays published, retry, dead-letter, or
   no-pending-event outcomes.
@@ -115,28 +118,30 @@ need local file-lock socket and Docker access.
   idempotent replay, structured API access, and service-role denial.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass; Kotlin unit suite
   compiled and ran after sandbox escalation.
-- `npm test`: pass; 156 Node oracle and evidence tests passed.
+- `npm test`: pass; 164 Node oracle and evidence tests passed.
 - `npm run node:retirement-gate`: pass; gate remains ready from existing
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
 - `npm run scripts:typecheck`: pass.
-- `npm run validate:manifests`: pass; 95 manifests validated, including
-  `CWB-701`, `CWB-702`, `CWB-703`, `PAY-101`, and `OPS-404`.
+- `npm run validate:manifests`: pass; 104 screen manifests validated,
+  including `CWB-701`, `CWB-702`, `CWB-703`, `PAY-101`, `PAY-102`, and
+  `OPS-404`.
 - `npm run packages:typecheck`: pass; screen/form/api/auth clients compiled,
   including the new payment API client contract.
 - `npm run next:customer-web:typecheck`: pass; Customer Web compiled with the
   payment-service panel and environment variable fallback.
 - `npm run next:staff-terminal:typecheck`: pass; Staff Terminal compiled with
-  the PAY-101 reason-required payment inquiry panel.
+  the PAY-101 reason-required payment inquiry panel and PAY-102 cancellation
+  approval smoke panel.
 - `npm run next:ops-console:typecheck`: pass; Ops Console compiled with the
   OPS-404 payment Outbox dispatch panel.
 - `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts`: pass;
   local shell and API-gated customer E2E coverage ran, with payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
 - `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`:
-  pass; local shell and API-gated staff E2E coverage ran, with PAY-101
-  payment-service smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL`
-  is configured.
+  pass; 5 local shell tests passed and 18 API/Keycloak/payment-service smokes
+  were skipped because E2E base URLs were not configured, including PAY-101 and
+  PAY-102 unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is set.
 - `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts`: pass;
   local shell and API-gated ops E2E coverage ran, with OPS-404 payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
@@ -222,6 +227,9 @@ Manifest and API client coverage verifies:
   pause/resume/cancel management through reusable command templates;
 - `PAY-101` declares reason-required staff payment instruction lookup with
   account masking policy and `PAYMENT_INSTRUCTION_VIEW` audit metadata;
+- `PAY-102` declares a high-risk staff payment cancellation command with
+  maker-checker approval, reason-required audit, approval/rejection actions, and
+  payment cancellation event metadata;
 - `OPS-404` declares ops payment Outbox dispatch with retry/dead-letter result
   metadata;
 - `@banking-lab/api-client` exposes typed payment instruction, settlement,
@@ -234,6 +242,10 @@ Manifest and API client coverage verifies:
 - Staff Terminal renders `data-testid="api-backed-staff-payment-inquiry"` and
   uses the same payment-service URL convention to exercise PAY-101 lookup with a
   business reason, `PAYMENT_INSTRUCTION_VIEW` audit, and `PAU-*` audit id.
+- Staff Terminal renders `data-testid="api-backed-staff-payment-cancellation"`
+  and uses the same payment-service URL convention to exercise PAY-102
+  cancellation maker-checker approval, including self-approval rejection and an
+  independent checker-canceled instruction.
 - Ops Console renders `data-testid="api-backed-payment-outbox-dispatch"` and
   uses the same payment-service URL convention to exercise OPS-404 durable
   Outbox dispatch with an operator reason and retry/dead-letter status display.
@@ -306,8 +318,9 @@ from Customer Web, queried from Staff Terminal with reason-required audit,
 dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
-maker-checker correction path, but Kafka/Redpanda runtime publication and live
-payment-service Keycloak realm smoke evidence are still pending.
+maker-checker correction path and PAY-102 staff-terminal smoke panel, but
+Kafka/Redpanda runtime publication and live payment-service Keycloak realm smoke
+evidence are still pending.
 The new Compose/Kubernetes/Helm surface is structurally validated only; it does
 not yet prove a live payment-service rollout, live worker dispatch against
 core-banking, or a live Keycloak-issued `PAYMENT_SERVICE` service token.

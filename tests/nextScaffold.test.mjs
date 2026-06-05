@@ -175,6 +175,33 @@ test("staff-terminal exposes PAY101 audited payment inquiry through the payment 
   assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
 });
 
+test("staff-terminal exposes PAY102 payment cancellation approval through the payment service client", async () => {
+  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/PAY-102.payment-cancellation-approval.json", "utf8"));
+
+  assert.match(panel, /data-testid="api-backed-staff-payment-cancellation"/);
+  assert.match(panel, /Run payment cancellation approval smoke/);
+  assert.match(panel, /requestPaymentCancellationApproval\(created\.item\.paymentInstructionId/);
+  assert.match(panel, /PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED/);
+  assert.match(panel, /approvePaymentCancellationRequest\(requested\.item\.cancellationRequestId/);
+  assert.match(panel, /paymentCancellationState\.requested\.item\.makerId/);
+  assert.match(panel, /paymentCancellationState\.approved\.item\.checkerId/);
+  assert.match(client, /requestPaymentCancellationApproval\(instructionId: string/);
+  assert.match(client, /approvePaymentCancellationRequest\(requestId: string/);
+  assert.match(client, /rejectPaymentCancellationRequest\(requestId: string/);
+  assert.equal(manifest.type, "COMMAND");
+  assert.equal(manifest.highRisk, true);
+  assert.equal(manifest.approval.required, true);
+  assert.equal(manifest.approval.makerChecker, true);
+  assert.equal(manifest.audit.reasonRequired, true);
+  assert.equal(manifest.api.command, "POST /api/payments/instructions/{instructionId}/cancellation-requests");
+  assert.equal(manifest.actions.some((action) => action.target === "POST /api/payments/cancellation-requests/{requestId}/approve"), true);
+  assert.equal(manifest.actions.some((action) => action.target === "POST /api/payments/cancellation-requests/{requestId}/reject"), true);
+  assert.equal(manifest.requiredRoles.includes("OPS_MANAGER"), true);
+  assert.equal(manifest.audit.eventTypes.includes("PAYMENT_CANCELLATION_REJECTED"), true);
+});
+
 test("payment service contract exposes staff cancellation maker-checker APIs", async () => {
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const contract = await readFile("contracts/openapi/payment-service.yaml", "utf8");

@@ -290,6 +290,23 @@ test("staff terminal executes Payment Service PAY101 audited instruction inquiry
   await expect(panel).toContainText("Browser PAY-101 payment instruction inquiry smoke");
 });
 
+test("staff terminal executes Payment Service PAY102 cancellation approval when configured", async ({ page }) => {
+  test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment cancellation smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run payment cancellation approval smoke" }).click();
+  const panel = page.getByTestId("api-backed-staff-payment-cancellation");
+  await expect(panel).toContainText("payment cancellation approved", { timeout: 20_000 });
+  await expect(panel).toContainText("PAY-");
+  await expect(panel).toContainText("PCR-");
+  await expect(panel).toContainText("ops-maker01");
+  await expect(panel).toContainText("PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED");
+  await expect(panel).toContainText("ops-manager01");
+  await expect(panel).toContainText("CANCELED");
+  await expect(panel).toContainText("Browser PAY-102 payment cancellation approval smoke");
+});
+
 test("staff terminal ACC103 executes Spring API-backed account hold and release approvals when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed account hold command smoke.");
 
