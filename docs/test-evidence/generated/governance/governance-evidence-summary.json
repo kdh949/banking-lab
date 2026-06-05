@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "artifactId": "H8-GOVERNANCE-EVIDENCE-SUMMARY",
-  "generatedAt": "2026-06-05T17:53:03.943Z",
+  "generatedAt": "2026-06-05T17:59:50.687Z",
   "status": "pass",
   "syntheticOnly": true,
   "controls": {
@@ -46,8 +46,8 @@
     }
   ],
   "accessRights": {
-    "principalCount": 14,
-    "roleAssignmentCount": 18,
+    "principalCount": 15,
+    "roleAssignmentCount": 19,
     "overPrivilegeFlagCount": 4,
     "flaggedPrincipals": [
       "compliance01",

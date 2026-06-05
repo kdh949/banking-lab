@@ -11,10 +11,12 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const compose = await readFile("docker-compose.yml", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const migration = await readFile("services/reporting-service/src/main/resources/db/migration/V001__reporting_service_foundation.sql", "utf8");
+  const keycloakServiceTokenSmoke = await readFile("scripts/run-reporting-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
   assert.equal(rootPackage.scripts["test:reporting-service:unit"], "scripts/run-core-banking-tests.sh :services:reporting-service:test");
   assert.equal(rootPackage.scripts["test:reporting-service:integration"], "scripts/run-core-banking-tests.sh :services:reporting-service:integrationTest");
+  assert.equal(rootPackage.scripts["test:reporting-service:keycloak-service-token"], "bash scripts/run-reporting-keycloak-service-token-smoke.sh");
   assert.match(build, /org\.springframework\.boot/);
   assert.match(build, /flyway-database-postgresql/);
   assert.match(build, /org\.testcontainers:postgresql/);
@@ -33,6 +35,14 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(migration, /UNIQUE \(requested_by, idempotency_key\)/);
   assert.match(migration, /'AUDIT_SUMMARY'/);
   assert.match(migration, /'EVIDENCE_COVERAGE'/);
+  assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
+  assert.match(keycloakServiceTokenSmoke, /client_id=reporting-service-api/);
+  assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(keycloakServiceTokenSmoke, /REPORTING_ANALYST/);
+  assert.match(keycloakServiceTokenSmoke, /reporting-service-api audience/);
+  assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/catalog/);
+  assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/artifacts/);
+  assert.match(keycloakServiceTokenSmoke, /maskedByDefault/);
 });
 
 test("reporting-service API enforces synthetic reporting controls in source and tests", async () => {

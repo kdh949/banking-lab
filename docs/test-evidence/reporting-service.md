@@ -17,6 +17,9 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.
 - Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
+- Live Keycloak client-credentials smoke proves the confidential
+  `reporting-service-api` service account can call catalog, generate, and list
+  report artifact routes with simulator tokens disabled.
 
 ## Controls
 
@@ -29,6 +32,7 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 ## Verification
 
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
+- `npm run test:reporting-service:keycloak-service-token`
 - `docker compose --profile platform config`
 - `npm run k8s:validate`
 - `npm run helm:template`
@@ -41,4 +45,5 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 
 - This slice stores artifact metadata only; runnable report rendering, retention lifecycle, export packaging, and channel UI wiring remain pending.
 - No Kafka/Outbox dispatch is added for report-generated events yet.
-- No live Keycloak smoke was run for this new service in this slice.
+- Live Kubernetes/Helm rollout and browser/channel propagation for reporting
+  routes remain future work.

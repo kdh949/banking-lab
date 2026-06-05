@@ -32,6 +32,7 @@ class KeycloakRealmPolicyTest {
         assertTrue(roles.contains("PASSKEY_RECOVERY_ADMIN"))
         assertTrue(roles.contains("PAYMENT_SERVICE"))
         assertTrue(roles.contains("NOTIFICATION_SERVICE"))
+        assertTrue(roles.contains("REPORTING_ANALYST"))
 
         val users = listMap(realm["users"])
         val paymentServiceAccount = users.single { it["username"] == "service-account-payment-service-api" }
@@ -40,6 +41,9 @@ class KeycloakRealmPolicyTest {
         val notificationServiceAccount = users.single { it["username"] == "service-account-notification-service-api" }
         assertEquals("notification-service-api", notificationServiceAccount["serviceAccountClientId"])
         assertTrue(listValue(notificationServiceAccount["realmRoles"]).contains("NOTIFICATION_SERVICE"))
+        val reportingServiceAccount = users.single { it["username"] == "service-account-reporting-service-api" }
+        assertEquals("reporting-service-api", reportingServiceAccount["serviceAccountClientId"])
+        assertTrue(listValue(reportingServiceAccount["realmRoles"]).contains("REPORTING_ANALYST"))
 
         val webAuthnUser = users.single { it["username"] == "manager-webauthn01" }
         assertTrue(listValue(webAuthnUser["requiredActions"]).contains("webauthn-register"))
@@ -103,6 +107,18 @@ class KeycloakRealmPolicyTest {
         assertTrue(notificationMappers.contains("notification-service-api-audience"))
         assertFalse(notificationMappers.contains("core-banking-api-audience"))
         assertFalse(notificationMappers.contains("payment-service-api-audience"))
+
+        val reportingServiceClient = clients.single { it["clientId"] == "reporting-service-api" }
+        assertEquals(false, reportingServiceClient["publicClient"])
+        assertEquals(true, reportingServiceClient["serviceAccountsEnabled"])
+        assertEquals(false, reportingServiceClient["directAccessGrantsEnabled"])
+        val reportingMappers = listMap(reportingServiceClient["protocolMappers"])
+            .map { it["name"]?.toString() }
+            .toSet()
+        assertTrue(reportingMappers.contains("reporting-service-api-audience"))
+        assertFalse(reportingMappers.contains("core-banking-api-audience"))
+        assertFalse(reportingMappers.contains("payment-service-api-audience"))
+        assertFalse(reportingMappers.contains("notification-service-api-audience"))
     }
 
     private fun mapperNames(client: Map<String, Any?>): Set<String> =
