@@ -21,10 +21,12 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const outboxMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V004__reporting_outbox_events.sql", "utf8");
   const outboxRetryMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V005__reporting_outbox_retry_dead_letter.sql", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-reporting-keycloak-service-token-smoke.sh", "utf8");
+  const domainPublisherComposeSmoke = await readFile("scripts/run-reporting-domain-publisher-compose-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
   assert.equal(rootPackage.scripts["test:reporting-service:unit"], "scripts/run-core-banking-tests.sh :services:reporting-service:test");
   assert.equal(rootPackage.scripts["test:reporting-service:integration"], "scripts/run-core-banking-tests.sh :services:reporting-service:integrationTest");
+  assert.equal(rootPackage.scripts["test:reporting-service:domain-publisher-compose"], "bash scripts/run-reporting-domain-publisher-compose-smoke.sh");
   assert.equal(rootPackage.scripts["test:reporting-service:keycloak-service-token"], "bash scripts/run-reporting-keycloak-service-token-smoke.sh");
   assert.match(build, /org\.springframework\.boot/);
   assert.match(build, /flyway-database-postgresql/);
@@ -106,6 +108,11 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(keycloakServiceTokenSmoke, /expiredCount/);
   assert.match(keycloakServiceTokenSmoke, /downloadSimulationOnly/);
   assert.match(keycloakServiceTokenSmoke, /maskedByDefault/);
+  assert.match(domainPublisherComposeSmoke, /BANKING_LAB_LIVE_REPORTING_DOMAIN_PUBLISHER_COMPOSE_PROJECT/);
+  assert.match(domainPublisherComposeSmoke, /reporting-domain-event-publisher/);
+  assert.match(domainPublisherComposeSmoke, /BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_TOPIC/);
+  assert.match(domainPublisherComposeSmoke, /banking\.lab\.reporting-domain-publisher-smoke/);
+  assert.match(domainPublisherComposeSmoke, /LiveReportingDomainEventPublisherComposeSmokeIntegrationTest/);
 });
 
 test("reporting-service API enforces synthetic reporting controls in source and tests", async () => {
@@ -120,6 +127,7 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   const kafkaWorker = await readFile("services/reporting-service/src/main/kotlin/lab/banking/reporting/eventing/ReportingDomainEventPublisherWorker.kt", "utf8");
   const integrationTest = await readFile("services/reporting-service/src/integrationTest/kotlin/lab/banking/reporting/ReportingServiceIntegrationTest.kt", "utf8");
   const kafkaIntegrationTest = await readFile("services/reporting-service/src/integrationTest/kotlin/lab/banking/reporting/ReportingKafkaOutboxPublisherIntegrationTest.kt", "utf8");
+  const liveComposeSmoke = await readFile("services/reporting-service/src/integrationTest/kotlin/lab/banking/reporting/LiveReportingDomainEventPublisherComposeSmokeIntegrationTest.kt", "utf8");
 
   assert.match(service, /Isolation\.SERIALIZABLE/);
   assert.match(service, /requireReason/);
@@ -193,4 +201,10 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(kafkaIntegrationTest, /DEAD_LETTER/);
   assert.match(kafkaIntegrationTest, /next_retry_at/);
   assert.match(kafkaIntegrationTest, /ledgerRowsMutated/);
+  assert.match(liveComposeSmoke, /BANKING_LAB_LIVE_REPORTING_DOMAIN_PUBLISHER_COMPOSE_PROJECT/);
+  assert.match(liveComposeSmoke, /ReportArtifactGenerated/);
+  assert.match(liveComposeSmoke, /reporting-domain-event-publisher/);
+  assert.match(liveComposeSmoke, /observability\.reporting\.publisher/);
+  assert.match(liveComposeSmoke, /published=1/);
+  assert.match(liveComposeSmoke, /deadLettered=0/);
 });

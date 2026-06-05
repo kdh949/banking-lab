@@ -32,6 +32,7 @@
     "test:notification-service:keycloak-service-token": "bash scripts/run-notification-keycloak-service-token-smoke.sh",
     "test:reporting-service:unit": "scripts/run-core-banking-tests.sh :services:reporting-service:test",
     "test:reporting-service:integration": "scripts/run-core-banking-tests.sh :services:reporting-service:integrationTest",
+    "test:reporting-service:domain-publisher-compose": "bash scripts/run-reporting-domain-publisher-compose-smoke.sh",
     "test:reporting-service:keycloak-service-token": "bash scripts/run-reporting-keycloak-service-token-smoke.sh",
     "ledger:integrity-check": "npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --rerun-tasks",
     "dr:multi-instance-drill": "node --experimental-strip-types scripts/run-multi-instance-drill.ts",

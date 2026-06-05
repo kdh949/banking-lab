@@ -21,6 +21,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `V005__reporting_outbox_retry_dead_letter.sql` adds `retry_count`, `next_retry_at`, `error_message`, and `DEAD_LETTER` status support.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Docker Compose platform profile also exposes `reporting-domain-event-publisher`, which uses the same Spring image with the reporting publisher enabled and the API container publisher mode disabled.
+- Live Docker Compose smoke coverage starts PostgreSQL, Redpanda, and `reporting-domain-event-publisher`, inserts a synthetic pending report event, restarts the publisher, and verifies the row reaches `PUBLISHED` with a consumed Redpanda envelope and batch log.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
 - Prometheus also scrapes `reporting-domain-event-publisher:8090` for worker observability.
 - Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service plus a dedicated reporting-domain-event-publisher Deployment with the reporting audience, Redpanda bootstrap settings, and dedicated Flyway table.
@@ -52,6 +53,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Broker-published reporting envelopes carry `sourceService=reporting-service`, `syntheticOnly=true`, aggregate metadata, and payload controls proving `ledgerRowsMutated=false`.
 - The reporting publisher uses an allow-list for reporting event types and Redpanda integration coverage proves `ReportArtifactGenerated` and `ReportArtifactExported` transition from `PENDING` to `PUBLISHED`.
 - Broker failure coverage proves retryable `FAILED` rows keep `published_at` empty, record bounded `error_message`, increment `retry_count`, honor `next_retry_at`, and move to `DEAD_LETTER` at threshold.
+- Live Compose publisher smoke proves the worker can recover a pending row after process restart, publish only the allow-listed `ReportArtifactGenerated` event, and log attempted/published/failed/dead-letter counters.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, `REPORT_ARTIFACT_EXPORTED`, and `REPORT_RETENTION_SWEEP_RUN` audit rows.
@@ -70,6 +72,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingKafkaOutboxPublisherIntegrationTest --rerun-tasks`
+- `npm run test:reporting-service:domain-publisher-compose`
 - `npm run test:reporting-service:keycloak-service-token`
 - `docker compose --profile platform config`
 - `npm run k8s:validate`
@@ -83,7 +86,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 
 - Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, retention lifecycle expiration, and Redpanda-backed domain event publication are implemented.
 - Broker publication and retry/dead-letter state transitions are proven with Redpanda/Testcontainers, and Compose/Kubernetes/Helm worker runtime wiring is structurally validated.
-- Live worker smoke, operator dead-letter remediation screens, and richer backoff policy controls remain future work.
+- Live Compose worker smoke is implemented; live Kubernetes worker rollout, operator dead-letter remediation screens, and richer backoff policy controls remain future work.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
   reporting smokes are present but skipped locally when the reporting E2E URL is
