@@ -7,6 +7,10 @@ banking-lab:
   payment-service:
     core-ledger-command-topic: ${BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC:banking.lab.core-banking.ledger-commands}
     real-payment-network-enabled: false
+    core-banking:
+      http-enabled: ${BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED:true}
+      base-url: ${BANKING_LAB_CORE_BANKING_BASE_URL:http://localhost:8081}
+      service-token: ${BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN:}
 
 spring:
   application:

@@ -56,6 +56,41 @@ data class PaymentInstructionResponse(
     val replayed: Boolean
 )
 
+data class DispatchPaymentLedgerPostingRequest(
+    val requestedBy: String,
+    val reason: String,
+    val deadLetterThreshold: Int = 3
+)
+
+data class PaymentOutboxDispatchResponse(
+    val outboxEventId: String?,
+    val paymentInstructionId: String?,
+    val ledgerTransactionId: String?,
+    val status: String,
+    val retryCount: Int,
+    val syntheticOnly: Boolean = true
+)
+
+data class CoreLedgerPaymentPostingCommand(
+    val paymentInstructionId: String,
+    val debitAccountId: String,
+    val syntheticBillerId: String,
+    val amountMinor: Long,
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val requestedChannel: String = "PAYMENT_SERVICE",
+    val reason: String,
+    val currency: String = "KRW"
+)
+
+data class CoreLedgerPostingResult(
+    val ledgerTransactionId: String
+)
+
+interface CoreLedgerPostingClient {
+    fun postBillPayment(command: CoreLedgerPaymentPostingCommand): CoreLedgerPostingResult
+}
+
 data class PaymentBillerRecord(
     val billerId: String,
     val displayName: String,
@@ -85,7 +120,9 @@ data class PaymentOutboxRecord(
     val eventType: String,
     val idempotencyKey: String,
     val payload: Map<String, Any?>,
-    val status: String
+    val status: String,
+    val retryCount: Int,
+    val errorMessage: String?
 )
 
 data class PaymentIdempotencyRecord(

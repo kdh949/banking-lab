@@ -1,5 +1,6 @@
 package lab.banking.payment.persistence
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -9,6 +10,7 @@ import lab.banking.payment.domain.PaymentIdempotencyRecord
 import lab.banking.payment.domain.PaymentInstructionRecord
 import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionStatus
+import lab.banking.payment.domain.PaymentOutboxRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 
@@ -292,6 +294,62 @@ class PaymentRepository(
             mapOf("instructionId" to instructionId)
         ) { rs, _ -> rs.getString("outbox_event_id") }.firstOrNull()
 
+    fun findNextLedgerPostingOutboxForUpdate(): PaymentOutboxRecord? =
+        jdbc.query(
+            """
+            SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+                   payload_json::text AS payload_json, status, retry_count, error_message
+            FROM payment_outbox_events
+            WHERE event_type = 'PaymentLedgerPostingRequested'
+              AND status IN ('PENDING', 'FAILED')
+              AND (next_retry_at IS NULL OR next_retry_at <= now())
+            ORDER BY created_at ASC, outbox_event_id ASC
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """.trimIndent(),
+            emptyMap<String, Any?>(),
+            this::mapOutbox
+        ).firstOrNull()
+
+    fun markOutboxPublished(outboxEventId: String) {
+        jdbc.update(
+            """
+            UPDATE payment_outbox_events
+            SET status = 'PUBLISHED',
+                published_at = now(),
+                next_retry_at = NULL,
+                error_message = NULL
+            WHERE outbox_event_id = :outboxEventId
+            """.trimIndent(),
+            mapOf("outboxEventId" to outboxEventId)
+        )
+    }
+
+    fun markOutboxFailed(
+        outboxEventId: String,
+        retryCount: Int,
+        errorMessage: String,
+        deadLetter: Boolean
+    ) {
+        jdbc.update(
+            """
+            UPDATE payment_outbox_events
+            SET status = :status,
+                retry_count = :retryCount,
+                next_retry_at = CASE WHEN :deadLetter THEN NULL ELSE now() + interval '5 minutes' END,
+                error_message = :errorMessage
+            WHERE outbox_event_id = :outboxEventId
+            """.trimIndent(),
+            mapOf(
+                "outboxEventId" to outboxEventId,
+                "retryCount" to retryCount,
+                "errorMessage" to errorMessage.take(500),
+                "deadLetter" to deadLetter,
+                "status" to if (deadLetter) "DEAD_LETTER" else "FAILED"
+            )
+        )
+    }
+
     private fun findInstructionBySql(sql: String, instructionId: String): PaymentInstructionRecord? =
         jdbc.query(sql, mapOf("instructionId" to instructionId), this::mapInstruction).firstOrNull()
 
@@ -309,5 +367,21 @@ class PaymentRepository(
             syntheticOnly = rs.getBoolean("synthetic_only"),
             createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapOutbox(rs: ResultSet, rowNum: Int): PaymentOutboxRecord =
+        PaymentOutboxRecord(
+            outboxEventId = rs.getString("outbox_event_id"),
+            aggregateType = rs.getString("aggregate_type"),
+            aggregateId = rs.getString("aggregate_id"),
+            eventType = rs.getString("event_type"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            payload = objectMapper.readValue(
+                rs.getString("payload_json"),
+                object : TypeReference<Map<String, Any?>>() {}
+            ),
+            status = rs.getString("status"),
+            retryCount = rs.getInt("retry_count"),
+            errorMessage = rs.getString("error_message")
         )
 }

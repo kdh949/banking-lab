@@ -16,11 +16,15 @@ This evidence covers the first synthetic Payment Service slice:
 - Event and OpenAPI contracts for payment-to-core-ledger posting requests.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
+- Payment-service outbox dispatcher that locks durable
+  `PaymentLedgerPostingRequested` events, calls a core-banking posting port,
+  records settlement, and marks retry/dead-letter state without real payment
+  network integration.
 
 The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda, a payment-service outbox consumer that calls the core-banking
-posting API, customer/staff screens, autopay, retries/dead-letter workers, and
-staff payment correction maker-checker flows remain future work.
+Kafka/Redpanda, a scheduled/background worker runner around the dispatcher,
+customer/staff screens, autopay, and staff payment correction maker-checker
+flows remain future work.
 
 ## Commands Run
 
@@ -49,9 +53,10 @@ need local file-lock socket and Docker access.
 ## Passing Tests
 
 - `npm run test:payment-service:unit`: pass; payment-service Kotlin compiled
-  with no test sources.
+  with no unit test sources.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
-  ran `PaymentInstructionIntegrationTest`.
+  ran `PaymentInstructionIntegrationTest` and
+  `PaymentOutboxDispatcherIntegrationTest`.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
   idempotent replay, structured API access, and service-role denial.
@@ -97,6 +102,16 @@ now verify the core-banking settlement bridge:
 - `POST /api/ledger/payment-postings` is restricted to `PAYMENT_SERVICE` or
   ops operator roles, and customer-role access is rejected.
 
+`PaymentOutboxDispatcherIntegrationTest` verifies:
+
+- the dispatcher reads the next due `PaymentLedgerPostingRequested` outbox row
+  with row locking and calls the `CoreLedgerPostingClient` port;
+- successful dispatch records `SETTLED` payment state, marks the source outbox
+  row `PUBLISHED`, and emits `PaymentInstructionSettled`;
+- retry failure persists `FAILED`, increments `retry_count`, preserves a stable
+  core ledger idempotency key, and later settles the same outbox event;
+- dead-letter threshold failure marks `DEAD_LETTER` without settlement mutation.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -106,8 +121,8 @@ institution API, or real money path is configured.
 
 ## Remaining Risk
 
-This is still a partial slice. A successful bill payment can now be posted by
-core-banking through the service-to-service ledger posting API, but automatic
-payment-service outbox consumption, Kafka/Redpanda runtime publication, UI/API
-client coverage, autopay scheduling, retry/dead-letter workers, and staff
-correction maker-checker flows are still pending.
+This is still a partial slice. A successful bill payment can now be dispatched
+from durable payment-service outbox state to a core-banking posting port and
+settled idempotently, but Kafka/Redpanda runtime publication, a scheduled worker
+runner, UI/API client coverage, autopay scheduling, and staff correction
+maker-checker flows are still pending.

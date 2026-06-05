@@ -2,8 +2,11 @@ package lab.banking.payment.api
 
 import lab.banking.payment.domain.CancelPaymentInstructionRequest
 import lab.banking.payment.domain.CreatePaymentInstructionRequest
+import lab.banking.payment.domain.DispatchPaymentLedgerPostingRequest
+import lab.banking.payment.domain.PaymentOutboxDispatchResponse
 import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionService
+import lab.banking.payment.domain.PaymentOutboxDispatcherService
 import lab.banking.payment.domain.RecordPaymentSettlementRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -16,7 +19,10 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/payments")
-class PaymentController(private val paymentInstructionService: PaymentInstructionService) {
+class PaymentController(
+    private val paymentInstructionService: PaymentInstructionService,
+    private val paymentOutboxDispatcherService: PaymentOutboxDispatcherService
+) {
     @PostMapping("/instructions")
     fun createInstruction(
         @RequestBody request: CreatePaymentInstructionRequest
@@ -47,4 +53,10 @@ class PaymentController(private val paymentInstructionService: PaymentInstructio
         @RequestBody request: CancelPaymentInstructionRequest
     ): PaymentInstructionResponse =
         paymentInstructionService.cancelInstruction(instructionId, request)
+
+    @PostMapping("/outbox/ledger-postings/dispatch-next")
+    fun dispatchNextLedgerPosting(
+        @RequestBody request: DispatchPaymentLedgerPostingRequest
+    ): ResponseEntity<PaymentOutboxDispatchResponse> =
+        ResponseEntity.ok(paymentOutboxDispatcherService.dispatchNextLedgerPosting(request))
 }
