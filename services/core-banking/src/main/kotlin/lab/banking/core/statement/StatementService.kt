@@ -138,9 +138,27 @@ class StatementService(
         val account = accountRow(accountId)
         val actor = authorizeCustomerOrStaffForCustomer(account.customerId, reason)
         val balanceAsOf = accountSignedPostingSum(accountId, date)
-        val hash = sha256("${account.accountId}:${account.customerId}:$date:$balanceAsOf:${account.currency}")
-        val certificate = BalanceCertificateDto(
-            certificateId = "BALCERT-${hash.take(16).uppercase()}",
+        val source = balanceCertificateSource(accountId, date)
+        val hash = sha256("${account.accountId}:${account.customerId}:$date:$balanceAsOf:${account.currency}:${source.ledgerHash}")
+        val certificateId = "BALCERT-${hash.take(16).uppercase()}"
+        val auditEventId = appendReadAudit(
+            actor = actor,
+            eventType = "BALANCE_CERTIFICATE_VIEW",
+            screenId = "ACC-102",
+            businessReferenceId = certificateId,
+            customerId = account.customerId,
+            accountId = account.accountId,
+            reason = reason,
+            payload = mapOf(
+                "date" to date.toString(),
+                "certificateId" to certificateId,
+                "sourcePostingCount" to source.postingCount,
+                "sourceLedgerHash" to source.ledgerHash,
+                "syntheticOnly" to true
+            )
+        )
+        val snapshot = persistBalanceCertificateSnapshot(
+            certificateId = certificateId,
             accountId = account.accountId,
             customerId = account.customerId,
             currency = account.currency,
@@ -148,23 +166,11 @@ class StatementService(
             balanceAsOfMinor = balanceAsOf,
             currentLedgerBalanceMinor = account.currentLedgerBalanceMinor,
             currentAvailableBalanceMinor = account.currentAvailableBalanceMinor,
-            deterministicInputHash = hash
+            deterministicInputHash = hash,
+            source = source,
+            auditEventId = auditEventId
         )
-        appendReadAudit(
-            actor = actor,
-            eventType = "BALANCE_CERTIFICATE_VIEW",
-            screenId = "ACC-102",
-            businessReferenceId = certificate.certificateId,
-            customerId = account.customerId,
-            accountId = account.accountId,
-            reason = reason,
-            payload = mapOf(
-                "date" to date.toString(),
-                "certificateId" to certificate.certificateId,
-                "syntheticOnly" to true
-            )
-        )
-        return certificate
+        return snapshot.toDto()
     }
 
     @Transactional
@@ -361,6 +367,156 @@ class StatementService(
             Long::class.java
         ) ?: 0L
 
+    private fun balanceCertificateSource(accountId: String, date: LocalDate): BalanceCertificateSource {
+        val rows = jdbc.query(
+            """
+            SELECT lp.ledger_posting_id,
+                   lp.ledger_transaction_id,
+                   lt.business_date,
+                   lp.direction,
+                   lp.amount_minor,
+                   lp.currency,
+                   lp.posting_type
+            FROM ledger_postings lp
+            JOIN ledger_transactions lt
+              ON lt.ledger_transaction_id = lp.ledger_transaction_id
+            WHERE lp.account_id = :accountId
+              AND lt.business_date <= :date
+            ORDER BY lt.business_date, lp.ledger_transaction_id, lp.ledger_posting_id
+            """.trimIndent(),
+            mapOf("accountId" to accountId, "date" to date)
+        ) { rs, _ ->
+            CertificateSourcePosting(
+                ledgerPostingId = rs.getString("ledger_posting_id"),
+                ledgerTransactionId = rs.getString("ledger_transaction_id"),
+                businessDate = rs.getObject("business_date", LocalDate::class.java),
+                direction = rs.getString("direction"),
+                amountMinor = rs.getLong("amount_minor"),
+                currency = rs.getString("currency").trim(),
+                postingType = rs.getString("posting_type")
+            )
+        }
+        val fingerprint = rows.joinToString("\n") {
+            listOf(
+                it.ledgerPostingId,
+                it.ledgerTransactionId,
+                it.businessDate,
+                it.direction,
+                it.amountMinor,
+                it.currency,
+                it.postingType
+            ).joinToString("|")
+        }.ifEmpty { "no-postings:$accountId:$date" }
+        return BalanceCertificateSource(
+            postingCount = rows.size,
+            lastBusinessDate = rows.maxOfOrNull { it.businessDate },
+            ledgerHash = sha256(fingerprint)
+        )
+    }
+
+    private fun persistBalanceCertificateSnapshot(
+        certificateId: String,
+        accountId: String,
+        customerId: String,
+        currency: String,
+        date: LocalDate,
+        balanceAsOfMinor: Long,
+        currentLedgerBalanceMinor: Long,
+        currentAvailableBalanceMinor: Long,
+        deterministicInputHash: String,
+        source: BalanceCertificateSource,
+        auditEventId: String
+    ): BalanceCertificateSnapshot =
+        jdbc.queryForObject(
+            """
+            INSERT INTO balance_certificate_snapshots (
+              certificate_id,
+              account_id,
+              customer_id,
+              currency,
+              as_of_date,
+              balance_as_of_minor,
+              current_ledger_balance_minor,
+              current_available_balance_minor,
+              deterministic_input_hash,
+              source_posting_count,
+              source_last_business_date,
+              source_ledger_hash,
+              first_audit_event_id,
+              last_audit_event_id,
+              synthetic_only
+            )
+            VALUES (
+              :certificateId,
+              :accountId,
+              :customerId,
+              :currency,
+              :asOfDate,
+              :balanceAsOfMinor,
+              :currentLedgerBalanceMinor,
+              :currentAvailableBalanceMinor,
+              :deterministicInputHash,
+              :sourcePostingCount,
+              :sourceLastBusinessDate,
+              :sourceLedgerHash,
+              :auditEventId,
+              :auditEventId,
+              true
+            )
+            ON CONFLICT (certificate_id) DO UPDATE
+            SET last_viewed_at = now(),
+                last_audit_event_id = EXCLUDED.last_audit_event_id
+            RETURNING certificate_id,
+                      account_id,
+                      customer_id,
+                      currency,
+                      as_of_date,
+                      balance_as_of_minor,
+                      current_ledger_balance_minor,
+                      current_available_balance_minor,
+                      deterministic_input_hash,
+                      source_posting_count,
+                      source_last_business_date,
+                      source_ledger_hash,
+                      synthetic_only,
+                      created_at,
+                      last_viewed_at
+            """.trimIndent(),
+            mapOf(
+                "certificateId" to certificateId,
+                "accountId" to accountId,
+                "customerId" to customerId,
+                "currency" to currency,
+                "asOfDate" to date,
+                "balanceAsOfMinor" to balanceAsOfMinor,
+                "currentLedgerBalanceMinor" to currentLedgerBalanceMinor,
+                "currentAvailableBalanceMinor" to currentAvailableBalanceMinor,
+                "deterministicInputHash" to deterministicInputHash,
+                "sourcePostingCount" to source.postingCount,
+                "sourceLastBusinessDate" to source.lastBusinessDate,
+                "sourceLedgerHash" to source.ledgerHash,
+                "auditEventId" to auditEventId
+            )
+        ) { rs, _ ->
+            BalanceCertificateSnapshot(
+                certificateId = rs.getString("certificate_id"),
+                accountId = rs.getString("account_id"),
+                customerId = rs.getString("customer_id"),
+                currency = rs.getString("currency").trim(),
+                date = rs.getObject("as_of_date", LocalDate::class.java),
+                balanceAsOfMinor = rs.getLong("balance_as_of_minor"),
+                currentLedgerBalanceMinor = rs.getLong("current_ledger_balance_minor"),
+                currentAvailableBalanceMinor = rs.getLong("current_available_balance_minor"),
+                deterministicInputHash = rs.getString("deterministic_input_hash"),
+                sourcePostingCount = rs.getInt("source_posting_count"),
+                sourceLastBusinessDate = rs.getObject("source_last_business_date", LocalDate::class.java),
+                sourceLedgerHash = rs.getString("source_ledger_hash"),
+                syntheticOnly = rs.getBoolean("synthetic_only"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+                lastViewedAt = rs.getObject("last_viewed_at", OffsetDateTime::class.java)
+            )
+        } ?: error("balance certificate snapshot was not returned")
+
     private fun primaryCurrency(customerId: String): String =
         jdbc.queryForObject(
             "SELECT currency FROM accounts WHERE customer_id = :customerId ORDER BY account_id LIMIT 1",
@@ -388,7 +544,7 @@ class StatementService(
         accountId: String?,
         reason: String?,
         payload: Map<String, Any?>
-    ) {
+    ): String =
         auditEvents.append(
             eventType = eventType,
             actorType = actor.actorType,
@@ -401,7 +557,6 @@ class StatementService(
             reason = reason,
             payload = payload
         )
-    }
 
     private fun signedAmount(direction: PostingDirection, amountMinor: Long): Long =
         if (direction == PostingDirection.DEBIT) -amountMinor else amountMinor
@@ -446,6 +601,59 @@ class StatementService(
         val currentLedgerBalanceMinor: Long,
         val currentAvailableBalanceMinor: Long
     )
+
+    private data class CertificateSourcePosting(
+        val ledgerPostingId: String,
+        val ledgerTransactionId: String,
+        val businessDate: LocalDate,
+        val direction: String,
+        val amountMinor: Long,
+        val currency: String,
+        val postingType: String
+    )
+
+    private data class BalanceCertificateSource(
+        val postingCount: Int,
+        val lastBusinessDate: LocalDate?,
+        val ledgerHash: String
+    )
+
+    private data class BalanceCertificateSnapshot(
+        val certificateId: String,
+        val accountId: String,
+        val customerId: String,
+        val currency: String,
+        val date: LocalDate,
+        val balanceAsOfMinor: Long,
+        val currentLedgerBalanceMinor: Long,
+        val currentAvailableBalanceMinor: Long,
+        val deterministicInputHash: String,
+        val sourcePostingCount: Int,
+        val sourceLastBusinessDate: LocalDate?,
+        val sourceLedgerHash: String,
+        val syntheticOnly: Boolean,
+        val createdAt: OffsetDateTime,
+        val lastViewedAt: OffsetDateTime
+    ) {
+        fun toDto(): BalanceCertificateDto =
+            BalanceCertificateDto(
+                certificateId = certificateId,
+                accountId = accountId,
+                customerId = customerId,
+                currency = currency,
+                date = date,
+                balanceAsOfMinor = balanceAsOfMinor,
+                currentLedgerBalanceMinor = currentLedgerBalanceMinor,
+                currentAvailableBalanceMinor = currentAvailableBalanceMinor,
+                deterministicInputHash = deterministicInputHash,
+                sourcePostingCount = sourcePostingCount,
+                sourceLastBusinessDate = sourceLastBusinessDate,
+                sourceLedgerHash = sourceLedgerHash,
+                snapshotCreatedAt = createdAt,
+                lastViewedAt = lastViewedAt,
+                syntheticOnly = syntheticOnly
+            )
+    }
 
     private companion object {
         val STAFF_READ_ROLES = setOf(
