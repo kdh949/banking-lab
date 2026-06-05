@@ -6,8 +6,13 @@ import java.util.Properties
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import lab.banking.payment.domain.CancelPaymentInstructionRequest
+import lab.banking.payment.domain.CoreLedgerPaymentPostingCommand
+import lab.banking.payment.domain.CoreLedgerPostingClient
+import lab.banking.payment.domain.CoreLedgerPostingResult
 import lab.banking.payment.domain.CreatePaymentInstructionRequest
+import lab.banking.payment.domain.DispatchPaymentLedgerPostingRequest
 import lab.banking.payment.domain.PaymentInstructionService
+import lab.banking.payment.domain.PaymentOutboxDispatcherService
 import lab.banking.payment.eventing.PaymentKafkaPublisherConfig
 import lab.banking.payment.eventing.PaymentOutboxKafkaEnvelope
 import lab.banking.payment.eventing.PaymentOutboxPublisherPort
@@ -24,6 +29,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -33,11 +40,17 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.redpanda.RedpandaContainer
 import org.testcontainers.utility.DockerImageName
 
-@SpringBootTest
+@SpringBootTest(properties = ["banking-lab.payment-service.core-banking.http-enabled=false"])
 @Testcontainers
 class PaymentKafkaOutboxPublisherIntegrationTest {
     @Autowired
     lateinit var paymentInstructionService: PaymentInstructionService
+
+    @Autowired
+    lateinit var dispatcherService: PaymentOutboxDispatcherService
+
+    @Autowired
+    lateinit var coreLedgerPostingClient: PublisherCoreLedgerPostingClient
 
     @Autowired
     lateinit var publisher: PaymentOutboxPublisherPort
@@ -65,6 +78,7 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
             RESTART IDENTITY CASCADE
             """.trimIndent()
         )
+        coreLedgerPostingClient.reset()
     }
 
     @Test
@@ -110,6 +124,94 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
         assertEquals(false, envelope.payload["directLedgerWrite"])
     }
 
+    @Test
+    fun `Redpanda publisher emits payment failure retry and dead-letter lifecycle domain events`() {
+        val topic = uniqueTopic("banking-lab-payment-lifecycle-events")
+        createTopic(topic)
+        val retryable = paymentInstructionService.createInstruction(sampleCreate("PAY-KAFKA-LIFECYCLE-RETRY-001"))
+        coreLedgerPostingClient.failOnce("synthetic core ledger unavailable")
+        val failedDispatch = dispatcherService.dispatchNextLedgerPosting(dispatchRequest(deadLetterThreshold = 3))
+        val deadLettered = paymentInstructionService.createInstruction(sampleCreate("PAY-KAFKA-LIFECYCLE-DEAD-001"))
+        coreLedgerPostingClient.failOnce("synthetic core ledger hard failure")
+        val deadLetterDispatch = dispatcherService.dispatchNextLedgerPosting(dispatchRequest(deadLetterThreshold = 1))
+
+        assertEquals("FAILED", failedDispatch.status)
+        assertEquals("DEAD_LETTER", deadLetterDispatch.status)
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionFailed' AND status = 'PENDING'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionRetryScheduled' AND status = 'PENDING'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionDeadLettered' AND status = 'PENDING'"))
+
+        val result = publisher.publishAvailable(
+            PaymentKafkaPublisherConfig(
+                bootstrapServers = redpanda.bootstrapServers,
+                topic = topic,
+                clientId = "payment-kafka-lifecycle-publisher-${UUID.randomUUID()}"
+            ),
+            limit = 10
+        )
+
+        assertEquals(3, result.attempted)
+        assertEquals(3, result.published)
+        assertEquals(0, result.failed)
+        assertEquals(0, result.deadLettered)
+        assertEquals(
+            setOf(
+                "PaymentInstructionFailed",
+                "PaymentInstructionRetryScheduled",
+                "PaymentInstructionDeadLettered"
+            ),
+            result.results.map { it.eventType }.toSet()
+        )
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionFailed' AND status = 'PUBLISHED'"))
+        assertEquals(
+            1,
+            countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionRetryScheduled' AND status = 'PUBLISHED'")
+        )
+        assertEquals(
+            1,
+            countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionDeadLettered' AND status = 'PUBLISHED'")
+        )
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentLedgerPostingRequested' AND status = 'FAILED'"))
+        assertEquals(
+            1,
+            countRows("payment_outbox_events WHERE event_type = 'PaymentLedgerPostingRequested' AND status = 'DEAD_LETTER'")
+        )
+
+        val envelopes = consume(topic, "payment-kafka-lifecycle-publisher-test-${UUID.randomUUID()}", expectedCount = 3)
+            .associateBy { it.eventType }
+        val failedEnvelope = envelopes["PaymentInstructionFailed"] ?: error("missing PaymentInstructionFailed envelope")
+        val retryEnvelope = envelopes["PaymentInstructionRetryScheduled"]
+            ?: error("missing PaymentInstructionRetryScheduled envelope")
+        val deadLetterEnvelope = envelopes["PaymentInstructionDeadLettered"]
+            ?: error("missing PaymentInstructionDeadLettered envelope")
+
+        assertLifecycleEnvelope(
+            envelope = failedEnvelope,
+            instructionId = retryable.item.paymentInstructionId,
+            status = "FAILED",
+            retryable = true,
+            retryCount = 1
+        )
+        assertEquals("PAYMENT_LEDGER_DISPATCH_FAILED", failedEnvelope.payload["failureCode"])
+        assertLifecycleEnvelope(
+            envelope = retryEnvelope,
+            instructionId = retryable.item.paymentInstructionId,
+            status = "RETRY_SCHEDULED",
+            retryable = null,
+            retryCount = 1
+        )
+        assertNotNull(retryEnvelope.payload["nextRetryAt"])
+        assertLifecycleEnvelope(
+            envelope = deadLetterEnvelope,
+            instructionId = deadLettered.item.paymentInstructionId,
+            status = "DEAD_LETTER",
+            retryable = false,
+            retryCount = 1
+        )
+        assertEquals("PAYMENT_LEDGER_DISPATCH_DEAD_LETTER", deadLetterEnvelope.payload["failureCode"])
+        assertEquals(1, payloadInt(deadLetterEnvelope, "deadLetterThreshold"))
+    }
+
     private fun sampleCreate(idempotencyKey: String): CreatePaymentInstructionRequest =
         CreatePaymentInstructionRequest(
             customerId = "CUS-PAY-KAFKA-001",
@@ -121,6 +223,13 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
             requestedBy = "customer01",
             requestedChannel = "CUSTOMER_WEB",
             reason = "Synthetic utility bill payment for Kafka publisher"
+        )
+
+    private fun dispatchRequest(deadLetterThreshold: Int): DispatchPaymentLedgerPostingRequest =
+        DispatchPaymentLedgerPostingRequest(
+            requestedBy = "payment-service-domain-event-publisher-test",
+            reason = "Synthetic payment lifecycle publisher coverage",
+            deadLetterThreshold = deadLetterThreshold
         )
 
     private fun createTopic(topic: String) {
@@ -135,20 +244,30 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
     }
 
     private fun consumeSingle(topic: String, groupId: String): PaymentOutboxKafkaEnvelope {
+        return consume(topic, groupId, expectedCount = 1).single()
+    }
+
+    private fun consume(topic: String, groupId: String, expectedCount: Int): List<PaymentOutboxKafkaEnvelope> {
+        val envelopes = mutableListOf<PaymentOutboxKafkaEnvelope>()
         KafkaConsumer<String, String>(consumerProperties(groupId)).use { consumer ->
             consumer.subscribe(listOf(topic))
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-            while (System.nanoTime() < deadline) {
+            while (System.nanoTime() < deadline && envelopes.size < expectedCount) {
                 val records = consumer.poll(Duration.ofMillis(250))
                 if (!records.isEmpty) {
-                    assertEquals(1, records.count())
-                    val record = records.first()
-                    assertTrue(record.headers().any { it.key() == "syntheticOnly" })
-                    return objectMapper.readValue(record.value(), PaymentOutboxKafkaEnvelope::class.java)
+                    records.forEach { record ->
+                        assertTrue(record.headers().any { it.key() == "syntheticOnly" })
+                        envelopes += objectMapper.readValue(record.value(), PaymentOutboxKafkaEnvelope::class.java)
+                    }
                 }
             }
         }
-        throw AssertionError("payment Kafka publisher did not produce a record on $topic")
+        if (envelopes.size != expectedCount) {
+            throw AssertionError(
+                "payment Kafka publisher produced ${envelopes.size} record(s) on $topic, expected $expectedCount"
+            )
+        }
+        return envelopes
     }
 
     private fun consumerProperties(groupId: String): Properties =
@@ -165,8 +284,66 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM $tableExpression", emptyMap<String, Any?>(), Int::class.java) ?: 0
 
+    private fun assertLifecycleEnvelope(
+        envelope: PaymentOutboxKafkaEnvelope,
+        instructionId: String,
+        status: String,
+        retryable: Boolean?,
+        retryCount: Int
+    ) {
+        assertNotNull(envelope.outboxEventId)
+        assertEquals("payment_instruction", envelope.aggregateType)
+        assertEquals(instructionId, envelope.aggregateId)
+        assertEquals(true, envelope.headers["syntheticOnly"])
+        assertEquals("payment-service", envelope.headers["sourceService"])
+        assertEquals(instructionId, envelope.payload["paymentInstructionId"])
+        assertEquals(status, envelope.payload["status"])
+        assertEquals(retryCount, payloadInt(envelope, "retryCount"))
+        if (retryable != null) {
+            assertEquals(retryable, envelope.payload["retryable"])
+        }
+        assertEquals(true, envelope.payload["syntheticOnly"])
+        assertEquals(false, envelope.payload["directLedgerWrite"])
+        assertEquals(false, envelope.payload["realPaymentNetworkUsed"])
+        assertEquals(false, envelope.payload["realFinancialInstitutionApiUsed"])
+    }
+
+    private fun payloadInt(envelope: PaymentOutboxKafkaEnvelope, field: String): Int =
+        (envelope.payload[field] as Number).toInt()
+
     private fun uniqueTopic(prefix: String): String =
         "$prefix-${UUID.randomUUID().toString().lowercase()}"
+
+    @TestConfiguration
+    class TestCoreLedgerPostingClientConfig {
+        @Bean
+        fun coreLedgerPostingClient(): PublisherCoreLedgerPostingClient = PublisherCoreLedgerPostingClient()
+    }
+
+    class PublisherCoreLedgerPostingClient : CoreLedgerPostingClient {
+        val commands: MutableList<CoreLedgerPaymentPostingCommand> = mutableListOf()
+        var nextResult: CoreLedgerPostingResult = CoreLedgerPostingResult("TX-PAY-KAFKA-PUBLISHER-DEFAULT")
+        private var nextError: RuntimeException? = null
+
+        override fun postBillPayment(command: CoreLedgerPaymentPostingCommand): CoreLedgerPostingResult {
+            commands += command
+            nextError?.let { error ->
+                nextError = null
+                throw error
+            }
+            return nextResult
+        }
+
+        fun failOnce(message: String) {
+            nextError = IllegalStateException(message)
+        }
+
+        fun reset() {
+            commands.clear()
+            nextResult = CoreLedgerPostingResult("TX-PAY-KAFKA-PUBLISHER-DEFAULT")
+            nextError = null
+        }
+    }
 
     companion object {
         @Container
