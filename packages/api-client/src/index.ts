@@ -1524,6 +1524,16 @@ export interface ReportArtifactListResponse {
   readonly syntheticOnly: boolean;
 }
 
+export interface ReportArtifactExportResponse {
+  readonly auditEventId: string;
+  readonly packageName: string;
+  readonly contentSha256: string;
+  readonly exportFormat: string;
+  readonly item: ReportArtifactDto;
+  readonly packageContent: Record<string, unknown>;
+  readonly syntheticOnly: boolean;
+}
+
 export interface ParameterVersionDto {
   readonly namespace: string;
   readonly parameterVersionId: string;
@@ -2716,6 +2726,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
           reason: filters.reason,
           ...(filters.reportType ? { reportType: filters.reportType } : {})
         },
+        options.bearerToken
+      );
+    },
+
+    exportReportArtifact(artifactId: string, reason: string) {
+      return request<ReportArtifactExportResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/reports/artifacts/${encodeURIComponent(artifactId)}/export`,
+        { reason },
         options.bearerToken
       );
     },

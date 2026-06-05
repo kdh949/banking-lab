@@ -7,6 +7,7 @@ import {
   type AdminPlatformSummaryResponse,
   type AdminSystemStatusResponse,
   type ReportArtifactDto,
+  type ReportArtifactExportResponse,
   type ReportDefinitionDto,
   type NotificationPreferenceDto,
   type NotificationTemplateDto
@@ -49,6 +50,7 @@ type ReportingAdminState =
       readonly status: "loaded";
       readonly definitions: readonly ReportDefinitionDto[];
       readonly artifact: ReportArtifactDto;
+      readonly exported: ReportArtifactExportResponse;
       readonly artifacts: readonly ReportArtifactDto[];
     }
   | { readonly status: "failed"; readonly message: string };
@@ -168,19 +170,24 @@ export function ApiBackedAdminPanel() {
         reason: "API-backed reporting artifact generation",
         idempotencyKey: "RPT-ADMIN-UI-SMOKE-001"
       });
+      const exported = await client.exportReportArtifact(
+        generated.item.artifactId,
+        "API-backed reporting artifact export package review"
+      );
       const artifacts = await client.reportArtifacts({
         reason: "API-backed reporting artifact list review",
         reportType: "EVIDENCE_COVERAGE"
       });
 
-      return { catalog, generated, artifacts };
+      return { catalog, generated, exported, artifacts };
     })()
-      .then(({ catalog, generated, artifacts }) => {
+      .then(({ catalog, generated, exported, artifacts }) => {
         if (!cancelled) {
           setReportingState({
             status: "loaded",
             definitions: catalog.items,
             artifact: generated.item,
+            exported,
             artifacts: artifacts.items
           });
         }
@@ -456,6 +463,10 @@ export function ApiBackedAdminPanel() {
             <div>
               <dt>Artifact Checksum</dt>
               <dd>{`${reportingState.artifact.exportFormat}:${reportingState.artifact.contentSha256.slice(0, 12)}`}</dd>
+            </div>
+            <div>
+              <dt>Export Package</dt>
+              <dd>{`${reportingState.exported.packageName}:${reportingState.exported.contentSha256.slice(0, 12)}`}</dd>
             </div>
             <div>
               <dt>Retention</dt>

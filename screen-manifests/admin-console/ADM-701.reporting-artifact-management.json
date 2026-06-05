@@ -14,7 +14,7 @@
   "audit": {
     "enabled": true,
     "reasonRequired": true,
-    "eventTypes": ["REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_GENERATE_REPLAYED", "REPORT_ARTIFACT_LIST_VIEW"],
+    "eventTypes": ["REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_GENERATE_REPLAYED", "REPORT_ARTIFACT_LIST_VIEW", "REPORT_ARTIFACT_EXPORTED"],
     "piiAccess": false,
     "maskingPolicy": "MASK_REPORT_METADATA"
   },
@@ -71,7 +71,13 @@
       "label": "List Report Artifacts",
       "type": "inquiry",
       "target": "GET /api/reports/artifacts"
+    },
+    {
+      "id": "export-report-artifact",
+      "label": "Export Report Artifact",
+      "type": "inquiry",
+      "target": "GET /api/reports/artifacts/{artifactId}/export"
     }
   ],
-  "postActions": ["createAuditEvent", "persistRenderedSyntheticArtifact", "preserveMaskedByDefault", "storeContentSha256", "applySyntheticRetentionPolicy"]
+  "postActions": ["createAuditEvent", "persistRenderedSyntheticArtifact", "preserveMaskedByDefault", "storeContentSha256", "applySyntheticRetentionPolicy", "packageSyntheticJsonExport"]
 }

@@ -90,6 +90,8 @@ test("admin console loads reporting catalog and artifact controls when configure
   await expect(panel).toContainText("reporting controls loaded", { timeout: 15_000 });
   await expect(panel).toContainText("EVIDENCE_COVERAGE");
   await expect(panel).toContainText("masked by default");
+  await expect(panel).toContainText("Export Package");
+  await expect(panel).toContainText(".json");
   await expect(panel).toContainText("RPT-");
 });
 

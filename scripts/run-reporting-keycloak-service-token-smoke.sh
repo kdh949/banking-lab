@@ -133,6 +133,10 @@ ARTIFACT_ID="$(
     if (item.requestedRole !== "REPORTING_ANALYST") failures.push(`unexpected requestedRole ${item.requestedRole}`);
     if (item.maskedByDefault !== true) failures.push("artifact is not maskedByDefault");
     if (item.syntheticOnly !== true) failures.push("artifact is not syntheticOnly");
+    if (item.artifactContent?.syntheticOnly !== true) failures.push("artifact content is not syntheticOnly");
+    if (!/^[a-f0-9]{64}$/.test(String(item.contentSha256 || ""))) failures.push(`unexpected contentSha256 ${item.contentSha256}`);
+    if (item.retentionPolicy !== "SYNTHETIC_7Y") failures.push(`unexpected retentionPolicy ${item.retentionPolicy}`);
+    if (item.exportFormat !== "JSON") failures.push(`unexpected exportFormat ${item.exportFormat}`);
     if (!String(item.artifactPath || "").includes("/audit_summary-")) failures.push(`unexpected artifactPath ${item.artifactPath}`);
     if (failures.length > 0) {
       console.error(`${failures.join("; ")}: ${JSON.stringify(response)}`);
@@ -155,9 +159,34 @@ ARTIFACTS_RESPONSE="${ARTIFACTS_RESPONSE}" ARTIFACT_ID="${ARTIFACT_ID}" node -e 
   if (!String(response.auditEventId || "").startsWith("RPA-")) failures.push(`unexpected artifact list audit id ${response.auditEventId}`);
   if (!item) failures.push(`generated artifact ${process.env.ARTIFACT_ID} was not listed`);
   if (item && item.maskedByDefault !== true) failures.push("listed artifact is not maskedByDefault");
+  if (item && !/^[a-f0-9]{64}$/.test(String(item.contentSha256 || ""))) failures.push(`listed artifact has unexpected contentSha256 ${item.contentSha256}`);
   if (failures.length > 0) {
     console.error(`${failures.join("; ")}: ${JSON.stringify(response)}`);
     process.exit(1);
   }
   console.log(`Reporting artifact list accepted Keycloak REPORTING_ANALYST token: ${process.env.ARTIFACT_ID}`);
+'
+
+EXPORT_RESPONSE="$(
+  curl -fsS "${REPORTING_BASE_URL}/api/reports/artifacts/${ARTIFACT_ID}/export?reason=reporting-keycloak-service-smoke-export" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}"
+)"
+EXPORT_RESPONSE="${EXPORT_RESPONSE}" ARTIFACT_ID="${ARTIFACT_ID}" node -e '
+  const response = JSON.parse(process.env.EXPORT_RESPONSE || "{}");
+  const failures = [];
+  if (response.syntheticOnly !== true) failures.push("export response is not syntheticOnly");
+  if (!String(response.auditEventId || "").startsWith("RPA-")) failures.push(`unexpected export audit id ${response.auditEventId}`);
+  if (!String(response.packageName || "").endsWith(".json")) failures.push(`unexpected packageName ${response.packageName}`);
+  if (!/^[a-f0-9]{64}$/.test(String(response.contentSha256 || ""))) failures.push(`unexpected export contentSha256 ${response.contentSha256}`);
+  if (response.exportFormat !== "JSON") failures.push(`unexpected exportFormat ${response.exportFormat}`);
+  if (response.item?.artifactId !== process.env.ARTIFACT_ID) failures.push(`unexpected exported artifact ${response.item?.artifactId}`);
+  if (response.packageContent?.syntheticOnly !== true) failures.push("export package is not syntheticOnly");
+  if (response.packageContent?.controls?.downloadSimulationOnly !== true) failures.push("export package is not marked as download simulation");
+  if (response.packageContent?.controls?.ledgerRowsMutated !== false) failures.push("export package does not prove no ledger mutation");
+  if (response.packageContent?.artifactContent?.syntheticOnly !== true) failures.push("embedded artifact content is not syntheticOnly");
+  if (failures.length > 0) {
+    console.error(`${failures.join("; ")}: ${JSON.stringify(response)}`);
+    process.exit(1);
+  }
+  console.log(`Reporting artifact export accepted Keycloak REPORTING_ANALYST token: ${process.env.ARTIFACT_ID}`);
 '

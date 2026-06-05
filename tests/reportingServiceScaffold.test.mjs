@@ -47,6 +47,8 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(keycloakServiceTokenSmoke, /reporting-service-api audience/);
   assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/catalog/);
   assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/artifacts/);
+  assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/artifacts\/\$\{ARTIFACT_ID\}\/export/);
+  assert.match(keycloakServiceTokenSmoke, /downloadSimulationOnly/);
   assert.match(keycloakServiceTokenSmoke, /maskedByDefault/);
 });
 
@@ -61,9 +63,12 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(service, /requireReason/);
   assert.match(service, /existingArtifact/);
   assert.match(service, /renderArtifactContent/);
+  assert.match(service, /exportArtifact/);
+  assert.match(service, /REPORT_ARTIFACT_EXPORTED/);
   assert.match(service, /sha256/);
   assert.match(service, /REPORT_GENERATED/);
   assert.match(models, /REPORTING_POLICY_REASON_REQUIRED/);
+  assert.match(models, /ReportArtifactExportResponse/);
   assert.match(models, /artifactContent/);
   assert.match(models, /contentSha256/);
   assert.match(models, /maskedByDefault/);
@@ -77,6 +82,8 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(integrationTest, /REPORTING_POLICY_REASON_REQUIRED/);
   assert.match(integrationTest, /RPT-IT-001/);
   assert.match(integrationTest, /contentSha256/);
+  assert.match(integrationTest, /\/export/);
+  assert.match(integrationTest, /downloadSimulationOnly/);
   assert.match(integrationTest, /SYNTHETIC_7Y/);
   assert.match(integrationTest, /reporting_access_audit_events/);
 });

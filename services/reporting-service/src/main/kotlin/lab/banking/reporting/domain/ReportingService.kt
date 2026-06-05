@@ -129,6 +129,37 @@ class ReportingService(
         return ReportArtifactListResponse(auditEventId = auditEventId, items = items)
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun exportArtifact(artifactId: String, reason: String?, principal: ReportingPrincipal): ReportArtifactExportResponse {
+        val viewReason = requireReason(reason)
+        val artifact = repository.artifactOrNull(requireField(artifactId, "artifactId"))
+            ?: throw ReportingErrors.notFound("report artifact not found: $artifactId")
+        val packageName = "${artifact.artifactId}-${artifact.reportType.lowercase()}.$EXPORT_FORMAT_EXTENSION"
+        val packageContent = exportPackageContent(artifact, packageName)
+        val auditEventId = appendAudit(
+            eventType = "REPORT_ARTIFACT_EXPORTED",
+            principal = principal,
+            reason = viewReason,
+            reportType = artifact.reportType,
+            artifactId = artifact.artifactId,
+            payload = mapOf(
+                "artifactId" to artifact.artifactId,
+                "packageName" to packageName,
+                "contentSha256" to artifact.contentSha256,
+                "exportFormat" to artifact.exportFormat,
+                "syntheticOnly" to true
+            )
+        )
+        return ReportArtifactExportResponse(
+            auditEventId = auditEventId,
+            packageName = packageName,
+            contentSha256 = artifact.contentSha256,
+            exportFormat = artifact.exportFormat,
+            item = artifact,
+            packageContent = packageContent
+        )
+    }
+
     private fun appendAudit(
         eventType: String,
         principal: ReportingPrincipal,
@@ -235,6 +266,29 @@ class ReportingService(
             )
         }
 
+    private fun exportPackageContent(artifact: ReportArtifactDto, packageName: String): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to 1,
+            "packageName" to packageName,
+            "artifactId" to artifact.artifactId,
+            "reportType" to artifact.reportType,
+            "exportFormat" to artifact.exportFormat,
+            "contentSha256" to artifact.contentSha256,
+            "exportedAt" to OffsetDateTime.now(ZoneOffset.UTC).toString(),
+            "retentionPolicy" to artifact.retentionPolicy,
+            "retentionUntil" to artifact.retentionUntil?.toString(),
+            "syntheticOnly" to true,
+            "maskedByDefault" to artifact.maskedByDefault,
+            "controls" to linkedMapOf(
+                "realPiiUsed" to false,
+                "realMoneyUsed" to false,
+                "externalFilingSubmitted" to false,
+                "ledgerRowsMutated" to false,
+                "downloadSimulationOnly" to true
+            ),
+            "artifactContent" to artifact.artifactContent
+        )
+
     private fun metric(name: String, value: Any?): Map<String, Any?> =
         linkedMapOf("name" to name, "value" to value)
 
@@ -268,6 +322,7 @@ class ReportingService(
     private companion object {
         val ALLOWED_GENERATE_ROLES = setOf("AUDITOR", "COMPLIANCE_MANAGER", "OPS_MANAGER", "REPORTING_ANALYST")
         const val EXPORT_FORMAT = "JSON"
+        const val EXPORT_FORMAT_EXTENSION = "json"
         const val RETENTION_POLICY = "SYNTHETIC_7Y"
         const val RETENTION_YEARS = 7L
     }

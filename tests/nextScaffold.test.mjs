@@ -102,12 +102,16 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(panel, /reportCatalog/);
   assert.match(panel, /generateReportArtifact/);
   assert.match(panel, /reportArtifacts/);
+  assert.match(panel, /exportReportArtifact/);
+  assert.match(panel, /Export Package/);
   assert.match(panel, /contentSha256/);
   assert.match(panel, /retentionPolicy/);
   assert.match(panel, /data-testid="api-backed-reporting-admin"/);
   assert.match(client, /ReportCatalogResponse/);
   assert.match(client, /artifactContent/);
   assert.match(client, /contentSha256/);
+  assert.match(client, /ReportArtifactExportResponse/);
+  assert.match(client, /exportReportArtifact/);
   assert.match(client, /generateReportArtifact/);
   assert.match(client, /reportArtifacts/);
   assert.match(loader, /admin-console/);
@@ -125,6 +129,8 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(reportingManifest.api.command, "POST /api/reports/artifacts");
   assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_CATALOG_VIEW");
   assert.ok(reportingManifest.postActions.includes("storeContentSha256"));
+  assert.ok(reportingManifest.postActions.includes("packageSyntheticJsonExport"));
+  assert.equal(reportingManifest.actions[3].target, "GET /api/reports/artifacts/{artifactId}/export");
   assert.equal(reportingManifest.actions[0].target, "GET /api/reports/catalog");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);

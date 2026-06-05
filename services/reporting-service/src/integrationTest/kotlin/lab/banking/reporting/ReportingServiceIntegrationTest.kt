@@ -81,7 +81,7 @@ class ReportingServiceIntegrationTest {
             }
         """.trimIndent()
 
-        mockMvc.perform(
+        val generateResult = mockMvc.perform(
             post("/api/reports/artifacts")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -101,6 +101,11 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.item.retentionUntil").exists())
             .andExpect(jsonPath("$.item.exportFormat").value("JSON"))
             .andExpect(jsonPath("$.item.sourceReferences[0]").value("audit_events"))
+            .andReturn()
+
+        val artifactId = ObjectMapper().readTree(generateResult.response.contentAsString)
+            .at("/item/artifactId")
+            .asText()
 
         mockMvc.perform(
             post("/api/reports/artifacts")
@@ -123,10 +128,26 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.items[0].retentionPolicy").value("SYNTHETIC_7Y"))
             .andExpect(jsonPath("$.items[0].artifactPath").value(org.hamcrest.Matchers.containsString("reports/synthetic")))
 
+        mockMvc.perform(
+            get("/api/reports/artifacts/$artifactId/export")
+                .header("Authorization", token)
+                .param("reason", "Synthetic artifact export package review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.packageName").value(org.hamcrest.Matchers.endsWith(".json")))
+            .andExpect(jsonPath("$.contentSha256").value(org.hamcrest.Matchers.matchesPattern("^[a-f0-9]{64}$")))
+            .andExpect(jsonPath("$.exportFormat").value("JSON"))
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.packageContent.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.packageContent.controls.downloadSimulationOnly").value(true))
+            .andExpect(jsonPath("$.packageContent.controls.ledgerRowsMutated").value(false))
+            .andExpect(jsonPath("$.packageContent.artifactContent.syntheticOnly").value(true))
+
         assertEquals(1, countRows("report_artifacts"))
         assertEquals(1, countRowsWhere("report_artifacts", "artifact_content ->> 'syntheticOnly' = 'true'"))
         assertEquals(1, countRowsWhere("report_artifacts", "content_sha256 <> repeat('0', 64)"))
-        assertTrue(countRows("reporting_access_audit_events") >= 4)
+        assertTrue(countRows("reporting_access_audit_events") >= 5)
     }
 
     private fun countRows(tableName: String): Long =

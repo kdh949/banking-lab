@@ -1,7 +1,7 @@
 package lab.banking.reporting.domain
 
-import java.time.OffsetDateTime
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import org.springframework.http.HttpStatus
 
 data class ReportDefinitionDto(
@@ -58,6 +58,16 @@ data class ReportArtifactListResponse(
     val syntheticOnly: Boolean = true
 )
 
+data class ReportArtifactExportResponse(
+    val auditEventId: String,
+    val packageName: String,
+    val contentSha256: String,
+    val exportFormat: String,
+    val item: ReportArtifactDto,
+    val packageContent: Map<String, Any?>,
+    val syntheticOnly: Boolean = true
+)
+
 data class ReportingAccessAuditEvent(
     val auditEventId: String,
     val eventType: String,
@@ -107,5 +117,14 @@ object ReportingErrors {
             message = message,
             causeText = "The actor role or request actor does not satisfy the modeled reporting-service policy.",
             fix = "Retry with an authorized synthetic role and matching actor context."
+        )
+
+    fun notFound(message: String): ReportingDomainException =
+        ReportingDomainException(
+            code = "REPORTING_RESOURCE_NOT_FOUND",
+            status = HttpStatus.NOT_FOUND,
+            message = message,
+            causeText = "The requested synthetic reporting artifact does not exist.",
+            fix = "Retry with an artifact id returned by the reporting artifact list API."
         )
 }

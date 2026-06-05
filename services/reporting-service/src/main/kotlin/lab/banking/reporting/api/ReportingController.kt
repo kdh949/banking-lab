@@ -3,6 +3,7 @@ package lab.banking.reporting.api
 import jakarta.servlet.http.HttpServletRequest
 import lab.banking.reporting.domain.GenerateReportCommand
 import lab.banking.reporting.domain.GenerateReportResponse
+import lab.banking.reporting.domain.ReportArtifactExportResponse
 import lab.banking.reporting.domain.ReportArtifactListResponse
 import lab.banking.reporting.domain.ReportCatalogResponse
 import lab.banking.reporting.domain.ReportingService
@@ -11,6 +12,7 @@ import lab.banking.reporting.security.ReportingPrincipal
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
@@ -51,6 +53,14 @@ class ReportingController(
         request: HttpServletRequest
     ): ReportArtifactListResponse =
         service.artifacts(reason, reportType, principal(request))
+
+    @GetMapping("/api/reports/artifacts/{artifactId}/export")
+    fun exportArtifact(
+        @PathVariable artifactId: String,
+        @RequestParam(required = false) reason: String?,
+        request: HttpServletRequest
+    ): ReportArtifactExportResponse =
+        service.exportArtifact(artifactId, reason, principal(request))
 
     private fun principal(request: HttpServletRequest): ReportingPrincipal =
         request.getAttribute(ReportingAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? ReportingPrincipal

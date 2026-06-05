@@ -98,6 +98,12 @@ class ReportingRepository(
             mapOf("artifactId" to artifactId)
         ) { rs, _ -> mapArtifact(rs) }.first()
 
+    fun artifactOrNull(artifactId: String): ReportArtifactDto? =
+        jdbc.query(
+            artifactSql("WHERE artifact_id = :artifactId"),
+            mapOf("artifactId" to artifactId)
+        ) { rs, _ -> mapArtifact(rs) }.firstOrNull()
+
     fun artifacts(reportType: String?): List<ReportArtifactDto> =
         jdbc.query(
             artifactSql(if (reportType.isNullOrBlank()) "" else "WHERE report_type = :reportType") + " ORDER BY generated_at DESC",

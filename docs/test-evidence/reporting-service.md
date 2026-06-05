@@ -10,6 +10,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `GET /api/reports/catalog` returns seeded synthetic report definitions and requires a business reason.
 - `POST /api/reports/artifacts` creates rendered synthetic JSON report artifacts with idempotency by `(requested_by, idempotency_key)`.
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
+- `GET /api/reports/artifacts/{artifactId}/export` returns a synthetic JSON package simulation for a rendered artifact and requires a business reason.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
@@ -18,13 +19,14 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
 - Live Keycloak client-credentials smoke proves the confidential
-  `reporting-service-api` service account can call catalog, generate, and list
-  report artifact routes with simulator tokens disabled.
+  `reporting-service-api` service account can call catalog, generate, list, and
+  export report artifact routes with simulator tokens disabled.
 - TypeScript API client methods expose reporting catalog, rendered artifact
   generation, checksum/retention metadata, and artifact list contracts.
 - Admin-console screen manifest `ADM-701` and API-backed panel wiring expose
-  reporting catalog, artifact generation, and artifact list controls when
-  `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
+  reporting catalog, artifact generation, artifact list, and artifact export
+  package controls when `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is
+  configured.
 - Audit-console screen manifest `AUD-401` and API-backed panel wiring expose
   reason-required reporting artifact history when
   `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
@@ -34,9 +36,10 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Report access and generation require a business reason.
 - Report artifacts persist rendered JSON payloads with `syntheticOnly=true`, `maskedByDefault=true`, `realPiiUsed=false`, `realMoneyUsed=false`, `externalFilingSubmitted=false`, and `ledgerRowsMutated=false`.
 - Artifact responses expose `contentSha256`, `retentionPolicy=SYNTHETIC_7Y`, `retentionUntil`, and `exportFormat=JSON`.
+- Export package responses include the rendered artifact content, content checksum, synthetic-only controls, `downloadSimulationOnly=true`, and `ledgerRowsMutated=false`.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
-- Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, and `REPORT_ARTIFACT_LIST_VIEW` audit rows.
+- Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, and `REPORT_ARTIFACT_EXPORTED` audit rows.
 - Admin/audit channel panels use simulator tokens only for local API-backed
   smoke paths; live service-token coverage remains in the Keycloak smoke script
   with simulator fallback disabled.
@@ -62,7 +65,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 
 ## Remaining Risk
 
-- Synthetic JSON report rendering, checksum persistence, and retention/export metadata are implemented. Retention lifecycle execution and packaged artifact export/download simulation remain pending.
+- Synthetic JSON report rendering, checksum persistence, retention/export metadata, and reason-required package export simulation are implemented. Retention lifecycle execution remains pending.
 - No Kafka/Outbox dispatch is added for report-generated events yet.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
