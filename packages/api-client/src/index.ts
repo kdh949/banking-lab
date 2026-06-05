@@ -1201,8 +1201,14 @@ export interface ExecuteDueAutopayResponse {
 }
 
 export type NotificationDeliveryStatus = "PENDING" | "DELIVERED" | "FAILED" | "DEAD_LETTER";
-export type NotificationChannel = "SMS" | "EMAIL" | "PUSH";
-export type NotificationProviderKind = "SYNTHETIC_SMS_SINK" | "SYNTHETIC_EMAIL_SINK" | "SYNTHETIC_PUSH_SINK";
+export type NotificationChannel = "SMS" | "EMAIL" | "PUSH" | "CHAT";
+export type NotificationProviderKind =
+  | "SYNTHETIC_SMS_SINK"
+  | "SYNTHETIC_EMAIL_SINK"
+  | "SYNTHETIC_PUSH_SINK"
+  | "SYNTHETIC_CHAT_SINK";
+export type NotificationTemplateStatus = "ACTIVE" | "RETIRED";
+export type NotificationTemplateChangeStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface ConsumeNotificationEventRequest {
   readonly sourceEventId: string;
@@ -1225,6 +1231,29 @@ export interface MarkNotificationDeliveredRequest {
   readonly reason: string;
 }
 
+export interface CreateNotificationTemplateChangeRequest {
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly version: number;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly?: boolean;
+}
+
+export interface ApproveNotificationTemplateChangeRequest {
+  readonly approvedBy: string;
+  readonly approvedByRole: string;
+  readonly reason: string;
+}
+
+export interface RejectNotificationTemplateChangeRequest {
+  readonly rejectedBy: string;
+  readonly rejectedByRole: string;
+  readonly reason: string;
+}
+
 export interface NotificationDeliveryDto {
   readonly deliveryRequestId: string;
   readonly sourceEventId: string;
@@ -1242,6 +1271,37 @@ export interface NotificationDeliveryDto {
 export interface NotificationDeliveryResponse {
   readonly items: readonly NotificationDeliveryDto[];
   readonly replayed: boolean;
+}
+
+export interface NotificationTemplateDto {
+  readonly templateId: string;
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly version: number;
+  readonly status: NotificationTemplateStatus;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+}
+
+export interface NotificationTemplateChangeRequestDto {
+  readonly changeRequestId: string;
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly requestedVersion: number;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly status: NotificationTemplateChangeStatus;
+  readonly requestedBy: string;
+  readonly requestReason: string;
+  readonly requestedAt: string;
+  readonly reviewedBy?: string | null;
+  readonly reviewedByRole?: string | null;
+  readonly reviewedAt?: string | null;
+  readonly reviewReason?: string | null;
+  readonly approvedTemplateId?: string | null;
+  readonly syntheticOnly: boolean;
 }
 
 export interface ParameterVersionDto {
@@ -2116,6 +2176,68 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}/delivered`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    listNotificationTemplates(filters: { readonly eventType?: string; readonly channel?: NotificationChannel } = {}) {
+      return request<readonly NotificationTemplateDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/templates",
+        {
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    createNotificationTemplateChangeRequest(command: CreateNotificationTemplateChangeRequest) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/templates/change-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getNotificationTemplateChangeRequest(changeRequestId: string) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveNotificationTemplateChangeRequest(
+      changeRequestId: string,
+      command: ApproveNotificationTemplateChangeRequest
+    ) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectNotificationTemplateChangeRequest(
+      changeRequestId: string,
+      command: RejectNotificationTemplateChangeRequest
+    ) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}/reject`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

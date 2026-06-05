@@ -24,6 +24,9 @@ class NotificationAuthorizationFilter(
     private val deliveryRead = Regex("^/api/notifications/deliveries/[^/]+$")
     private val deliveryFailure = Regex("^/api/notifications/deliveries/[^/]+/failures$")
     private val deliveryDelivered = Regex("^/api/notifications/deliveries/[^/]+/delivered$")
+    private val templateChangeRead = Regex("^/api/notifications/templates/change-requests/[^/]+$")
+    private val templateChangeApprove = Regex("^/api/notifications/templates/change-requests/[^/]+/approve$")
+    private val templateChangeReject = Regex("^/api/notifications/templates/change-requests/[^/]+/reject$")
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -68,6 +71,16 @@ class NotificationAuthorizationFilter(
                 setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             deliveryFailure.matches(path) && method == "POST" -> setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR")
             deliveryDelivered.matches(path) && method == "POST" -> setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR")
+            path == "/api/notifications/templates" && method == "GET" ->
+                setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/notifications/templates/change-requests" && method == "POST" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            templateChangeRead.matches(path) && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            templateChangeApprove.matches(path) && method == "POST" ->
+                setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+            templateChangeReject.matches(path) && method == "POST" ->
+                setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
             else -> emptySet()
         }
     }

@@ -48,9 +48,17 @@ class NotificationAuthorizationIntegrationTest {
               notification_dead_letters,
               notification_delivery_attempts,
               notification_delivery_requests,
-              notification_inbox_events
+              notification_inbox_events,
+              notification_template_change_requests
             RESTART IDENTITY CASCADE
             """.trimIndent()
+        )
+        jdbc.update(
+            """
+            DELETE FROM notification_templates
+            WHERE event_type LIKE 'TemplateAuth%'
+            """.trimIndent(),
+            emptyMap<String, Any?>()
         )
     }
 
@@ -135,6 +143,74 @@ class NotificationAuthorizationIntegrationTest {
             .andExpect(jsonPath("$.status").value("DELIVERED"))
 
         assertEquals(1, countRows("notification_delivery_attempts WHERE status = 'DELIVERED'"))
+    }
+
+    @Test
+    fun `notification template routes enforce maker checker roles`() {
+        val createBody = """
+            {
+              "eventType": "TemplateAuthApproved",
+              "channel": "CHAT",
+              "version": 1,
+              "bodyTemplate": "Synthetic chat notice {accountNo}.",
+              "providerKind": "SYNTHETIC_CHAT_SINK",
+              "requestedBy": "ops-maker-auth",
+              "reason": "Synthetic template authorization test"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody)
+        )
+            .andExpect(status().isForbidden)
+
+        val created = mockMvc.perform(
+            post("/api/notifications/templates/change-requests")
+                .header("Authorization", bearer("ops-maker-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andReturn()
+        val changeRequestId = objectMapper.readTree(created.response.contentAsString)
+            .at("/changeRequestId")
+            .asText()
+
+        val approveBody = """
+            {
+              "approvedBy": "ops-checker-auth",
+              "approvedByRole": "OPS_MANAGER",
+              "reason": "Synthetic checker approval"
+            }
+        """.trimIndent()
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests/$changeRequestId/approve")
+                .header("Authorization", bearer("ops-maker-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests/$changeRequestId/approve")
+                .header("Authorization", bearer("ops-checker-auth", listOf("OPS_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.approvedTemplateId").value(org.hamcrest.Matchers.startsWith("NTPL-CHAT-")))
+
+        mockMvc.perform(
+            get("/api/notifications/templates?eventType=TemplateAuthApproved&channel=CHAT")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].providerKind").value("SYNTHETIC_CHAT_SINK"))
     }
 
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {

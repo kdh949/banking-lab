@@ -1,21 +1,31 @@
 package lab.banking.notification.api
 
 import lab.banking.notification.domain.ConsumeNotificationEventRequest
+import lab.banking.notification.domain.ApproveNotificationTemplateChangeRequest
+import lab.banking.notification.domain.CreateNotificationTemplateChangeRequest
 import lab.banking.notification.domain.MarkNotificationDeliveredRequest
 import lab.banking.notification.domain.NotificationDeliveryDto
 import lab.banking.notification.domain.NotificationDeliveryResponse
 import lab.banking.notification.domain.NotificationDeliveryService
+import lab.banking.notification.domain.NotificationTemplateAdminService
+import lab.banking.notification.domain.NotificationTemplateChangeRequestDto
+import lab.banking.notification.domain.NotificationTemplateDto
 import lab.banking.notification.domain.RecordNotificationFailureRequest
+import lab.banking.notification.domain.RejectNotificationTemplateChangeRequest
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/notifications")
-class NotificationController(private val notificationDeliveryService: NotificationDeliveryService) {
+class NotificationController(
+    private val notificationDeliveryService: NotificationDeliveryService,
+    private val notificationTemplateAdminService: NotificationTemplateAdminService
+) {
     @PostMapping("/events")
     fun consumeEvent(@RequestBody request: ConsumeNotificationEventRequest): NotificationDeliveryResponse =
         notificationDeliveryService.consumeEvent(request)
@@ -37,4 +47,35 @@ class NotificationController(private val notificationDeliveryService: Notificati
         @RequestBody request: MarkNotificationDeliveredRequest
     ): NotificationDeliveryDto =
         notificationDeliveryService.markDelivered(deliveryRequestId, request)
+
+    @GetMapping("/templates")
+    fun templates(
+        @RequestParam(required = false) eventType: String?,
+        @RequestParam(required = false) channel: String?
+    ): List<NotificationTemplateDto> =
+        notificationTemplateAdminService.templates(eventType, channel)
+
+    @PostMapping("/templates/change-requests")
+    fun createTemplateChangeRequest(
+        @RequestBody request: CreateNotificationTemplateChangeRequest
+    ): NotificationTemplateChangeRequestDto =
+        notificationTemplateAdminService.createChangeRequest(request)
+
+    @GetMapping("/templates/change-requests/{changeRequestId}")
+    fun templateChangeRequest(@PathVariable changeRequestId: String): NotificationTemplateChangeRequestDto =
+        notificationTemplateAdminService.changeRequest(changeRequestId)
+
+    @PostMapping("/templates/change-requests/{changeRequestId}/approve")
+    fun approveTemplateChangeRequest(
+        @PathVariable changeRequestId: String,
+        @RequestBody request: ApproveNotificationTemplateChangeRequest
+    ): NotificationTemplateChangeRequestDto =
+        notificationTemplateAdminService.approveChangeRequest(changeRequestId, request)
+
+    @PostMapping("/templates/change-requests/{changeRequestId}/reject")
+    fun rejectTemplateChangeRequest(
+        @PathVariable changeRequestId: String,
+        @RequestBody request: RejectNotificationTemplateChangeRequest
+    ): NotificationTemplateChangeRequestDto =
+        notificationTemplateAdminService.rejectChangeRequest(changeRequestId, request)
 }

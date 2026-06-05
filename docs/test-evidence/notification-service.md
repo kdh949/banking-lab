@@ -20,17 +20,20 @@ This evidence covers the first synthetic Notification Service slice:
   enabled Redpanda event-consumer worker, both using synthetic-only provider
   settings and an isolated notification Flyway history table.
 - Retry/failure and dead-letter state transitions.
+- Admin template change requests with maker-checker approval/rejection,
+  append-only template versioning, and the synthetic `CHAT` sink.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
-  reads, provider failure recording, and delivered-state marking.
+  reads, provider failure recording, delivered-state marking, template reads,
+  and template change-request approval/rejection.
 - Notification-service route-level authorization filter, signed JWKS JWT
   decoder, dev-only simulator token decoder, and route role policies for event
-  consumption, delivery reads, failure recording, and delivered-state marking.
+  consumption, delivery reads, failure recording, delivered-state marking, and
+  template administration.
 
 The slice does not claim full Notification Service completion. Customer
-preference screens, admin template approval, live notification-service Keycloak
-smoke evidence, and live provider integrations are not in scope. Live providers
-remain prohibited.
+preference screens, live notification-service Keycloak smoke evidence, and live
+provider integrations are not in scope. Live providers remain prohibited.
 
 ## Commands Run
 
@@ -40,11 +43,14 @@ npm run test:notification-service:integration
 npm run test:notification-service:integration -- --rerun-tasks
 npm run test:notification-service:unit -- --rerun-tasks
 npm --workspace @banking-lab/api-client run typecheck
+npm run packages:typecheck
 docker compose --profile platform config
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda notification-event-consumer
 env BANKING_LAB_LIVE_NOTIFICATION_COMPOSE_PROJECT=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh :services:notification-service:integrationTest --tests 'lab.banking.notification.LiveNotificationConsumerComposeSmokeIntegrationTest.live notification event consumer writes masked delivery from Compose Redpanda record' --rerun-tasks
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v
 npm test
+npm run evidence:refresh-check
+npm run node:retirement-gate
 ```
 
 The commands require the same Gradle file-lock socket and Testcontainers access
@@ -62,11 +68,14 @@ were rerun sequentially with `--rerun-tasks`.
 - `npm run test:notification-service:integration -- --rerun-tasks`: pass;
   PostgreSQL and Redpanda Testcontainers ran
   `NotificationDeliveryIntegrationTest`, `NotificationAuthorizationIntegrationTest`,
-  and `NotificationKafkaConsumerIntegrationTest`.
+  `NotificationTemplateAdminIntegrationTest`, and
+  `NotificationKafkaConsumerIntegrationTest`.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
   service API client methods compile.
+- `npm run packages:typecheck`: pass; shared screen/form/auth/api packages compile
+  after notification client contract expansion.
 - `docker compose --profile platform config`: pass; platform profile renders
   `notification-service` and `notification-event-consumer` with Redpanda
   bootstrap configuration, synthetic provider disablement, and
@@ -103,8 +112,25 @@ were rerun sequentially with `--rerun-tasks`.
 - `NOTIFICATION_SERVICE` tokens can consume domain events and mark synthetic
   deliveries as delivered;
 - `AUDITOR` tokens can read masked delivery state but cannot mutate it;
+- customers cannot create template change requests;
+- operations makers can create template change requests but cannot approve them
+  through the route policy;
+- operations managers can approve pending template changes, while auditors can
+  read the activated synthetic template;
 - authorization tests use only dev-enabled simulator tokens, while the runtime
   also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
+
+`NotificationTemplateAdminIntegrationTest` verifies:
+
+- pending template changes are not active and cannot be used for delivery;
+- template approval is blocked when maker and checker are the same actor;
+- checker roles are limited to operations, compliance, or notification managers;
+- approval activates a higher-version template, retires previous active
+  templates for the event/channel, and enables `SYNTHETIC_CHAT_SINK` delivery;
+- rejection is terminal and does not activate a template;
+- reason, positive version, synthetic-only provider, channel/provider match, and
+  raw account/phone/email literal checks are enforced before durable change
+  creation.
 
 `NotificationKafkaConsumerIntegrationTest` verifies:
 
@@ -157,22 +183,28 @@ were rerun sequentially with `--rerun-tasks`.
 API client typecheck verifies:
 
 - `consumeNotificationEvent`, `getNotificationDelivery`,
-  `recordNotificationFailure`, and `markNotificationDelivered` methods are
-  available with typed request/response contracts.
+  `recordNotificationFailure`, `markNotificationDelivered`,
+  `listNotificationTemplates`, `createNotificationTemplateChangeRequest`,
+  `getNotificationTemplateChangeRequest`,
+  `approveNotificationTemplateChangeRequest`, and
+  `rejectNotificationTemplateChangeRequest` methods are available with typed
+  request/response contracts.
 
 ## Synthetic Boundary
 
 The migration constrains provider kinds to `SYNTHETIC_SMS_SINK`,
-`SYNTHETIC_EMAIL_SINK`, and `SYNTHETIC_PUSH_SINK`. It does not contain real SMS,
-email, push, chat, telecom, or external notification provider configuration.
+`SYNTHETIC_EMAIL_SINK`, `SYNTHETIC_PUSH_SINK`, and `SYNTHETIC_CHAT_SINK`. It
+does not contain real SMS, email, push, chat, telecom, or external notification
+provider configuration.
 The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=true`
 in payload or headers before creating delivery side effects.
+Template administration rejects `syntheticOnly=false`, non-matching provider
+kinds, and raw account/phone/email literals in template bodies.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 
 ## Remaining Risk
 
-This is still a partial feature slice. Template maker-checker approval, customer
-preference APIs, admin screens, retry/dead-letter behavior in a live Compose
-provider-sink loop, and live notification-service Keycloak smoke evidence remain
-future work.
+This is still a partial feature slice. Customer preference APIs, admin screens,
+retry/dead-letter behavior in a live Compose provider-sink loop, and live
+notification-service Keycloak smoke evidence remain future work.
