@@ -53,6 +53,13 @@ class StaffAccessController(
     ): StaffAccessListResponse<StaffTransferLimitDto> =
         staffAccessService.transferLimits(customerId, reason)
 
+    @GetMapping("/operations/retry-queue")
+    fun operationalRetryQueue(
+        @RequestParam(required = false) status: String?,
+        @RequestParam(required = false) reason: String?
+    ): StaffAccessListResponse<OperationalRetryQueueItemDto> =
+        staffAccessService.operationalRetryQueue(status, reason)
+
     @PostMapping("/pii/unmask")
     fun unmask(@RequestBody command: PiiUnmaskCommand): StaffUnmaskResponse =
         staffAccessService.unmaskCustomer(command)

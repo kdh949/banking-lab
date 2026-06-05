@@ -216,6 +216,61 @@ class StaffAccessService(
         return StaffAccessListResponse(auditEventId = auditEventId, items = limits)
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun operationalRetryQueue(status: String?, reason: String?): StaffAccessListResponse<OperationalRetryQueueItemDto> {
+        requireReason(reason, "OPERATIONAL_RETRY_QUEUE_VIEW requires a business reason")
+        val normalizedStatus = status?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+        if (normalizedStatus != null && normalizedStatus !in OPERATIONAL_RETRY_QUEUE_STATUSES) {
+            throw WorkflowErrors.validation("status must be one of ${OPERATIONAL_RETRY_QUEUE_STATUSES.joinToString(", ")}")
+        }
+        val statusPredicate = if (normalizedStatus == null) {
+            "status IN ('FAILED', 'DEAD_LETTER')"
+        } else {
+            "status = :status"
+        }
+        val params = mutableMapOf<String, Any?>()
+        if (normalizedStatus != null) {
+            params["status"] = normalizedStatus
+        }
+        val items = jdbc.query(
+            """
+            SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, status,
+                   retry_count, next_retry_at, created_at, published_at, error_message,
+                   CASE
+                     WHEN status = 'FAILED' AND (next_retry_at IS NULL OR next_retry_at <= now()) THEN TRUE
+                     WHEN status = 'PENDING' THEN TRUE
+                     ELSE FALSE
+                   END AS retry_eligible
+            FROM outbox_events
+            WHERE $statusPredicate
+            ORDER BY
+              CASE status WHEN 'DEAD_LETTER' THEN 0 WHEN 'FAILED' THEN 1 ELSE 2 END,
+              created_at,
+              outbox_event_id
+            LIMIT 50
+            """.trimIndent(),
+            params,
+            this::mapOperationalRetryQueueItem
+        )
+        val principal = BankingLabAuthContext.get()
+        val auditEventId = appendAudit(
+            eventType = "OPERATIONAL_RETRY_QUEUE_VIEW",
+            actorId = principal?.subject ?: "ops01",
+            actorRole = principal?.roles?.sorted()?.joinToString(",") ?: "OPS_MANAGER",
+            screenId = "WRK-002",
+            customerId = null,
+            accountId = null,
+            reason = reason,
+            payload = mapOf(
+                "status" to (normalizedStatus ?: "FAILED,DEAD_LETTER"),
+                "resultCount" to items.size,
+                "outboxEventIds" to items.map { it.outboxEventId },
+                "syntheticOnly" to true
+            )
+        )
+        return StaffAccessListResponse(auditEventId = auditEventId, items = items)
+    }
+
     fun unmaskCustomer(command: PiiUnmaskCommand): StaffUnmaskResponse =
         runSerializableStaffAccess {
             unmaskCustomerInTransaction(command)
@@ -2527,6 +2582,21 @@ class StaffAccessService(
             reason = rs.getString("reason")
         )
 
+    private fun mapOperationalRetryQueueItem(rs: ResultSet, rowNum: Int): OperationalRetryQueueItemDto =
+        OperationalRetryQueueItemDto(
+            outboxEventId = rs.getString("outbox_event_id"),
+            aggregateType = rs.getString("aggregate_type"),
+            aggregateId = rs.getString("aggregate_id"),
+            eventType = rs.getString("event_type"),
+            status = rs.getString("status"),
+            retryCount = rs.getInt("retry_count"),
+            nextRetryAt = rs.getObject("next_retry_at", OffsetDateTime::class.java),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            publishedAt = rs.getObject("published_at", OffsetDateTime::class.java),
+            errorMessage = rs.getString("error_message"),
+            retryEligible = rs.getBoolean("retry_eligible")
+        )
+
     private fun maskedCustomer(customer: StaffCustomerRecord): MaskedCustomerDto =
         MaskedCustomerDto(
             customerId = customer.customerId,
@@ -2761,6 +2831,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.SECURITY_POLICY_PARAMETER_CHANGE,
             ApprovalBusinessTypes.AUTHORIZATION_PARAMETER_CHANGE
         )
+        val OPERATIONAL_RETRY_QUEUE_STATUSES = setOf("FAILED", "DEAD_LETTER", "PENDING")
         val EOD_CLOSING_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
         val LOAN_EXECUTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
     }

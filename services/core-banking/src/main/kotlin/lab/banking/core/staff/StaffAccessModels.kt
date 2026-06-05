@@ -26,6 +26,20 @@ data class StaffAccessListResponse<T>(
     val items: List<T>
 )
 
+data class OperationalRetryQueueItemDto(
+    val outboxEventId: String,
+    val aggregateType: String,
+    val aggregateId: String,
+    val eventType: String,
+    val status: String,
+    val retryCount: Int,
+    val nextRetryAt: OffsetDateTime?,
+    val createdAt: OffsetDateTime,
+    val publishedAt: OffsetDateTime?,
+    val errorMessage: String?,
+    val retryEligible: Boolean
+)
+
 data class StaffUnmaskResponse(
     val auditEventId: String,
     val expiresInSeconds: Int,

@@ -4,7 +4,7 @@ Date: 2026-06-04
 
 ## Scope
 
-This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, fee waiver approval/rejection, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
+This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, fee waiver approval/rejection, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, operational retry queue inquiry, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
 
 ## Changes Proven
 
@@ -35,6 +35,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `staff-terminal` can execute a Spring API-backed transaction correction command smoke for `TX-SYN-CORR-001` by requesting a `TRANSACTION_CORRECTION` approval, proving maker self-approval rejection, approving as a separate checker, and observing a balanced `REVERSAL` ledger transaction with `ledgerSourceRowsMutated=false`.
 - `staff-terminal` can execute a Spring API-backed deposit rate parameter command smoke for `DP-SYN-SAVINGS` by requesting a `PRODUCT_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied rate version without ledger source-row mutation.
 - `staff-terminal` can execute a Spring API-backed fee policy parameter command smoke for `FEE-SYN-MONTHLY` by requesting a `FEE_POLICY_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied fee policy version without ledger source-row mutation.
+- `staff-terminal` renders `WRK002` as a reason-required operational retry queue inquiry backed by `GET /api/staff/operations/retry-queue`, and the API-backed panel can read failed synthetic `outbox_events` through `@banking-lab/api-client` when a Spring API URL is configured.
 - The Spring product-ledger API can list deposit products, create approval-gated rate versions, run deterministic daily interest accruals, and post interest through a balanced `INTEREST_POSTING` ledger transaction.
 - The Spring product-ledger API can list fee policies, create approval-gated fee policy versions, post fee batches through a balanced `FEE_POSTING` ledger transaction, replay the same batch idempotency key without duplicate postings, and refund a targeted posted fee through an approved `FEE_WAIVER` reversal.
 - `staff-terminal` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange branch and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render masked lookup with the `branch01` token, execute privileged unmask with the `manager01` token, request a customer information change as `branch01`, and approve it with the `manager01` token while Spring simulator tokens are disabled.
@@ -98,6 +99,31 @@ Not proven locally on 2026-06-04:
 - API-backed AUD001 browser audit-event retrieval against a live Spring API.
 
 Those two browser paths are covered by conditional Playwright tests and require `BANKING_LAB_E2E_API_BASE_URL` plus a running Spring API with synthetic seed data.
+
+## 2026-06-05 WRK002 Operational Retry Queue Update
+
+This update adds a Back Office staff-workstation read slice for operator exception visibility without mutating retry state.
+
+Changes:
+
+- `GET /api/staff/operations/retry-queue` returns failed, dead-letter, or pending durable `outbox_events` with a required business reason.
+- The read path appends `OPERATIONAL_RETRY_QUEUE_VIEW` audit events for `WRK-002` while keeping broker error text out of the audit payload.
+- The synthetic seed includes `OBX-SYN-RETRY-001` so API-backed staff-terminal browser smoke can show a deterministic failed event.
+- `WRK-001` links to `WRK-002`, and `WRK-002` declares the reason-required retry queue inquiry manifest.
+- `@banking-lab/api-client` and the staff-terminal API-backed panel expose the retry queue read path when `BANKING_LAB_E2E_API_BASE_URL` is configured.
+
+Commands run:
+
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed.
+- `npm run validate:manifests` passed with 100 manifests.
+- `npm test` passed with 157 tests.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.security.SecurityAuthorizationIntegrationTest --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks` passed after sandbox escalation for Testcontainers/PostgreSQL.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed with 5 tests and 16 skipped because API/payment/Keycloak E2E URLs were not configured.
+
+Not proven locally on 2026-06-05:
+
+- API-backed WRK002 browser retrieval against a live Spring API was not run because `BANKING_LAB_E2E_API_BASE_URL` was not configured for the local Playwright run.
 
 ## 2026-06-04 ACC103/ACC104 Account Hold Update
 

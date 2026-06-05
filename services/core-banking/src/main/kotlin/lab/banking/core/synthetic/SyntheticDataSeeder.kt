@@ -27,6 +27,7 @@ class SyntheticDataSeeder(
         seedFeePolicies()
         seedLedgerCorrectionTransactions()
         seedComplaintSourceReferences()
+        seedOperationalRetryQueue()
         seedWorkflowCases()
         seedAuditEvent()
     }
@@ -236,6 +237,27 @@ class SyntheticDataSeeder(
               'SEED-CMP-CARD-AUTH-001'
             )
             ON CONFLICT (authorization_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedOperationalRetryQueue() {
+        jdbc.update(
+            """
+            INSERT INTO outbox_events (
+              outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+              payload_json, headers_json, status, retry_count, next_retry_at, error_message
+            )
+            VALUES (
+              'OBX-SYN-RETRY-001', 'ledger_transaction', 'TX-SYN-CORR-001',
+              'LedgerTransactionPosted', 'SEED-OBX-SYN-RETRY-001',
+              '{"ledgerTransactionId":"TX-SYN-CORR-001","syntheticOnly":true}'::jsonb,
+              '{"syntheticOnly":true,"source":"synthetic-seeder"}'::jsonb,
+              'FAILED', 2, now() - interval '1 minute',
+              'Synthetic broker delay for staff retry queue smoke'
+            )
+            ON CONFLICT (outbox_event_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
         )

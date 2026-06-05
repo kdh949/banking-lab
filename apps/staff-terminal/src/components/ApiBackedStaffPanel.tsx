@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type OperationalRetryQueueItemDto,
   type PaymentInstructionResponse,
   type StaffApprovalExecutionResponse,
   type StaffCustomerDetailDto,
@@ -111,6 +112,12 @@ type PaymentInquiryState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type OperationalRetryQueueState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly auditEventId: string; readonly items: readonly OperationalRetryQueueItemDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
 type OidcIntent = "staff" | "checker" | "webauthn";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
@@ -148,6 +155,9 @@ export function ApiBackedStaffPanel() {
   const [keycloakUnmaskState, setKeycloakUnmaskState] = useState<KeycloakUnmaskState>({ status: "idle" });
   const [paymentInquiryState, setPaymentInquiryState] = useState<PaymentInquiryState>(() =>
     simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
+  const [retryQueueState, setRetryQueueState] = useState<OperationalRetryQueueState>(() =>
+    apiBaseUrl && simulatorTokenSmokesEnabled ? { status: "loading" } : { status: "offline" }
   );
 
   useEffect(() => {
@@ -189,6 +199,37 @@ export function ApiBackedStaffPanel() {
     if (storedStaffLogin) {
       setKeycloakStaffState(storedStaffLogin);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "ops01",
+        roles: ["OPS_MANAGER"]
+      })
+    });
+
+    client
+      .staffOperationalRetryQueue("API-backed operational retry queue smoke", "FAILED")
+      .then((response) => {
+        if (!cancelled) {
+          setRetryQueueState({ status: "loaded", auditEventId: response.auditEventId, items: response.items });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setRetryQueueState({ status: "failed", message: error instanceof Error ? error.message : "Unknown retry queue failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -783,6 +824,44 @@ export function ApiBackedStaffPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-operational-retry-queue">
+        <dl>
+          <div>
+            <dt>Retry queue</dt>
+            <dd>{retryQueueLabel(retryQueueState)}</dd>
+          </div>
+          {retryQueueState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Audit event</dt>
+                <dd>{retryQueueState.auditEventId}</dd>
+              </div>
+              <div>
+                <dt>Queue count</dt>
+                <dd>{retryQueueState.items.length}</dd>
+              </div>
+              <div>
+                <dt>First event</dt>
+                <dd>{retryQueueState.items[0]?.outboxEventId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>First status</dt>
+                <dd>{retryQueueState.items[0]?.status ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Retry eligible</dt>
+                <dd>{retryQueueState.items[0]?.retryEligible ? "eligible" : "not eligible"}</dd>
+              </div>
+            </>
+          ) : null}
+          {retryQueueState.status === "failed" ? (
+            <div>
+              <dt>Retry queue error</dt>
+              <dd>{retryQueueState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-staff-keycloak-login">
         <button
           type="button"
@@ -1060,6 +1139,19 @@ function paymentInquiryLabel(state: PaymentInquiryState): string {
   }
   if (state.status === "loaded") {
     return "payment inquiry audited";
+  }
+  return "failed";
+}
+
+function retryQueueLabel(state: OperationalRetryQueueState): string {
+  if (state.status === "offline") {
+    return apiBaseUrl && !simulatorTokenSmokesEnabled ? "simulator token smoke disabled" : "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return "retry queue loaded";
   }
   return "failed";
 }

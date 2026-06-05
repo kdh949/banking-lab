@@ -163,6 +163,21 @@ test("staff-terminal exposes PAY101 audited payment inquiry through the payment 
   assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
 });
 
+test("staff-terminal exposes WRK002 operational retry queue through the Spring API client", async () => {
+  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-002.operational-retry-queue.json", "utf8"));
+
+  assert.match(panel, /data-testid="api-backed-operational-retry-queue"/);
+  assert.match(panel, /staffOperationalRetryQueue/);
+  assert.match(panel, /First event/);
+  assert.match(client, /OperationalRetryQueueItemDto/);
+  assert.match(client, /staffOperationalRetryQueue\(reason: string, status\?: string\)/);
+  assert.equal(manifest.query.endpoint, "GET /api/staff/operations/retry-queue");
+  assert.equal(manifest.audit.reasonRequired, true);
+  assert.equal(manifest.audit.eventTypes[0], "OPERATIONAL_RETRY_QUEUE_VIEW");
+});
+
 test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
   const panel = await readFile("apps/ops-console/src/components/ApiBackedOpsPanel.tsx", "utf8");
   const manifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-404.payment-outbox-dispatch.json", "utf8"));

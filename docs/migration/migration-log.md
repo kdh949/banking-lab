@@ -2162,6 +2162,31 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-05: Staff Operational Retry Queue Read Slice
+
+Changes completed:
+
+- Added `GET /api/staff/operations/retry-queue` for reason-required staff visibility into failed, dead-letter, and pending durable `outbox_events`.
+- Added `WRK-002` operational retry queue manifest and linked it from the integrated workstation dashboard.
+- Added shared api-client and staff-terminal API-backed panel support for the retry queue smoke.
+- Seeded deterministic synthetic failed outbox event `OBX-SYN-RETRY-001`.
+- Extended staff access integration coverage to prove missing reason rejection, unsupported status rejection, failed outbox event response, and `OPERATIONAL_RETRY_QUEUE_VIEW` audit without broker error text in the audit payload.
+- Added route-level authorization coverage proving branch staff cannot read `WRK-002` while ops manager access succeeds.
+
+Verification:
+
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed.
+- `npm run validate:manifests` passed with 100 manifests.
+- `npm test` passed with 157 tests.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.security.SecurityAuthorizationIntegrationTest --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks` passed after sandbox escalation for Testcontainers/PostgreSQL.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed with 5 tests and 16 skipped because API/payment/Keycloak E2E URLs were not configured.
+
+Result:
+
+- Back Office staff terminal now has target-stack read visibility into operational retry exceptions without mutating retry state or treating the Node reference as implementation.
+- Live browser retrieval against Spring remains conditional until `BANKING_LAB_E2E_API_BASE_URL` is configured for the WRK002 smoke.
+
 ## 2026-06-05: Complaint Dispute Source References
 
 Changes completed:

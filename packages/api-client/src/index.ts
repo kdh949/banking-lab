@@ -14,6 +14,20 @@ export interface StaffAccessListResponse<T> {
   readonly items: readonly T[];
 }
 
+export interface OperationalRetryQueueItemDto {
+  readonly outboxEventId: string;
+  readonly aggregateType: string;
+  readonly aggregateId: string;
+  readonly eventType: string;
+  readonly status: string;
+  readonly retryCount: number;
+  readonly nextRetryAt?: string | null;
+  readonly createdAt: string;
+  readonly publishedAt?: string | null;
+  readonly errorMessage?: string | null;
+  readonly retryEligible: boolean;
+}
+
 export interface StaffCustomerDetailDto {
   readonly customerId: string;
   readonly piiExposure: string;
@@ -1795,6 +1809,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         `/api/staff/customers/${encodeURIComponent(customerId)}/transfer-limits`,
         { reason },
+        options.bearerToken
+      );
+    },
+
+    staffOperationalRetryQueue(reason: string, status?: string) {
+      return request<StaffAccessListResponse<OperationalRetryQueueItemDto>>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/operations/retry-queue",
+        status ? { reason, status } : { reason },
         options.bearerToken
       );
     },

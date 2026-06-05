@@ -78,6 +78,7 @@ test("staff terminal renders reason, masking, and maker-checker controls from ma
   await expect(page.getByLabel("Role-aware menu")).toBeVisible();
   await expect(page.getByText("Catalog Counts")).toBeVisible();
   await expect(page.getByTestId("api-backed-staff-customer")).toBeAttached();
+  await expect(page.getByTestId("api-backed-operational-retry-queue")).toBeAttached();
 });
 
 test("staff terminal opens transaction codes into tabs and switches active business screens", async ({ page }) => {
@@ -101,6 +102,13 @@ test("staff terminal opens transaction codes into tabs and switches active busin
   await page.getByRole("button", { name: /\[CST001\] Customer Integrated Search/ }).click();
   await expect(page.getByRole("heading", { name: "Customer Integrated Search" })).toBeVisible();
   await expect(page.getByText("Search Conditions")).toBeVisible();
+
+  await page.getByLabel("Transaction code search").fill("WRK002");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Operational Retry Queue" })).toBeVisible();
+  await expect(page.getByText("[WRK002] Operational Retry Queue")).toBeVisible();
+  await expect(page.locator(".manifest-endpoint", { hasText: "GET /api/staff/operations/retry-queue" })).toBeVisible();
+  await expect(page.getByLabel("Lookup Reason")).toBeVisible();
 });
 
 test("staff terminal renders CST-001 through the inquiry manifest renderer", async ({ page }) => {
@@ -198,6 +206,19 @@ test("staff terminal loads masked customer detail from the Spring API when confi
   await expect(panel).toContainText("010-****-1001");
   await expect(panel).toContainText("AUD-");
   await expect(panel).toContainText("API-backed channel parity smoke");
+});
+
+test("staff terminal loads Spring API-backed operational retry queue when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed operational retry queue smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-operational-retry-queue");
+  await expect(panel).toContainText("retry queue loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("AUD-");
+  await expect(panel).toContainText("OBX-SYN-RETRY-001");
+  await expect(panel).toContainText("FAILED");
+  await expect(panel).toContainText("eligible");
 });
 
 test("staff terminal executes Spring API-backed privileged unmask when configured", async ({ page }) => {

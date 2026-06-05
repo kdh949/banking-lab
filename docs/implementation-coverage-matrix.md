@@ -21,6 +21,7 @@ Status values are limited to `complete`, `api-backed-read`, `api-backed-command`
 | staff-terminal | Customer profile changes: `CST-101`, `CST-102`, `CST-103` | yes | yes | yes | yes | customer profile and approval state | staff/checker roles | request/approve/execute audit | yes | Node oracle, Spring integration, browser command smoke, live branch-maker/manager-checker Keycloak propagation | `docs/test-evidence/api-backed-channel-smoke.md`, `docs/test-evidence/keycloak-live-realm-smoke.md` | live-keycloak-backed |
 | staff-terminal | Privileged PII unmask: `CST-104` | yes | yes | yes | yes | audit event state | manager/auditor/compliance policy | time-boxed unmask audit | declared as high risk | Node oracle, Spring integration, browser unmask smoke, live staff Keycloak propagation | `docs/test-evidence/api-backed-channel-smoke.md`, `docs/test-evidence/keycloak-live-realm-smoke.md` | live-keycloak-backed |
 | staff-terminal | Approval inbox and audit log: `APR-001`, `AUD-001` | yes | yes | yes | yes | approvals and audit events | manager/auditor roles | hash-chain visible | approval execution path | API-backed APR001 approval execution and AUD001 audit retrieval browser paths documented; no row-specific live Keycloak proof | `docs/test-evidence/api-backed-channel-smoke.md` | browser-e2e-backed |
+| staff-terminal | Operational retry queue: `WRK-001`, `WRK-002` | yes | yes; dashboard action plus API-backed panel | yes | yes; `GET /api/staff/operations/retry-queue` | durable `outbox_events` retry/dead-letter state | ops/compliance/auditor route policy plus service reason check | reason-required `OPERATIONAL_RETRY_QUEUE_VIEW`; audit payload excludes broker error text | not-applicable | `SecurityAuthorizationIntegrationTest` and `StaffAccessApiParityIntegrationTest` passed locally; targeted Playwright opens `WRK002`, API-backed browser smoke remains conditional on Spring URL | `docs/test-evidence/api-backed-channel-smoke.md`, `docs/test-evidence/staff-terminal-renderer-e2e.md` | api-backed-read |
 | staff-terminal | Complaint workflow screens: `CMP-201`, `CMP-202` | yes | yes | yes | yes | complaint tables and approvals | complaint/checker roles | workflow audit | yes | Node oracle, Spring integration, browser command/failure smokes, live complaint Keycloak propagation through portal path | `docs/test-evidence/phase-5-complaint-workflow.md`, `docs/test-evidence/keycloak-live-realm-smoke.md` | live-keycloak-backed |
 | staff-terminal | FDS release/block and AML closure: `SFD-101`, `SFD-102`, `SFD-103`, `SAM-101`, `SAM-102` | yes | yes | yes | yes | FDS/AML case tables and ledger release posting | reviewer/checker roles | workflow audit | yes | Node oracle, Spring integration, browser command/failure smokes, live FDS/AML Keycloak propagation through console path | `docs/test-evidence/fds-aml-reconciliation.md`, `docs/test-evidence/keycloak-live-realm-smoke.md` | live-keycloak-backed |
 | staff-terminal | Reconciliation inquiry/adjustment: `REC-101`, `REC-102` | yes | yes | yes | yes | reconciliation and adjustment request tables | ops/checker roles | workflow audit | yes | Node oracle, Spring integration, browser command/failure smokes, live ops Keycloak propagation | `docs/reconciliation-reports/phase-6-eod-reconciliation.md`, `docs/test-evidence/keycloak-live-realm-smoke.md` | live-keycloak-backed |
@@ -79,8 +80,8 @@ Status values are limited to `complete`, `api-backed-read`, `api-backed-command`
 Commands run through 2026-06-05 for this review:
 
 - `npm ci`: pass.
-- `npm test`: pass, 154 tests after complaint self-service scaffold coverage.
-- `npm run validate:manifests`: pass, 95 manifests after notification admin/audit manifest update.
+- `npm test`: pass, 157 tests after operational retry queue scaffold coverage.
+- `npm run validate:manifests`: pass, 100 manifests after WRK-002 operational retry queue manifest update.
 - `npm run test:screen-engine`: pass, 10 tests.
 - `npm run packages:typecheck`: pass.
 - `npm run scripts:typecheck`: pass.
@@ -90,13 +91,13 @@ Commands run through 2026-06-05 for this review:
 - `npm run siem:alert-drill`: pass; validates synthetic Loki operational-security alert rules and writes `docs/test-evidence/generated/siem-alert-drill.json`.
 - `npm run next:staff-terminal:typecheck`: pass.
 - `npm run next:staff-terminal:build`: pass.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after Phase C fee policy/posting update with 5 passed and 14 skipped because API/Keycloak variables were not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`: pass after WRK-002 operational retry queue update with 5 passed and 16 skipped because API/payment/Keycloak variables were not configured.
 - `npm run test:e2e`: pass after Phase C fee policy/posting update with 17 passed and 41 skipped because API/Keycloak variables were not configured.
 - `docker compose config`: pass.
 - `docker compose --profile platform config`: pass.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass after sandbox escalation.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin`: pass after sandbox escalation.
-- `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest`: pass after Phase B LED-103 update.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.security.SecurityAuthorizationIntegrationTest --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks`: pass after WRK-002 operational retry queue update.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.product.DepositProductApiIntegrationTest`: pass after Phase C product-interest update.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.product.FeePolicyApiIntegrationTest --rerun-tasks`: pass after Phase C fee policy/posting update.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.eod.EodClosingPipelineIntegrationTest`: pass after Phase 1B EOD pipeline update and sandbox escalation for Gradle file-lock socket access.
