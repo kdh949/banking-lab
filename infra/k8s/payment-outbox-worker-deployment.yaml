@@ -47,6 +47,8 @@ spec:
               value: "banking.lab.core-banking.ledger-commands"
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED
               value: "true"
+            - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED
+              value: "false"
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY
               value: "payment-k8s-outbox-worker"
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON

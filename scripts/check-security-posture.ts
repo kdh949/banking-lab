@@ -106,6 +106,7 @@ const checks: Check[] = [
       "value: \"payment_flyway_schema_history\"",
       "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
       "value: \"false\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
       "http://core-banking-service:8081",
       "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
     ],
@@ -121,8 +122,28 @@ const checks: Check[] = [
       "value: \"payment_flyway_schema_history\"",
       "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
       "value: \"true\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"false\"",
       "payment-k8s-outbox-worker",
       "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/k8s/payment-domain-event-publisher-deployment.yaml",
+    description: "Payment Kubernetes domain event publisher emits synthetic payment events to Redpanda only.",
+    mustContain: [
+      "value: \"payment-service-api\"",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"false\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"true\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS",
+      "value: \"redpanda:9092\"",
+      "PaymentInstructionCanceled"
     ],
     mustNotContain: [
       "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
@@ -136,6 +157,7 @@ const checks: Check[] = [
       "value: \"payment_flyway_schema_history\"",
       "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
       "value: \"false\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
       "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
     ]
   },
@@ -147,8 +169,25 @@ const checks: Check[] = [
       "value: \"payment_flyway_schema_history\"",
       "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
       "value: \"true\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"false\"",
       "payment-helm-outbox-worker",
       "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/payment-domain-event-publisher-deployment.yaml",
+    description: "Payment Helm domain event publisher renders synthetic Redpanda publisher controls.",
+    mustContain: [
+      "value: {{ .Values.paymentService.securityAudience | quote }}",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"false\"",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"true\"",
+      "value: {{ .Values.paymentService.domainEventPublisherBootstrapServers | quote }}",
+      "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES",
+      "value: {{ .Values.paymentService.domainEventPublisherEventTypes | quote }}"
     ]
   },
   {

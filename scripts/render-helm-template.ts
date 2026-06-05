@@ -45,6 +45,7 @@ for (const expected of [
   "Deployment/banking-lab-payment-service",
   "Service/banking-lab-payment-service",
   "Deployment/banking-lab-payment-outbox-worker",
+  "Deployment/banking-lab-payment-domain-event-publisher",
   "Deployment/banking-lab-notification-service",
   "Service/banking-lab-notification-service",
   "Deployment/banking-lab-notification-event-consumer",
@@ -71,10 +72,13 @@ if (
   !rendered.includes("payment_flyway_schema_history") ||
   !rendered.includes("payment-service-api") ||
   !rendered.includes("BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !rendered.includes("BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !rendered.includes("BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
   !rendered.includes("PAYMENT_CORE_BANKING_SERVICE_TOKEN") ||
-  !rendered.includes("banking.lab.core-banking.ledger-commands")
+  !rendered.includes("banking.lab.core-banking.ledger-commands") ||
+  !rendered.includes("banking.lab.payment-events")
 ) {
-  errors.push("Rendered Helm output must include payment-service worker, Flyway, core-banking token, and audience settings.");
+  errors.push("Rendered Helm output must include payment-service worker, domain publisher, Flyway, core-banking token, and audience settings.");
 }
 if (
   !rendered.includes("notification_flyway_schema_history") ||
@@ -166,10 +170,15 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
     ".Values.paymentService.replicas": scalarFromSection(source, "paymentService", ["replicas"]),
     ".Values.paymentService.outboxWorkerReplicas": scalarFromSection(source, "paymentService", ["outboxWorkerReplicas"]),
+    ".Values.paymentService.domainEventPublisherReplicas": scalarFromSection(source, "paymentService", ["domainEventPublisherReplicas"]),
     ".Values.paymentService.image": scalarFromSection(source, "paymentService", ["image"]),
     ".Values.paymentService.port": scalarFromSection(source, "paymentService", ["port"]),
     ".Values.paymentService.securityAudience": scalarFromSection(source, "paymentService", ["securityAudience"]),
     ".Values.paymentService.ledgerCommandTopic": scalarFromSection(source, "paymentService", ["ledgerCommandTopic"]),
+    ".Values.paymentService.domainEventPublisherBootstrapServers": scalarFromSection(source, "paymentService", ["domainEventPublisherBootstrapServers"]),
+    ".Values.paymentService.domainEventPublisherTopic": scalarFromSection(source, "paymentService", ["domainEventPublisherTopic"]),
+    ".Values.paymentService.domainEventPublisherClientId": scalarFromSection(source, "paymentService", ["domainEventPublisherClientId"]),
+    ".Values.paymentService.domainEventPublisherEventTypes": scalarFromSection(source, "paymentService", ["domainEventPublisherEventTypes"]),
     ".Values.paymentService.resources.requests.cpu": scalarFromSection(source, "paymentService", ["resources", "requests", "cpu"]),
     ".Values.paymentService.resources.requests.memory": scalarFromSection(source, "paymentService", ["resources", "requests", "memory"]),
     ".Values.paymentService.resources.limits.cpu": scalarFromSection(source, "paymentService", ["resources", "limits", "cpu"]),

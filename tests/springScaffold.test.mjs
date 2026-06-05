@@ -103,7 +103,7 @@ test("notification-service platform profile includes API and Redpanda consumer w
   assert.match(prometheus, /notification-event-consumer:8089/);
 });
 
-test("payment-service platform profile includes API and outbox worker", async () => {
+test("payment-service platform profile includes API, outbox worker, and domain event publisher", async () => {
   const settings = await readFile("settings.gradle.kts", "utf8");
   const application = await readFile("services/payment-service/src/main/resources/application.yml", "utf8");
   const dockerfile = await readFile("infra/docker-compose/payment-service.Dockerfile", "utf8");
@@ -113,9 +113,11 @@ test("payment-service platform profile includes API and outbox worker", async ()
   assert.match(settings, /include\(":services:payment-service"\)/);
   assert.match(application, /real-payment-network-enabled: false/);
   assert.match(application, /BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED:false/);
+  assert.match(application, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED:false/);
   assert.match(dockerfile, /payment-service-\*-migration\.jar/);
   assert.match(compose, /payment-service:/);
   assert.match(compose, /payment-outbox-worker:/);
+  assert.match(compose, /payment-domain-event-publisher:/);
   assert.match(compose, /SPRING_FLYWAY_TABLE: payment_flyway_schema_history/);
   assert.match(compose, /BANKING_LAB_CORE_BANKING_BASE_URL: http:\/\/core-banking:8081/);
   assert.match(
@@ -124,12 +126,30 @@ test("payment-service platform profile includes API and outbox worker", async ()
   );
   assert.match(
     compose,
+    /payment-service:[\s\S]*BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED: "false"/
+  );
+  assert.match(
+    compose,
     /payment-outbox-worker:[\s\S]*BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED: "true"/
   );
+  assert.match(
+    compose,
+    /payment-outbox-worker:[\s\S]*BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED: "false"/
+  );
+  assert.match(
+    compose,
+    /payment-domain-event-publisher:[\s\S]*BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED: "false"/
+  );
+  assert.match(
+    compose,
+    /payment-domain-event-publisher:[\s\S]*BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED: "true"/
+  );
+  assert.match(compose, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092/);
   assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN/);
   assert.match(prometheus, /job_name: payment-service/);
   assert.match(prometheus, /payment-service:8088/);
   assert.match(prometheus, /payment-outbox-worker:8088/);
+  assert.match(prometheus, /payment-domain-event-publisher:8088/);
 });
 
 test("payment-service cancellation outbox event has checked-in AsyncAPI contract coverage", async () => {

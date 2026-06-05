@@ -47,6 +47,8 @@ spec:
               value: {{ .Values.paymentService.ledgerCommandTopic | quote }}
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED
               value: "true"
+            - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED
+              value: "false"
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY
               value: "payment-helm-outbox-worker"
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON

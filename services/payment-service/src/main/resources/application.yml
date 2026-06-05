@@ -19,6 +19,19 @@ banking-lab:
       dead-letter-threshold: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_DEAD_LETTER_THRESHOLD:3}
       requested-by: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY:payment-service-outbox-worker}
       reason: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON:Synthetic payment outbox worker dispatch}
+    domain-event-publisher:
+      bootstrap-servers: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+      topic: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_TOPIC:banking.lab.payment-events}
+      worker:
+        enabled: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED:false}
+        client-id: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_CLIENT_ID:payment-service-domain-event-publisher}
+        batch-size: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BATCH_SIZE:100}
+        poll-interval-millis: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_POLL_INTERVAL_MILLIS:1000}
+      publish:
+        timeout-millis: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS:5000}
+        dead-letter-threshold: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD:3}
+        retry-delay-seconds: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS:60}
+        event-types: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:PaymentInstructionSettled,PaymentInstructionCanceled,PaymentAutopayExecutionCreated}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}

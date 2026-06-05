@@ -21,6 +21,7 @@ const requiredFiles = [
   "payment-service-deployment.yaml",
   "payment-service.yaml",
   "payment-outbox-worker-deployment.yaml",
+  "payment-domain-event-publisher-deployment.yaml",
   "notification-service-deployment.yaml",
   "notification-service.yaml",
   "notification-event-consumer-deployment.yaml",
@@ -56,6 +57,7 @@ requireDocument(documents, "Service", "reporting-service", errors);
 const paymentDeployment = requireDocument(documents, "Deployment", "payment-service", errors);
 requireDocument(documents, "Service", "payment-service", errors);
 const paymentWorkerDeployment = requireDocument(documents, "Deployment", "payment-outbox-worker", errors);
+const paymentDomainEventPublisherDeployment = requireDocument(documents, "Deployment", "payment-domain-event-publisher", errors);
 const notificationDeployment = requireDocument(documents, "Deployment", "notification-service", errors);
 requireDocument(documents, "Service", "notification-service", errors);
 const notificationConsumerDeployment = requireDocument(documents, "Deployment", "notification-event-consumer", errors);
@@ -66,7 +68,7 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, reportingDeployment, paymentDeployment, paymentWorkerDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, paymentDeployment, paymentWorkerDeployment, paymentDomainEventPublisherDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
@@ -81,19 +83,35 @@ if (
   !hasText(paymentDeployment, "payment_flyway_schema_history") ||
   !hasText(paymentDeployment, "payment-service-api") ||
   !hasText(paymentDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
   !hasText(paymentDeployment, "value: \"false\"") ||
   !hasText(paymentDeployment, "http://core-banking-service:8081")
 ) {
-  errors.push("Payment service deployment must use its own Flyway table, payment-service audience, disabled worker mode, and core-banking service endpoint.");
+  errors.push("Payment service deployment must use its own Flyway table, payment-service audience, disabled worker/publisher modes, and core-banking service endpoint.");
 }
 if (
   !hasText(paymentWorkerDeployment, "payment_flyway_schema_history") ||
   !hasText(paymentWorkerDeployment, "payment-service-api") ||
   !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
   !hasText(paymentWorkerDeployment, "value: \"true\"") ||
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(paymentWorkerDeployment, "value: \"false\"") ||
   !hasText(paymentWorkerDeployment, "PAYMENT_CORE_BANKING_SERVICE_TOKEN")
 ) {
-  errors.push("Payment outbox worker deployment must enable the worker with a synthetic core-banking service token reference.");
+  errors.push("Payment outbox worker deployment must enable ledger dispatch, disable domain publishing, and use a synthetic core-banking service token reference.");
+}
+if (
+  !hasText(paymentDomainEventPublisherDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentDomainEventPublisherDeployment, "payment-service-api") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentDomainEventPublisherDeployment, "value: \"false\"") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(paymentDomainEventPublisherDeployment, "value: \"true\"") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !hasText(paymentDomainEventPublisherDeployment, "redpanda:9092") ||
+  !hasText(paymentDomainEventPublisherDeployment, "PaymentInstructionCanceled")
+) {
+  errors.push("Payment domain event publisher deployment must disable ledger dispatch and enable Redpanda-backed payment domain event publishing.");
 }
 if (
   !hasText(notificationDeployment, "notification_flyway_schema_history") ||

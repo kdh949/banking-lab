@@ -29,6 +29,9 @@ This evidence covers the first synthetic Payment Service slice:
 - Payment-service Kafka outbox publisher that publishes non-ledger payment
   domain events to Redpanda/Kafka after durable persistence while leaving
   `PaymentLedgerPostingRequested` rows on the core-ledger dispatch path.
+- Configurable payment domain-event publisher worker with bounded batch polling,
+  Micrometer metrics, retry/dead-letter settings, and synthetic-only
+  observability logs for durable non-ledger payment events.
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
   commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
@@ -51,18 +54,20 @@ This evidence covers the first synthetic Payment Service slice:
   maker-checker APIs.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
-- Docker Compose platform services for the payment REST API and the enabled
-  payment outbox worker, both using `payment_flyway_schema_history`, the
-  service-specific `payment-service-api` audience, and the synthetic
-  core-banking posting bridge.
-- Raw Kubernetes and Helm manifests for the payment REST API and outbox worker,
-  both using readiness/liveness probes, `payment_flyway_schema_history`, the
-  synthetic core-banking service-token placeholder, and explicit API-vs-worker
-  `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` modes.
+- Docker Compose platform services for the payment REST API, the enabled
+  payment ledger outbox worker, and the enabled payment domain-event publisher,
+  all using `payment_flyway_schema_history`, the service-specific
+  `payment-service-api` audience, and explicit API-vs-worker publisher modes.
+- Raw Kubernetes and Helm manifests for the payment REST API, ledger outbox
+  worker, and domain-event publisher, using readiness/liveness probes,
+  `payment_flyway_schema_history`, the synthetic core-banking service-token
+  placeholder, Redpanda publisher configuration, and explicit
+  `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` /
+  `BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED` mode splits.
 
 The slice does not claim full Payment Service completion. A deployed
-payment-domain event publisher worker/API path and live payment-service Keycloak
-smoke evidence remain future work.
+payment-domain event publisher live-runtime smoke and live payment-service
+Keycloak smoke evidence remain future work.
 
 ## Commands Run
 
@@ -106,8 +111,10 @@ need local file-lock socket and Docker access.
 
 ## Passing Tests
 
-- `npm run test:payment-service:unit`: pass; payment-service Kotlin compiled
-  with no unit test sources.
+- `npm run test:payment-service:unit`: pass after sandbox escalation;
+  `PaymentDomainEventPublisherWorkerTest` compiled and verified publisher
+  configuration delegation, bounded batch size, metrics counters, and disabled
+  worker start behavior.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
   ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
   `PaymentOutboxDispatcherIntegrationTest`, and
@@ -156,20 +163,23 @@ need local file-lock socket and Docker access.
   local shell and API-gated ops E2E coverage ran, with OPS-404 payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
 - `docker compose --profile platform config`: pass; platform profile renders
-  `payment-service` and `payment-outbox-worker` with
-  `payment_flyway_schema_history`, `payment-service-api`, core-banking service
-  URL, and API-disabled/worker-enabled payment outbox modes.
+  `payment-service`, `payment-outbox-worker`, and
+  `payment-domain-event-publisher` with `payment_flyway_schema_history`,
+  `payment-service-api`, Redpanda publisher settings, core-banking service URL,
+  and explicit ledger-worker/domain-publisher mode splits.
 - `npm run k8s:validate`: pass; structural validation covers
-  `payment-service` and `payment-outbox-worker` deployments with
-  readiness/liveness probes, service-specific Flyway history, the
-  synthetic-only core-banking service-token placeholder, and the expected
-  outbox worker mode split.
+  `payment-service`, `payment-outbox-worker`, and
+  `payment-domain-event-publisher` deployments with readiness/liveness probes,
+  service-specific Flyway history, synthetic-only core-banking service-token
+  placeholder, Redpanda bootstrap configuration, and the expected worker mode
+  splits.
 - `npm run helm:template`: pass; Helm renders the payment REST API
-  Deployment/Service and outbox-worker Deployment with the same audience,
-  Flyway, token-reference, and worker-mode controls.
+  Deployment/Service, outbox-worker Deployment, and domain-event publisher
+  Deployment with the same audience, Flyway, token-reference, Redpanda
+  publisher, and worker-mode controls.
 - `npm run security:posture-check`: pass; static posture checks include the
   payment application synthetic-only payment network default and raw/Helm
-  payment deployment controls.
+  payment API, outbox-worker, and domain-event publisher deployment controls.
 - `node --test tests/springScaffold.test.mjs`: pass; 6 static Spring scaffold
   checks passed, including payment-service `PaymentInstructionCanceled` AsyncAPI
   contract coverage.
@@ -328,6 +338,14 @@ Manifest and API client coverage verifies:
 - successful broker acknowledgement marks only the published payment domain
   event `PUBLISHED`.
 
+`PaymentDomainEventPublisherWorkerTest` verifies:
+
+- worker configuration maps the configured Redpanda bootstrap servers, topic,
+  client id, publish timeout, retry delay, dead-letter threshold, event type
+  allow-list, and bounded batch size into the publisher port;
+- Micrometer counters record attempted, published, failed, and batch counts;
+- disabled worker configuration is inert and does not start the lifecycle.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -335,9 +353,9 @@ The migration seeds only `SYN-BILLER-*` billers with
 No real biller, payment network, payment provider, customer PII, financial
 institution API, or real money path is configured.
 The application keeps `real-payment-network-enabled: false`; Compose,
-Kubernetes, and Helm add only synthetic payment-service API/worker runtime
-settings and a replaceable local synthetic service-token placeholder for the
-core-banking posting bridge.
+Kubernetes, and Helm add only synthetic payment-service API/worker/runtime
+settings, Redpanda publisher settings, and a replaceable local synthetic
+service-token placeholder for the core-banking posting bridge.
 Staff cancellation approval creates only synthetic `payment_cancellation_requests`
 rows and a durable `PaymentInstructionCanceled` Outbox event after independent
 checker approval; it never writes core ledger tables directly.
@@ -349,9 +367,10 @@ from Customer Web, queried from Staff Terminal with reason-required audit,
 dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
-maker-checker correction path and PAY-102 staff-terminal smoke panel, but
-live deployed payment-domain publisher worker/API evidence and live
-payment-service Keycloak realm smoke evidence are still pending.
+maker-checker correction path, PAY-102 staff-terminal smoke panel, and
+structurally deployed payment domain-event publisher worker. Live
+payment-service Keycloak realm smoke evidence is still pending.
 The new Compose/Kubernetes/Helm surface is structurally validated only; it does
-not yet prove a live payment-service rollout, live worker dispatch against
-core-banking, or a live Keycloak-issued `PAYMENT_SERVICE` service token.
+not yet prove a live payment-service rollout, live ledger worker dispatch
+against core-banking, live domain-event publisher polling against Redpanda, or a
+live Keycloak-issued `PAYMENT_SERVICE` service token.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:18:30.035Z",
+  "generatedAt": "2026-06-05T16:06:01.478Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -62,6 +62,13 @@
       "forbidden": []
     },
     {
+      "file": "infra/k8s/payment-domain-event-publisher-deployment.yaml",
+      "description": "Payment Kubernetes domain event publisher emits synthetic payment events to Redpanda only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
       "file": "infra/helm/banking-lab/templates/payment-service-deployment.yaml",
       "description": "Payment Helm API deployment renders service audience, disabled worker mode, and separate Flyway state.",
       "status": "pass",
@@ -71,6 +78,13 @@
     {
       "file": "infra/helm/banking-lab/templates/payment-outbox-worker-deployment.yaml",
       "description": "Payment Helm worker deployment renders synthetic outbox dispatch controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-domain-event-publisher-deployment.yaml",
+      "description": "Payment Helm domain event publisher renders synthetic Redpanda publisher controls.",
       "status": "pass",
       "missing": [],
       "forbidden": []

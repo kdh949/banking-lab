@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:18:30.252Z",
+  "generatedAt": "2026-06-05T16:05:46.368Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {
@@ -19,6 +19,7 @@
     "payment-service-deployment.yaml",
     "payment-service.yaml",
     "payment-outbox-worker-deployment.yaml",
+    "payment-domain-event-publisher-deployment.yaml",
     "notification-service-deployment.yaml",
     "notification-service.yaml",
     "notification-event-consumer-deployment.yaml",
@@ -29,7 +30,7 @@
     "temporal-deployment.yaml",
     "network-policy.yaml"
   ],
-  "documentCount": 23,
+  "documentCount": 24,
   "resources": [
     {
       "file": "infra/k8s/configmap.yaml",
@@ -105,6 +106,13 @@
       "apiVersion": "v1",
       "kind": "Service",
       "name": "notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/payment-domain-event-publisher-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "payment-domain-event-publisher",
       "namespace": "banking-lab"
     },
     {

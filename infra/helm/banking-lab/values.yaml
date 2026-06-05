@@ -29,10 +29,15 @@ reportingService:
 paymentService:
   replicas: 1
   outboxWorkerReplicas: 1
+  domainEventPublisherReplicas: 1
   image: banking-lab/payment-service:local
   port: 8088
   securityAudience: payment-service-api
   ledgerCommandTopic: banking.lab.core-banking.ledger-commands
+  domainEventPublisherBootstrapServers: redpanda:9092
+  domainEventPublisherTopic: banking.lab.payment-events
+  domainEventPublisherClientId: payment-helm-domain-event-publisher
+  domainEventPublisherEventTypes: PaymentInstructionSettled,PaymentInstructionCanceled,PaymentAutopayExecutionCreated
   resources:
     requests:
       cpu: 150m
