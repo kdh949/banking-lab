@@ -18,6 +18,9 @@ const requiredFiles = [
   "core-banking-service.yaml",
   "reporting-service-deployment.yaml",
   "reporting-service.yaml",
+  "payment-service-deployment.yaml",
+  "payment-service.yaml",
+  "payment-outbox-worker-deployment.yaml",
   "notification-service-deployment.yaml",
   "notification-service.yaml",
   "notification-event-consumer-deployment.yaml",
@@ -50,6 +53,9 @@ const coreDeployment = requireDocument(documents, "Deployment", "core-banking-se
 requireDocument(documents, "Service", "core-banking-service", errors);
 const reportingDeployment = requireDocument(documents, "Deployment", "reporting-service", errors);
 requireDocument(documents, "Service", "reporting-service", errors);
+const paymentDeployment = requireDocument(documents, "Deployment", "payment-service", errors);
+requireDocument(documents, "Service", "payment-service", errors);
+const paymentWorkerDeployment = requireDocument(documents, "Deployment", "payment-outbox-worker", errors);
 const notificationDeployment = requireDocument(documents, "Deployment", "notification-service", errors);
 requireDocument(documents, "Service", "notification-service", errors);
 const notificationConsumerDeployment = requireDocument(documents, "Deployment", "notification-event-consumer", errors);
@@ -60,7 +66,7 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, reportingDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, paymentDeployment, paymentWorkerDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
@@ -70,6 +76,24 @@ if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasTex
 }
 if (!hasText(reportingDeployment, "reporting_flyway_schema_history") || !hasText(reportingDeployment, "reporting-service-api")) {
   errors.push("Reporting service deployment must use its own Flyway table and reporting-service audience.");
+}
+if (
+  !hasText(paymentDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentDeployment, "payment-service-api") ||
+  !hasText(paymentDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentDeployment, "value: \"false\"") ||
+  !hasText(paymentDeployment, "http://core-banking-service:8081")
+) {
+  errors.push("Payment service deployment must use its own Flyway table, payment-service audience, disabled worker mode, and core-banking service endpoint.");
+}
+if (
+  !hasText(paymentWorkerDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentWorkerDeployment, "payment-service-api") ||
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentWorkerDeployment, "value: \"true\"") ||
+  !hasText(paymentWorkerDeployment, "PAYMENT_CORE_BANKING_SERVICE_TOKEN")
+) {
+  errors.push("Payment outbox worker deployment must enable the worker with a synthetic core-banking service token reference.");
 }
 if (
   !hasText(notificationDeployment, "notification_flyway_schema_history") ||

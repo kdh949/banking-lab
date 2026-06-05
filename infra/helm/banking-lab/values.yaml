@@ -26,6 +26,28 @@ reportingService:
       cpu: "1"
       memory: 768Mi
 
+paymentService:
+  replicas: 1
+  outboxWorkerReplicas: 1
+  image: banking-lab/payment-service:local
+  port: 8088
+  securityAudience: payment-service-api
+  ledgerCommandTopic: banking.lab.core-banking.ledger-commands
+  resources:
+    requests:
+      cpu: 150m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  workerResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
 notificationService:
   replicas: 1
   eventConsumerReplicas: 1

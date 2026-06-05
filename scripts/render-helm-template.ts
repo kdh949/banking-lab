@@ -42,6 +42,9 @@ for (const expected of [
   "Service/banking-lab-core-banking",
   "Deployment/banking-lab-reporting-service",
   "Service/banking-lab-reporting-service",
+  "Deployment/banking-lab-payment-service",
+  "Service/banking-lab-payment-service",
+  "Deployment/banking-lab-payment-outbox-worker",
   "Deployment/banking-lab-notification-service",
   "Service/banking-lab-notification-service",
   "Deployment/banking-lab-notification-event-consumer",
@@ -63,6 +66,15 @@ if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
 }
 if (!rendered.includes("reporting_flyway_schema_history") || !rendered.includes("reporting-service-api")) {
   errors.push("Rendered Helm output must include reporting-service Flyway and audience settings.");
+}
+if (
+  !rendered.includes("payment_flyway_schema_history") ||
+  !rendered.includes("payment-service-api") ||
+  !rendered.includes("BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !rendered.includes("PAYMENT_CORE_BANKING_SERVICE_TOKEN") ||
+  !rendered.includes("banking.lab.core-banking.ledger-commands")
+) {
+  errors.push("Rendered Helm output must include payment-service worker, Flyway, core-banking token, and audience settings.");
 }
 if (
   !rendered.includes("notification_flyway_schema_history") ||
@@ -152,6 +164,20 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),
     ".Values.reportingService.resources.limits.cpu": scalarFromSection(source, "reportingService", ["resources", "limits", "cpu"]),
     ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
+    ".Values.paymentService.replicas": scalarFromSection(source, "paymentService", ["replicas"]),
+    ".Values.paymentService.outboxWorkerReplicas": scalarFromSection(source, "paymentService", ["outboxWorkerReplicas"]),
+    ".Values.paymentService.image": scalarFromSection(source, "paymentService", ["image"]),
+    ".Values.paymentService.port": scalarFromSection(source, "paymentService", ["port"]),
+    ".Values.paymentService.securityAudience": scalarFromSection(source, "paymentService", ["securityAudience"]),
+    ".Values.paymentService.ledgerCommandTopic": scalarFromSection(source, "paymentService", ["ledgerCommandTopic"]),
+    ".Values.paymentService.resources.requests.cpu": scalarFromSection(source, "paymentService", ["resources", "requests", "cpu"]),
+    ".Values.paymentService.resources.requests.memory": scalarFromSection(source, "paymentService", ["resources", "requests", "memory"]),
+    ".Values.paymentService.resources.limits.cpu": scalarFromSection(source, "paymentService", ["resources", "limits", "cpu"]),
+    ".Values.paymentService.resources.limits.memory": scalarFromSection(source, "paymentService", ["resources", "limits", "memory"]),
+    ".Values.paymentService.workerResources.requests.cpu": scalarFromSection(source, "paymentService", ["workerResources", "requests", "cpu"]),
+    ".Values.paymentService.workerResources.requests.memory": scalarFromSection(source, "paymentService", ["workerResources", "requests", "memory"]),
+    ".Values.paymentService.workerResources.limits.cpu": scalarFromSection(source, "paymentService", ["workerResources", "limits", "cpu"]),
+    ".Values.paymentService.workerResources.limits.memory": scalarFromSection(source, "paymentService", ["workerResources", "limits", "memory"]),
     ".Values.notificationService.replicas": scalarFromSection(source, "notificationService", ["replicas"]),
     ".Values.notificationService.eventConsumerReplicas": scalarFromSection(source, "notificationService", ["eventConsumerReplicas"]),
     ".Values.notificationService.image": scalarFromSection(source, "notificationService", ["image"]),

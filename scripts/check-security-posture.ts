@@ -37,8 +37,10 @@ const checks: Check[] = [
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_SECURITY_AUDIENCE:-core-banking-api}\"",
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_REPORTING_SECURITY_AUDIENCE:-reporting-service-api}\"",
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_NOTIFICATION_SECURITY_AUDIENCE:-notification-service-api}\"",
+      "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_PAYMENT_SECURITY_AUDIENCE:-payment-service-api}\"",
       "SPRING_FLYWAY_TABLE: reporting_flyway_schema_history",
-      "SPRING_FLYWAY_TABLE: notification_flyway_schema_history"
+      "SPRING_FLYWAY_TABLE: notification_flyway_schema_history",
+      "SPRING_FLYWAY_TABLE: payment_flyway_schema_history"
     ],
     mustNotContain: [
       "BANKING_LAB_SECURITY_ENABLED: \"${BANKING_LAB_SECURITY_ENABLED:-false}\"",
@@ -55,6 +57,22 @@ const checks: Check[] = [
       "audience: ${BANKING_LAB_SECURITY_AUDIENCE:}"
     ],
     mustNotContain: [
+      "enabled: ${BANKING_LAB_SECURITY_ENABLED:false}",
+      "simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:true}"
+    ]
+  },
+  {
+    file: "services/payment-service/src/main/resources/application.yml",
+    description: "Payment service defaults to synthetic-only payment network and secure auth.",
+    mustContain: [
+      "real-payment-network-enabled: false",
+      "enabled: ${BANKING_LAB_SECURITY_ENABLED:true}",
+      "simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}",
+      "dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}",
+      "audience: ${BANKING_LAB_SECURITY_AUDIENCE:}"
+    ],
+    mustNotContain: [
+      "real-payment-network-enabled: true",
       "enabled: ${BANKING_LAB_SECURITY_ENABLED:false}",
       "simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:true}"
     ]
@@ -78,6 +96,59 @@ const checks: Check[] = [
       "value: {{ .Values.reportingService.securityAudience | quote }}",
       "value: \"reporting_flyway_schema_history\"",
       "BANKING_LAB_REPORTING_DATABASE_URL"
+    ]
+  },
+  {
+    file: "infra/k8s/payment-service-deployment.yaml",
+    description: "Payment Kubernetes API deployment keeps service audience, disabled worker mode, and separate Flyway state.",
+    mustContain: [
+      "value: \"payment-service-api\"",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"false\"",
+      "http://core-banking-service:8081",
+      "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/k8s/payment-outbox-worker-deployment.yaml",
+    description: "Payment Kubernetes worker deployment enables only the synthetic outbox dispatch path.",
+    mustContain: [
+      "value: \"payment-service-api\"",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"true\"",
+      "payment-k8s-outbox-worker",
+      "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/payment-service-deployment.yaml",
+    description: "Payment Helm API deployment renders service audience, disabled worker mode, and separate Flyway state.",
+    mustContain: [
+      "value: {{ .Values.paymentService.securityAudience | quote }}",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"false\"",
+      "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/payment-outbox-worker-deployment.yaml",
+    description: "Payment Helm worker deployment renders synthetic outbox dispatch controls.",
+    mustContain: [
+      "value: {{ .Values.paymentService.securityAudience | quote }}",
+      "value: \"payment_flyway_schema_history\"",
+      "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED",
+      "value: \"true\"",
+      "payment-helm-outbox-worker",
+      "PAYMENT_CORE_BANKING_SERVICE_TOKEN"
     ]
   },
   {

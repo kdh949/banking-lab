@@ -15,6 +15,12 @@ scrape_configs:
       - targets:
           - notification-service:8089
           - notification-event-consumer:8089
+  - job_name: payment-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - payment-service:8088
+          - payment-outbox-worker:8088
   - job_name: reporting-service
     metrics_path: /actuator/prometheus
     static_configs:

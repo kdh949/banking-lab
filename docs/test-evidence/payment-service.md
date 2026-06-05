@@ -41,6 +41,14 @@ This evidence covers the first synthetic Payment Service slice:
   autopay, settlement, due-execution, and Outbox dispatch APIs.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
+- Docker Compose platform services for the payment REST API and the enabled
+  payment outbox worker, both using `payment_flyway_schema_history`, the
+  service-specific `payment-service-api` audience, and the synthetic
+  core-banking posting bridge.
+- Raw Kubernetes and Helm manifests for the payment REST API and outbox worker,
+  both using readiness/liveness probes, `payment_flyway_schema_history`, the
+  synthetic core-banking service-token placeholder, and explicit API-vs-worker
+  `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` modes.
 
 The slice does not claim full Payment Service completion. Runtime publication to
 Kafka/Redpanda and staff payment correction maker-checker flows remain future
@@ -65,6 +73,10 @@ npm run next:ops-console:typecheck
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts
 npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts
+docker compose --profile platform config
+npm run k8s:validate
+npm run helm:template
+npm run security:posture-check
 ```
 
 The Gradle-backed commands were first attempted inside the managed sandbox and
@@ -116,6 +128,21 @@ need local file-lock socket and Docker access.
 - `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts`: pass;
   local shell and API-gated ops E2E coverage ran, with OPS-404 payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
+- `docker compose --profile platform config`: pass; platform profile renders
+  `payment-service` and `payment-outbox-worker` with
+  `payment_flyway_schema_history`, `payment-service-api`, core-banking service
+  URL, and API-disabled/worker-enabled payment outbox modes.
+- `npm run k8s:validate`: pass; structural validation covers
+  `payment-service` and `payment-outbox-worker` deployments with
+  readiness/liveness probes, service-specific Flyway history, the
+  synthetic-only core-banking service-token placeholder, and the expected
+  outbox worker mode split.
+- `npm run helm:template`: pass; Helm renders the payment REST API
+  Deployment/Service and outbox-worker Deployment with the same audience,
+  Flyway, token-reference, and worker-mode controls.
+- `npm run security:posture-check`: pass; static posture checks include the
+  payment application synthetic-only payment network default and raw/Helm
+  payment deployment controls.
 
 ## Integration Coverage
 
@@ -239,6 +266,10 @@ The migration seeds only `SYN-BILLER-*` billers with
 `network_kind='SYNTHETIC_BILLER_SIMULATOR'` and `synthetic_only=true`.
 No real biller, payment network, payment provider, customer PII, financial
 institution API, or real money path is configured.
+The application keeps `real-payment-network-enabled: false`; Compose,
+Kubernetes, and Helm add only synthetic payment-service API/worker runtime
+settings and a replaceable local synthetic service-token placeholder for the
+core-banking posting bridge.
 
 ## Remaining Risk
 
@@ -249,3 +280,6 @@ core-banking posting port, settled idempotently, and created from durable
 autopay schedules, but Kafka/Redpanda runtime publication, live payment-service
 Keycloak realm smoke evidence, and full staff correction maker-checker flows are
 still pending.
+The new Compose/Kubernetes/Helm surface is structurally validated only; it does
+not yet prove a live payment-service rollout, live worker dispatch against
+core-banking, or a live Keycloak-issued `PAYMENT_SERVICE` service token.

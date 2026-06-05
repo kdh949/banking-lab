@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:11:40.057Z",
+  "generatedAt": "2026-06-05T15:18:30.035Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -27,6 +27,13 @@
       "forbidden": []
     },
     {
+      "file": "services/payment-service/src/main/resources/application.yml",
+      "description": "Payment service defaults to synthetic-only payment network and secure auth.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
       "file": "infra/k8s/reporting-service-deployment.yaml",
       "description": "Reporting Kubernetes deployment uses secure route audience and separate Flyway state.",
       "status": "pass",
@@ -36,6 +43,34 @@
     {
       "file": "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
       "description": "Reporting Helm deployment renders secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/payment-service-deployment.yaml",
+      "description": "Payment Kubernetes API deployment keeps service audience, disabled worker mode, and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/payment-outbox-worker-deployment.yaml",
+      "description": "Payment Kubernetes worker deployment enables only the synthetic outbox dispatch path.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-service-deployment.yaml",
+      "description": "Payment Helm API deployment renders service audience, disabled worker mode, and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-outbox-worker-deployment.yaml",
+      "description": "Payment Helm worker deployment renders synthetic outbox dispatch controls.",
       "status": "pass",
       "missing": [],
       "forbidden": []

@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-outbox-worker
+  namespace: banking-lab
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: payment-outbox-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-outbox-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: payment-outbox-worker
+    spec:
+      containers:
+        - name: payment-outbox-worker
+          image: banking-lab/payment-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8088
+              name: http
+          envFrom:
+            - configMapRef:
+                name: banking-lab-config
+            - secretRef:
+                name: banking-lab-secret
+          env:
+            - name: PORT
+              value: "8088"
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: "true"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED
+              value: "true"
+            - name: BANKING_LAB_CORE_BANKING_BASE_URL
+              value: "http://core-banking-service:8081"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: PAYMENT_CORE_BANKING_SERVICE_TOKEN
+            - name: BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC
+              value: "banking.lab.core-banking.ledger-commands"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED
+              value: "true"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY
+              value: "payment-k8s-outbox-worker"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON
+              value: "Synthetic payment outbox worker dispatch"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_MAX_BATCH_SIZE
+              value: "10"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_DEAD_LETTER_THRESHOLD
+              value: "3"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-payment-outbox-worker"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: "payment-service-api"
+            - name: BANKING_LAB_PAYMENT_DATABASE_URL
+              value: "jdbc:postgresql://postgres:5432/banking_lab"
+            - name: BANKING_LAB_PAYMENT_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_PAYMENT_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "payment_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
