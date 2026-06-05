@@ -13,6 +13,8 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `GET /api/reports/artifacts/{artifactId}/export` returns a synthetic JSON package simulation for a rendered artifact and requires a business reason.
 - `POST /api/reports/retention/sweeps` expires artifacts past `retention_until`, records `SYNTHETIC_RETENTION_EXPIRED`, and requires an authorized ops/compliance/reporting actor.
 - Report generation, export, and retention sweep completion append durable `reporting_outbox_events` rows in the same transaction as reporting metadata changes.
+- `ReportingKafkaOutboxPublisher` reads allow-listed `PENDING reporting_outbox_events`, publishes reporting domain events to Redpanda/Kafka, and marks rows `PUBLISHED` only after broker acknowledgement.
+- `ReportingDomainEventPublisherWorker` provides a disabled-by-default scheduled worker controlled by `banking-lab.reporting-service.domain-event-publisher.*` settings.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - `V004__reporting_outbox_events.sql` adds a durable `PENDING` outbox table with idempotency-key uniqueness for report-generated events.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
@@ -43,6 +45,8 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Export package responses include the rendered artifact content, content checksum, synthetic-only controls, `downloadSimulationOnly=true`, and `ledgerRowsMutated=false`.
 - Retention sweeps change only report artifact metadata from `GENERATED` to `EXPIRED`, reject expired artifact export, record `REPORT_RETENTION_SWEEP_RUN`, and prove `ledgerRowsMutated=false`.
 - Durable reporting outbox rows are created for `ReportArtifactGenerated`, `ReportArtifactExported`, and `ReportRetentionSweepCompleted`; idempotent generation replay does not create a duplicate generated event.
+- Broker-published reporting envelopes carry `sourceService=reporting-service`, `syntheticOnly=true`, aggregate metadata, and payload controls proving `ledgerRowsMutated=false`.
+- The reporting publisher uses an allow-list for reporting event types and Redpanda integration coverage proves `ReportArtifactGenerated` and `ReportArtifactExported` transition from `PENDING` to `PUBLISHED`.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, `REPORT_ARTIFACT_EXPORTED`, and `REPORT_RETENTION_SWEEP_RUN` audit rows.
@@ -60,6 +64,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `node --test tests/reportingServiceScaffold.test.mjs tests/nextScaffold.test.mjs`
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
+- `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingKafkaOutboxPublisherIntegrationTest --rerun-tasks`
 - `npm run test:reporting-service:keycloak-service-token`
 - `docker compose --profile platform config`
 - `npm run k8s:validate`
@@ -71,8 +76,8 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 
 ## Remaining Risk
 
-- Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, and retention lifecycle expiration are implemented.
-- Kafka dispatch for `reporting_outbox_events` is not added yet; current coverage is durable outbox persistence, not broker publication.
+- Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, retention lifecycle expiration, and Redpanda-backed domain event publication are implemented.
+- Broker publication is proven with Redpanda Testcontainers, while live Compose/Kubernetes dedicated worker rollout and retry/dead-letter hardening remain future work.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
   reporting smokes are present but skipped locally when the reporting E2E URL is

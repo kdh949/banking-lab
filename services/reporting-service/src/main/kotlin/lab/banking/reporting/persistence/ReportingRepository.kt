@@ -8,6 +8,7 @@ import java.time.OffsetDateTime
 import lab.banking.reporting.domain.ReportArtifactDto
 import lab.banking.reporting.domain.ReportDefinitionDto
 import lab.banking.reporting.domain.ReportingAccessAuditEvent
+import lab.banking.reporting.eventing.ReportingOutboxRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 
@@ -187,6 +188,44 @@ class ReportingRepository(
         )
     }
 
+    fun findNextPublishableOutboxForUpdate(eventTypes: Set<String>): ReportingOutboxRecord? =
+        jdbc.query(
+            """
+            SELECT outbox_event_id, event_type, aggregate_type, aggregate_id,
+                   idempotency_key, payload_json
+            FROM reporting_outbox_events
+            WHERE status = 'PENDING'
+              AND event_type IN (:eventTypes)
+            ORDER BY created_at, outbox_event_id
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("eventTypes" to eventTypes)
+        ) { rs, _ -> mapOutbox(rs) }.firstOrNull()
+
+    fun markOutboxPublished(outboxEventId: String) {
+        jdbc.update(
+            """
+            UPDATE reporting_outbox_events
+            SET status = 'PUBLISHED',
+                published_at = now()
+            WHERE outbox_event_id = :outboxEventId
+            """.trimIndent(),
+            mapOf("outboxEventId" to outboxEventId)
+        )
+    }
+
+    fun markOutboxFailed(outboxEventId: String) {
+        jdbc.update(
+            """
+            UPDATE reporting_outbox_events
+            SET status = 'FAILED'
+            WHERE outbox_event_id = :outboxEventId
+            """.trimIndent(),
+            mapOf("outboxEventId" to outboxEventId)
+        )
+    }
+
     private fun artifactSql(whereClause: String): String =
         """
         SELECT artifact_id, report_type, requested_by, requested_role, reason,
@@ -227,6 +266,16 @@ class ReportingRepository(
             maskedByDefault = rs.getBoolean("masked_by_default"),
             syntheticOnly = rs.getBoolean("synthetic_only"),
             generatedAt = rs.getObject("generated_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapOutbox(rs: ResultSet): ReportingOutboxRecord =
+        ReportingOutboxRecord(
+            outboxEventId = rs.getString("outbox_event_id"),
+            eventType = rs.getString("event_type"),
+            aggregateType = rs.getString("aggregate_type"),
+            aggregateId = rs.getString("aggregate_id"),
+            idempotencyKey = rs.getString("idempotency_key"),
+            payload = readMap(rs.getString("payload_json"))
         )
 
     private fun readStringList(value: String): List<String> =
