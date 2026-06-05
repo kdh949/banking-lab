@@ -491,6 +491,14 @@ export function ApiBackedAdminPanel() {
               <dd>{`${reportingState.artifact.retentionPolicy}:${reportingState.artifact.retentionUntil ?? "unscheduled"}`}</dd>
             </div>
             <div>
+              <dt>Artifact Workflow</dt>
+              <dd>{`${reportingState.artifact.workflowInstanceId}:${reportingState.artifact.workflowStatus}`}</dd>
+            </div>
+            <div>
+              <dt>Workflow Timeline</dt>
+              <dd>{reportingState.artifact.workflowTimeline.map((entry) => entry.eventType).join(" -> ") || "none"}</dd>
+            </div>
+            <div>
               <dt>Listed Artifacts</dt>
               <dd>{reportingState.artifacts.map((artifact) => `${artifact.artifactId}:${artifact.status}`).join(", ") || "none"}</dd>
             </div>

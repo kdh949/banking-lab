@@ -109,10 +109,13 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(panel, /Export Package/);
   assert.match(panel, /contentSha256/);
   assert.match(panel, /retentionPolicy/);
+  assert.match(panel, /Artifact Workflow/);
+  assert.match(panel, /workflowStatus/);
   assert.match(panel, /data-testid="api-backed-reporting-admin"/);
   assert.match(client, /ReportCatalogResponse/);
   assert.match(client, /artifactContent/);
   assert.match(client, /contentSha256/);
+  assert.match(client, /ReportingWorkflowTimelineEntryDto/);
   assert.match(client, /ReportArtifactExportResponse/);
   assert.match(client, /exportReportArtifact/);
   assert.match(client, /ReportRetentionSweepResponse/);
@@ -164,6 +167,8 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.match(panel, /reportArtifacts/);
   assert.match(panel, /contentSha256/);
   assert.match(panel, /retentionPolicy/);
+  assert.match(panel, /Artifact Workflow/);
+  assert.match(panel, /workflowTimeline/);
   assert.match(panel, /data-testid="api-backed-reporting-artifact-history"/);
   assert.match(client, /ReportArtifactListResponse/);
   assert.match(loader, /audit-console/);

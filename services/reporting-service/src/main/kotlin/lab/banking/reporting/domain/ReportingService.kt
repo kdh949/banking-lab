@@ -68,6 +68,7 @@ class ReportingService(
         }
 
         val artifactId = "RPT-${UUID.randomUUID().toString().uppercase()}"
+        val workflowInstanceId = workflowInstanceId()
         val artifactPath = "${artifactRoot.trimEnd('/')}/${definition.reportType.lowercase()}-$artifactId.json"
         val artifactContent = renderArtifactContent(
             definition = definition,
@@ -76,8 +77,16 @@ class ReportingService(
             requestedBy = requestedBy,
             requestedRole = requestedRole
         )
-        val artifact = repository.insertArtifact(
+        repository.insertWorkflowInstance(
+            workflowInstanceId = workflowInstanceId,
+            workflowType = "REPORT_ARTIFACT_LIFECYCLE",
+            businessReferenceId = artifactId,
+            status = ReportingWorkflowStatus.GENERATED,
+            startedBy = requestedBy
+        )
+        repository.insertArtifact(
             artifactId = artifactId,
+            workflowInstanceId = workflowInstanceId,
             reportType = definition.reportType,
             requestedBy = requestedBy,
             requestedRole = requestedRole,
@@ -91,36 +100,47 @@ class ReportingService(
             exportFormat = EXPORT_FORMAT,
             sourceReferences = definition.sourceSystems
         )
+        repository.insertWorkflowEvent(
+            workflowEventId = workflowEventId(),
+            workflowInstanceId = workflowInstanceId,
+            eventType = "GENERATED",
+            fromStatus = null,
+            toStatus = ReportingWorkflowStatus.GENERATED,
+            actorId = requestedBy,
+            actorRole = requestedRole,
+            reason = reason
+        )
+        val artifactWithWorkflow = repository.artifact(artifactId)
         appendAudit(
             eventType = "REPORT_GENERATED",
             principal = principal,
             reason = reason,
-            reportType = artifact.reportType,
-            artifactId = artifact.artifactId,
+            reportType = artifactWithWorkflow.reportType,
+            artifactId = artifactWithWorkflow.artifactId,
             payload = mapOf(
-                "artifactId" to artifact.artifactId,
-                "reportType" to artifact.reportType,
-                "maskedByDefault" to artifact.maskedByDefault,
-                "contentSha256" to artifact.contentSha256,
-                "retentionPolicy" to artifact.retentionPolicy,
-                "sourceReferenceCount" to artifact.sourceReferences.size,
+                "artifactId" to artifactWithWorkflow.artifactId,
+                "reportType" to artifactWithWorkflow.reportType,
+                "maskedByDefault" to artifactWithWorkflow.maskedByDefault,
+                "contentSha256" to artifactWithWorkflow.contentSha256,
+                "retentionPolicy" to artifactWithWorkflow.retentionPolicy,
+                "sourceReferenceCount" to artifactWithWorkflow.sourceReferences.size,
                 "syntheticOnly" to true
             )
         )
         appendOutbox(
             eventType = "ReportArtifactGenerated",
-            aggregateId = artifact.artifactId,
+            aggregateId = artifactWithWorkflow.artifactId,
             idempotencyKey = "report-generated:$idempotencyKey",
             payload = mapOf(
-                "artifactId" to artifact.artifactId,
-                "reportType" to artifact.reportType,
-                "contentSha256" to artifact.contentSha256,
-                "retentionPolicy" to artifact.retentionPolicy,
+                "artifactId" to artifactWithWorkflow.artifactId,
+                "reportType" to artifactWithWorkflow.reportType,
+                "contentSha256" to artifactWithWorkflow.contentSha256,
+                "retentionPolicy" to artifactWithWorkflow.retentionPolicy,
                 "syntheticOnly" to true,
                 "ledgerRowsMutated" to false
             )
         )
-        return GenerateReportResponse(item = artifact, replayed = false)
+        return GenerateReportResponse(item = artifactWithWorkflow, replayed = false)
     }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -152,29 +172,43 @@ class ReportingService(
         }
         val packageName = "${artifact.artifactId}-${artifact.reportType.lowercase()}.$EXPORT_FORMAT_EXTENSION"
         val packageContent = exportPackageContent(artifact, packageName)
+        val actorRole = principal.roles.sorted().firstOrNull(ALLOWED_GENERATE_ROLES::contains)
+            ?: principal.roles.sorted().first()
+        repository.updateWorkflowStatus(listOf(artifact.workflowInstanceId), ReportingWorkflowStatus.EXPORTED)
+        repository.insertWorkflowEvent(
+            workflowEventId = workflowEventId(),
+            workflowInstanceId = artifact.workflowInstanceId,
+            eventType = "EXPORTED",
+            fromStatus = artifact.workflowStatus,
+            toStatus = ReportingWorkflowStatus.EXPORTED,
+            actorId = principal.subject,
+            actorRole = actorRole,
+            reason = viewReason
+        )
+        val exportedArtifact = repository.artifact(artifact.artifactId)
         val auditEventId = appendAudit(
             eventType = "REPORT_ARTIFACT_EXPORTED",
             principal = principal,
             reason = viewReason,
-            reportType = artifact.reportType,
-            artifactId = artifact.artifactId,
+            reportType = exportedArtifact.reportType,
+            artifactId = exportedArtifact.artifactId,
             payload = mapOf(
-                "artifactId" to artifact.artifactId,
+                "artifactId" to exportedArtifact.artifactId,
                 "packageName" to packageName,
-                "contentSha256" to artifact.contentSha256,
-                "exportFormat" to artifact.exportFormat,
+                "contentSha256" to exportedArtifact.contentSha256,
+                "exportFormat" to exportedArtifact.exportFormat,
                 "syntheticOnly" to true
             )
         )
         appendOutbox(
             eventType = "ReportArtifactExported",
-            aggregateId = artifact.artifactId,
+            aggregateId = exportedArtifact.artifactId,
             idempotencyKey = null,
             payload = mapOf(
-                "artifactId" to artifact.artifactId,
-                "reportType" to artifact.reportType,
+                "artifactId" to exportedArtifact.artifactId,
+                "reportType" to exportedArtifact.reportType,
                 "packageName" to packageName,
-                "contentSha256" to artifact.contentSha256,
+                "contentSha256" to exportedArtifact.contentSha256,
                 "syntheticOnly" to true,
                 "ledgerRowsMutated" to false
             )
@@ -182,9 +216,9 @@ class ReportingService(
         return ReportArtifactExportResponse(
             auditEventId = auditEventId,
             packageName = packageName,
-            contentSha256 = artifact.contentSha256,
-            exportFormat = artifact.exportFormat,
-            item = artifact,
+            contentSha256 = exportedArtifact.contentSha256,
+            exportFormat = exportedArtifact.exportFormat,
+            item = exportedArtifact,
             packageContent = packageContent
         )
     }
@@ -204,6 +238,22 @@ class ReportingService(
         val expiredArtifacts = repository.expiredGeneratedArtifacts(sweepDate)
         val expiredArtifactIds = expiredArtifacts.map { it.artifactId }
         val expiredCount = repository.expireArtifacts(expiredArtifactIds)
+        repository.updateWorkflowStatus(
+            workflowInstanceIds = expiredArtifacts.map { it.workflowInstanceId },
+            status = ReportingWorkflowStatus.EXPIRED
+        )
+        expiredArtifacts.forEach { artifact ->
+            repository.insertWorkflowEvent(
+                workflowEventId = workflowEventId(),
+                workflowInstanceId = artifact.workflowInstanceId,
+                eventType = "EXPIRED",
+                fromStatus = artifact.workflowStatus,
+                toStatus = ReportingWorkflowStatus.EXPIRED,
+                actorId = requestedBy,
+                actorRole = requestedRole,
+                reason = reason
+            )
+        }
         val auditEventId = appendAudit(
             eventType = "REPORT_RETENTION_SWEEP_RUN",
             principal = principal,
@@ -280,6 +330,10 @@ class ReportingService(
             payload = payload
         )
     }
+
+    private fun workflowInstanceId(): String = "RWF-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun workflowEventId(): String = "RWE-${UUID.randomUUID().toString().uppercase()}"
 
     private fun renderArtifactContent(
         definition: ReportDefinitionDto,

@@ -376,6 +376,22 @@ export function ApiBackedAuditPanel() {
               <dt>Artifact Checksum</dt>
               <dd>{reportingArtifactState.artifacts[0]?.contentSha256.slice(0, 12) ?? "none"}</dd>
             </div>
+            <div>
+              <dt>Artifact Workflow</dt>
+              <dd>
+                {reportingArtifactState.artifacts[0]
+                  ? `${reportingArtifactState.artifacts[0].workflowInstanceId}:${reportingArtifactState.artifacts[0].workflowStatus}`
+                  : "none"}
+              </dd>
+            </div>
+            <div>
+              <dt>Workflow Timeline</dt>
+              <dd>
+                {reportingArtifactState.artifacts[0]
+                  ? reportingArtifactState.artifacts[0].workflowTimeline.map((entry) => entry.eventType).join(" -> ")
+                  : "none"}
+              </dd>
+            </div>
           </>
         ) : null}
         {reportingArtifactState.status === "failed" ? (

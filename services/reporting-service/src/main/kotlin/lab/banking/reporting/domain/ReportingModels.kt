@@ -35,6 +35,12 @@ data class RunReportRetentionSweepCommand(
     val sweepDate: LocalDate? = null
 )
 
+enum class ReportingWorkflowStatus {
+    GENERATED,
+    EXPORTED,
+    EXPIRED
+}
+
 data class ReportArtifactDto(
     val artifactId: String,
     val reportType: String,
@@ -51,7 +57,22 @@ data class ReportArtifactDto(
     val sourceReferences: List<String>,
     val maskedByDefault: Boolean,
     val syntheticOnly: Boolean,
-    val generatedAt: OffsetDateTime?
+    val generatedAt: OffsetDateTime?,
+    val workflowInstanceId: String,
+    val workflowStatus: ReportingWorkflowStatus,
+    val workflowTimeline: List<ReportingWorkflowTimelineEntryDto>
+)
+
+data class ReportingWorkflowTimelineEntryDto(
+    val workflowEventId: String,
+    val eventType: String,
+    val fromStatus: ReportingWorkflowStatus?,
+    val toStatus: ReportingWorkflowStatus,
+    val actorId: String,
+    val actorRole: String,
+    val reason: String,
+    val occurredAt: OffsetDateTime,
+    val syntheticOnly: Boolean
 )
 
 data class GenerateReportResponse(

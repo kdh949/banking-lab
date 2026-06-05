@@ -101,6 +101,12 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.item.retentionUntil").exists())
             .andExpect(jsonPath("$.item.exportFormat").value("JSON"))
             .andExpect(jsonPath("$.item.sourceReferences[0]").value("audit_events"))
+            .andExpect(jsonPath("$.item.workflowInstanceId").value(org.hamcrest.Matchers.startsWith("RWF-")))
+            .andExpect(jsonPath("$.item.workflowStatus").value("GENERATED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[0].eventType").value("GENERATED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[0].fromStatus").doesNotExist())
+            .andExpect(jsonPath("$.item.workflowTimeline[0].toStatus").value("GENERATED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[0].syntheticOnly").value(true))
             .andReturn()
 
         val artifactId = ObjectMapper().readTree(generateResult.response.contentAsString)
@@ -127,6 +133,8 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.items[0].contentSha256").value(org.hamcrest.Matchers.matchesPattern("^[a-f0-9]{64}$")))
             .andExpect(jsonPath("$.items[0].retentionPolicy").value("SYNTHETIC_7Y"))
             .andExpect(jsonPath("$.items[0].artifactPath").value(org.hamcrest.Matchers.containsString("reports/synthetic")))
+            .andExpect(jsonPath("$.items[0].workflowStatus").value("GENERATED"))
+            .andExpect(jsonPath("$.items[0].workflowTimeline[0].eventType").value("GENERATED"))
 
         mockMvc.perform(
             get("/api/reports/artifacts/$artifactId/export")
@@ -143,6 +151,11 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.packageContent.controls.downloadSimulationOnly").value(true))
             .andExpect(jsonPath("$.packageContent.controls.ledgerRowsMutated").value(false))
             .andExpect(jsonPath("$.packageContent.artifactContent.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.item.workflowStatus").value("EXPORTED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[0].eventType").value("GENERATED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[1].eventType").value("EXPORTED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[1].fromStatus").value("GENERATED"))
+            .andExpect(jsonPath("$.item.workflowTimeline[1].toStatus").value("EXPORTED"))
 
         jdbc.update(
             "UPDATE report_artifacts SET retention_until = CURRENT_DATE - INTERVAL '1 day' WHERE artifact_id = :artifactId",
@@ -179,6 +192,10 @@ class ReportingServiceIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.items[0].artifactId").value(artifactId))
             .andExpect(jsonPath("$.items[0].status").value("EXPIRED"))
+            .andExpect(jsonPath("$.items[0].workflowStatus").value("EXPIRED"))
+            .andExpect(jsonPath("$.items[0].workflowTimeline[2].eventType").value("EXPIRED"))
+            .andExpect(jsonPath("$.items[0].workflowTimeline[2].fromStatus").value("EXPORTED"))
+            .andExpect(jsonPath("$.items[0].workflowTimeline[2].toStatus").value("EXPIRED"))
 
         mockMvc.perform(
             get("/api/reports/artifacts/$artifactId/export")
@@ -192,6 +209,8 @@ class ReportingServiceIntegrationTest {
         assertEquals(1, countRowsWhere("report_artifacts", "artifact_content ->> 'syntheticOnly' = 'true'"))
         assertEquals(1, countRowsWhere("report_artifacts", "content_sha256 <> repeat('0', 64)"))
         assertEquals(1, countRowsWhere("report_artifacts", "status = 'EXPIRED' AND retention_action = 'SYNTHETIC_RETENTION_EXPIRED'"))
+        assertEquals(1, countRowsWhere("reporting_workflow_instances", "status = 'EXPIRED' AND business_reference_id = '$artifactId'"))
+        assertEquals(3, countRowsWhere("reporting_workflow_events", "workflow_instance_id IN (SELECT workflow_instance_id FROM report_artifacts WHERE artifact_id = '$artifactId')"))
         assertEquals(3, countRows("reporting_outbox_events"))
         assertEquals(1, countRowsWhere("reporting_outbox_events", "event_type = 'ReportArtifactGenerated' AND status = 'PENDING' AND payload_json ->> 'ledgerRowsMutated' = 'false'"))
         assertEquals(1, countRowsWhere("reporting_outbox_events", "event_type = 'ReportArtifactExported' AND status = 'PENDING'"))
