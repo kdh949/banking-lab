@@ -233,6 +233,65 @@ test("payment-service cancellation outbox event has checked-in AsyncAPI contract
   assert.equal(schema.properties.directLedgerWrite.const, false);
   assert.equal(schema.properties.cancellationRequestId.pattern, "^PCR-");
   assert.equal(schema.properties.realPaymentNetworkUsed.const, false);
+  assert.equal(schema.properties.realFinancialInstitutionApiUsed.const, false);
+  assert.equal(schema.additionalProperties, false);
+});
+
+test("payment-service instruction lifecycle events have checked-in AsyncAPI contract coverage", async () => {
+  const asyncapi = await readFile("contracts/asyncapi/banking-lab-events.yaml", "utf8");
+  const service = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/domain/PaymentInstructionService.kt", "utf8");
+  const lifecycleSchemas = [
+    [
+      "payment.instruction.settled",
+      "PaymentInstructionSettled",
+      "payment-instruction-settled.schema.json",
+      "SETTLED",
+      undefined
+    ],
+    [
+      "payment.instruction.failed",
+      "PaymentInstructionFailed",
+      "payment-instruction-failed.schema.json",
+      "FAILED",
+      true
+    ],
+    [
+      "payment.instruction.retry.scheduled",
+      "PaymentInstructionRetryScheduled",
+      "payment-instruction-retry-scheduled.schema.json",
+      "RETRY_SCHEDULED",
+      undefined
+    ],
+    [
+      "payment.instruction.dead-lettered",
+      "PaymentInstructionDeadLettered",
+      "payment-instruction-dead-lettered.schema.json",
+      "DEAD_LETTER",
+      false
+    ]
+  ];
+
+  assert.match(service, /eventType = "PaymentInstructionSettled"/);
+  assert.match(service, /"ledgerPostedViaCoreBanking" to true/);
+  assert.match(service, /"realFinancialInstitutionApiUsed" to false/);
+  for (const [channel, title, fileName, status, retryable] of lifecycleSchemas) {
+    const schema = JSON.parse(await readFile(`contracts/events/${fileName}`, "utf8"));
+    assert.match(asyncapi, new RegExp(channel.replaceAll(".", "\\.")));
+    assert.match(asyncapi, new RegExp(title));
+    assert.match(asyncapi, new RegExp(fileName.replaceAll(".", "\\.")));
+    assert.equal(schema.title, title);
+    assert.equal(schema.additionalProperties, false);
+    assert.equal(schema.properties.status.const, status);
+    assert.equal(schema.properties.syntheticOnly.const, true);
+    assert.equal(schema.properties.directLedgerWrite.const, false);
+    assert.equal(schema.properties.realPaymentNetworkUsed.const, false);
+    assert.equal(schema.properties.realFinancialInstitutionApiUsed.const, false);
+    assert.equal(schema.properties.paymentInstructionId.pattern, "^PAY-");
+    if (retryable !== undefined) {
+      assert.equal(schema.properties.retryable.const, retryable);
+      assert.equal(schema.properties.deadLetterThreshold.minimum, 1);
+    }
+  }
 });
 
 test("notification-service delivery lifecycle events have checked-in AsyncAPI contract coverage", async () => {

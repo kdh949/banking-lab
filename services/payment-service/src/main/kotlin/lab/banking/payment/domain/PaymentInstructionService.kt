@@ -225,7 +225,9 @@ class PaymentInstructionService(
                     "cancellationRequestId" to cancellationRequestId,
                     "syntheticOnly" to true,
                     "directLedgerWrite" to false,
-                    "makerCheckerApproved" to true
+                    "makerCheckerApproved" to true,
+                    "realPaymentNetworkUsed" to false,
+                    "realFinancialInstitutionApiUsed" to false
                 )
             )
         }
@@ -390,8 +392,12 @@ class PaymentInstructionService(
                     "contractVersion" to "2026-06-05",
                     "paymentInstructionId" to instructionId,
                     "ledgerTransactionId" to request.ledgerTransactionId,
+                    "status" to "SETTLED",
                     "syntheticOnly" to true,
-                    "directLedgerWrite" to false
+                    "directLedgerWrite" to false,
+                    "ledgerPostedViaCoreBanking" to true,
+                    "realPaymentNetworkUsed" to false,
+                    "realFinancialInstitutionApiUsed" to false
                 )
             )
         }
@@ -441,7 +447,9 @@ class PaymentInstructionService(
                     "contractVersion" to "2026-06-05",
                     "paymentInstructionId" to instructionId,
                     "syntheticOnly" to true,
-                    "directLedgerWrite" to false
+                    "directLedgerWrite" to false,
+                    "realPaymentNetworkUsed" to false,
+                    "realFinancialInstitutionApiUsed" to false
                 )
             )
         }

@@ -1,12 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-canceled.schema.json",
-  "title": "PaymentInstructionCanceled",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-retry-scheduled.schema.json",
+  "title": "PaymentInstructionRetryScheduled",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "contractVersion",
     "paymentInstructionId",
+    "paymentAttemptId",
+    "status",
+    "retryCount",
+    "nextRetryAt",
     "syntheticOnly",
     "directLedgerWrite",
     "realPaymentNetworkUsed",
@@ -15,10 +19,12 @@
   "properties": {
     "contractVersion": { "const": "2026-06-05" },
     "paymentInstructionId": { "type": "string", "pattern": "^PAY-" },
-    "cancellationRequestId": { "type": "string", "pattern": "^PCR-" },
+    "paymentAttemptId": { "type": "string", "pattern": "^PAT-" },
+    "status": { "const": "RETRY_SCHEDULED" },
+    "retryCount": { "type": "integer", "minimum": 1 },
+    "nextRetryAt": { "type": "string", "format": "date-time" },
     "syntheticOnly": { "const": true },
     "directLedgerWrite": { "const": false },
-    "makerCheckerApproved": { "type": "boolean" },
     "realPaymentNetworkUsed": { "const": false },
     "realFinancialInstitutionApiUsed": { "const": false }
   }
