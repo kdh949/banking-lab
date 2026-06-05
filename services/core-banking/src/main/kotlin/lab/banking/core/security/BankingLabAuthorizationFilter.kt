@@ -95,6 +95,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/auth/session") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path == "/api/ledger/payment-postings" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
             else -> emptySet()
         }
@@ -247,6 +248,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/cards/authorizations") -> "CWB-602"
             path.startsWith("/api/cards/") && path.contains("loss-report") -> "CWB-606"
             path.startsWith("/api/cards") -> "CWB-601"
+            path.startsWith("/api/ledger/payment-postings") -> "PAY-201"
             path.startsWith("/api/staff/fee-policies") -> "FEE-103"
             path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"

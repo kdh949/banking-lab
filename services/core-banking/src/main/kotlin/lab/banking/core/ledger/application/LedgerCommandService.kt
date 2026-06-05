@@ -492,6 +492,51 @@ class LedgerCommandService(
         }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun billPayment(command: BillPaymentCommand): LedgerCommandResult =
+        postLedgerCommand("BILL_PAYMENT", command.idempotencyKey, command) {
+            requirePositiveAmount(command.amountMinor)
+            requireNonBlank(command.paymentInstructionId, "paymentInstructionId")
+            requireNonBlank(command.debitAccountId, "debitAccountId")
+            requireNonBlank(command.syntheticBillerId, "syntheticBillerId")
+            requireNonBlank(command.requestedBy, "requestedBy")
+            requireNonBlank(command.reason, "reason")
+            if (command.requestedChannel != "PAYMENT_SERVICE") {
+                throw ledgerValidation("requestedChannel must be PAYMENT_SERVICE for bill payment ledger postings")
+            }
+            val businessDate = command.businessDate ?: LocalDate.now()
+            ensureBusinessDateOpen(businessDate)
+            ensureBankSettlementAccount(command.currency)
+            val balances = lockActiveAccounts(listOf(command.debitAccountId, BANK_SETTLEMENT_ACCOUNT_ID))
+            val debitBalance = balances.getValue(command.debitAccountId)
+            if (debitBalance.availableBalanceMinor < command.amountMinor) {
+                throw ledgerConflict(
+                    code = "LEDGER_INSUFFICIENT_AVAILABLE_BALANCE",
+                    message = "insufficient available balance for bill payment on ${command.debitAccountId}",
+                    invariant = "available_balance >= bill payment amount"
+                )
+            }
+            enforcePostingLimits(
+                accountId = command.debitAccountId,
+                channel = command.requestedChannel,
+                businessDate = businessDate,
+                amountMinor = command.amountMinor
+            )
+            createPostedTransaction(
+                transactionType = "BILL_PAYMENT",
+                idempotencyKey = command.idempotencyKey,
+                businessReferenceId = command.paymentInstructionId,
+                businessDate = businessDate,
+                requestedBy = command.requestedBy,
+                requestedChannel = command.requestedChannel,
+                reason = command.reason,
+                postings = listOf(
+                    LedgerPostingInput(command.debitAccountId, PostingDirection.DEBIT, command.amountMinor, command.currency, "PAYMENT"),
+                    LedgerPostingInput(BANK_SETTLEMENT_ACCOUNT_ID, PostingDirection.CREDIT, command.amountMinor, command.currency, "PAYMENT")
+                )
+            )
+        }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun closeBusinessDay(command: DailyClosingCommand): DailyClosingResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(command.idempotencyKey)
@@ -582,6 +627,7 @@ class LedgerCommandService(
                 "LOAN_REPAYMENT" -> "LoanRepaymentPosted"
                 "LOAN_PREPAYMENT" -> "LoanPrepaymentPosted"
                 "CARD_CAPTURE" -> "CardCapturePosted"
+                "BILL_PAYMENT" -> "PaymentLedgerPostingSettled"
                 else -> "LedgerTransactionPosted"
             },
             idempotencyKey = idempotencyKey,
@@ -751,7 +797,6 @@ class LedgerCommandService(
         )
     }
 
-    @Suppress("unused")
     private fun ensureBankSettlementAccount(currency: String) {
         ensureSystemAccount(
             accountId = BANK_SETTLEMENT_ACCOUNT_ID,
@@ -999,7 +1044,7 @@ class LedgerCommandService(
     }
 
     private fun releaseLimitUsageForReversal(original: LedgerTransactionDto) {
-        if (original.transactionType !in setOf("WITHDRAWAL", "INTERNAL_TRANSFER")) {
+        if (original.transactionType !in setOf("WITHDRAWAL", "INTERNAL_TRANSFER", "BILL_PAYMENT")) {
             return
         }
         val channel = normalizeLimitChannel(original.requestedChannel)
@@ -1365,6 +1410,7 @@ class LedgerCommandService(
             "LOAN_REPAYMENT" -> "TX-LOAN-REPAY"
             "LOAN_PREPAYMENT" -> "TX-LOAN-PREPAY"
             "CARD_CAPTURE" -> "TX-CARD-CAP"
+            "BILL_PAYMENT" -> "TX-PAY"
             else -> "TX-LED"
         } + "-${UUID.randomUUID().toString().uppercase()}"
 

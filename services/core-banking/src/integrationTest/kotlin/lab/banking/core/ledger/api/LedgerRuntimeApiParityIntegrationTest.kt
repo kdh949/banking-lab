@@ -307,6 +307,87 @@ class LedgerRuntimeApiParityIntegrationTest {
         assertEquals(0L, ledgerCommandService.balance("ACC-B").availableBalanceMinor)
     }
 
+    @Test
+    fun `payment service ledger posting endpoint posts balanced settlement and replays idempotently`() {
+        seedAccount("CUS-PAY-API", "ACC-PAY-API", "LAB-API-000004", availableBalanceMinor = 50_000)
+        val commandJson = """
+            {
+              "paymentInstructionId": "PAY-API-001",
+              "debitAccountId": "ACC-PAY-API",
+              "syntheticBillerId": "BILLER-SYN-UTIL-001",
+              "amountMinor": 12500,
+              "idempotencyKey": "API-PAY-001",
+              "requestedBy": "payment-service",
+              "requestedChannel": "PAYMENT_SERVICE",
+              "reason": "Synthetic payment-service settlement API test"
+            }
+        """.trimIndent()
+
+        val first = mockMvc.perform(
+            post("/api/ledger/payment-postings")
+                .header("Authorization", bearer("payment-service", listOf("PAYMENT_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(commandJson)
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.replayed").value(false))
+            .andExpect(jsonPath("$.value.transactionType").value("BILL_PAYMENT"))
+            .andExpect(jsonPath("$.value.businessReferenceId").value("PAY-API-001"))
+            .andExpect(jsonPath("$.value.requestedChannel").value("PAYMENT_SERVICE"))
+            .andExpect(jsonPath("$.value.postings.length()").value(2))
+            .andReturn()
+
+        val transactionId = objectMapper.readTree(first.response.contentAsString)
+            .path("value")
+            .path("id")
+            .asText()
+
+        mockMvc.perform(
+            post("/api/ledger/payment-postings")
+                .header("Authorization", bearer("payment-service", listOf("PAYMENT_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(commandJson)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.replayed").value(true))
+            .andExpect(jsonPath("$.value.id").value(transactionId))
+
+        assertEquals(1, countRows("ledger_transactions WHERE idempotency_key = 'API-PAY-001'"))
+        assertEquals(2, countPaymentPostings(transactionId))
+        assertEquals(1, countOutboxEvents(transactionId, "PaymentLedgerPostingSettled"))
+        assertEquals(37_500L, balance("ACC-PAY-API"))
+    }
+
+    @Test
+    fun `payment service ledger posting endpoint rejects customer role`() {
+        seedAccount("CUS-PAY-DENIED", "ACC-PAY-DENIED", "LAB-API-000005", availableBalanceMinor = 50_000)
+
+        mockMvc.perform(
+            post("/api/ledger/payment-postings")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-PAY-DENIED"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "paymentInstructionId": "PAY-API-DENIED",
+                      "debitAccountId": "ACC-PAY-DENIED",
+                      "syntheticBillerId": "BILLER-SYN-UTIL-001",
+                      "amountMinor": 12500,
+                      "idempotencyKey": "API-PAY-DENIED",
+                      "requestedBy": "payment-service",
+                      "requestedChannel": "PAYMENT_SERVICE",
+                      "reason": "Synthetic payment-service settlement API deny test"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+
+        assertEquals(0, countRows("ledger_transactions WHERE idempotency_key = 'API-PAY-DENIED'"))
+        assertEquals(50_000L, balance("ACC-PAY-DENIED"))
+    }
+
     private fun reversalJson(originalTransactionId: String, idempotencyKey: String): String =
         """
         {
@@ -412,6 +493,30 @@ class LedgerRuntimeApiParityIntegrationTest {
             mapOf("accountId" to accountId),
             Long::class.java
         ) ?: 0L
+
+    private fun countPaymentPostings(transactionId: String): Int =
+        jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM ledger_postings
+            WHERE ledger_transaction_id = :transactionId
+              AND posting_type = 'PAYMENT'
+            """.trimIndent(),
+            mapOf("transactionId" to transactionId),
+            Int::class.java
+        ) ?: 0
+
+    private fun countOutboxEvents(aggregateId: String, eventType: String): Int =
+        jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM outbox_events
+            WHERE aggregate_id = :aggregateId
+              AND event_type = :eventType
+            """.trimIndent(),
+            mapOf("aggregateId" to aggregateId, "eventType" to eventType),
+            Int::class.java
+        ) ?: 0
 
     companion object {
         @Container
