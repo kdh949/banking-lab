@@ -1,6 +1,6 @@
 # Parameter Admin API Evidence
 
-Review date: 2026-06-04
+Review date: 2026-06-06
 
 ## Scope
 
@@ -23,6 +23,8 @@ All values are synthetic lab controls. No real security policy, real PII, real f
 - `StaffAccessService` applies/rejects the new parameter business types through the existing maker-checker approval route.
 - `CustomerTransferService` reads `fds.highAmountMinor` from approved effective-dated FDS parameters instead of a static constant.
 - `packages/api-client` has typed parameter DTOs and endpoint methods for all five domains.
+- `apps/fds-aml-console` now exposes a conditional `FDS-301` browser smoke panel that reads `fdsParameters` and can submit a future-effective `highAmountMinor` change request through `requestFdsParameterChange` when a Spring API URL is configured.
+- `packages/auth-client` simulator tokens can carry optional synthetic `auth_time`, `iat`, `amr`, and `acr` claims so local browser smokes can model the same step-up claims enforced by Spring high-risk parameter routes.
 
 ## Commands Run
 
@@ -32,6 +34,10 @@ npm run packages:typecheck
 npm run validate:manifests
 npm run test:screen-engine
 npm run scripts:typecheck
+npm run next:fds-aml-console:typecheck
+node --test tests/nextScaffold.test.mjs
+npm run test:e2e -- apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts
+npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks
 ```
 
 ## Result
@@ -44,6 +50,11 @@ npm run scripts:typecheck
 - `npm run validate:manifests`: passed with 87 manifests.
 - `npm run test:screen-engine`: passed.
 - `npm run scripts:typecheck`: passed.
+- `npm run next:fds-aml-console:typecheck`: passed.
+- `npm run packages:typecheck`: passed after adding optional simulator step-up claims to `@banking-lab/auth-client`.
+- `node --test tests/nextScaffold.test.mjs`: passed with static coverage for the new `api-backed-fds-parameters` panel and API client calls.
+- `npm run test:e2e -- apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts`: passed after sandbox escalation for Chromium; 2 shell tests passed and 8 API/Keycloak tests, including the new FDS parameter command smoke, were skipped because `BANKING_LAB_E2E_API_BASE_URL` was not set.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: first sandboxed run failed before Gradle startup with `java.net.SocketException: Operation not permitted`; approved escalated rerun passed.
 
 ## Invariants Verified
 
@@ -56,7 +67,8 @@ npm run scripts:typecheck
 - Rollback restores a previous parameter value by inserting a new approved version.
 - FDS held transfer path creates no unsafe ledger posting; posted transfers remain balanced.
 - Parameter audit events are appended and marked synthetic-only.
+- The FDS/AML console now keeps `FDS-301` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day FDS behavior during local shell rendering.
 
 ## Remaining Risk
 
-This slice proves the common parameter workflow and the FDS high-amount rule integration. Future hardening should add UI smoke buttons per ops/audit/FDS/admin app, richer validation for structured JSON menu-role parameters, and Temporal/activity evidence if parameter application is later delegated to scheduled workers.
+This slice proves the common parameter workflow and the FDS high-amount rule integration. The FDS/AML console now has conditional `FDS-301` browser wiring, but the local browser run did not execute the API-backed command because no Spring API URL was configured. Future hardening should add equivalent UI smoke buttons per ops/audit/admin app, richer validation for structured JSON menu-role parameters, and Temporal/activity evidence if parameter application is later delegated to scheduled workers.

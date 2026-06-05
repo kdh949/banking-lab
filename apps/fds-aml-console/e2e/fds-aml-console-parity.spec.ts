@@ -88,6 +88,21 @@ test("FDS/AML console executes Spring API-backed FDS release approval when confi
   await expect(panel).toContainText("TX-");
 });
 
+test("FDS/AML console requests Spring API-backed FDS parameter change when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed parameter command smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-fds-parameters");
+  await expect(panel).toContainText("FDS parameters loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("highAmountMinor");
+  await page.getByRole("button", { name: "Run FDS parameter change smoke" }).click();
+  await expect(panel).toContainText("FDS parameter change requested", { timeout: 15_000 });
+  await expect(panel).toContainText("PENDING_APPROVAL");
+  await expect(panel).toContainText("APR-");
+  await expect(panel).toContainText("FPC-");
+});
+
 test("FDS/AML console executes Spring API-backed FDS block approval when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed command smoke.");
 
