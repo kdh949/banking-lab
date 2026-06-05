@@ -6,6 +6,14 @@ banking-lab:
   migration-target: kotlin-spring-boot
   notification-service:
     real-provider-enabled: false
+  security:
+    enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
+    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}
+    dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}
+    jwt:
+      jwks-uri: ${BANKING_LAB_SECURITY_JWKS_URI:}
+      issuer: ${BANKING_LAB_SECURITY_ISSUER:}
+      audience: ${BANKING_LAB_SECURITY_AUDIENCE:}
 
 spring:
   application:

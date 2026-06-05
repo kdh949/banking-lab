@@ -1200,6 +1200,50 @@ export interface ExecuteDueAutopayResponse {
   readonly replayed: boolean;
 }
 
+export type NotificationDeliveryStatus = "PENDING" | "DELIVERED" | "FAILED" | "DEAD_LETTER";
+export type NotificationChannel = "SMS" | "EMAIL" | "PUSH";
+export type NotificationProviderKind = "SYNTHETIC_SMS_SINK" | "SYNTHETIC_EMAIL_SINK" | "SYNTHETIC_PUSH_SINK";
+
+export interface ConsumeNotificationEventRequest {
+  readonly sourceEventId: string;
+  readonly eventType: string;
+  readonly recipientId: string;
+  readonly channel?: NotificationChannel;
+  readonly payload: Record<string, unknown>;
+  readonly requestedBy?: string;
+}
+
+export interface RecordNotificationFailureRequest {
+  readonly errorMessage: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly deadLetterThreshold?: number;
+}
+
+export interface MarkNotificationDeliveredRequest {
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface NotificationDeliveryDto {
+  readonly deliveryRequestId: string;
+  readonly sourceEventId: string;
+  readonly eventType: string;
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly providerKind: NotificationProviderKind;
+  readonly status: NotificationDeliveryStatus;
+  readonly maskedMessage: string;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface NotificationDeliveryResponse {
+  readonly items: readonly NotificationDeliveryDto[];
+  readonly replayed: boolean;
+}
+
 export interface ParameterVersionDto {
   readonly namespace: string;
   readonly parameterVersionId: string;
@@ -2029,6 +2073,49 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         "/api/payments/autopay/executions/due",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    consumeNotificationEvent(command: ConsumeNotificationEventRequest) {
+      return request<NotificationDeliveryResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/events",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getNotificationDelivery(deliveryRequestId: string) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    recordNotificationFailure(deliveryRequestId: string, command: RecordNotificationFailureRequest) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}/failures`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    markNotificationDelivered(deliveryRequestId: string, command: MarkNotificationDeliveredRequest) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}/delivered`,
         {},
         options.bearerToken,
         { method: "POST", body: command }
