@@ -27,6 +27,30 @@ channels:
       PaymentInstructionCanceled:
         payload:
           $ref: ../events/payment-instruction-canceled.schema.json
+  payment.instruction.settled:
+    address: payment.instruction.settled
+    messages:
+      PaymentInstructionSettled:
+        payload:
+          $ref: ../events/payment-instruction-settled.schema.json
+  payment.instruction.failed:
+    address: payment.instruction.failed
+    messages:
+      PaymentInstructionFailed:
+        payload:
+          $ref: ../events/payment-instruction-failed.schema.json
+  payment.instruction.retry.scheduled:
+    address: payment.instruction.retry.scheduled
+    messages:
+      PaymentInstructionRetryScheduled:
+        payload:
+          $ref: ../events/payment-instruction-retry-scheduled.schema.json
+  payment.instruction.dead-lettered:
+    address: payment.instruction.dead-lettered
+    messages:
+      PaymentInstructionDeadLettered:
+        payload:
+          $ref: ../events/payment-instruction-dead-lettered.schema.json
   payment.autopay.execution.created:
     address: payment.autopay.execution.created
     messages:
@@ -80,6 +104,22 @@ operations:
     action: send
     channel:
       $ref: '#/channels/payment.instruction.canceled'
+  publishPaymentInstructionSettled:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.settled'
+  publishPaymentInstructionFailed:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.failed'
+  publishPaymentInstructionRetryScheduled:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.retry.scheduled'
+  publishPaymentInstructionDeadLettered:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.dead-lettered'
   publishPaymentAutopayExecutionCreated:
     action: send
     channel:

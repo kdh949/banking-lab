@@ -21,7 +21,9 @@ This evidence covers the first synthetic Payment Service slice:
   correction requests with independent checker approval before the payment
   instruction is canceled.
 - Event, AsyncAPI, and OpenAPI contracts for payment-to-core-ledger posting
-  requests, settlement, autopay execution, and payment instruction cancellation.
+  requests, settlement, autopay execution, payment instruction cancellation, and
+  payment instruction lifecycle events for settled, failed, retry-scheduled, and
+  dead-lettered outcomes.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
 - Payment-service outbox dispatcher that locks durable
@@ -93,6 +95,7 @@ scheduled worker token acquisition for the core-banking posting bridge.
 ```bash
 npm run test:payment-service:unit
 npm run test:payment-service:integration
+npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentInstructionIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks
@@ -256,9 +259,9 @@ need local file-lock socket and Docker access.
 - `npm run security:posture-check`: pass; static posture checks include the
   payment application synthetic-only payment network default and raw/Helm
   payment API, outbox-worker, and domain-event publisher deployment controls.
-- `node --test tests/springScaffold.test.mjs`: pass; 6 static Spring scaffold
-  checks passed, including payment-service `PaymentInstructionCanceled` AsyncAPI
-  contract coverage.
+- `node --test tests/springScaffold.test.mjs`: pass; 8 static Spring scaffold
+  checks include payment-service `PaymentInstructionCanceled` and payment
+  instruction lifecycle AsyncAPI contract coverage.
 - `node --test tests/springScaffold.test.mjs tests/reportingServiceScaffold.test.mjs`:
   pass; 8 static scaffold checks passed, including payment, notification, and
   reporting service shared-schema Flyway baseline controls.
@@ -278,8 +281,14 @@ need local file-lock socket and Docker access.
 - conflicting payload reuse is rejected with `PAYMENT_IDEMPOTENCY_CONFLICT`;
 - unknown real-network biller identifiers are rejected;
 - settlement records a `TX-*` core-banking ledger transaction reference;
+- `PaymentInstructionSettled` outbox payloads include `status=SETTLED`,
+  `ledgerPostedViaCoreBanking=true`, `directLedgerWrite=false`,
+  `realPaymentNetworkUsed=false`, and
+  `realFinancialInstitutionApiUsed=false`;
 - settled instructions cannot be canceled;
-- pre-settlement cancellation is idempotent and audited through status history.
+- pre-settlement cancellation is idempotent and audited through status history,
+  with `PaymentInstructionCanceled` payloads preserving synthetic-only and
+  no-real-network boundary metadata.
 
 `LedgerCommandServiceIntegrationTest` and `LedgerRuntimeApiParityIntegrationTest`
 now verify the core-banking settlement bridge:
@@ -493,6 +502,10 @@ maker-checker correction path, PAY-102 staff-terminal smoke panel, and
 live Compose payment domain-event publisher and ledger outbox worker smoke
 evidence. Live payment-service Keycloak service-token route smoke evidence now
 passes for dispatch authorization.
+Payment instruction lifecycle AsyncAPI contracts now cover settled, failed,
+retry-scheduled, and dead-lettered outcomes, but failed/retry/dead-letter event
+emission remains a follow-up hardening item beyond the existing durable outbox
+retry state evidence.
 The new Compose/Kubernetes/Helm surface is structurally validated, and the
 domain-event publisher plus ledger outbox worker now have live Compose proof.
 Remaining hardening is production-grade secret rotation, mTLS/service-mesh

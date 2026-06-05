@@ -1,24 +1,28 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-canceled.schema.json",
-  "title": "PaymentInstructionCanceled",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-settled.schema.json",
+  "title": "PaymentInstructionSettled",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "contractVersion",
     "paymentInstructionId",
+    "ledgerTransactionId",
+    "status",
     "syntheticOnly",
     "directLedgerWrite",
+    "ledgerPostedViaCoreBanking",
     "realPaymentNetworkUsed",
     "realFinancialInstitutionApiUsed"
   ],
   "properties": {
     "contractVersion": { "const": "2026-06-05" },
     "paymentInstructionId": { "type": "string", "pattern": "^PAY-" },
-    "cancellationRequestId": { "type": "string", "pattern": "^PCR-" },
+    "ledgerTransactionId": { "type": "string", "pattern": "^TX-" },
+    "status": { "const": "SETTLED" },
     "syntheticOnly": { "const": true },
     "directLedgerWrite": { "const": false },
-    "makerCheckerApproved": { "type": "boolean" },
+    "ledgerPostedViaCoreBanking": { "const": true },
     "realPaymentNetworkUsed": { "const": false },
     "realFinancialInstitutionApiUsed": { "const": false }
   }
