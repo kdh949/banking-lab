@@ -124,6 +124,57 @@ class PaymentAuthorizationIntegrationTest {
             .andExpect(jsonPath("$.auditEventId").value(org.hamcrest.Matchers.startsWith("PAU-")))
         assertEquals(1, countRows("payment_access_audit_events WHERE event_type = 'PAYMENT_INSTRUCTION_VIEW' AND reason = 'Synthetic staff payment inquiry'"))
 
+        val cancelCreateBody = """
+            {
+              "customerId": "CUS-PAY-AUTH-001",
+              "debitAccountId": "ACC-PAY-AUTH-001",
+              "billerId": "SYN-BILLER-UTIL-001",
+              "amountMinor": 47000,
+              "currency": "KRW",
+              "idempotencyKey": "PAY-AUTH-CANCEL-CREATE-001",
+              "requestedBy": "customer01",
+              "requestedChannel": "CUSTOMER_WEB",
+              "reason": "Synthetic authorization payment cancel target"
+            }
+        """.trimIndent()
+        val cancelCreated = mockMvc.perform(
+            post("/api/payments/instructions")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-PAY-AUTH-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cancelCreateBody)
+        )
+            .andExpect(status().isCreated)
+            .andReturn()
+        val cancelInstructionId = objectMapper.readTree(cancelCreated.response.contentAsString)
+            .at("/item/paymentInstructionId")
+            .asText()
+        val cancelBody = """
+            {
+              "idempotencyKey": "PAY-AUTH-CANCEL-001",
+              "requestedBy": "customer01",
+              "reason": "Synthetic customer cancels own payment"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/payments/instructions/$cancelInstructionId/cancel")
+                .header("Authorization", bearer("branch01", listOf("BRANCH_STAFF")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cancelBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("PAYMENT_AUTHORIZATION_POLICY_VIOLATION"))
+
+        mockMvc.perform(
+            post("/api/payments/instructions/$cancelInstructionId/cancel")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-PAY-AUTH-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cancelBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("CANCELED"))
+        assertEquals(1, countRows("payment_instructions WHERE status = 'CANCELED'"))
+
         val settlementBody = """
             {
               "ledgerTransactionId": "TX-PAY-AUTH-001",

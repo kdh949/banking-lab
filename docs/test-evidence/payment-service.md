@@ -13,6 +13,9 @@ This evidence covers the first synthetic Payment Service slice:
   attempts, status history, idempotency, and durable payment Outbox events.
 - Payment instruction API and service logic for create, idempotent replay,
   settlement reference recording, and pre-settlement cancellation.
+- Direct customer self-cancel remains allowed and audited, while direct staff or
+  ops payment cancellation is denied until a maker-checker staff correction flow
+  is introduced.
 - Event and OpenAPI contracts for payment-to-core-ledger posting requests.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
@@ -206,6 +209,9 @@ Manifest and API client coverage verifies:
   `PAYMENT_LOOKUP_REASON_REQUIRED`;
 - reasoned staff payment instruction reads write `payment_access_audit_events`
   rows and return `PAU-*` `auditEventId` values for PAY-101 evidence;
+- branch staff direct payment cancellation is rejected with
+  `PAYMENT_AUTHORIZATION_POLICY_VIOLATION`, while customer self-cancel remains
+  allowed for pre-settlement instructions;
 - customer tokens cannot record settlement callbacks or run operational
   dispatch/due-execution APIs;
 - `PAYMENT_SERVICE` tokens can record payment settlement, execute due autopay,
@@ -241,5 +247,5 @@ from Customer Web, queried from Staff Terminal with reason-required audit,
 dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules, but Kafka/Redpanda runtime publication, live payment-service
-Keycloak realm smoke evidence, and staff correction maker-checker flows are
+Keycloak realm smoke evidence, and full staff correction maker-checker flows are
 still pending.

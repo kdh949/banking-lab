@@ -69,7 +69,7 @@ class PaymentAuthorizationFilter(
             instructionRead.matches(path) && method == "GET" ->
                 setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             instructionSettlement.matches(path) && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
-            instructionCancel.matches(path) && method == "POST" -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER")
+            instructionCancel.matches(path) && method == "POST" -> setOf("CUSTOMER")
             path == "/api/payments/outbox/ledger-postings/dispatch-next" && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR", "OPS_MANAGER")
             path == "/api/payments/autopay/agreements" && method == "POST" -> setOf("CUSTOMER")
             autopayRead.matches(path) && method == "GET" ->
