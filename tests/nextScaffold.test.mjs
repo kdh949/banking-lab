@@ -178,6 +178,23 @@ test("staff-terminal exposes WRK002 operational retry queue through the Spring A
   assert.equal(manifest.audit.eventTypes[0], "OPERATIONAL_RETRY_QUEUE_VIEW");
 });
 
+test("staff-terminal exposes WRK003 workflow timeline through the Spring API client", async () => {
+  const renderer = await readFile("apps/staff-terminal/src/components/manifest-renderer.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const dashboard = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-001.integrated-workstation-dashboard.json", "utf8"));
+  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-003.workflow-timeline.json", "utf8"));
+
+  assert.match(renderer, /data-testid="manifest-workflow-timeline-api-panel"/);
+  assert.match(renderer, /staffWorkflowTimeline/);
+  assert.match(renderer, /TX-SYN-CORR-001/);
+  assert.match(client, /StaffWorkflowTimelineEntryDto/);
+  assert.match(client, /staffWorkflowTimeline\(businessReferenceId: string, reason: string\)/);
+  assert.equal(manifest.query.endpoint, "GET /api/staff/workflows/{businessReferenceId}/timeline");
+  assert.equal(manifest.audit.reasonRequired, true);
+  assert.equal(manifest.audit.eventTypes[0], "WORKFLOW_TIMELINE_VIEW");
+  assert.equal(dashboard.actions.some((action) => action.target === "WRK-003"), true);
+});
+
 test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
   const panel = await readFile("apps/ops-console/src/components/ApiBackedOpsPanel.tsx", "utf8");
   const manifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-404.payment-outbox-dispatch.json", "utf8"));

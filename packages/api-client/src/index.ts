@@ -28,6 +28,19 @@ export interface OperationalRetryQueueItemDto {
   readonly retryEligible: boolean;
 }
 
+export interface StaffWorkflowTimelineEntryDto {
+  readonly timelineEntryId: string;
+  readonly sourceType: string;
+  readonly eventType: string;
+  readonly status?: string | null;
+  readonly actorId?: string | null;
+  readonly actorRole?: string | null;
+  readonly screenId?: string | null;
+  readonly businessReferenceId: string;
+  readonly reason?: string | null;
+  readonly occurredAt: string;
+}
+
 export interface StaffCustomerDetailDto {
   readonly customerId: string;
   readonly piiExposure: string;
@@ -1819,6 +1832,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         "/api/staff/operations/retry-queue",
         status ? { reason, status } : { reason },
+        options.bearerToken
+      );
+    },
+
+    staffWorkflowTimeline(businessReferenceId: string, reason: string) {
+      return request<StaffAccessListResponse<StaffWorkflowTimelineEntryDto>>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/workflows/${encodeURIComponent(businessReferenceId)}/timeline`,
+        { reason },
         options.bearerToken
       );
     },

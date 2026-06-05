@@ -28,6 +28,7 @@ class SyntheticDataSeeder(
         seedLedgerCorrectionTransactions()
         seedComplaintSourceReferences()
         seedOperationalRetryQueue()
+        seedStaffWorkflowTimeline()
         seedWorkflowCases()
         seedAuditEvent()
     }
@@ -258,6 +259,43 @@ class SyntheticDataSeeder(
               'Synthetic broker delay for staff retry queue smoke'
             )
             ON CONFLICT (outbox_event_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedStaffWorkflowTimeline() {
+        jdbc.update(
+            """
+            INSERT INTO workflow_instances (
+              workflow_instance_id, workflow_type, business_reference_id,
+              temporal_workflow_id, temporal_run_id, status, started_by
+            )
+            VALUES (
+              'WFI-SYN-TX-CORR-001', 'TRANSACTION_CORRECTION', 'TX-SYN-CORR-001',
+              NULL, NULL, 'WAITING_APPROVAL', 'ops01'
+            )
+            ON CONFLICT (workflow_instance_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO workflow_events (
+              workflow_event_id, workflow_instance_id, event_type, actor_id, payload_json
+            )
+            VALUES
+              (
+                'WFE-SYN-TX-CORR-001-STARTED', 'WFI-SYN-TX-CORR-001',
+                'WORKFLOW_STARTED', 'ops01',
+                '{"syntheticOnly":true,"businessReferenceId":"TX-SYN-CORR-001"}'::jsonb
+              ),
+              (
+                'WFE-SYN-TX-CORR-001-WAITING', 'WFI-SYN-TX-CORR-001',
+                'WAITING_APPROVAL', 'ops01',
+                '{"syntheticOnly":true,"approvalRequired":true}'::jsonb
+              )
+            ON CONFLICT (workflow_event_id) DO NOTHING
             """.trimIndent(),
             emptyMap<String, Any?>()
         )

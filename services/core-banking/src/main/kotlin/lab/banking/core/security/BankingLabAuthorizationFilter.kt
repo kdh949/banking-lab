@@ -86,6 +86,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/aml/governance") -> setOf("AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/operations/retry-queue") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/reject$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -274,6 +275,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/accounts/") && path.contains("balance-certificate") -> "ACC-102"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/operations/retry-queue") -> "WRK-002"
+            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> "WRK-003"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"

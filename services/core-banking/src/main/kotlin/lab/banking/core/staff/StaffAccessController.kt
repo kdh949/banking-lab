@@ -60,6 +60,13 @@ class StaffAccessController(
     ): StaffAccessListResponse<OperationalRetryQueueItemDto> =
         staffAccessService.operationalRetryQueue(status, reason)
 
+    @GetMapping("/workflows/{businessReferenceId}/timeline")
+    fun workflowTimeline(
+        @PathVariable businessReferenceId: String,
+        @RequestParam(required = false) reason: String?
+    ): StaffAccessListResponse<StaffWorkflowTimelineEntryDto> =
+        staffAccessService.workflowTimeline(businessReferenceId, reason)
+
     @PostMapping("/pii/unmask")
     fun unmask(@RequestBody command: PiiUnmaskCommand): StaffUnmaskResponse =
         staffAccessService.unmaskCustomer(command)

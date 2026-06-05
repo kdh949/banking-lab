@@ -271,6 +271,114 @@ class StaffAccessService(
         return StaffAccessListResponse(auditEventId = auditEventId, items = items)
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    fun workflowTimeline(
+        businessReferenceId: String,
+        reason: String?
+    ): StaffAccessListResponse<StaffWorkflowTimelineEntryDto> {
+        val normalizedReferenceId = requireField(businessReferenceId.trim(), "businessReferenceId")
+        requireReason(reason, "WORKFLOW_TIMELINE_VIEW requires a business reason")
+        val items = jdbc.query(
+            """
+            SELECT *
+            FROM (
+              SELECT workflow_event_id AS timeline_entry_id,
+                     'WORKFLOW' AS source_type,
+                     we.event_type AS event_type,
+                     wi.status AS status,
+                     we.actor_id AS actor_id,
+                     NULL::text AS actor_role,
+                     NULL::text AS screen_id,
+                     wi.business_reference_id AS business_reference_id,
+                     NULL::text AS reason,
+                     we.created_at AS occurred_at
+              FROM workflow_events we
+              JOIN workflow_instances wi
+                ON wi.workflow_instance_id = we.workflow_instance_id
+              WHERE wi.business_reference_id = :businessReferenceId
+              UNION ALL
+              SELECT approval_id || ':REQUESTED' AS timeline_entry_id,
+                     'APPROVAL' AS source_type,
+                     'APPROVAL_REQUESTED' AS event_type,
+                     status,
+                     requested_by AS actor_id,
+                     NULL::text AS actor_role,
+                     NULL::text AS screen_id,
+                     business_reference_id,
+                     request_reason AS reason,
+                     requested_at AS occurred_at
+              FROM operator_approvals
+              WHERE business_reference_id = :businessReferenceId
+              UNION ALL
+              SELECT approval_id || ':APPROVED' AS timeline_entry_id,
+                     'APPROVAL' AS source_type,
+                     'APPROVAL_APPROVED' AS event_type,
+                     status,
+                     approved_by AS actor_id,
+                     NULL::text AS actor_role,
+                     NULL::text AS screen_id,
+                     business_reference_id,
+                     request_reason AS reason,
+                     approved_at AS occurred_at
+              FROM operator_approvals
+              WHERE business_reference_id = :businessReferenceId
+                AND approved_at IS NOT NULL
+              UNION ALL
+              SELECT approval_id || ':REJECTED' AS timeline_entry_id,
+                     'APPROVAL' AS source_type,
+                     'APPROVAL_REJECTED' AS event_type,
+                     status,
+                     rejected_by AS actor_id,
+                     NULL::text AS actor_role,
+                     NULL::text AS screen_id,
+                     business_reference_id,
+                     COALESCE(reject_reason, request_reason) AS reason,
+                     rejected_at AS occurred_at
+              FROM operator_approvals
+              WHERE business_reference_id = :businessReferenceId
+                AND rejected_at IS NOT NULL
+              UNION ALL
+              SELECT audit_event_id AS timeline_entry_id,
+                     'AUDIT' AS source_type,
+                     event_type,
+                     NULL::text AS status,
+                     actor_id,
+                     actor_role,
+                     screen_id,
+                     business_reference_id,
+                     reason,
+                     created_at AS occurred_at
+              FROM audit_events
+              WHERE business_reference_id = :businessReferenceId
+            ) timeline
+            ORDER BY occurred_at, timeline_entry_id
+            LIMIT 100
+            """.trimIndent(),
+            mapOf("businessReferenceId" to normalizedReferenceId),
+            this::mapStaffWorkflowTimelineEntry
+        )
+        if (items.isEmpty()) {
+            throw WorkflowErrors.notFound("workflow timeline not found for business reference: $normalizedReferenceId")
+        }
+        val principal = BankingLabAuthContext.get()
+        val auditEventId = appendAudit(
+            eventType = "WORKFLOW_TIMELINE_VIEW",
+            actorId = principal?.subject ?: "ops01",
+            actorRole = principal?.roles?.sorted()?.joinToString(",") ?: "OPS_MANAGER",
+            screenId = "WRK-003",
+            customerId = null,
+            accountId = null,
+            reason = reason,
+            payload = mapOf(
+                "businessReferenceId" to normalizedReferenceId,
+                "resultCount" to items.size,
+                "sources" to items.map { it.sourceType }.distinct().sorted(),
+                "syntheticOnly" to true
+            )
+        )
+        return StaffAccessListResponse(auditEventId = auditEventId, items = items)
+    }
+
     fun unmaskCustomer(command: PiiUnmaskCommand): StaffUnmaskResponse =
         runSerializableStaffAccess {
             unmaskCustomerInTransaction(command)
@@ -2595,6 +2703,20 @@ class StaffAccessService(
             publishedAt = rs.getObject("published_at", OffsetDateTime::class.java),
             errorMessage = rs.getString("error_message"),
             retryEligible = rs.getBoolean("retry_eligible")
+        )
+
+    private fun mapStaffWorkflowTimelineEntry(rs: ResultSet, rowNum: Int): StaffWorkflowTimelineEntryDto =
+        StaffWorkflowTimelineEntryDto(
+            timelineEntryId = rs.getString("timeline_entry_id"),
+            sourceType = rs.getString("source_type"),
+            eventType = rs.getString("event_type"),
+            status = rs.getString("status"),
+            actorId = rs.getString("actor_id"),
+            actorRole = rs.getString("actor_role"),
+            screenId = rs.getString("screen_id"),
+            businessReferenceId = rs.getString("business_reference_id"),
+            reason = rs.getString("reason"),
+            occurredAt = rs.getObject("occurred_at", OffsetDateTime::class.java)
         )
 
     private fun maskedCustomer(customer: StaffCustomerRecord): MaskedCustomerDto =

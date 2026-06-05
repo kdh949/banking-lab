@@ -109,6 +109,13 @@ test("staff terminal opens transaction codes into tabs and switches active busin
   await expect(page.getByText("[WRK002] Operational Retry Queue")).toBeVisible();
   await expect(page.locator(".manifest-endpoint", { hasText: "GET /api/staff/operations/retry-queue" })).toBeVisible();
   await expect(page.getByLabel("Lookup Reason")).toBeVisible();
+
+  await page.getByLabel("Transaction code search").fill("WRK003");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Workflow Timeline" })).toBeVisible();
+  await expect(page.getByText("[WRK003] Workflow Timeline")).toBeVisible();
+  await expect(page.locator(".manifest-endpoint", { hasText: "GET /api/staff/workflows/{businessReferenceId}/timeline" })).toBeVisible();
+  await expect(page.getByTestId("manifest-workflow-timeline-api-panel")).toBeAttached();
 });
 
 test("staff terminal renders CST-001 through the inquiry manifest renderer", async ({ page }) => {
@@ -219,6 +226,21 @@ test("staff terminal loads Spring API-backed operational retry queue when config
   await expect(panel).toContainText("OBX-SYN-RETRY-001");
   await expect(panel).toContainText("FAILED");
   await expect(panel).toContainText("eligible");
+});
+
+test("staff terminal loads Spring API-backed workflow timeline when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed workflow timeline smoke.");
+
+  await page.goto(baseUrl);
+  await page.getByLabel("Transaction code search").fill("WRK003");
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+
+  const panel = page.getByTestId("manifest-workflow-timeline-api-panel");
+  await expect(panel).toContainText("workflow timeline loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("AUD-");
+  await expect(panel).toContainText("TX-SYN-CORR-001");
+  await expect(panel).toContainText("WORKFLOW");
+  await expect(panel).toContainText("WAITING_APPROVAL");
 });
 
 test("staff terminal executes Spring API-backed privileged unmask when configured", async ({ page }) => {

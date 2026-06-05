@@ -2187,6 +2187,30 @@ Result:
 - Back Office staff terminal now has target-stack read visibility into operational retry exceptions without mutating retry state or treating the Node reference as implementation.
 - Live browser retrieval against Spring remains conditional until `BANKING_LAB_E2E_API_BASE_URL` is configured for the WRK002 smoke.
 
+## 2026-06-05: Staff Workflow Timeline Read Slice
+
+Changes completed:
+
+- Added `GET /api/staff/workflows/{businessReferenceId}/timeline` for reason-required staff visibility into workflow, approval, and audit timeline entries.
+- Added `WRK-003` workflow timeline manifest and linked it from the integrated workstation dashboard.
+- Added shared api-client and staff-terminal manifest renderer support for the workflow timeline smoke.
+- Seeded deterministic synthetic workflow instance/events for `TX-SYN-CORR-001`.
+- Extended staff access integration coverage to prove missing reason rejection, workflow/approval/audit source aggregation, and `WORKFLOW_TIMELINE_VIEW` audit without leaking audit payload JSON or snapshot bodies.
+
+Verification:
+
+- `npm run packages:typecheck` passed.
+- `npm run next:staff-terminal:typecheck` passed after replacing an unsupported local icon name.
+- `npm run validate:manifests` passed with 101 manifests.
+- `npm test` passed with 158 tests.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks` passed after sandbox escalation for Testcontainers/PostgreSQL.
+- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed with 5 tests and 17 skipped because API/payment/Keycloak E2E URLs were not configured.
+
+Result:
+
+- Back Office staff terminal now has target-stack workflow timeline read visibility for a business reference without relying on the legacy Node reference.
+- Live browser retrieval against Spring remains conditional until `BANKING_LAB_E2E_API_BASE_URL` is configured for the WRK003 smoke.
+
 ## 2026-06-05: Complaint Dispute Source References
 
 Changes completed:

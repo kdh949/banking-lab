@@ -15,6 +15,7 @@ import {
   type OperatorApproval,
   type StaffApprovalExecutionResponse,
   type StaffApprovalRejectionResponse,
+  type StaffWorkflowTimelineEntryDto,
   type TransactionCorrectionRequestResponse,
   type TransferLimitChangeRequestResponse
 } from "@banking-lab/api-client";
@@ -68,6 +69,11 @@ type AuditLogState =
   | { readonly status: "offline"; readonly message: string }
   | { readonly status: "loading" }
   | { readonly status: "loaded"; readonly hashChainValid: boolean; readonly events: readonly AuditEventDto[] }
+  | { readonly status: "failed"; readonly message: string };
+type WorkflowTimelineState =
+  | { readonly status: "offline"; readonly message: string }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly auditEventId: string; readonly items: readonly StaffWorkflowTimelineEntryDto[] }
   | { readonly status: "failed"; readonly message: string };
 type AccountHoldApiState =
   | { readonly status: "offline"; readonly message: string }
@@ -209,6 +215,7 @@ const apiBackedEndpointFragments = [
   "/api/ops/fee-posting-batches",
   "/api/staff/pii/unmask",
   "/api/staff/approvals/",
+  "/api/staff/workflows/",
   "/api/staff/complaints",
   "/api/staff/fds-cases",
   "/api/staff/aml-cases",
@@ -391,6 +398,9 @@ function InquiryApiPanel({ manifest }: { readonly manifest: ScreenManifest }) {
   }
   if (manifest.screenId === "AUD-001") {
     return <AuditLogApiPanel />;
+  }
+  if (manifest.screenId === "WRK-003") {
+    return <WorkflowTimelineApiPanel />;
   }
   return null;
 }
@@ -732,6 +742,83 @@ function AuditLogApiPanel() {
                 </div>
               </dl>
             </div>
+          </>
+        ) : null}
+        {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function WorkflowTimelineApiPanel() {
+  const [state, setState] = useState<WorkflowTimelineState>(() => initialWorkflowTimelineState());
+
+  useEffect(() => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    let cancelled = false;
+    createStaffCommandClient("ops01", ["OPS_MANAGER"])
+      .staffWorkflowTimeline("TX-SYN-CORR-001", "API-backed workflow timeline smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setState({ status: "loaded", auditEventId: response.auditEventId, items: response.items });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setState({ status: "failed", message: errorMessage(error) });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <TerminalPanel
+      title="API-backed WRK003 Workflow Timeline"
+      icon="account_tree"
+      className="manifest-panel manifest-api-panel"
+      action={<span>{apiBaseUrl ? "/api/staff/workflows/{businessReferenceId}/timeline" : "not configured"}</span>}
+    >
+      <div className="manifest-api-stack" data-testid="manifest-workflow-timeline-api-panel">
+        <div className="manifest-api-summary">
+          <strong>{workflowTimelineStatusLabel(state)}</strong>
+          <span>{state.status === "offline" ? state.message : "Spring workflow timeline read model for audit, approval, and workflow events."}</span>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <dl className="manifest-definition-list">
+              <div>
+                <dt>Business ref</dt>
+                <dd>{state.items[0]?.businessReferenceId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Audit event</dt>
+                <dd>{state.auditEventId}</dd>
+              </div>
+              <div>
+                <dt>Sources</dt>
+                <dd>{[...new Set(state.items.map((item) => item.sourceType))].sort().join(", ")}</dd>
+              </div>
+              <div>
+                <dt>Entries</dt>
+                <dd>{state.items.length}</dd>
+              </div>
+            </dl>
+            <DenseTable
+              columns={["source", "eventType", "status", "actor", "screen", "occurredAt"]}
+              rows={state.items.slice(0, 10).map((item) => [
+                item.sourceType,
+                item.eventType,
+                item.status ?? "none",
+                item.actorId ?? "none",
+                item.screenId ?? "none",
+                formatDateTime(item.occurredAt)
+              ])}
+              ariaLabel="API-backed WRK003 workflow timeline"
+            />
           </>
         ) : null}
         {state.status === "failed" ? <p className="manifest-api-error">{state.message}</p> : null}
@@ -2526,6 +2613,16 @@ function initialFeePolicyApiState(): FeePolicyApiState {
   return { status: "idle" };
 }
 
+function initialWorkflowTimelineState(): WorkflowTimelineState {
+  if (!apiBaseUrl) {
+    return { status: "offline", message: "API URL not configured" };
+  }
+  if (!simulatorTokenSmokesEnabled) {
+    return { status: "offline", message: "simulator token smoke disabled" };
+  }
+  return { status: "loading" };
+}
+
 function createApprovalClient() {
   return createBankingApiClient({
     baseUrl: apiBaseUrl,
@@ -2590,6 +2687,19 @@ function auditStatusLabel(state: AuditLogState): string {
     return "audit log failed";
   }
   return "audit log loaded";
+}
+
+function workflowTimelineStatusLabel(state: WorkflowTimelineState): string {
+  if (state.status === "offline") {
+    return state.message;
+  }
+  if (state.status === "loading") {
+    return "loading workflow timeline";
+  }
+  if (state.status === "failed") {
+    return "workflow timeline failed";
+  }
+  return "workflow timeline loaded";
 }
 
 function accountHoldStatusLabel(state: AccountHoldApiState): string {

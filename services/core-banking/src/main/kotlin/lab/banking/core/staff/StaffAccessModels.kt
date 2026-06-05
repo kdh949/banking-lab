@@ -40,6 +40,19 @@ data class OperationalRetryQueueItemDto(
     val retryEligible: Boolean
 )
 
+data class StaffWorkflowTimelineEntryDto(
+    val timelineEntryId: String,
+    val sourceType: String,
+    val eventType: String,
+    val status: String?,
+    val actorId: String?,
+    val actorRole: String?,
+    val screenId: String?,
+    val businessReferenceId: String,
+    val reason: String?,
+    val occurredAt: OffsetDateTime
+)
+
 data class StaffUnmaskResponse(
     val auditEventId: String,
     val expiresInSeconds: Int,

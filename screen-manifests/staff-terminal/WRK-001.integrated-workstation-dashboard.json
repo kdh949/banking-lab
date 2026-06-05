@@ -48,6 +48,12 @@
       "target": "WRK-002"
     },
     {
+      "id": "openWorkflowTimeline",
+      "label": "Open Workflow Timeline",
+      "type": "navigate",
+      "target": "WRK-003"
+    },
+    {
       "id": "openAuditLog",
       "label": "Open Audit Log",
       "type": "navigate",
