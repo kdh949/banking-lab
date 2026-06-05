@@ -12,7 +12,9 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
 - `GET /api/reports/artifacts/{artifactId}/export` returns a synthetic JSON package simulation for a rendered artifact and requires a business reason.
 - `POST /api/reports/retention/sweeps` expires artifacts past `retention_until`, records `SYNTHETIC_RETENTION_EXPIRED`, and requires an authorized ops/compliance/reporting actor.
+- Report generation, export, and retention sweep completion append durable `reporting_outbox_events` rows in the same transaction as reporting metadata changes.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
+- `V004__reporting_outbox_events.sql` adds a durable `PENDING` outbox table with idempotency-key uniqueness for report-generated events.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
 - Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service with the reporting audience and dedicated Flyway table.
@@ -40,6 +42,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Artifact responses expose `contentSha256`, `retentionPolicy=SYNTHETIC_7Y`, `retentionUntil`, and `exportFormat=JSON`.
 - Export package responses include the rendered artifact content, content checksum, synthetic-only controls, `downloadSimulationOnly=true`, and `ledgerRowsMutated=false`.
 - Retention sweeps change only report artifact metadata from `GENERATED` to `EXPIRED`, reject expired artifact export, record `REPORT_RETENTION_SWEEP_RUN`, and prove `ledgerRowsMutated=false`.
+- Durable reporting outbox rows are created for `ReportArtifactGenerated`, `ReportArtifactExported`, and `ReportRetentionSweepCompleted`; idempotent generation replay does not create a duplicate generated event.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, `REPORT_ARTIFACT_EXPORTED`, and `REPORT_RETENTION_SWEEP_RUN` audit rows.
@@ -69,7 +72,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 ## Remaining Risk
 
 - Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, and retention lifecycle expiration are implemented.
-- No Kafka/Outbox dispatch is added for report-generated events yet.
+- Kafka dispatch for `reporting_outbox_events` is not added yet; current coverage is durable outbox persistence, not broker publication.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
   reporting smokes are present but skipped locally when the reporting E2E URL is

@@ -107,6 +107,19 @@ class ReportingService(
                 "syntheticOnly" to true
             )
         )
+        appendOutbox(
+            eventType = "ReportArtifactGenerated",
+            aggregateId = artifact.artifactId,
+            idempotencyKey = "report-generated:$idempotencyKey",
+            payload = mapOf(
+                "artifactId" to artifact.artifactId,
+                "reportType" to artifact.reportType,
+                "contentSha256" to artifact.contentSha256,
+                "retentionPolicy" to artifact.retentionPolicy,
+                "syntheticOnly" to true,
+                "ledgerRowsMutated" to false
+            )
+        )
         return GenerateReportResponse(item = artifact, replayed = false)
     }
 
@@ -153,6 +166,19 @@ class ReportingService(
                 "syntheticOnly" to true
             )
         )
+        appendOutbox(
+            eventType = "ReportArtifactExported",
+            aggregateId = artifact.artifactId,
+            idempotencyKey = null,
+            payload = mapOf(
+                "artifactId" to artifact.artifactId,
+                "reportType" to artifact.reportType,
+                "packageName" to packageName,
+                "contentSha256" to artifact.contentSha256,
+                "syntheticOnly" to true,
+                "ledgerRowsMutated" to false
+            )
+        )
         return ReportArtifactExportResponse(
             auditEventId = auditEventId,
             packageName = packageName,
@@ -192,6 +218,19 @@ class ReportingService(
                 "syntheticOnly" to true
             )
         )
+        appendOutbox(
+            eventType = "ReportRetentionSweepCompleted",
+            aggregateType = "REPORT_RETENTION_SWEEP",
+            aggregateId = "REPORT_RETENTION_SWEEP-${sweepDate}",
+            idempotencyKey = null,
+            payload = mapOf(
+                "sweepDate" to sweepDate.toString(),
+                "expiredCount" to expiredCount,
+                "expiredArtifactIds" to expiredArtifactIds,
+                "syntheticOnly" to true,
+                "ledgerRowsMutated" to false
+            )
+        )
         return ReportRetentionSweepResponse(
             auditEventId = auditEventId,
             sweepDate = sweepDate,
@@ -223,6 +262,23 @@ class ReportingService(
             )
         )
         return auditEventId
+    }
+
+    private fun appendOutbox(
+        eventType: String,
+        aggregateType: String = "REPORT_ARTIFACT",
+        aggregateId: String,
+        idempotencyKey: String?,
+        payload: Map<String, Any?>
+    ) {
+        repository.appendOutboxEvent(
+            outboxEventId = "RPO-${UUID.randomUUID().toString().uppercase()}",
+            eventType = eventType,
+            aggregateType = aggregateType,
+            aggregateId = aggregateId,
+            idempotencyKey = idempotencyKey,
+            payload = payload
+        )
     }
 
     private fun renderArtifactContent(

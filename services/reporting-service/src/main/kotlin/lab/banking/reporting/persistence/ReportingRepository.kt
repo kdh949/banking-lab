@@ -157,6 +157,36 @@ class ReportingRepository(
         )
     }
 
+    fun appendOutboxEvent(
+        outboxEventId: String,
+        eventType: String,
+        aggregateType: String,
+        aggregateId: String,
+        idempotencyKey: String?,
+        payload: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO reporting_outbox_events (
+              outbox_event_id, event_type, aggregate_type, aggregate_id,
+              idempotency_key, payload_json, status, synthetic_only
+            ) VALUES (
+              :outboxEventId, :eventType, :aggregateType, :aggregateId,
+              :idempotencyKey, CAST(:payloadJson AS jsonb), 'PENDING', true
+            )
+            ON CONFLICT (outbox_event_id) DO NOTHING
+            """.trimIndent(),
+            mapOf(
+                "outboxEventId" to outboxEventId,
+                "eventType" to eventType,
+                "aggregateType" to aggregateType,
+                "aggregateId" to aggregateId,
+                "idempotencyKey" to idempotencyKey,
+                "payloadJson" to objectMapper.writeValueAsString(payload)
+            )
+        )
+    }
+
     private fun artifactSql(whereClause: String): String =
         """
         SELECT artifact_id, report_type, requested_by, requested_role, reason,

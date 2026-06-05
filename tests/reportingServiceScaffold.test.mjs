@@ -13,6 +13,7 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const migration = await readFile("services/reporting-service/src/main/resources/db/migration/V001__reporting_service_foundation.sql", "utf8");
   const renderingMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V002__report_artifact_rendering.sql", "utf8");
   const retentionMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V003__report_artifact_retention_lifecycle.sql", "utf8");
+  const outboxMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V004__reporting_outbox_events.sql", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-reporting-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
@@ -44,6 +45,9 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(retentionMigration, /EXPIRED/);
   assert.match(retentionMigration, /SYNTHETIC_RETENTION_EXPIRED/);
   assert.match(retentionMigration, /idx_report_artifacts_retention_until/);
+  assert.match(outboxMigration, /CREATE TABLE reporting_outbox_events/);
+  assert.match(outboxMigration, /status TEXT NOT NULL DEFAULT 'PENDING'/);
+  assert.match(outboxMigration, /idx_reporting_outbox_idempotency/);
   assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
   assert.match(keycloakServiceTokenSmoke, /client_id=reporting-service-api/);
   assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
@@ -71,6 +75,8 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(service, /renderArtifactContent/);
   assert.match(service, /exportArtifact/);
   assert.match(service, /runRetentionSweep/);
+  assert.match(service, /appendOutbox/);
+  assert.match(service, /ReportArtifactGenerated/);
   assert.match(service, /REPORT_ARTIFACT_EXPORTED/);
   assert.match(service, /REPORT_RETENTION_SWEEP_RUN/);
   assert.match(service, /sha256/);
@@ -94,6 +100,8 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(integrationTest, /\/export/);
   assert.match(integrationTest, /retention\/sweeps/);
   assert.match(integrationTest, /EXPIRED/);
+  assert.match(integrationTest, /reporting_outbox_events/);
+  assert.match(integrationTest, /ReportRetentionSweepCompleted/);
   assert.match(integrationTest, /downloadSimulationOnly/);
   assert.match(integrationTest, /SYNTHETIC_7Y/);
   assert.match(integrationTest, /reporting_access_audit_events/);

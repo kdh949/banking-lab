@@ -192,6 +192,10 @@ class ReportingServiceIntegrationTest {
         assertEquals(1, countRowsWhere("report_artifacts", "artifact_content ->> 'syntheticOnly' = 'true'"))
         assertEquals(1, countRowsWhere("report_artifacts", "content_sha256 <> repeat('0', 64)"))
         assertEquals(1, countRowsWhere("report_artifacts", "status = 'EXPIRED' AND retention_action = 'SYNTHETIC_RETENTION_EXPIRED'"))
+        assertEquals(3, countRows("reporting_outbox_events"))
+        assertEquals(1, countRowsWhere("reporting_outbox_events", "event_type = 'ReportArtifactGenerated' AND status = 'PENDING' AND payload_json ->> 'ledgerRowsMutated' = 'false'"))
+        assertEquals(1, countRowsWhere("reporting_outbox_events", "event_type = 'ReportArtifactExported' AND status = 'PENDING'"))
+        assertEquals(1, countRowsWhere("reporting_outbox_events", "event_type = 'ReportRetentionSweepCompleted' AND aggregate_type = 'REPORT_RETENTION_SWEEP'"))
         assertTrue(countRows("reporting_access_audit_events") >= 6)
     }
 
