@@ -110,6 +110,29 @@ class ReportingRepository(
             if (reportType.isNullOrBlank()) emptyMap<String, Any?>() else mapOf("reportType" to reportType)
         ) { rs, _ -> mapArtifact(rs) }
 
+    fun expiredGeneratedArtifacts(sweepDate: LocalDate): List<ReportArtifactDto> =
+        jdbc.query(
+            artifactSql("WHERE status = 'GENERATED' AND retention_until < :sweepDate") + " ORDER BY retention_until, artifact_id",
+            mapOf("sweepDate" to sweepDate)
+        ) { rs, _ -> mapArtifact(rs) }
+
+    fun expireArtifacts(artifactIds: List<String>): Int {
+        if (artifactIds.isEmpty()) {
+            return 0
+        }
+        return jdbc.update(
+            """
+            UPDATE report_artifacts
+            SET status = 'EXPIRED',
+                expired_at = now(),
+                retention_action = 'SYNTHETIC_RETENTION_EXPIRED'
+            WHERE artifact_id IN (:artifactIds)
+              AND status = 'GENERATED'
+            """.trimIndent(),
+            mapOf("artifactIds" to artifactIds)
+        )
+    }
+
     fun appendAudit(event: ReportingAccessAuditEvent) {
         jdbc.update(
             """

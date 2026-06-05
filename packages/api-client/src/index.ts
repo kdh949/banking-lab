@@ -1494,6 +1494,13 @@ export interface GenerateReportArtifactRequest {
   readonly idempotencyKey?: string;
 }
 
+export interface RunReportRetentionSweepRequest {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly sweepDate?: string;
+}
+
 export interface ReportArtifactDto {
   readonly artifactId: string;
   readonly reportType: string;
@@ -1531,6 +1538,15 @@ export interface ReportArtifactExportResponse {
   readonly exportFormat: string;
   readonly item: ReportArtifactDto;
   readonly packageContent: Record<string, unknown>;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ReportRetentionSweepResponse {
+  readonly auditEventId: string;
+  readonly sweepDate: string;
+  readonly expiredCount: number;
+  readonly expiredArtifactIds: readonly string[];
+  readonly ledgerRowsMutated: boolean;
   readonly syntheticOnly: boolean;
 }
 
@@ -2737,6 +2753,17 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         `/api/reports/artifacts/${encodeURIComponent(artifactId)}/export`,
         { reason },
         options.bearerToken
+      );
+    },
+
+    runReportRetentionSweep(command: RunReportRetentionSweepRequest) {
+      return request<ReportRetentionSweepResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/retention/sweeps",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
       );
     },
 

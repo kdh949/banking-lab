@@ -12,6 +12,7 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const migration = await readFile("services/reporting-service/src/main/resources/db/migration/V001__reporting_service_foundation.sql", "utf8");
   const renderingMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V002__report_artifact_rendering.sql", "utf8");
+  const retentionMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V003__report_artifact_retention_lifecycle.sql", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-reporting-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
@@ -40,6 +41,9 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(renderingMigration, /content_sha256 TEXT NOT NULL/);
   assert.match(renderingMigration, /retention_policy TEXT NOT NULL/);
   assert.match(renderingMigration, /chk_report_artifacts_synthetic_rendered_content/);
+  assert.match(retentionMigration, /EXPIRED/);
+  assert.match(retentionMigration, /SYNTHETIC_RETENTION_EXPIRED/);
+  assert.match(retentionMigration, /idx_report_artifacts_retention_until/);
   assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
   assert.match(keycloakServiceTokenSmoke, /client_id=reporting-service-api/);
   assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
@@ -48,6 +52,8 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/catalog/);
   assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/artifacts/);
   assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/artifacts\/\$\{ARTIFACT_ID\}\/export/);
+  assert.match(keycloakServiceTokenSmoke, /\/api\/reports\/retention\/sweeps/);
+  assert.match(keycloakServiceTokenSmoke, /expiredCount/);
   assert.match(keycloakServiceTokenSmoke, /downloadSimulationOnly/);
   assert.match(keycloakServiceTokenSmoke, /maskedByDefault/);
 });
@@ -64,11 +70,14 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(service, /existingArtifact/);
   assert.match(service, /renderArtifactContent/);
   assert.match(service, /exportArtifact/);
+  assert.match(service, /runRetentionSweep/);
   assert.match(service, /REPORT_ARTIFACT_EXPORTED/);
+  assert.match(service, /REPORT_RETENTION_SWEEP_RUN/);
   assert.match(service, /sha256/);
   assert.match(service, /REPORT_GENERATED/);
   assert.match(models, /REPORTING_POLICY_REASON_REQUIRED/);
   assert.match(models, /ReportArtifactExportResponse/);
+  assert.match(models, /ReportRetentionSweepResponse/);
   assert.match(models, /artifactContent/);
   assert.match(models, /contentSha256/);
   assert.match(models, /maskedByDefault/);
@@ -83,6 +92,8 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(integrationTest, /RPT-IT-001/);
   assert.match(integrationTest, /contentSha256/);
   assert.match(integrationTest, /\/export/);
+  assert.match(integrationTest, /retention\/sweeps/);
+  assert.match(integrationTest, /EXPIRED/);
   assert.match(integrationTest, /downloadSimulationOnly/);
   assert.match(integrationTest, /SYNTHETIC_7Y/);
   assert.match(integrationTest, /reporting_access_audit_events/);

@@ -28,6 +28,13 @@ data class GenerateReportCommand(
     val idempotencyKey: String? = null
 )
 
+data class RunReportRetentionSweepCommand(
+    val requestedBy: String? = null,
+    val requestedByRole: String? = null,
+    val reason: String? = null,
+    val sweepDate: LocalDate? = null
+)
+
 data class ReportArtifactDto(
     val artifactId: String,
     val reportType: String,
@@ -65,6 +72,15 @@ data class ReportArtifactExportResponse(
     val exportFormat: String,
     val item: ReportArtifactDto,
     val packageContent: Map<String, Any?>,
+    val syntheticOnly: Boolean = true
+)
+
+data class ReportRetentionSweepResponse(
+    val auditEventId: String,
+    val sweepDate: LocalDate,
+    val expiredCount: Int,
+    val expiredArtifactIds: List<String>,
+    val ledgerRowsMutated: Boolean = false,
     val syntheticOnly: Boolean = true
 )
 

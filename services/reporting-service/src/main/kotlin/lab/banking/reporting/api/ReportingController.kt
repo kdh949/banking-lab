@@ -6,7 +6,9 @@ import lab.banking.reporting.domain.GenerateReportResponse
 import lab.banking.reporting.domain.ReportArtifactExportResponse
 import lab.banking.reporting.domain.ReportArtifactListResponse
 import lab.banking.reporting.domain.ReportCatalogResponse
+import lab.banking.reporting.domain.ReportRetentionSweepResponse
 import lab.banking.reporting.domain.ReportingService
+import lab.banking.reporting.domain.RunReportRetentionSweepCommand
 import lab.banking.reporting.security.ReportingAuthorizationFilter
 import lab.banking.reporting.security.ReportingPrincipal
 import org.springframework.http.HttpStatus
@@ -61,6 +63,13 @@ class ReportingController(
         request: HttpServletRequest
     ): ReportArtifactExportResponse =
         service.exportArtifact(artifactId, reason, principal(request))
+
+    @PostMapping("/api/reports/retention/sweeps")
+    fun runRetentionSweep(
+        @RequestBody command: RunReportRetentionSweepCommand,
+        request: HttpServletRequest
+    ): ReportRetentionSweepResponse =
+        service.runRetentionSweep(command, principal(request))
 
     private fun principal(request: HttpServletRequest): ReportingPrincipal =
         request.getAttribute(ReportingAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? ReportingPrincipal

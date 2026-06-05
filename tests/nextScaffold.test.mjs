@@ -112,6 +112,8 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(client, /contentSha256/);
   assert.match(client, /ReportArtifactExportResponse/);
   assert.match(client, /exportReportArtifact/);
+  assert.match(client, /ReportRetentionSweepResponse/);
+  assert.match(client, /runReportRetentionSweep/);
   assert.match(client, /generateReportArtifact/);
   assert.match(client, /reportArtifacts/);
   assert.match(loader, /admin-console/);
@@ -130,7 +132,9 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_CATALOG_VIEW");
   assert.ok(reportingManifest.postActions.includes("storeContentSha256"));
   assert.ok(reportingManifest.postActions.includes("packageSyntheticJsonExport"));
+  assert.ok(reportingManifest.postActions.includes("expirePastRetentionArtifacts"));
   assert.equal(reportingManifest.actions[3].target, "GET /api/reports/artifacts/{artifactId}/export");
+  assert.equal(reportingManifest.actions[4].target, "POST /api/reports/retention/sweeps");
   assert.equal(reportingManifest.actions[0].target, "GET /api/reports/catalog");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);

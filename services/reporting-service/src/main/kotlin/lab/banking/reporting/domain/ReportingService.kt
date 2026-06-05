@@ -134,6 +134,9 @@ class ReportingService(
         val viewReason = requireReason(reason)
         val artifact = repository.artifactOrNull(requireField(artifactId, "artifactId"))
             ?: throw ReportingErrors.notFound("report artifact not found: $artifactId")
+        if (artifact.status != "GENERATED") {
+            throw ReportingErrors.validation("only GENERATED report artifacts can be exported")
+        }
         val packageName = "${artifact.artifactId}-${artifact.reportType.lowercase()}.$EXPORT_FORMAT_EXTENSION"
         val packageContent = exportPackageContent(artifact, packageName)
         val auditEventId = appendAudit(
@@ -157,6 +160,43 @@ class ReportingService(
             exportFormat = artifact.exportFormat,
             item = artifact,
             packageContent = packageContent
+        )
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun runRetentionSweep(command: RunReportRetentionSweepCommand, principal: ReportingPrincipal): ReportRetentionSweepResponse {
+        val reason = requireReason(command.reason)
+        val requestedBy = command.requestedBy?.takeIf { it.isNotBlank() } ?: principal.subject
+        val requestedRole = command.requestedByRole?.takeIf { it.isNotBlank() }
+            ?: principal.roles.sorted().firstOrNull(ALLOWED_RETENTION_ROLES::contains)
+            ?: principal.roles.sorted().first()
+        requireActor(principal, requestedBy, requestedRole)
+        if (requestedRole !in ALLOWED_RETENTION_ROLES) {
+            throw ReportingErrors.authorization("requestedByRole is not allowed to run retention sweeps")
+        }
+        val sweepDate = command.sweepDate ?: LocalDate.now(ZoneOffset.UTC)
+        val expiredArtifacts = repository.expiredGeneratedArtifacts(sweepDate)
+        val expiredArtifactIds = expiredArtifacts.map { it.artifactId }
+        val expiredCount = repository.expireArtifacts(expiredArtifactIds)
+        val auditEventId = appendAudit(
+            eventType = "REPORT_RETENTION_SWEEP_RUN",
+            principal = principal,
+            reason = reason,
+            reportType = null,
+            artifactId = null,
+            payload = mapOf(
+                "sweepDate" to sweepDate.toString(),
+                "expiredCount" to expiredCount,
+                "expiredArtifactIds" to expiredArtifactIds,
+                "ledgerRowsMutated" to false,
+                "syntheticOnly" to true
+            )
+        )
+        return ReportRetentionSweepResponse(
+            auditEventId = auditEventId,
+            sweepDate = sweepDate,
+            expiredCount = expiredCount,
+            expiredArtifactIds = expiredArtifactIds
         )
     }
 
@@ -321,6 +361,7 @@ class ReportingService(
 
     private companion object {
         val ALLOWED_GENERATE_ROLES = setOf("AUDITOR", "COMPLIANCE_MANAGER", "OPS_MANAGER", "REPORTING_ANALYST")
+        val ALLOWED_RETENTION_ROLES = setOf("COMPLIANCE_MANAGER", "OPS_MANAGER", "REPORTING_ANALYST")
         const val EXPORT_FORMAT = "JSON"
         const val EXPORT_FORMAT_EXTENSION = "json"
         const val RETENTION_POLICY = "SYNTHETIC_7Y"

@@ -144,10 +144,55 @@ class ReportingServiceIntegrationTest {
             .andExpect(jsonPath("$.packageContent.controls.ledgerRowsMutated").value(false))
             .andExpect(jsonPath("$.packageContent.artifactContent.syntheticOnly").value(true))
 
+        jdbc.update(
+            "UPDATE report_artifacts SET retention_until = CURRENT_DATE - INTERVAL '1 day' WHERE artifact_id = :artifactId",
+            mapOf("artifactId" to artifactId)
+        )
+        mockMvc.perform(
+            post("/api/reports/retention/sweeps")
+                .header("Authorization", bearer("reporting-admin01", listOf("REPORTING_ANALYST")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "reporting-admin01",
+                      "requestedByRole": "REPORTING_ANALYST",
+                      "reason": "Synthetic retention lifecycle test",
+                      "sweepDate": "2099-01-01"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.expiredCount").value(1))
+            .andExpect(jsonPath("$.expiredArtifactIds[0]").value(artifactId))
+            .andExpect(jsonPath("$.ledgerRowsMutated").value(false))
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+
+        mockMvc.perform(
+            get("/api/reports/artifacts")
+                .header("Authorization", token)
+                .param("reason", "Synthetic expired artifact inventory review")
+                .param("reportType", "AUDIT_SUMMARY")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[0].artifactId").value(artifactId))
+            .andExpect(jsonPath("$.items[0].status").value("EXPIRED"))
+
+        mockMvc.perform(
+            get("/api/reports/artifacts/$artifactId/export")
+                .header("Authorization", token)
+                .param("reason", "Synthetic expired artifact export denial review")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REPORTING_REQUEST_VALIDATION_FAILED"))
+
         assertEquals(1, countRows("report_artifacts"))
         assertEquals(1, countRowsWhere("report_artifacts", "artifact_content ->> 'syntheticOnly' = 'true'"))
         assertEquals(1, countRowsWhere("report_artifacts", "content_sha256 <> repeat('0', 64)"))
-        assertTrue(countRows("reporting_access_audit_events") >= 5)
+        assertEquals(1, countRowsWhere("report_artifacts", "status = 'EXPIRED' AND retention_action = 'SYNTHETIC_RETENTION_EXPIRED'"))
+        assertTrue(countRows("reporting_access_audit_events") >= 6)
     }
 
     private fun countRows(tableName: String): Long =

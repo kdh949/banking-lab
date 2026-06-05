@@ -11,6 +11,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `POST /api/reports/artifacts` creates rendered synthetic JSON report artifacts with idempotency by `(requested_by, idempotency_key)`.
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
 - `GET /api/reports/artifacts/{artifactId}/export` returns a synthetic JSON package simulation for a rendered artifact and requires a business reason.
+- `POST /api/reports/retention/sweeps` expires artifacts past `retention_until`, records `SYNTHETIC_RETENTION_EXPIRED`, and requires an authorized ops/compliance/reporting actor.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
@@ -20,7 +21,8 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
 - Live Keycloak client-credentials smoke proves the confidential
   `reporting-service-api` service account can call catalog, generate, list, and
-  export report artifact routes with simulator tokens disabled.
+  export report artifact routes plus run the retention sweep route with
+  simulator tokens disabled.
 - TypeScript API client methods expose reporting catalog, rendered artifact
   generation, checksum/retention metadata, and artifact list contracts.
 - Admin-console screen manifest `ADM-701` and API-backed panel wiring expose
@@ -37,9 +39,10 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Report artifacts persist rendered JSON payloads with `syntheticOnly=true`, `maskedByDefault=true`, `realPiiUsed=false`, `realMoneyUsed=false`, `externalFilingSubmitted=false`, and `ledgerRowsMutated=false`.
 - Artifact responses expose `contentSha256`, `retentionPolicy=SYNTHETIC_7Y`, `retentionUntil`, and `exportFormat=JSON`.
 - Export package responses include the rendered artifact content, content checksum, synthetic-only controls, `downloadSimulationOnly=true`, and `ledgerRowsMutated=false`.
+- Retention sweeps change only report artifact metadata from `GENERATED` to `EXPIRED`, reject expired artifact export, record `REPORT_RETENTION_SWEEP_RUN`, and prove `ledgerRowsMutated=false`.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
-- Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, and `REPORT_ARTIFACT_EXPORTED` audit rows.
+- Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, `REPORT_ARTIFACT_EXPORTED`, and `REPORT_RETENTION_SWEEP_RUN` audit rows.
 - Admin/audit channel panels use simulator tokens only for local API-backed
   smoke paths; live service-token coverage remains in the Keycloak smoke script
   with simulator fallback disabled.
@@ -65,7 +68,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 
 ## Remaining Risk
 
-- Synthetic JSON report rendering, checksum persistence, retention/export metadata, and reason-required package export simulation are implemented. Retention lifecycle execution remains pending.
+- Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, and retention lifecycle expiration are implemented.
 - No Kafka/Outbox dispatch is added for report-generated events yet.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright

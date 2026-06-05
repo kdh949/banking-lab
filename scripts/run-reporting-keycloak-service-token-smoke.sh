@@ -190,3 +190,27 @@ EXPORT_RESPONSE="${EXPORT_RESPONSE}" ARTIFACT_ID="${ARTIFACT_ID}" node -e '
   }
   console.log(`Reporting artifact export accepted Keycloak REPORTING_ANALYST token: ${process.env.ARTIFACT_ID}`);
 '
+
+RETENTION_RESPONSE="$(
+  curl -fsS -X POST "${REPORTING_BASE_URL}/api/reports/retention/sweeps" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    --data '{
+      "requestedBy":"service-account-reporting-service-api",
+      "requestedByRole":"REPORTING_ANALYST",
+      "reason":"reporting-keycloak-service-smoke-retention"
+    }'
+)"
+RETENTION_RESPONSE="${RETENTION_RESPONSE}" node -e '
+  const response = JSON.parse(process.env.RETENTION_RESPONSE || "{}");
+  const failures = [];
+  if (response.syntheticOnly !== true) failures.push("retention response is not syntheticOnly");
+  if (!String(response.auditEventId || "").startsWith("RPA-")) failures.push(`unexpected retention audit id ${response.auditEventId}`);
+  if (response.expiredCount !== 0) failures.push(`unexpected expiredCount ${response.expiredCount}`);
+  if (response.ledgerRowsMutated !== false) failures.push("retention sweep does not prove no ledger mutation");
+  if (failures.length > 0) {
+    console.error(`${failures.join("; ")}: ${JSON.stringify(response)}`);
+    process.exit(1);
+  }
+  console.log("Reporting retention sweep accepted Keycloak REPORTING_ANALYST token with no premature expiration");
+'

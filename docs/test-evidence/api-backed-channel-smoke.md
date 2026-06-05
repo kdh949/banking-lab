@@ -65,6 +65,8 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
   reporting-service URL is configured, then displays rendered artifact checksum,
   export package name, and synthetic retention metadata without exposing
   unmasked payloads.
+  The ADM-701 manifest also declares the reason-required
+  `POST /api/reports/retention/sweeps` retention lifecycle command.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting release for `FDS-SYN-CMD-001`, approving the generated maker-checker approval, and observing a posted ledger transaction.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting block for `FDS-SYN-BLOCK-CMD-001`, approving the generated maker-checker approval, and observing `BLOCKED` with no ledger posting.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting AML closure for `AML-SYN-CMD-001`, approving the generated maker-checker approval, and observing the workflow status move to `CLOSED` with `STR_SIMULATED`.
@@ -100,7 +102,7 @@ Commands run:
 - `npm run validate:manifests` passed with 106 manifests.
 - `node --test tests/reportingServiceScaffold.test.mjs tests/nextScaffold.test.mjs` passed with 16 tests.
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks` passed after sandbox escalation; the sandboxed run failed before tests with Gradle `FileLockContentionHandler` socket permission denial.
-- `npm run test:reporting-service:keycloak-service-token` passed after the export update; the live synthetic Compose smoke proved `reporting-service-api` client-credentials tokens can catalog, generate, list, and export rendered artifacts with simulator tokens disabled.
+- `npm run test:reporting-service:keycloak-service-token` passed after the retention update; the live synthetic Compose smoke proved `reporting-service-api` client-credentials tokens can catalog, generate, list, export rendered artifacts, and run a no-op retention sweep with simulator tokens disabled.
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts` passed with 4 manifest-rendering/shell tests and 6 skipped because API, Keycloak, and reporting E2E URLs were not configured.
 
 Not proven locally:
