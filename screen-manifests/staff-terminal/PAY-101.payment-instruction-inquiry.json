@@ -1,0 +1,49 @@
+{
+  "screenId": "PAY-101",
+  "transactionCode": "PAY101",
+  "title": "Payment Instruction Inquiry",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "payment",
+  "requiredRoles": ["BRANCH_STAFF", "OPS_OPERATOR", "AUDITOR"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["PAYMENT_INSTRUCTION_VIEW"],
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "query": {
+    "endpoint": "GET /api/payments/instructions/{instructionId}",
+    "fields": [
+      {
+        "name": "instructionId",
+        "label": "Instruction ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["paymentInstructionId", "status", "debitAccountId", "billerId", "amountMinor", "ledgerTransactionId", "syntheticOnly"]
+  },
+  "actions": [
+    {
+      "id": "openLedgerDetail",
+      "label": "Open Ledger Detail",
+      "type": "navigate",
+      "target": "LED-102"
+    }
+  ]
+}

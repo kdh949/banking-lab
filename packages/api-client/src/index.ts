@@ -1054,6 +1054,152 @@ export interface CardLossReportCommand {
   readonly reason?: string | null;
 }
 
+export type PaymentInstructionStatus = "POSTING_REQUESTED" | "SETTLED" | "CANCELED" | "FAILED";
+export type PaymentAutopayFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
+export type PaymentAutopayStatus = "ACTIVE" | "PAUSED" | "CANCELED";
+export type PaymentOutboxDispatchStatus = "PUBLISHED" | "FAILED" | "DEAD_LETTER" | "NO_PENDING_EVENT";
+
+export interface CreatePaymentInstructionRequest {
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly amountMinor: number;
+  readonly currency?: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly requestedChannel?: string;
+  readonly reason?: string | null;
+}
+
+export interface RecordPaymentSettlementRequest {
+  readonly ledgerTransactionId: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface CancelPaymentInstructionRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface PaymentInstructionDto {
+  readonly paymentInstructionId: string;
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly billerName: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly status: PaymentInstructionStatus;
+  readonly ledgerTransactionId?: string | null;
+  readonly lastOutboxEventId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PaymentInstructionResponse {
+  readonly item: PaymentInstructionDto;
+  readonly replayed: boolean;
+}
+
+export interface DispatchPaymentLedgerPostingRequest {
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly deadLetterThreshold?: number;
+}
+
+export interface PaymentOutboxDispatchResponse {
+  readonly outboxEventId?: string | null;
+  readonly paymentInstructionId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+  readonly status: PaymentOutboxDispatchStatus;
+  readonly retryCount: number;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CreateAutopayAgreementRequest {
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly amountMinor: number;
+  readonly currency?: string;
+  readonly frequency: PaymentAutopayFrequency;
+  readonly nextRunOn: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly requestedChannel?: string;
+  readonly reason: string;
+}
+
+export interface PauseAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ResumeAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly nextRunOn?: string | null;
+}
+
+export interface CancelAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ExecuteDueAutopayRequest {
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly limit?: number;
+}
+
+export interface PaymentAutopayAgreementDto {
+  readonly autopayAgreementId: string;
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly billerName: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly frequency: PaymentAutopayFrequency;
+  readonly status: PaymentAutopayStatus;
+  readonly nextRunOn: string;
+  readonly lastRunOn?: string | null;
+  readonly lastPaymentInstructionId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PaymentAutopayAgreementResponse {
+  readonly item: PaymentAutopayAgreementDto;
+  readonly replayed: boolean;
+}
+
+export interface PaymentAutopayExecutionDto {
+  readonly autopayExecutionId: string;
+  readonly autopayAgreementId: string;
+  readonly scheduledRunOn: string;
+  readonly paymentInstructionId: string;
+  readonly status: "INSTRUCTION_CREATED";
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+}
+
+export interface ExecuteDueAutopayResponse {
+  readonly items: readonly PaymentAutopayExecutionDto[];
+  readonly executedCount: number;
+  readonly replayed: boolean;
+}
+
 export interface ParameterVersionDto {
   readonly namespace: string;
   readonly parameterVersionId: string;
@@ -1764,6 +1910,125 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/cards/${encodeURIComponent(cardId)}/loss-report`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    createPaymentInstruction(command: CreatePaymentInstructionRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/instructions",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getPaymentInstruction(instructionId: string) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    recordPaymentSettlement(instructionId: string, command: RecordPaymentSettlementRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/settlements`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelPaymentInstruction(instructionId: string, command: CancelPaymentInstructionRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    dispatchNextPaymentLedgerPosting(command: DispatchPaymentLedgerPostingRequest) {
+      return request<PaymentOutboxDispatchResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/outbox/ledger-postings/dispatch-next",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    createAutopayAgreement(command: CreateAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/autopay/agreements",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getAutopayAgreement(agreementId: string) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    pauseAutopayAgreement(agreementId: string, command: PauseAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/pause`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    resumeAutopayAgreement(agreementId: string, command: ResumeAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/resume`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelAutopayAgreement(agreementId: string, command: CancelAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeDueAutopay(command: ExecuteDueAutopayRequest) {
+      return request<ExecuteDueAutopayResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/autopay/executions/due",
         {},
         options.bearerToken,
         { method: "POST", body: command }

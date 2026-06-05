@@ -1,0 +1,48 @@
+{
+  "screenId": "OPS-404",
+  "transactionCode": "OPS404",
+  "title": "Payment Outbox Dispatch",
+  "app": "ops-console",
+  "type": "COMMAND",
+  "domain": "payment",
+  "highRisk": false,
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "fields": [
+    {
+      "name": "requestedBy",
+      "label": "Requested By",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "deadLetterThreshold",
+      "label": "Dead Letter Threshold",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "reason",
+      "label": "Dispatch Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/payments/outbox/ledger-postings/dispatch-next"
+  },
+  "postActions": ["createAuditEvent", "dispatchDurableOutboxEvent", "recordRetryOrDeadLetter"]
+}

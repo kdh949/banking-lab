@@ -22,11 +22,14 @@ This evidence covers the first synthetic Payment Service slice:
   network integration.
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
   commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
+- Channel contracts for customer bill payment/autopay, staff payment inquiry,
+  and ops payment outbox dispatch manifests, plus TypeScript API client methods
+  for the payment-service OpenAPI operations.
 
 The slice does not claim full Payment Service completion. Runtime publication to
 Kafka/Redpanda, a scheduled/background worker runner around the dispatcher,
-customer/staff screens, and staff payment correction maker-checker flows remain
-future work.
+a dedicated rendered Next.js payment panel, and staff payment correction
+maker-checker flows remain future work.
 
 ## Commands Run
 
@@ -39,10 +42,12 @@ npm test
 npm run node:retirement-gate
 npm run evidence:refresh-check
 npm run scripts:typecheck
+npm run validate:manifests
+npm run packages:typecheck
 ```
 
-Both commands were first attempted inside the managed sandbox and failed before
-Gradle startup with:
+The Gradle-backed commands were first attempted inside the managed sandbox and
+failed before Gradle startup with:
 
 ```text
 Could not create service of type FileLockContentionHandler
@@ -69,6 +74,10 @@ need local file-lock socket and Docker access.
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
 - `npm run scripts:typecheck`: pass.
+- `npm run validate:manifests`: pass; 92 manifests validated, including
+  `CWB-701`, `CWB-702`, `CWB-703`, `PAY-101`, and `OPS-404`.
+- `npm run packages:typecheck`: pass; screen/form/api/auth clients compiled,
+  including the new payment API client contract.
 
 ## Integration Coverage
 
@@ -128,6 +137,20 @@ now verify the core-banking settlement bridge:
 - paused and canceled agreements are skipped by due execution;
 - non-synthetic biller identifiers are rejected before autopay persistence.
 
+Manifest and API client coverage verifies:
+
+- `CWB-701` declares customer bill payment command fields, reason-required
+  self-service audit, and durable payment Outbox status follow-up metadata;
+- `CWB-702` and `CWB-703` declare autopay agreement creation and
+  pause/resume/cancel management through reusable command templates;
+- `PAY-101` declares reason-required staff payment instruction lookup with
+  account masking policy and `PAYMENT_INSTRUCTION_VIEW` audit metadata;
+- `OPS-404` declares ops payment Outbox dispatch with retry/dead-letter result
+  metadata;
+- `@banking-lab/api-client` exposes typed payment instruction, settlement,
+  outbox dispatch, and autopay methods matching the payment-service OpenAPI
+  operation set.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -140,5 +163,6 @@ institution API, or real money path is configured.
 This is still a partial slice. A successful bill payment can now be dispatched
 from durable payment-service outbox state to a core-banking posting port,
 settled idempotently, and created from durable autopay schedules, but
-Kafka/Redpanda runtime publication, a scheduled worker runner, UI/API client
-coverage, and staff correction maker-checker flows are still pending.
+Kafka/Redpanda runtime publication, a scheduled worker runner, dedicated Next.js
+payment panels, route-level Keycloak policy, and staff correction maker-checker
+flows are still pending.
