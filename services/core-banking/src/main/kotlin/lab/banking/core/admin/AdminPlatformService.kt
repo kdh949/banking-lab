@@ -5,6 +5,7 @@ import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.config.BankingLabProperties
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
@@ -12,7 +13,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class AdminPlatformService(
     private val properties: BankingLabProperties,
-    private val auditEvents: AuditEventAppender
+    private val auditEvents: AuditEventAppender,
+    private val jdbc: NamedParameterJdbcTemplate
 ) {
     fun summary(): AdminPlatformControlSummary = AdminPlatformControlSummary(
         syntheticOnly = properties.syntheticOnly,
@@ -38,20 +40,48 @@ class AdminPlatformService(
     )
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun systemStatus(reason: String?): AdminSystemStatusResponse {
+        val viewReason = requireReason(reason, "admin system status view requires a business reason")
+        val actor = adminActor("actor role cannot view admin system status")
+        val services = serviceStatuses()
+        val batches = batchStatuses()
+        val monitoringLinks = monitoringLinks()
+        val auditEventId = auditEvents.append(
+            eventType = "ADMIN_SYSTEM_STATUS_VIEW",
+            actorType = "STAFF",
+            actorId = actor.actorId,
+            actorRole = actor.actorRole,
+            screenId = "ADM-601",
+            businessReferenceId = "ADMIN_SYSTEM_STATUS",
+            reason = viewReason,
+            payload = mapOf(
+                "serviceIds" to services.map { it.serviceId },
+                "batchTypes" to batches.map { it.batchType },
+                "monitoringSystems" to monitoringLinks.map { it.system },
+                "syntheticOnly" to true
+            )
+        )
+        return AdminSystemStatusResponse(
+            auditEventId = auditEventId,
+            generatedAt = OffsetDateTime.now().toString(),
+            syntheticOnly = true,
+            services = services,
+            batches = batches,
+            monitoringLinks = monitoringLinks
+        )
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     fun evidenceCoverage(reason: String?): AdminEvidenceCoverageResponse {
-        val viewReason = reason?.takeIf { it.isNotBlank() }
-            ?: throw WorkflowErrors.reasonRequired("admin evidence coverage view requires a business reason")
-        val actor = BankingLabAuthContext.get()
-        if (actor != null && !actor.hasAnyRole(ALLOWED_ROLES)) {
-            throw WorkflowErrors.authorizationViolation("actor role cannot view admin evidence coverage")
-        }
+        val viewReason = requireReason(reason, "admin evidence coverage view requires a business reason")
+        val actor = adminActor("actor role cannot view admin evidence coverage")
         val evidenceLinks = evidenceLinks()
         val featureCoverage = featureCoverage()
         val auditEventId = auditEvents.append(
             eventType = "ADMIN_EVIDENCE_COVERAGE_VIEW",
             actorType = "STAFF",
-            actorId = actor?.subject ?: "system",
-            actorRole = actor?.roles?.sorted()?.firstOrNull(ALLOWED_ROLES::contains) ?: "SYSTEM",
+            actorId = actor.actorId,
+            actorRole = actor.actorRole,
             screenId = "ADM-501",
             businessReferenceId = "ADMIN_EVIDENCE_COVERAGE",
             reason = viewReason,
@@ -71,6 +101,168 @@ class AdminPlatformService(
             featureCoverage = featureCoverage
         )
     }
+
+    private fun serviceStatuses(): List<AdminServiceStatus> = listOf(
+        AdminServiceStatus(
+            serviceId = "CORE_BANKING",
+            displayName = "Core Banking Spring API",
+            status = "AVAILABLE",
+            evidence = "GET /health",
+            syntheticOnly = true
+        ),
+        AdminServiceStatus(
+            serviceId = "POSTGRESQL",
+            displayName = "PostgreSQL Ledger Store",
+            status = "AVAILABLE",
+            evidence = "Flyway migrations applied through target stack",
+            syntheticOnly = true
+        ),
+        AdminServiceStatus(
+            serviceId = "REDPANDA",
+            displayName = "Redpanda Event Broker",
+            status = "CONFIGURED",
+            evidence = "infra/docker-compose and outbox worker evidence",
+            syntheticOnly = true
+        ),
+        AdminServiceStatus(
+            serviceId = "TEMPORAL",
+            displayName = "Temporal Workflow Runtime",
+            status = "CONFIGURED",
+            evidence = "docs/test-evidence/temporal-live-worker-smoke.md",
+            syntheticOnly = true
+        ),
+        AdminServiceStatus(
+            serviceId = "KEYCLOAK",
+            displayName = "Keycloak Identity Provider",
+            status = "CONFIGURED",
+            evidence = "docs/test-evidence/keycloak-live-realm-smoke.md",
+            syntheticOnly = true
+        ),
+        AdminServiceStatus(
+            serviceId = "OBSERVABILITY",
+            displayName = "Prometheus Grafana Loki Tempo",
+            status = "CONFIGURED",
+            evidence = "docs/test-evidence/observability-stack-smoke.md",
+            syntheticOnly = true
+        )
+    )
+
+    private fun batchStatuses(): List<AdminBatchStatus> = listOf(
+        latestBatchStatus(
+            batchType = "EOD_CLOSING",
+            tableName = "daily_closings",
+            referenceExpression = "business_date::text",
+            businessDateExpression = "business_date::text",
+            updatedExpression = "COALESCE(closed_at, created_at)",
+            evidence = "docs/test-evidence/eod-closing-pipeline.md"
+        ),
+        latestBatchStatus(
+            batchType = "EOD_STEPS",
+            tableName = "eod_closing_steps",
+            referenceExpression = "business_date::text || ':' || step",
+            businessDateExpression = "business_date::text",
+            updatedExpression = "COALESCE(finished_at, started_at)",
+            evidence = "docs/test-evidence/eod-closing-pipeline.md"
+        ),
+        latestBatchStatus(
+            batchType = "INTEREST_POSTING",
+            tableName = "interest_posting_batches",
+            referenceExpression = "batch_id",
+            businessDateExpression = "business_date::text",
+            updatedExpression = "posted_at",
+            evidence = "docs/test-evidence/eod-closing-pipeline.md"
+        ),
+        latestBatchStatus(
+            batchType = "FEE_POSTING",
+            tableName = "fee_posting_batches",
+            referenceExpression = "batch_id",
+            businessDateExpression = "business_date::text",
+            updatedExpression = "posted_at",
+            evidence = "docs/test-evidence/eod-closing-pipeline.md"
+        ),
+        latestBatchStatus(
+            batchType = "OUTBOX_DELIVERY",
+            tableName = "outbox_events",
+            referenceExpression = "outbox_event_id",
+            businessDateExpression = "created_at::date::text",
+            updatedExpression = "COALESCE(published_at, next_retry_at, created_at)",
+            evidence = "docs/test-evidence/outbox-worker-failure-drill.md"
+        )
+    )
+
+    private fun latestBatchStatus(
+        batchType: String,
+        tableName: String,
+        referenceExpression: String,
+        businessDateExpression: String,
+        updatedExpression: String,
+        evidence: String
+    ): AdminBatchStatus {
+        val itemCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM $tableName",
+            emptyMap<String, Any?>(),
+            Long::class.java
+        ) ?: 0L
+        val latest = jdbc.query(
+            """
+            SELECT
+              $referenceExpression AS reference_id,
+              $businessDateExpression AS business_date,
+              status,
+              $updatedExpression AS updated_at
+            FROM $tableName
+            ORDER BY $updatedExpression DESC NULLS LAST, reference_id DESC
+            LIMIT 1
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        ) { rs, _ ->
+            AdminBatchStatus(
+                batchType = batchType,
+                latestReferenceId = rs.getString("reference_id"),
+                businessDate = rs.getString("business_date"),
+                status = rs.getString("status"),
+                itemCount = itemCount,
+                lastUpdatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)?.toString(),
+                evidence = evidence
+            )
+        }.firstOrNull()
+        return latest ?: AdminBatchStatus(
+            batchType = batchType,
+            latestReferenceId = null,
+            businessDate = null,
+            status = "NO_RUN",
+            itemCount = itemCount,
+            lastUpdatedAt = null,
+            evidence = evidence
+        )
+    }
+
+    private fun monitoringLinks(): List<AdminMonitoringLink> = listOf(
+        AdminMonitoringLink(
+            system = "PROMETHEUS",
+            url = "http://localhost:9090",
+            status = "LOCAL_PROFILE",
+            evidence = "infra/prometheus/prometheus.yml"
+        ),
+        AdminMonitoringLink(
+            system = "GRAFANA",
+            url = "http://localhost:3000",
+            status = "LOCAL_PROFILE",
+            evidence = "infra/grafana/provisioning"
+        ),
+        AdminMonitoringLink(
+            system = "LOKI",
+            url = "http://localhost:3100",
+            status = "LOCAL_PROFILE",
+            evidence = "infra/loki"
+        ),
+        AdminMonitoringLink(
+            system = "TEMPO",
+            url = "http://localhost:3200",
+            status = "LOCAL_PROFILE",
+            evidence = "infra/tempo"
+        )
+    )
 
     private fun evidenceLinks(): List<AdminEvidenceLink> = listOf(
         AdminEvidenceLink(
@@ -167,6 +359,22 @@ class AdminPlatformService(
             status = "API_BACKED"
         )
     )
+
+    private fun requireReason(value: String?, message: String): String =
+        value?.takeIf { it.isNotBlank() } ?: throw WorkflowErrors.reasonRequired(message)
+
+    private fun adminActor(message: String): AdminActor {
+        val actor = BankingLabAuthContext.get()
+        if (actor != null && !actor.hasAnyRole(ALLOWED_ROLES)) {
+            throw WorkflowErrors.authorizationViolation(message)
+        }
+        return AdminActor(
+            actorId = actor?.subject ?: "system",
+            actorRole = actor?.roles?.sorted()?.firstOrNull(ALLOWED_ROLES::contains) ?: "SYSTEM"
+        )
+    }
+
+    private data class AdminActor(val actorId: String, val actorRole: String)
 
     private companion object {
         val ALLOWED_ROLES = setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")

@@ -1674,6 +1674,40 @@ export interface AdminEvidenceCoverageResponse {
   readonly featureCoverage: readonly AdminFeatureCoverageDto[];
 }
 
+export interface AdminServiceStatusDto {
+  readonly serviceId: string;
+  readonly displayName: string;
+  readonly status: string;
+  readonly evidence: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AdminBatchStatusDto {
+  readonly batchType: string;
+  readonly latestReferenceId?: string | null;
+  readonly businessDate?: string | null;
+  readonly status: string;
+  readonly itemCount: number;
+  readonly lastUpdatedAt?: string | null;
+  readonly evidence: string;
+}
+
+export interface AdminMonitoringLinkDto {
+  readonly system: string;
+  readonly url: string;
+  readonly status: string;
+  readonly evidence: string;
+}
+
+export interface AdminSystemStatusResponse {
+  readonly auditEventId: string;
+  readonly generatedAt: string;
+  readonly syntheticOnly: boolean;
+  readonly services: readonly AdminServiceStatusDto[];
+  readonly batches: readonly AdminBatchStatusDto[];
+  readonly monitoringLinks: readonly AdminMonitoringLinkDto[];
+}
+
 export interface FdsCaseDto {
   readonly caseId: string;
   readonly transferReferenceId: string;
@@ -2859,6 +2893,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         "/api/admin/platform/evidence-coverage",
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    adminSystemStatus(reason: string) {
+      return request<AdminSystemStatusResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/admin/platform/system-status",
         { reason },
         options.bearerToken
       );

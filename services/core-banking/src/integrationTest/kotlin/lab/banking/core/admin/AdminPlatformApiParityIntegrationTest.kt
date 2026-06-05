@@ -92,6 +92,37 @@ class AdminPlatformApiParityIntegrationTest {
         assertTrue(auditCount("ADMIN_EVIDENCE_COVERAGE_VIEW", "ADM-501") > beforeAuditCount)
     }
 
+    @Test
+    fun `admin system status is reason required and summarizes platform batches`() {
+        val token = bearer("security-admin01", listOf("COMPLIANCE_MANAGER", "AUDITOR", "PASSKEY_RECOVERY_ADMIN"))
+        val beforeAuditCount = auditCount("ADMIN_SYSTEM_STATUS_VIEW", "ADM-601")
+
+        mockMvc.perform(
+            get("/api/admin/platform/system-status")
+                .header("Authorization", token)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/admin/platform/system-status")
+                .header("Authorization", token)
+                .param("reason", "Synthetic admin system status review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.services[0].serviceId").value("CORE_BANKING"))
+            .andExpect(jsonPath("$.services[0].status").value("AVAILABLE"))
+            .andExpect(jsonPath("$.batches[0].batchType").value("EOD_CLOSING"))
+            .andExpect(jsonPath("$.batches[2].batchType").value("INTEREST_POSTING"))
+            .andExpect(jsonPath("$.batches[4].batchType").value("OUTBOX_DELIVERY"))
+            .andExpect(jsonPath("$.monitoringLinks[0].system").value("PROMETHEUS"))
+            .andExpect(jsonPath("$.monitoringLinks[1].system").value("GRAFANA"))
+
+        assertTrue(auditCount("ADMIN_SYSTEM_STATUS_VIEW", "ADM-601") > beforeAuditCount)
+    }
+
     private fun auditCount(eventType: String, screenId: String): Long =
         jdbc.queryForObject(
             """

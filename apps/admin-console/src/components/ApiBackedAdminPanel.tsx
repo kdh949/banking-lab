@@ -5,6 +5,7 @@ import {
   createBankingApiClient,
   type AdminEvidenceCoverageResponse,
   type AdminPlatformSummaryResponse,
+  type AdminSystemStatusResponse,
   type NotificationPreferenceDto,
   type NotificationTemplateDto
 } from "@banking-lab/api-client";
@@ -17,6 +18,7 @@ type ApiState =
       readonly status: "loaded";
       readonly summary: AdminPlatformSummaryResponse;
       readonly evidence: AdminEvidenceCoverageResponse;
+      readonly systemStatus: AdminSystemStatusResponse;
     }
   | { readonly status: "failed"; readonly message: string };
 
@@ -69,11 +71,12 @@ export function ApiBackedAdminPanel() {
 
     Promise.all([
       client.adminPlatformSummary(),
-      client.adminEvidenceCoverage("Synthetic admin evidence coverage review")
+      client.adminEvidenceCoverage("Synthetic admin evidence coverage review"),
+      client.adminSystemStatus("Synthetic admin system status review")
     ])
-      .then(([summary, evidence]) => {
+      .then(([summary, evidence, systemStatus]) => {
         if (!cancelled) {
-          setState({ status: "loaded", summary, evidence });
+          setState({ status: "loaded", summary, evidence, systemStatus });
         }
       })
       .catch((error: unknown) => {
@@ -295,6 +298,32 @@ export function ApiBackedAdminPanel() {
           </>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-admin-system-status">
+        <div>
+          <dt>System Status</dt>
+          <dd>{systemStatusLabel(state)}</dd>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <div>
+              <dt>System Audit</dt>
+              <dd>{state.systemStatus.auditEventId}</dd>
+            </div>
+            <div>
+              <dt>Services</dt>
+              <dd>{state.systemStatus.services.map((service) => `${service.serviceId}:${service.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Batches</dt>
+              <dd>{state.systemStatus.batches.map((batch) => `${batch.batchType}:${batch.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Monitoring</dt>
+              <dd>{state.systemStatus.monitoringLinks.map((link) => `${link.system}:${link.status}`).join(", ")}</dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
       <dl data-testid="api-backed-notification-admin">
         <div>
           <dt>Notification API</dt>
@@ -396,6 +425,19 @@ function evidenceCoverageStatusLabel(state: ApiState): string {
       return "evidence coverage loaded";
     case "failed":
       return "evidence coverage request failed";
+  }
+}
+
+function systemStatusLabel(state: ApiState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading system status";
+    case "loaded":
+      return "system status loaded";
+    case "failed":
+      return "system status request failed";
   }
 }
 

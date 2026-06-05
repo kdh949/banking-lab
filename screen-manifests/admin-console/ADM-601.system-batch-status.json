@@ -1,0 +1,34 @@
+{
+  "screenId": "ADM-601",
+  "transactionCode": "ADM601",
+  "title": "System and Batch Status",
+  "app": "admin-console",
+  "type": "DASHBOARD",
+  "domain": "platform-admin",
+  "requiredRoles": ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["ADMIN_SYSTEM_STATUS_VIEW"],
+    "piiAccess": false,
+    "maskingPolicy": "NONE"
+  },
+  "widgets": [
+    "service-status-summary",
+    "operational-batch-summary",
+    "monitoring-link-summary",
+    "synthetic-platform-boundary"
+  ],
+  "actions": [
+    {
+      "id": "view-system-status",
+      "label": "View System Status",
+      "type": "inquiry",
+      "target": "GET /api/admin/platform/system-status"
+    }
+  ]
+}

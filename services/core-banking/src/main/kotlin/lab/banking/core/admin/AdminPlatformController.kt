@@ -43,6 +43,40 @@ data class AdminFeatureCoverage(
     val status: String
 )
 
+data class AdminSystemStatusResponse(
+    val auditEventId: String,
+    val generatedAt: String,
+    val syntheticOnly: Boolean,
+    val services: List<AdminServiceStatus>,
+    val batches: List<AdminBatchStatus>,
+    val monitoringLinks: List<AdminMonitoringLink>
+)
+
+data class AdminServiceStatus(
+    val serviceId: String,
+    val displayName: String,
+    val status: String,
+    val evidence: String,
+    val syntheticOnly: Boolean
+)
+
+data class AdminBatchStatus(
+    val batchType: String,
+    val latestReferenceId: String?,
+    val businessDate: String?,
+    val status: String,
+    val itemCount: Long,
+    val lastUpdatedAt: String?,
+    val evidence: String
+)
+
+data class AdminMonitoringLink(
+    val system: String,
+    val url: String,
+    val status: String,
+    val evidence: String
+)
+
 @RestController
 @RequestMapping("/api/admin/platform")
 class AdminPlatformController(
@@ -54,4 +88,8 @@ class AdminPlatformController(
     @GetMapping("/evidence-coverage")
     fun evidenceCoverage(@RequestParam(required = false) reason: String?): AdminEvidenceCoverageResponse =
         service.evidenceCoverage(reason)
+
+    @GetMapping("/system-status")
+    fun systemStatus(@RequestParam(required = false) reason: String?): AdminSystemStatusResponse =
+        service.systemStatus(reason)
 }
