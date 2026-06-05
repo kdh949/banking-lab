@@ -21,6 +21,12 @@ channels:
       PaymentLedgerPostingSettled:
         payload:
           $ref: ../events/payment-ledger-posting-settled.schema.json
+  payment.instruction.canceled:
+    address: payment.instruction.canceled
+    messages:
+      PaymentInstructionCanceled:
+        payload:
+          $ref: ../events/payment-instruction-canceled.schema.json
   payment.autopay.execution.created:
     address: payment.autopay.execution.created
     messages:
@@ -46,6 +52,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/payment.ledger.posting.settled'
+  publishPaymentInstructionCanceled:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.canceled'
   publishPaymentAutopayExecutionCreated:
     action: send
     channel:

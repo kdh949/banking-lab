@@ -131,3 +131,23 @@ test("payment-service platform profile includes API and outbox worker", async ()
   assert.match(prometheus, /payment-service:8088/);
   assert.match(prometheus, /payment-outbox-worker:8088/);
 });
+
+test("payment-service cancellation outbox event has checked-in AsyncAPI contract coverage", async () => {
+  const asyncapi = await readFile("contracts/asyncapi/banking-lab-events.yaml", "utf8");
+  const schema = JSON.parse(await readFile("contracts/events/payment-instruction-canceled.schema.json", "utf8"));
+  const service = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/domain/PaymentInstructionService.kt", "utf8");
+  const authorizationTest = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/PaymentAuthorizationIntegrationTest.kt", "utf8");
+
+  assert.match(service, /eventType = "PaymentInstructionCanceled"/);
+  assert.match(service, /"cancellationRequestId" to cancellationRequestId/);
+  assert.match(service, /"makerCheckerApproved" to true/);
+  assert.match(authorizationTest, /PaymentInstructionCanceled/);
+  assert.match(asyncapi, /payment\.instruction\.canceled/);
+  assert.match(asyncapi, /PaymentInstructionCanceled/);
+  assert.match(asyncapi, /payment-instruction-canceled\.schema\.json/);
+  assert.equal(schema.title, "PaymentInstructionCanceled");
+  assert.equal(schema.properties.syntheticOnly.const, true);
+  assert.equal(schema.properties.directLedgerWrite.const, false);
+  assert.equal(schema.properties.cancellationRequestId.pattern, "^PCR-");
+  assert.equal(schema.properties.realPaymentNetworkUsed.const, false);
+});

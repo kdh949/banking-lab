@@ -18,7 +18,8 @@ This evidence covers the first synthetic Payment Service slice:
 - Staff and ops payment cancellation now goes through durable maker-checker
   correction requests with independent checker approval before the payment
   instruction is canceled.
-- Event and OpenAPI contracts for payment-to-core-ledger posting requests.
+- Event, AsyncAPI, and OpenAPI contracts for payment-to-core-ledger posting
+  requests, settlement, autopay execution, and payment instruction cancellation.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
 - Payment-service outbox dispatcher that locks durable
@@ -85,6 +86,7 @@ docker compose --profile platform config
 npm run k8s:validate
 npm run helm:template
 npm run security:posture-check
+node --test tests/springScaffold.test.mjs
 ```
 
 The Gradle-backed commands were first attempted inside the managed sandbox and
@@ -118,7 +120,7 @@ need local file-lock socket and Docker access.
   idempotent replay, structured API access, and service-role denial.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass; Kotlin unit suite
   compiled and ran after sandbox escalation.
-- `npm test`: pass; 164 Node oracle and evidence tests passed.
+- `npm test`: pass; 165 Node oracle and evidence tests passed.
 - `npm run node:retirement-gate`: pass; gate remains ready from existing
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
@@ -160,6 +162,9 @@ need local file-lock socket and Docker access.
 - `npm run security:posture-check`: pass; static posture checks include the
   payment application synthetic-only payment network default and raw/Helm
   payment deployment controls.
+- `node --test tests/springScaffold.test.mjs`: pass; 6 static Spring scaffold
+  checks passed, including payment-service `PaymentInstructionCanceled` AsyncAPI
+  contract coverage.
 
 ## Integration Coverage
 
@@ -235,6 +240,11 @@ Manifest and API client coverage verifies:
 - `@banking-lab/api-client` exposes typed payment instruction, settlement,
   outbox dispatch, staff cancellation maker-checker, and autopay methods
   matching the payment-service OpenAPI operation set.
+- `contracts/asyncapi/banking-lab-events.yaml` now declares
+  `payment.instruction.canceled` with
+  `contracts/events/payment-instruction-canceled.schema.json`, matching the
+  durable `PaymentInstructionCanceled` outbox rows emitted by customer and
+  checker-approved staff cancellation paths.
 - Customer Web renders `data-testid="api-backed-customer-payment-domain"` and
   uses `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL` with the standard
   `NEXT_PUBLIC_BANKING_API_BASE_URL` fallback to exercise CWB-701/CWB-702/CWB-703
