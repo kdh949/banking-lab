@@ -1538,6 +1538,23 @@ export interface ReportArtifactDto {
   readonly maskedByDefault: boolean;
   readonly syntheticOnly: boolean;
   readonly generatedAt?: string | null;
+  readonly workflowInstanceId: string;
+  readonly workflowStatus: ReportingWorkflowStatus;
+  readonly workflowTimeline: readonly ReportingWorkflowTimelineEntryDto[];
+}
+
+export type ReportingWorkflowStatus = "GENERATED" | "EXPORTED" | "EXPIRED";
+
+export interface ReportingWorkflowTimelineEntryDto {
+  readonly workflowEventId: string;
+  readonly eventType: string;
+  readonly fromStatus?: ReportingWorkflowStatus | null;
+  readonly toStatus: ReportingWorkflowStatus;
+  readonly actorId: string;
+  readonly actorRole: string;
+  readonly reason: string;
+  readonly occurredAt: string;
+  readonly syntheticOnly: boolean;
 }
 
 export interface GenerateReportArtifactResponse {

@@ -8,6 +8,8 @@ import java.time.OffsetDateTime
 import lab.banking.reporting.domain.ReportArtifactDto
 import lab.banking.reporting.domain.ReportDefinitionDto
 import lab.banking.reporting.domain.ReportingAccessAuditEvent
+import lab.banking.reporting.domain.ReportingWorkflowStatus
+import lab.banking.reporting.domain.ReportingWorkflowTimelineEntryDto
 import lab.banking.reporting.eventing.ReportingOutboxRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
@@ -41,12 +43,13 @@ class ReportingRepository(
 
     fun existingArtifact(requestedBy: String, idempotencyKey: String): ReportArtifactDto? =
         jdbc.query(
-            artifactSql("WHERE requested_by = :requestedBy AND idempotency_key = :idempotencyKey"),
+            artifactSql("WHERE ra.requested_by = :requestedBy AND ra.idempotency_key = :idempotencyKey"),
             mapOf("requestedBy" to requestedBy, "idempotencyKey" to idempotencyKey)
         ) { rs, _ -> mapArtifact(rs) }.firstOrNull()
 
     fun insertArtifact(
         artifactId: String,
+        workflowInstanceId: String,
         reportType: String,
         requestedBy: String,
         requestedRole: String,
@@ -59,16 +62,16 @@ class ReportingRepository(
         retentionUntil: LocalDate,
         exportFormat: String,
         sourceReferences: List<String>
-    ): ReportArtifactDto {
+    ) {
         jdbc.update(
             """
             INSERT INTO report_artifacts (
-              artifact_id, report_type, requested_by, requested_role, reason,
+              artifact_id, workflow_instance_id, report_type, requested_by, requested_role, reason,
               idempotency_key, status, artifact_path, source_references,
               artifact_content, content_sha256, retention_policy, retention_until,
               export_format, masked_by_default, synthetic_only
             ) VALUES (
-              :artifactId, :reportType, :requestedBy, :requestedRole, :reason,
+              :artifactId, :workflowInstanceId, :reportType, :requestedBy, :requestedRole, :reason,
               :idempotencyKey, 'GENERATED', :artifactPath, CAST(:sourceReferences AS jsonb),
               CAST(:artifactContent AS jsonb), :contentSha256, :retentionPolicy, :retentionUntil,
               :exportFormat, true, true
@@ -76,6 +79,7 @@ class ReportingRepository(
             """.trimIndent(),
             mapOf(
                 "artifactId" to artifactId,
+                "workflowInstanceId" to workflowInstanceId,
                 "reportType" to reportType,
                 "requestedBy" to requestedBy,
                 "requestedRole" to requestedRole,
@@ -90,30 +94,139 @@ class ReportingRepository(
                 "sourceReferences" to objectMapper.writeValueAsString(sourceReferences)
             )
         )
-        return artifact(artifactId)
     }
+
+    fun insertWorkflowInstance(
+        workflowInstanceId: String,
+        workflowType: String,
+        businessReferenceId: String,
+        status: ReportingWorkflowStatus,
+        startedBy: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO reporting_workflow_instances (
+              workflow_instance_id, workflow_type, business_reference_id,
+              status, started_by, synthetic_only
+            )
+            VALUES (
+              :workflowInstanceId, :workflowType, :businessReferenceId,
+              :status, :startedBy, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "workflowInstanceId" to workflowInstanceId,
+                "workflowType" to workflowType,
+                "businessReferenceId" to businessReferenceId,
+                "status" to status.name,
+                "startedBy" to startedBy
+            )
+        )
+    }
+
+    fun updateWorkflowStatus(
+        workflowInstanceIds: List<String>,
+        status: ReportingWorkflowStatus
+    ) {
+        if (workflowInstanceIds.isEmpty()) {
+            return
+        }
+        jdbc.update(
+            """
+            UPDATE reporting_workflow_instances
+            SET status = :status,
+                completed_at = CASE
+                  WHEN :status = 'EXPIRED' THEN now()
+                  ELSE completed_at
+                END
+            WHERE workflow_instance_id IN (:workflowInstanceIds)
+            """.trimIndent(),
+            mapOf(
+                "workflowInstanceIds" to workflowInstanceIds,
+                "status" to status.name
+            )
+        )
+    }
+
+    fun insertWorkflowEvent(
+        workflowEventId: String,
+        workflowInstanceId: String,
+        eventType: String,
+        fromStatus: ReportingWorkflowStatus?,
+        toStatus: ReportingWorkflowStatus,
+        actorId: String,
+        actorRole: String,
+        reason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO reporting_workflow_events (
+              workflow_event_id, workflow_instance_id, event_type, from_status,
+              to_status, actor_id, actor_role, reason, synthetic_only
+            )
+            VALUES (
+              :workflowEventId, :workflowInstanceId, :eventType, :fromStatus,
+              :toStatus, :actorId, :actorRole, :reason, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "workflowEventId" to workflowEventId,
+                "workflowInstanceId" to workflowInstanceId,
+                "eventType" to eventType,
+                "fromStatus" to fromStatus?.name,
+                "toStatus" to toStatus.name,
+                "actorId" to actorId,
+                "actorRole" to actorRole,
+                "reason" to reason
+            )
+        )
+    }
+
+    fun workflowEvents(workflowInstanceId: String): List<ReportingWorkflowTimelineEntryDto> =
+        jdbc.query(
+            """
+            SELECT workflow_event_id, event_type, from_status, to_status,
+                   actor_id, actor_role, reason, occurred_at, synthetic_only
+            FROM reporting_workflow_events
+            WHERE workflow_instance_id = :workflowInstanceId
+            ORDER BY occurred_at ASC, workflow_event_id ASC
+            """.trimIndent(),
+            mapOf("workflowInstanceId" to workflowInstanceId)
+        ) { rs, _ ->
+            ReportingWorkflowTimelineEntryDto(
+                workflowEventId = rs.getString("workflow_event_id"),
+                eventType = rs.getString("event_type"),
+                fromStatus = rs.getString("from_status")?.let(ReportingWorkflowStatus::valueOf),
+                toStatus = ReportingWorkflowStatus.valueOf(rs.getString("to_status")),
+                actorId = rs.getString("actor_id"),
+                actorRole = rs.getString("actor_role"),
+                reason = rs.getString("reason"),
+                occurredAt = rs.getObject("occurred_at", OffsetDateTime::class.java),
+                syntheticOnly = rs.getBoolean("synthetic_only")
+            )
+        }
 
     fun artifact(artifactId: String): ReportArtifactDto =
         jdbc.query(
-            artifactSql("WHERE artifact_id = :artifactId"),
+            artifactSql("WHERE ra.artifact_id = :artifactId"),
             mapOf("artifactId" to artifactId)
         ) { rs, _ -> mapArtifact(rs) }.first()
 
     fun artifactOrNull(artifactId: String): ReportArtifactDto? =
         jdbc.query(
-            artifactSql("WHERE artifact_id = :artifactId"),
+            artifactSql("WHERE ra.artifact_id = :artifactId"),
             mapOf("artifactId" to artifactId)
         ) { rs, _ -> mapArtifact(rs) }.firstOrNull()
 
     fun artifacts(reportType: String?): List<ReportArtifactDto> =
         jdbc.query(
-            artifactSql(if (reportType.isNullOrBlank()) "" else "WHERE report_type = :reportType") + " ORDER BY generated_at DESC",
+            artifactSql(if (reportType.isNullOrBlank()) "" else "WHERE ra.report_type = :reportType") + " ORDER BY ra.generated_at DESC",
             if (reportType.isNullOrBlank()) emptyMap<String, Any?>() else mapOf("reportType" to reportType)
         ) { rs, _ -> mapArtifact(rs) }
 
     fun expiredGeneratedArtifacts(sweepDate: LocalDate): List<ReportArtifactDto> =
         jdbc.query(
-            artifactSql("WHERE status = 'GENERATED' AND retention_until < :sweepDate") + " ORDER BY retention_until, artifact_id",
+            artifactSql("WHERE ra.status = 'GENERATED' AND ra.retention_until < :sweepDate") + " ORDER BY ra.retention_until, ra.artifact_id",
             mapOf("sweepDate" to sweepDate)
         ) { rs, _ -> mapArtifact(rs) }
 
@@ -248,12 +361,15 @@ class ReportingRepository(
 
     private fun artifactSql(whereClause: String): String =
         """
-        SELECT artifact_id, report_type, requested_by, requested_role, reason,
-               status, artifact_path, artifact_content, content_sha256,
-               retention_policy, retention_until, export_format,
-               source_references, masked_by_default,
-               synthetic_only, generated_at
-        FROM report_artifacts
+        SELECT ra.artifact_id, ra.report_type, ra.requested_by, ra.requested_role, ra.reason,
+               ra.status, ra.artifact_path, ra.artifact_content, ra.content_sha256,
+               ra.retention_policy, ra.retention_until, ra.export_format,
+               ra.source_references, ra.masked_by_default,
+               ra.synthetic_only, ra.generated_at, ra.workflow_instance_id,
+               rwi.status AS workflow_status
+        FROM report_artifacts ra
+        JOIN reporting_workflow_instances rwi
+          ON rwi.workflow_instance_id = ra.workflow_instance_id
         $whereClause
         """.trimIndent()
 
@@ -285,7 +401,10 @@ class ReportingRepository(
             sourceReferences = readStringList(rs.getString("source_references")),
             maskedByDefault = rs.getBoolean("masked_by_default"),
             syntheticOnly = rs.getBoolean("synthetic_only"),
-            generatedAt = rs.getObject("generated_at", OffsetDateTime::class.java)
+            generatedAt = rs.getObject("generated_at", OffsetDateTime::class.java),
+            workflowInstanceId = rs.getString("workflow_instance_id"),
+            workflowStatus = ReportingWorkflowStatus.valueOf(rs.getString("workflow_status")),
+            workflowTimeline = workflowEvents(rs.getString("workflow_instance_id"))
         )
 
     private fun mapOutbox(rs: ResultSet): ReportingOutboxRecord =

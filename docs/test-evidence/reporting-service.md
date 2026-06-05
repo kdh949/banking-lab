@@ -12,6 +12,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
 - `GET /api/reports/artifacts/{artifactId}/export` returns a synthetic JSON package simulation for a rendered artifact and requires a business reason.
 - `POST /api/reports/retention/sweeps` expires artifacts past `retention_until`, records `SYNTHETIC_RETENTION_EXPIRED`, and requires an authorized ops/compliance/reporting actor.
+- `reporting_workflow_instances` and `reporting_workflow_events` persist Temporal-compatible lifecycle visibility for generated, exported, and expired reporting artifacts.
 - Report generation, export, and retention sweep completion append durable `reporting_outbox_events` rows in the same transaction as reporting metadata changes.
 - `ReportingKafkaOutboxPublisher` reads allow-listed `PENDING reporting_outbox_events`, publishes reporting domain events to Redpanda/Kafka, and marks rows `PUBLISHED` only after broker acknowledgement.
 - `ReportingKafkaOutboxPublisher` records broker failures as retryable `FAILED` rows until the configured dead-letter threshold moves the row to `DEAD_LETTER`.
@@ -19,6 +20,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - `V004__reporting_outbox_events.sql` adds a durable `PENDING` outbox table with idempotency-key uniqueness for report-generated events.
 - `V005__reporting_outbox_retry_dead_letter.sql` adds `retry_count`, `next_retry_at`, `error_message`, and `DEAD_LETTER` status support.
+- `V006__report_artifact_workflow_visibility.sql` adds artifact workflow instances/events and backfills existing synthetic artifacts with lifecycle references.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Docker Compose platform profile also exposes `reporting-domain-event-publisher`, which uses the same Spring image with the reporting publisher enabled and the API container publisher mode disabled.
 - Live Docker Compose smoke coverage starts PostgreSQL, Redpanda, and `reporting-domain-event-publisher`, inserts a synthetic pending report event, restarts the publisher, and verifies the row reaches `PUBLISHED` with a consumed Redpanda envelope and batch log.
@@ -33,13 +35,14 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
   export report artifact routes plus run the retention sweep route with
   simulator tokens disabled.
 - TypeScript API client methods expose reporting catalog, rendered artifact
-  generation, checksum/retention metadata, and artifact list contracts.
+  generation, checksum/retention metadata, artifact workflow timelines, and
+  artifact list contracts.
 - Admin-console screen manifest `ADM-701` and API-backed panel wiring expose
   reporting catalog, artifact generation, artifact list, and artifact export
-  package controls when `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is
-  configured.
+  package controls plus artifact workflow status/timeline when
+  `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
 - Audit-console screen manifest `AUD-401` and API-backed panel wiring expose
-  reason-required reporting artifact history when
+  reason-required reporting artifact history plus workflow status/timeline when
   `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
 
 ## Controls
@@ -49,6 +52,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Artifact responses expose `contentSha256`, `retentionPolicy=SYNTHETIC_7Y`, `retentionUntil`, and `exportFormat=JSON`.
 - Export package responses include the rendered artifact content, content checksum, synthetic-only controls, `downloadSimulationOnly=true`, and `ledgerRowsMutated=false`.
 - Retention sweeps change only report artifact metadata from `GENERATED` to `EXPIRED`, reject expired artifact export, record `REPORT_RETENTION_SWEEP_RUN`, and prove `ledgerRowsMutated=false`.
+- Report artifact workflow state transitions from `GENERATED` to `EXPORTED` to `EXPIRED` append timeline rows with actor, role, reason, timestamp, and `syntheticOnly=true`.
 - Durable reporting outbox rows are created for `ReportArtifactGenerated`, `ReportArtifactExported`, and `ReportRetentionSweepCompleted`; idempotent generation replay does not create a duplicate generated event.
 - Broker-published reporting envelopes carry `sourceService=reporting-service`, `syntheticOnly=true`, aggregate metadata, and payload controls proving `ledgerRowsMutated=false`.
 - The reporting publisher uses an allow-list for reporting event types and Redpanda integration coverage proves `ReportArtifactGenerated` and `ReportArtifactExported` transition from `PENDING` to `PUBLISHED`.
