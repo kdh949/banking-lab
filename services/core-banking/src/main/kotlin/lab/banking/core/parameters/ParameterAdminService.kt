@@ -116,6 +116,7 @@ class ParameterAdminService(
         }
         val requestedValue = rollbackVersion?.parameterValue
             ?: normalizedValue(command.scheduledValue, parameter.valueType)
+        validateParameterValue(config, parameterKey, requestedValue)
         val current = currentVersion(config, parameterKey, effectiveFrom)
             ?: currentVersion(config, parameterKey, LocalDate.now())
         val requestId = "${config.requestPrefix}-${UUID.randomUUID().toString().uppercase()}"
@@ -468,6 +469,166 @@ class ParameterAdminService(
         return normalized
     }
 
+    private fun validateParameterValue(config: ParameterNamespaceConfig, parameterKey: String, requestedValue: String) {
+        if (config.namespace != "authorization") {
+            return
+        }
+        when (parameterKey) {
+            "roleMenuMap" -> validateRoleMenuMap(requestedValue)
+            "approvalRoleMatrix" -> validateApprovalRoleMatrix(requestedValue)
+            "reasonRequiredScreens" -> validateScreenCatalog("reasonRequiredScreens", requestedValue)
+        }
+    }
+
+    private fun validateRoleMenuMap(value: String) {
+        if (looksLikeJson(value)) {
+            val node = parseJsonParameter("roleMenuMap", value)
+            if (!node.isObject || node.size() == 0) {
+                throw WorkflowErrors.validation("roleMenuMap must be a non-empty object mapping roles to screen id arrays")
+            }
+            val roles = node.fieldNames()
+            while (roles.hasNext()) {
+                val role = roles.next()
+                val screens = node.path(role)
+                validateRoleCode("roleMenuMap", role)
+                if (!screens.isArray || screens.size() == 0) {
+                    throw WorkflowErrors.validation("roleMenuMap values must be non-empty screen id arrays")
+                }
+                val seenScreens = mutableSetOf<String>()
+                screens.forEach { screen ->
+                    if (!screen.isTextual) {
+                        throw WorkflowErrors.validation("roleMenuMap screen ids must be strings")
+                    }
+                    val screenId = screen.asText()
+                    validateScreenId("roleMenuMap", screenId)
+                    if (!seenScreens.add(screenId)) {
+                        throw WorkflowErrors.validation("roleMenuMap role $role contains duplicate screen id: $screenId")
+                    }
+                }
+            }
+            return
+        }
+        validateDelimitedRoleMap("roleMenuMap", value, ::validateScreenId)
+    }
+
+    private fun validateApprovalRoleMatrix(value: String) {
+        if (looksLikeJson(value)) {
+            val node = parseJsonParameter("approvalRoleMatrix", value)
+            if (!node.isObject || node.size() == 0) {
+                throw WorkflowErrors.validation("approvalRoleMatrix must be a non-empty object mapping roles to business type arrays")
+            }
+            val roles = node.fieldNames()
+            while (roles.hasNext()) {
+                val role = roles.next()
+                val businessTypes = node.path(role)
+                validateRoleCode("approvalRoleMatrix", role)
+                if (!businessTypes.isArray || businessTypes.size() == 0) {
+                    throw WorkflowErrors.validation("approvalRoleMatrix values must be non-empty business type arrays")
+                }
+                val seenBusinessTypes = mutableSetOf<String>()
+                businessTypes.forEach { businessType ->
+                    if (!businessType.isTextual) {
+                        throw WorkflowErrors.validation("approvalRoleMatrix business types must be strings")
+                    }
+                    val businessTypeValue = businessType.asText()
+                    validateApprovalBusinessType("approvalRoleMatrix", businessTypeValue)
+                    if (!seenBusinessTypes.add(businessTypeValue)) {
+                        throw WorkflowErrors.validation("approvalRoleMatrix role $role contains duplicate business type: $businessTypeValue")
+                    }
+                }
+            }
+            return
+        }
+        validateDelimitedRoleMap("approvalRoleMatrix", value, ::validateApprovalBusinessType)
+    }
+
+    private fun validateScreenCatalog(parameterKey: String, value: String) {
+        val screens = if (looksLikeJson(value)) {
+            val node = parseJsonParameter(parameterKey, value)
+            if (!node.isArray || node.size() == 0) {
+                throw WorkflowErrors.validation("$parameterKey must be a non-empty screen id array")
+            }
+            node.map {
+                if (!it.isTextual) {
+                    throw WorkflowErrors.validation("$parameterKey screen ids must be strings")
+                }
+                it.asText()
+            }
+        } else {
+            value.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        }
+        if (screens.isEmpty()) {
+            throw WorkflowErrors.validation("$parameterKey must include at least one screen id")
+        }
+        val seen = mutableSetOf<String>()
+        screens.forEach { screen ->
+            validateScreenId(parameterKey, screen)
+            if (!seen.add(screen)) {
+                throw WorkflowErrors.validation("$parameterKey contains duplicate screen id: $screen")
+            }
+        }
+    }
+
+    private fun validateDelimitedRoleMap(parameterKey: String, value: String, valueValidator: (String, String) -> Unit) {
+        val entries = value.split(";").map { it.trim() }.filter { it.isNotBlank() }
+        if (entries.isEmpty()) {
+            throw WorkflowErrors.validation("$parameterKey must include at least one ROLE:value entry")
+        }
+        val seenRoles = mutableSetOf<String>()
+        entries.forEach { entry ->
+            val parts = entry.split(":", limit = 2)
+            if (parts.size != 2) {
+                throw WorkflowErrors.validation("$parameterKey entries must use ROLE:value format")
+            }
+            val role = parts[0].trim()
+            validateRoleCode(parameterKey, role)
+            if (!seenRoles.add(role)) {
+                throw WorkflowErrors.validation("$parameterKey contains duplicate role: $role")
+            }
+            val values = parts[1].split(",").map { it.trim() }.filter { it.isNotBlank() }
+            if (values.isEmpty()) {
+                throw WorkflowErrors.validation("$parameterKey role $role must include at least one value")
+            }
+            val seenValues = mutableSetOf<String>()
+            values.forEach {
+                valueValidator(parameterKey, it)
+                if (!seenValues.add(it)) {
+                    throw WorkflowErrors.validation("$parameterKey role $role contains duplicate value: $it")
+                }
+            }
+        }
+    }
+
+    private fun validateRoleCode(parameterKey: String, role: String) {
+        if (!ROLE_CODE_PATTERN.matches(role)) {
+            throw WorkflowErrors.validation("$parameterKey contains invalid role code: $role")
+        }
+    }
+
+    private fun validateScreenId(parameterKey: String, screenId: String) {
+        if (!SCREEN_ID_PATTERN.matches(screenId)) {
+            throw WorkflowErrors.validation("$parameterKey contains invalid screen id: $screenId")
+        }
+    }
+
+    private fun validateApprovalBusinessType(parameterKey: String, businessType: String) {
+        if (businessType !in ApprovalBusinessTypes.highRisk) {
+            throw WorkflowErrors.validation("$parameterKey contains unsupported approval business type: $businessType")
+        }
+    }
+
+    private fun looksLikeJson(value: String): Boolean {
+        val trimmed = value.trimStart()
+        return trimmed.startsWith("{") || trimmed.startsWith("[")
+    }
+
+    private fun parseJsonParameter(parameterKey: String, value: String) =
+        try {
+            objectMapper.readTree(value)
+        } catch (ex: Exception) {
+            throw WorkflowErrors.validation("$parameterKey must contain valid JSON when JSON syntax is used")
+        }
+
     private fun config(namespace: String): ParameterNamespaceConfig =
         configs[namespace] ?: throw WorkflowErrors.validation("unsupported parameter namespace: $namespace")
 
@@ -597,5 +758,8 @@ class ParameterAdminService(
 
         private val configsByBusinessType: Map<String, ParameterNamespaceConfig> =
             configs.values.associateBy { it.businessType }
+
+        private val ROLE_CODE_PATTERN = Regex("^[A-Z][A-Z0-9_]*$")
+        private val SCREEN_ID_PATTERN = Regex("^[A-Z]{2,4}(?:-[A-Z0-9]+)*-\\d{3}$")
     }
 }

@@ -19,6 +19,7 @@ All values are synthetic lab controls. No real security policy, real PII, real f
 - `db/migrations/V024__parameter_admin_controls.sql` creates one `*_parameters` and one `*_parameter_versions` table pair for each required domain.
 - `parameter_change_requests` records maker requests with idempotency key, rollback plan, effective date, approval ID, and applied version ID.
 - `ParameterAdminService` exposes current/scheduled values, history, maker change requests, approval-backed version insertion, rejection, and rollback-as-new-version.
+- `ParameterAdminService` validates `ADM-301` structured authorization parameters before creating approvals: `roleMenuMap` and `approvalRoleMatrix` accept JSON object or delimited role maps, while `reasonRequiredScreens` accepts JSON arrays or comma-delimited screen IDs and rejects duplicates.
 - `ParameterAdminController` implements the existing manifest endpoints for `OPS-301`, `AUD-201`, `FDS-301`, `ADM-201`, and `ADM-301`.
 - `StaffAccessService` applies/rejects the new parameter business types through the existing maker-checker approval route.
 - `CustomerTransferService` reads `fds.highAmountMinor` from approved effective-dated FDS parameters instead of a static constant.
@@ -71,6 +72,7 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - `npm run test:e2e -- apps/audit-console/e2e/audit-console-parity.spec.ts`: first run failed because the new panel duplicated exact `AUD-201` text already used by the manifest card; after relabeling the panel field to `Parameters`, rerun passed with 2 shell tests and 4 API/Reporting/Keycloak tests, including the new AUD parameter command smoke, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_REPORTING_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts`: passed with 2 shell tests and 5 API/Reporting/Keycloak tests, including the new ADM-201 and ADM-301 parameter command smokes, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_REPORTING_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: approved escalated rerun passed.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: approved escalated rerun passed after adding server-side `ADM-301` value validation; compile warnings are limited to pre-existing analytics evidence code.
 
 ## Invariants Verified
 
@@ -88,7 +90,8 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - The admin console now keeps `ADM-201` security parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day staff session policy during local shell rendering.
 - The admin console now keeps `ADM-301` authorization parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day menu/role policy during local shell rendering.
 - The FDS/AML console now keeps `FDS-301` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day FDS behavior during local shell rendering.
+- `ADM-301` authorization parameter changes are validated before approval creation, including screen ID shape, high-risk approval business type membership, non-empty role maps, and duplicate screen/value rejection.
 
 ## Remaining Risk
 
-This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, audit retention, admin security policy, and admin menu-role browser wiring. The FDS/AML, ops, audit, admin security, and admin authorization panels are conditional, but local browser runs do not execute the API-backed parameter commands unless a Spring API URL is configured. Future hardening should execute the FDS/OPS/AUD/ADM parameter command paths against a live Spring API URL when available, add richer validation for structured JSON menu-role parameters, and add Temporal/activity evidence if parameter application is later delegated to scheduled workers.
+This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, audit retention, admin security policy, admin menu-role browser wiring, and server-side `ADM-301` structured value validation. The FDS/AML, ops, audit, admin security, and admin authorization panels are conditional, but local browser runs do not execute the API-backed parameter commands unless a Spring API URL is configured. Future hardening should execute the FDS/OPS/AUD/ADM parameter command paths against a live Spring API URL when available, and add Temporal/activity evidence if parameter application is later delegated to scheduled workers.
