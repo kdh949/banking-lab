@@ -82,6 +82,21 @@ test("audit console loads reporting artifact history when configured", async ({ 
   await expect(panel).toContainText("RPA-");
 });
 
+test("audit console requests Spring API-backed audit parameter change when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed AUD-201 parameter command smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-audit-parameters");
+  await expect(panel).toContainText("audit parameters loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("retentionYears");
+  await page.getByRole("button", { name: "Run audit parameter change smoke" }).click();
+  await expect(panel).toContainText("audit parameter change requested", { timeout: 15_000 });
+  await expect(panel).toContainText("PENDING_APPROVAL");
+  await expect(panel).toContainText("APR-");
+  await expect(panel).toContainText("APC-");
+});
+
 test("audit console propagates interactive Keycloak auditor token when configured", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live audit Keycloak browser smoke.");
 
