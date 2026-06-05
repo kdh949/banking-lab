@@ -175,6 +175,22 @@ test("staff-terminal exposes PAY101 audited payment inquiry through the payment 
   assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
 });
 
+test("payment service contract exposes staff cancellation maker-checker APIs", async () => {
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const contract = await readFile("contracts/openapi/payment-service.yaml", "utf8");
+
+  assert.match(contract, /requestPaymentCancellationApproval/);
+  assert.match(contract, /approvePaymentCancellationRequest/);
+  assert.match(contract, /rejectPaymentCancellationRequest/);
+  assert.match(contract, /PAYMENT_MAKER_CHECKER_REQUIRED|Maker\/checker|maker-checker/i);
+  assert.match(client, /RequestPaymentCancellationApprovalRequest/);
+  assert.match(client, /ReviewPaymentCancellationRequest/);
+  assert.match(client, /PaymentCancellationRequestResponse/);
+  assert.match(client, /requestPaymentCancellationApproval\(instructionId: string/);
+  assert.match(client, /approvePaymentCancellationRequest\(requestId: string/);
+  assert.match(client, /rejectPaymentCancellationRequest\(requestId: string/);
+});
+
 test("staff-terminal exposes WRK002 operational retry queue through the Spring API client", async () => {
   const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");

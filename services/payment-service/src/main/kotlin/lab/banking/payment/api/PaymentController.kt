@@ -13,9 +13,12 @@ import lab.banking.payment.domain.PaymentAutopayService
 import lab.banking.payment.domain.PaymentOutboxDispatchResponse
 import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionService
+import lab.banking.payment.domain.PaymentCancellationRequestResponse
 import lab.banking.payment.domain.PaymentOutboxDispatcherService
 import lab.banking.payment.domain.RecordPaymentSettlementRequest
+import lab.banking.payment.domain.RequestPaymentCancellationApprovalRequest
 import lab.banking.payment.domain.ResumeAutopayAgreementRequest
+import lab.banking.payment.domain.ReviewPaymentCancellationRequest
 import lab.banking.payment.security.PaymentAuthorizationFilter
 import lab.banking.payment.security.PaymentPrincipal
 import jakarta.servlet.http.HttpServletRequest
@@ -71,6 +74,46 @@ class PaymentController(
         @RequestBody request: CancelPaymentInstructionRequest
     ): PaymentInstructionResponse =
         paymentInstructionService.cancelInstruction(instructionId, request)
+
+    @PostMapping("/instructions/{instructionId}/cancellation-requests")
+    fun requestCancellationApproval(
+        @PathVariable instructionId: String,
+        @RequestBody request: RequestPaymentCancellationApprovalRequest,
+        servletRequest: HttpServletRequest
+    ): ResponseEntity<PaymentCancellationRequestResponse> {
+        val response = paymentInstructionService.requestCancellationApproval(
+            instructionId = instructionId,
+            request = request,
+            principal = servletRequest.getAttribute(PaymentAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? PaymentPrincipal
+        )
+        return ResponseEntity
+            .status(if (response.replayed) HttpStatus.OK else HttpStatus.CREATED)
+            .body(response)
+    }
+
+    @PostMapping("/cancellation-requests/{requestId}/approve")
+    fun approveCancellationRequest(
+        @PathVariable requestId: String,
+        @RequestBody request: ReviewPaymentCancellationRequest,
+        servletRequest: HttpServletRequest
+    ): PaymentCancellationRequestResponse =
+        paymentInstructionService.approveCancellationRequest(
+            cancellationRequestId = requestId,
+            request = request,
+            principal = servletRequest.getAttribute(PaymentAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? PaymentPrincipal
+        )
+
+    @PostMapping("/cancellation-requests/{requestId}/reject")
+    fun rejectCancellationRequest(
+        @PathVariable requestId: String,
+        @RequestBody request: ReviewPaymentCancellationRequest,
+        servletRequest: HttpServletRequest
+    ): PaymentCancellationRequestResponse =
+        paymentInstructionService.rejectCancellationRequest(
+            cancellationRequestId = requestId,
+            request = request,
+            principal = servletRequest.getAttribute(PaymentAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? PaymentPrincipal
+        )
 
     @PostMapping("/outbox/ledger-postings/dispatch-next")
     fun dispatchNextLedgerPosting(

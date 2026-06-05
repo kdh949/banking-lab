@@ -11,6 +11,8 @@ import lab.banking.payment.domain.PaymentAutopayExecutionRecord
 import lab.banking.payment.domain.PaymentAutopayFrequency
 import lab.banking.payment.domain.PaymentAutopayStatus
 import lab.banking.payment.domain.PaymentBillerRecord
+import lab.banking.payment.domain.PaymentCancellationRequestRecord
+import lab.banking.payment.domain.PaymentCancellationRequestStatus
 import lab.banking.payment.domain.PaymentIdempotencyRecord
 import lab.banking.payment.domain.PaymentInstructionRecord
 import lab.banking.payment.domain.PaymentInstructionStatus
@@ -337,6 +339,106 @@ class PaymentRepository(
         return auditEventId
     }
 
+    fun insertCancellationRequest(
+        cancellationRequestId: String,
+        instructionId: String,
+        makerId: String,
+        makerRole: String,
+        makerReason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO payment_cancellation_requests (
+              cancellation_request_id, payment_instruction_id, status,
+              maker_id, maker_role, maker_reason, synthetic_only
+            )
+            VALUES (
+              :cancellationRequestId, :instructionId, 'PENDING',
+              :makerId, :makerRole, :makerReason, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "cancellationRequestId" to cancellationRequestId,
+                "instructionId" to instructionId,
+                "makerId" to makerId,
+                "makerRole" to makerRole,
+                "makerReason" to makerReason
+            )
+        )
+    }
+
+    fun findCancellationRequest(requestId: String): PaymentCancellationRequestRecord? =
+        findCancellationRequestBySql(
+            """
+            SELECT cancellation_request_id, payment_instruction_id, status,
+                   maker_id, maker_role, maker_reason,
+                   checker_id, checker_role, checker_reason,
+                   synthetic_only, created_at, updated_at, decided_at
+            FROM payment_cancellation_requests
+            WHERE cancellation_request_id = :requestId
+            """.trimIndent(),
+            requestId
+        )
+
+    fun findCancellationRequestForUpdate(requestId: String): PaymentCancellationRequestRecord? =
+        findCancellationRequestBySql(
+            """
+            SELECT cancellation_request_id, payment_instruction_id, status,
+                   maker_id, maker_role, maker_reason,
+                   checker_id, checker_role, checker_reason,
+                   synthetic_only, created_at, updated_at, decided_at
+            FROM payment_cancellation_requests
+            WHERE cancellation_request_id = :requestId
+            FOR UPDATE
+            """.trimIndent(),
+            requestId
+        )
+
+    fun findPendingCancellationRequest(instructionId: String): PaymentCancellationRequestRecord? =
+        jdbc.query(
+            """
+            SELECT cancellation_request_id, payment_instruction_id, status,
+                   maker_id, maker_role, maker_reason,
+                   checker_id, checker_role, checker_reason,
+                   synthetic_only, created_at, updated_at, decided_at
+            FROM payment_cancellation_requests
+            WHERE payment_instruction_id = :instructionId
+              AND status = 'PENDING'
+            ORDER BY created_at ASC
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("instructionId" to instructionId),
+            this::mapCancellationRequest
+        ).firstOrNull()
+
+    fun decideCancellationRequest(
+        requestId: String,
+        status: PaymentCancellationRequestStatus,
+        checkerId: String,
+        checkerRole: String,
+        checkerReason: String
+    ) {
+        jdbc.update(
+            """
+            UPDATE payment_cancellation_requests
+            SET status = :status,
+                checker_id = :checkerId,
+                checker_role = :checkerRole,
+                checker_reason = :checkerReason,
+                decided_at = now(),
+                updated_at = now()
+            WHERE cancellation_request_id = :requestId
+            """.trimIndent(),
+            mapOf(
+                "requestId" to requestId,
+                "status" to status.name,
+                "checkerId" to checkerId,
+                "checkerRole" to checkerRole,
+                "checkerReason" to checkerReason
+            )
+        )
+    }
+
     fun insertAutopayAgreement(
         agreementId: String,
         customerId: String,
@@ -597,6 +699,9 @@ class PaymentRepository(
     private fun findInstructionBySql(sql: String, instructionId: String): PaymentInstructionRecord? =
         jdbc.query(sql, mapOf("instructionId" to instructionId), this::mapInstruction).firstOrNull()
 
+    private fun findCancellationRequestBySql(sql: String, requestId: String): PaymentCancellationRequestRecord? =
+        jdbc.query(sql, mapOf("requestId" to requestId), this::mapCancellationRequest).firstOrNull()
+
     private fun findAutopayAgreementBySql(sql: String, params: Map<String, Any?>): PaymentAutopayAgreementRecord? =
         jdbc.query(sql, params, this::mapAutopayAgreement).firstOrNull()
 
@@ -614,6 +719,23 @@ class PaymentRepository(
             syntheticOnly = rs.getBoolean("synthetic_only"),
             createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapCancellationRequest(rs: ResultSet, rowNum: Int): PaymentCancellationRequestRecord =
+        PaymentCancellationRequestRecord(
+            cancellationRequestId = rs.getString("cancellation_request_id"),
+            paymentInstructionId = rs.getString("payment_instruction_id"),
+            status = PaymentCancellationRequestStatus.valueOf(rs.getString("status")),
+            makerId = rs.getString("maker_id"),
+            makerRole = rs.getString("maker_role"),
+            makerReason = rs.getString("maker_reason"),
+            checkerId = rs.getString("checker_id"),
+            checkerRole = rs.getString("checker_role"),
+            checkerReason = rs.getString("checker_reason"),
+            syntheticOnly = rs.getBoolean("synthetic_only"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java),
+            decidedAt = rs.getObject("decided_at", OffsetDateTime::class.java)
         )
 
     private fun mapAutopayAgreement(rs: ResultSet, rowNum: Int): PaymentAutopayAgreementRecord =

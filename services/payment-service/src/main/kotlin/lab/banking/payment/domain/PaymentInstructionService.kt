@@ -105,6 +105,204 @@ class PaymentInstructionService(
         return response
     }
 
+    @Transactional
+    fun requestCancellationApproval(
+        instructionId: String,
+        request: RequestPaymentCancellationApprovalRequest,
+        principal: PaymentPrincipal?
+    ): PaymentCancellationRequestResponse {
+        val makerId = actorIdFromRequest(request.requestedBy, principal)
+        val makerRole = correctionMakerRole(principal)
+        validateIdempotentCommand(
+            idempotencyKey = request.idempotencyKey,
+            requestedBy = makerId,
+            reason = request.reason
+        )
+        val requestHash = requestHash("REQUEST_CANCEL_APPROVAL", instructionId, makerId, request.reason)
+        replayCancellationIfPresent(
+            request.idempotencyKey,
+            "REQUEST_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash
+        )?.let { return it }
+
+        val current = repository.findInstructionForUpdate(instructionId) ?: throw notFound(instructionId)
+        if (current.status != PaymentInstructionStatus.POSTING_REQUESTED) {
+            throw invalidState(instructionId, current.status, "only pre-settlement payment instructions can be submitted for staff cancellation")
+        }
+        repository.findPendingCancellationRequest(instructionId)?.let { pending ->
+            throw paymentError(
+                code = "PAYMENT_CANCELLATION_REQUEST_ALREADY_PENDING",
+                status = HttpStatus.CONFLICT,
+                policy = "PAYMENT_MAKER_CHECKER_REQUIRED",
+                message = "payment cancellation request is already pending approval",
+                cause = "Staff payment corrections must progress through one open maker-checker request at a time.",
+                fix = "Approve, reject, or query the existing cancellation request before creating another one.",
+                details = mapOf("paymentInstructionId" to instructionId, "cancellationRequestId" to pending.cancellationRequestId)
+            )
+        }
+
+        val cancellationRequestId = paymentCancellationRequestId()
+        repository.insertCancellationRequest(
+            cancellationRequestId = cancellationRequestId,
+            instructionId = instructionId,
+            makerId = makerId,
+            makerRole = makerRole,
+            makerReason = request.reason
+        )
+
+        val response = cancellationResponse(cancellationRequestId, replayed = false)
+        repository.insertIdempotency(
+            idempotencyKey = request.idempotencyKey,
+            commandType = "REQUEST_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash = requestHash,
+            aggregateId = cancellationRequestId,
+            response = response
+        )
+        return response
+    }
+
+    @Transactional
+    fun approveCancellationRequest(
+        cancellationRequestId: String,
+        request: ReviewPaymentCancellationRequest,
+        principal: PaymentPrincipal?
+    ): PaymentCancellationRequestResponse {
+        val checkerId = actorIdFromRequest(request.requestedBy, principal)
+        val checkerRole = correctionCheckerRole(principal)
+        validateIdempotentCommand(
+            idempotencyKey = request.idempotencyKey,
+            requestedBy = checkerId,
+            reason = request.reason
+        )
+        val requestHash = requestHash("APPROVE_CANCEL_APPROVAL", cancellationRequestId, checkerId, request.reason)
+        replayCancellationIfPresent(
+            request.idempotencyKey,
+            "APPROVE_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash
+        )?.let { return it }
+
+        val correction = repository.findCancellationRequestForUpdate(cancellationRequestId)
+            ?: throw cancellationRequestNotFound(cancellationRequestId)
+        if (correction.status != PaymentCancellationRequestStatus.PENDING) {
+            throw cancellationRequestTerminal(cancellationRequestId, correction.status)
+        }
+        if (correction.makerId == checkerId) {
+            throw paymentError(
+                code = "PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED",
+                status = HttpStatus.FORBIDDEN,
+                policy = "PAYMENT_MAKER_CHECKER_REQUIRED",
+                message = "payment cancellation maker cannot approve their own request",
+                cause = "High-risk staff payment corrections require independent checker approval.",
+                fix = "Use a different authorized checker account for the approval decision.",
+                details = mapOf("cancellationRequestId" to cancellationRequestId, "makerId" to correction.makerId)
+            )
+        }
+
+        val current = repository.findInstructionForUpdate(correction.paymentInstructionId)
+            ?: throw notFound(correction.paymentInstructionId)
+        if (current.status == PaymentInstructionStatus.SETTLED) {
+            throw invalidState(correction.paymentInstructionId, current.status, "settled payment instruction cannot be staff-canceled")
+        }
+        if (current.status !in setOf(PaymentInstructionStatus.POSTING_REQUESTED, PaymentInstructionStatus.CANCELED)) {
+            throw invalidState(correction.paymentInstructionId, current.status, "payment instruction status cannot be staff-canceled")
+        }
+        if (current.status == PaymentInstructionStatus.POSTING_REQUESTED) {
+            repository.updateStatus(correction.paymentInstructionId, PaymentInstructionStatus.CANCELED)
+            repository.markLatestAttemptCanceled(correction.paymentInstructionId)
+            repository.insertStatusHistory(
+                instructionId = correction.paymentInstructionId,
+                status = PaymentInstructionStatus.CANCELED,
+                actorId = checkerId,
+                reason = request.reason
+            )
+            repository.insertOutboxEvent(
+                aggregateId = correction.paymentInstructionId,
+                eventType = "PaymentInstructionCanceled",
+                idempotencyKey = request.idempotencyKey,
+                payload = mapOf(
+                    "contractVersion" to "2026-06-05",
+                    "paymentInstructionId" to correction.paymentInstructionId,
+                    "cancellationRequestId" to cancellationRequestId,
+                    "syntheticOnly" to true,
+                    "directLedgerWrite" to false,
+                    "makerCheckerApproved" to true
+                )
+            )
+        }
+        repository.decideCancellationRequest(
+            requestId = cancellationRequestId,
+            status = PaymentCancellationRequestStatus.APPROVED,
+            checkerId = checkerId,
+            checkerRole = checkerRole,
+            checkerReason = request.reason
+        )
+
+        val response = cancellationResponse(cancellationRequestId, replayed = false)
+        repository.insertIdempotency(
+            idempotencyKey = request.idempotencyKey,
+            commandType = "APPROVE_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash = requestHash,
+            aggregateId = cancellationRequestId,
+            response = response
+        )
+        return response
+    }
+
+    @Transactional
+    fun rejectCancellationRequest(
+        cancellationRequestId: String,
+        request: ReviewPaymentCancellationRequest,
+        principal: PaymentPrincipal?
+    ): PaymentCancellationRequestResponse {
+        val checkerId = actorIdFromRequest(request.requestedBy, principal)
+        val checkerRole = correctionCheckerRole(principal)
+        validateIdempotentCommand(
+            idempotencyKey = request.idempotencyKey,
+            requestedBy = checkerId,
+            reason = request.reason
+        )
+        val requestHash = requestHash("REJECT_CANCEL_APPROVAL", cancellationRequestId, checkerId, request.reason)
+        replayCancellationIfPresent(
+            request.idempotencyKey,
+            "REJECT_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash
+        )?.let { return it }
+
+        val correction = repository.findCancellationRequestForUpdate(cancellationRequestId)
+            ?: throw cancellationRequestNotFound(cancellationRequestId)
+        if (correction.status != PaymentCancellationRequestStatus.PENDING) {
+            throw cancellationRequestTerminal(cancellationRequestId, correction.status)
+        }
+        if (correction.makerId == checkerId) {
+            throw paymentError(
+                code = "PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED",
+                status = HttpStatus.FORBIDDEN,
+                policy = "PAYMENT_MAKER_CHECKER_REQUIRED",
+                message = "payment cancellation maker cannot reject their own request",
+                cause = "High-risk staff payment corrections require independent checker review.",
+                fix = "Use a different authorized checker account for the rejection decision.",
+                details = mapOf("cancellationRequestId" to cancellationRequestId, "makerId" to correction.makerId)
+            )
+        }
+        repository.decideCancellationRequest(
+            requestId = cancellationRequestId,
+            status = PaymentCancellationRequestStatus.REJECTED,
+            checkerId = checkerId,
+            checkerRole = checkerRole,
+            checkerReason = request.reason
+        )
+
+        val response = cancellationResponse(cancellationRequestId, replayed = false)
+        repository.insertIdempotency(
+            idempotencyKey = request.idempotencyKey,
+            commandType = "REJECT_PAYMENT_CANCELLATION_APPROVAL",
+            requestHash = requestHash,
+            aggregateId = cancellationRequestId,
+            response = response
+        )
+        return response
+    }
+
     fun instruction(instructionId: String): PaymentInstructionDto {
         val record = repository.findInstruction(instructionId) ?: throw notFound(instructionId)
         return record.toDto(repository.latestOutboxEventId(instructionId))
@@ -281,6 +479,28 @@ class PaymentInstructionService(
             .copy(replayed = true)
     }
 
+    private fun replayCancellationIfPresent(
+        idempotencyKey: String,
+        commandType: String,
+        requestHash: String
+    ): PaymentCancellationRequestResponse? {
+        val existing = repository.findIdempotency(idempotencyKey) ?: return null
+        if (existing.commandType != commandType || existing.requestHash != requestHash) {
+            throw paymentError(
+                code = "PAYMENT_IDEMPOTENCY_CONFLICT",
+                status = HttpStatus.CONFLICT,
+                invariant = "idempotent payment correction command creates at most one business result",
+                message = "idempotency key was reused with a different payment correction payload",
+                cause = "The same idempotency key already exists for a different command type or request hash.",
+                fix = "Replay the original payload or use a new idempotency key for a different payment correction command.",
+                details = mapOf("idempotencyKey" to idempotencyKey)
+            )
+        }
+        return objectMapper
+            .readValue(existing.responseJson, PaymentCancellationRequestResponse::class.java)
+            .copy(replayed = true)
+    }
+
     private fun validateCreate(request: CreatePaymentInstructionRequest) {
         validateIdempotentCommand(
             idempotencyKey = request.idempotencyKey,
@@ -316,6 +536,28 @@ class PaymentInstructionService(
         return staffPaymentReadRoles.firstOrNull(principal.roles::contains)
     }
 
+    private fun actorIdFromRequest(requestedBy: String, principal: PaymentPrincipal?): String {
+        requireNonBlank(requestedBy, "requestedBy")
+        if (principal != null && principal.subject != requestedBy) {
+            throw paymentError(
+                code = "PAYMENT_ACTOR_BINDING_MISMATCH",
+                status = HttpStatus.FORBIDDEN,
+                policy = "PAYMENT_ACTOR_BINDING",
+                message = "payment correction requestedBy must match the authenticated actor",
+                cause = "Payment correction maker/checker commands bind the request body actor to the bearer-token subject.",
+                fix = "Use the authenticated subject as requestedBy before retrying.",
+                details = mapOf("requestedBy" to requestedBy, "authenticatedSubject" to principal.subject)
+            )
+        }
+        return requestedBy
+    }
+
+    private fun correctionMakerRole(principal: PaymentPrincipal?): String =
+        correctionMakerRoles.firstOrNull { principal?.roles?.contains(it) == true } ?: "PAYMENT_CORRECTION_MAKER"
+
+    private fun correctionCheckerRole(principal: PaymentPrincipal?): String =
+        correctionCheckerRoles.firstOrNull { principal?.roles?.contains(it) == true } ?: "PAYMENT_CORRECTION_CHECKER"
+
     private fun requireNonBlank(value: String, field: String) {
         if (value.isBlank()) {
             throw paymentError(
@@ -346,6 +588,33 @@ class PaymentInstructionService(
             updatedAt = updatedAt
         )
 
+    private fun PaymentCancellationRequestRecord.toDto(): PaymentCancellationRequestDto =
+        PaymentCancellationRequestDto(
+            cancellationRequestId = cancellationRequestId,
+            paymentInstructionId = paymentInstructionId,
+            status = status,
+            makerId = makerId,
+            makerRole = makerRole,
+            makerReason = makerReason,
+            checkerId = checkerId,
+            checkerRole = checkerRole,
+            checkerReason = checkerReason,
+            syntheticOnly = syntheticOnly,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            decidedAt = decidedAt
+        )
+
+    private fun cancellationResponse(requestId: String, replayed: Boolean): PaymentCancellationRequestResponse {
+        val correction = repository.findCancellationRequest(requestId) ?: throw cancellationRequestNotFound(requestId)
+        val instruction = repository.findInstruction(correction.paymentInstructionId)
+        return PaymentCancellationRequestResponse(
+            item = correction.toDto(),
+            instruction = instruction?.toDto(repository.latestOutboxEventId(correction.paymentInstructionId)),
+            replayed = replayed
+        )
+    }
+
     private fun notFound(instructionId: String): PaymentDomainException =
         paymentError(
             code = "PAYMENT_INSTRUCTION_NOT_FOUND",
@@ -369,6 +638,30 @@ class PaymentInstructionService(
             cause = "Payment Service rejected an unsafe status transition.",
             fix = "Use the current payment status and submit the next allowed command.",
             details = mapOf("paymentInstructionId" to instructionId, "status" to status.name)
+        )
+
+    private fun cancellationRequestNotFound(requestId: String): PaymentDomainException =
+        paymentError(
+            code = "PAYMENT_CANCELLATION_REQUEST_NOT_FOUND",
+            status = HttpStatus.NOT_FOUND,
+            message = "payment cancellation request was not found",
+            cause = "No durable payment cancellation maker-checker request exists for the supplied id.",
+            fix = "Check the PCR-* request id returned by the maker request command.",
+            details = mapOf("cancellationRequestId" to requestId)
+        )
+
+    private fun cancellationRequestTerminal(
+        requestId: String,
+        status: PaymentCancellationRequestStatus
+    ): PaymentDomainException =
+        paymentError(
+            code = "PAYMENT_CANCELLATION_REQUEST_TERMINAL",
+            status = HttpStatus.CONFLICT,
+            policy = "PAYMENT_MAKER_CHECKER_REQUIRED",
+            message = "payment cancellation request is already terminal",
+            cause = "Payment cancellation approval requests are append-only and can be approved or rejected once.",
+            fix = "Create a new correction request if another correction is still required.",
+            details = mapOf("cancellationRequestId" to requestId, "status" to status.name)
         )
 
     private fun paymentError(
@@ -396,6 +689,8 @@ class PaymentInstructionService(
 
     private fun paymentAttemptId(): String = "PAT-${UUID.randomUUID().toString().uppercase()}"
 
+    private fun paymentCancellationRequestId(): String = "PCR-${UUID.randomUUID().toString().uppercase()}"
+
     private fun requestHash(vararg parts: String): String {
         val payload = parts.joinToString(separator = "|")
         val digest = MessageDigest.getInstance("SHA-256").digest(payload.toByteArray(Charsets.UTF_8))
@@ -409,6 +704,18 @@ class PaymentInstructionService(
             "OPS_OPERATOR",
             "OPS_MANAGER",
             "AUDITOR",
+            "COMPLIANCE_MANAGER"
+        )
+        private val correctionMakerRoles = listOf(
+            "BRANCH_STAFF",
+            "BRANCH_MANAGER",
+            "OPS_OPERATOR",
+            "OPS_MANAGER",
+            "COMPLIANCE_MANAGER"
+        )
+        private val correctionCheckerRoles = listOf(
+            "BRANCH_MANAGER",
+            "OPS_MANAGER",
             "COMPLIANCE_MANAGER"
         )
     }

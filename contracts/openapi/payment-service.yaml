@@ -88,6 +88,75 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
+  /api/payments/instructions/{instructionId}/cancellation-requests:
+    post:
+      summary: Request staff maker-checker approval for pre-settlement payment cancellation
+      operationId: requestPaymentCancellationApproval
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPaymentCancellationApprovalRequest'
+      responses:
+        '201':
+          description: Cancellation request created and pending independent checker approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '200':
+          description: Idempotent replay of the same cancellation request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '409':
+          description: Existing pending request or non-cancelable payment state
+  /api/payments/cancellation-requests/{requestId}/approve:
+    post:
+      summary: Approve staff payment cancellation request as an independent checker
+      operationId: approvePaymentCancellationRequest
+      parameters:
+        - $ref: '#/components/parameters/CancellationRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
+      responses:
+        '200':
+          description: Cancellation request approved and the payment instruction canceled if still pre-settlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '403':
+          description: Maker/checker separation failed
+  /api/payments/cancellation-requests/{requestId}/reject:
+    post:
+      summary: Reject staff payment cancellation request as an independent checker
+      operationId: rejectPaymentCancellationRequest
+      parameters:
+        - $ref: '#/components/parameters/CancellationRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
+      responses:
+        '200':
+          description: Cancellation request rejected without payment instruction mutation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '403':
+          description: Maker/checker separation failed
   /api/payments/outbox/ledger-postings/dispatch-next:
     post:
       summary: Dispatch the next durable payment ledger posting request to core-banking
@@ -231,6 +300,13 @@ components:
       schema:
         type: string
         pattern: '^APAY-'
+    CancellationRequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^PCR-'
   schemas:
     CreatePaymentInstructionRequest:
       type: object
@@ -278,6 +354,28 @@ components:
           type: string
         requestedBy:
           type: string
+        reason:
+          type: string
+    RequestPaymentCancellationApprovalRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated maker subject.
+        reason:
+          type: string
+    ReviewPaymentCancellationRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated checker subject and differ from the maker.
         reason:
           type: string
     DispatchPaymentLedgerPostingRequest:
@@ -490,6 +588,57 @@ components:
           type: string
           nullable: true
           pattern: '^PAU-'
+    PaymentCancellationRequestResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentCancellationRequest'
+        instruction:
+          anyOf:
+            - $ref: '#/components/schemas/PaymentInstruction'
+            - type: 'null'
+        replayed:
+          type: boolean
+    PaymentCancellationRequest:
+      type: object
+      required: [cancellationRequestId, paymentInstructionId, status, makerId, makerRole, makerReason, syntheticOnly, createdAt, updatedAt]
+      properties:
+        cancellationRequestId:
+          type: string
+          pattern: '^PCR-'
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        status:
+          enum: [PENDING, APPROVED, REJECTED]
+        makerId:
+          type: string
+        makerRole:
+          type: string
+        makerReason:
+          type: string
+        checkerId:
+          type: string
+          nullable: true
+        checkerRole:
+          type: string
+          nullable: true
+        checkerReason:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
     PaymentInstruction:
       type: object
       required: [paymentInstructionId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, status, syntheticOnly, createdAt, updatedAt]

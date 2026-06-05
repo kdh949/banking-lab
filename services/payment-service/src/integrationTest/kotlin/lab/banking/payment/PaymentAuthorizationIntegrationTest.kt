@@ -45,6 +45,7 @@ class PaymentAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              payment_cancellation_requests,
               payment_access_audit_events,
               payment_autopay_executions,
               payment_autopay_status_history,
@@ -202,6 +203,128 @@ class PaymentAuthorizationIntegrationTest {
             .andExpect(jsonPath("$.item.status").value("SETTLED"))
 
         assertEquals(1, countRows("payment_instructions WHERE status = 'SETTLED'"))
+    }
+
+    @Test
+    fun `staff payment cancellation requires maker checker approval before mutation`() {
+        val createBody = """
+            {
+              "customerId": "CUS-PAY-CORR-001",
+              "debitAccountId": "ACC-PAY-CORR-001",
+              "billerId": "SYN-BILLER-UTIL-001",
+              "amountMinor": 51000,
+              "currency": "KRW",
+              "idempotencyKey": "PAY-CORR-CREATE-001",
+              "requestedBy": "customer-corr01",
+              "requestedChannel": "CUSTOMER_WEB",
+              "reason": "Synthetic correction target payment"
+            }
+        """.trimIndent()
+        val created = mockMvc.perform(
+            post("/api/payments/instructions")
+                .header("Authorization", bearer("customer-corr01", listOf("CUSTOMER"), customerId = "CUS-PAY-CORR-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody)
+        )
+            .andExpect(status().isCreated)
+            .andReturn()
+        val instructionId = objectMapper.readTree(created.response.contentAsString)
+            .at("/item/paymentInstructionId")
+            .asText()
+
+        val requestBody = """
+            {
+              "idempotencyKey": "PAY-CORR-REQUEST-001",
+              "requestedBy": "ops-maker01",
+              "reason": "Synthetic staff payment cancellation correction"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/payments/instructions/$instructionId/cancellation-requests")
+                .header("Authorization", bearer("customer-corr01", listOf("CUSTOMER"), customerId = "CUS-PAY-CORR-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("PAYMENT_AUTHORIZATION_POLICY_VIOLATION"))
+
+        val requested = mockMvc.perform(
+            post("/api/payments/instructions/$instructionId/cancellation-requests")
+                .header("Authorization", bearer("ops-maker01", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.status").value("PENDING"))
+            .andExpect(jsonPath("$.item.makerId").value("ops-maker01"))
+            .andExpect(jsonPath("$.instruction.status").value("POSTING_REQUESTED"))
+            .andReturn()
+        val cancellationRequestId = objectMapper.readTree(requested.response.contentAsString)
+            .at("/item/cancellationRequestId")
+            .asText()
+
+        mockMvc.perform(
+            post("/api/payments/instructions/$instructionId/cancellation-requests")
+                .header("Authorization", bearer("ops-maker01", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.replayed").value(true))
+            .andExpect(jsonPath("$.item.cancellationRequestId").value(cancellationRequestId))
+        assertEquals(1, countRows("payment_cancellation_requests WHERE status = 'PENDING'"))
+        assertEquals(1, countRows("payment_instructions WHERE payment_instruction_id = '$instructionId' AND status = 'POSTING_REQUESTED'"))
+
+        val selfApproveBody = """
+            {
+              "idempotencyKey": "PAY-CORR-APPROVE-SELF-001",
+              "requestedBy": "ops-maker01",
+              "reason": "Synthetic self approval attempt"
+            }
+        """.trimIndent()
+        mockMvc.perform(
+            post("/api/payments/cancellation-requests/$cancellationRequestId/approve")
+                .header("Authorization", bearer("ops-maker01", listOf("OPS_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(selfApproveBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED"))
+        assertEquals(1, countRows("payment_instructions WHERE payment_instruction_id = '$instructionId' AND status = 'POSTING_REQUESTED'"))
+
+        val approveBody = """
+            {
+              "idempotencyKey": "PAY-CORR-APPROVE-001",
+              "requestedBy": "ops-manager01",
+              "reason": "Synthetic manager approval for staff payment cancellation"
+            }
+        """.trimIndent()
+        mockMvc.perform(
+            post("/api/payments/cancellation-requests/$cancellationRequestId/approve")
+                .header("Authorization", bearer("ops-manager01", listOf("OPS_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("APPROVED"))
+            .andExpect(jsonPath("$.item.checkerId").value("ops-manager01"))
+            .andExpect(jsonPath("$.instruction.status").value("CANCELED"))
+
+        mockMvc.perform(
+            post("/api/payments/cancellation-requests/$cancellationRequestId/approve")
+                .header("Authorization", bearer("ops-manager01", listOf("OPS_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.replayed").value(true))
+            .andExpect(jsonPath("$.instruction.status").value("CANCELED"))
+
+        assertEquals(1, countRows("payment_cancellation_requests WHERE status = 'APPROVED' AND checker_id = 'ops-manager01'"))
+        assertEquals(1, countRows("payment_instructions WHERE payment_instruction_id = '$instructionId' AND status = 'CANCELED'"))
+        assertEquals(1, countRows("payment_status_history WHERE payment_instruction_id = '$instructionId' AND status = 'CANCELED' AND actor_id = 'ops-manager01'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE aggregate_id = '$instructionId' AND event_type = 'PaymentInstructionCanceled'"))
     }
 
     @Test

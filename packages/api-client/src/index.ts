@@ -1158,6 +1158,7 @@ export type PaymentInstructionStatus = "POSTING_REQUESTED" | "SETTLED" | "CANCEL
 export type PaymentAutopayFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
 export type PaymentAutopayStatus = "ACTIVE" | "PAUSED" | "CANCELED";
 export type PaymentOutboxDispatchStatus = "PUBLISHED" | "FAILED" | "DEAD_LETTER" | "NO_PENDING_EVENT";
+export type PaymentCancellationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface CreatePaymentInstructionRequest {
   readonly customerId: string;
@@ -1184,6 +1185,18 @@ export interface CancelPaymentInstructionRequest {
   readonly reason: string;
 }
 
+export interface RequestPaymentCancellationApprovalRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ReviewPaymentCancellationRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
 export interface PaymentInstructionDto {
   readonly paymentInstructionId: string;
   readonly customerId: string;
@@ -1204,6 +1217,28 @@ export interface PaymentInstructionResponse {
   readonly item: PaymentInstructionDto;
   readonly replayed: boolean;
   readonly auditEventId?: string | null;
+}
+
+export interface PaymentCancellationRequestDto {
+  readonly cancellationRequestId: string;
+  readonly paymentInstructionId: string;
+  readonly status: PaymentCancellationRequestStatus;
+  readonly makerId: string;
+  readonly makerRole: string;
+  readonly makerReason: string;
+  readonly checkerId?: string | null;
+  readonly checkerRole?: string | null;
+  readonly checkerReason?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly decidedAt?: string | null;
+}
+
+export interface PaymentCancellationRequestResponse {
+  readonly item: PaymentCancellationRequestDto;
+  readonly instruction?: PaymentInstructionDto | null;
+  readonly replayed: boolean;
 }
 
 export interface DispatchPaymentLedgerPostingRequest {
@@ -2273,6 +2308,39 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/payments/instructions/${encodeURIComponent(instructionId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestPaymentCancellationApproval(instructionId: string, command: RequestPaymentCancellationApprovalRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/cancellation-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    approvePaymentCancellationRequest(requestId: string, command: ReviewPaymentCancellationRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/cancellation-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectPaymentCancellationRequest(requestId: string, command: ReviewPaymentCancellationRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/cancellation-requests/${encodeURIComponent(requestId)}/reject`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

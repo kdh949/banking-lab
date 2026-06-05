@@ -24,6 +24,8 @@ class PaymentAuthorizationFilter(
     private val instructionRead = Regex("^/api/payments/instructions/[^/]+$")
     private val instructionSettlement = Regex("^/api/payments/instructions/[^/]+/settlements$")
     private val instructionCancel = Regex("^/api/payments/instructions/[^/]+/cancel$")
+    private val instructionCancellationRequest = Regex("^/api/payments/instructions/[^/]+/cancellation-requests$")
+    private val cancellationRequestReview = Regex("^/api/payments/cancellation-requests/[^/]+/(approve|reject)$")
     private val autopayRead = Regex("^/api/payments/autopay/agreements/[^/]+$")
     private val autopayCommand = Regex("^/api/payments/autopay/agreements/[^/]+/(pause|resume|cancel)$")
 
@@ -70,6 +72,9 @@ class PaymentAuthorizationFilter(
                 setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             instructionSettlement.matches(path) && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
             instructionCancel.matches(path) && method == "POST" -> setOf("CUSTOMER")
+            instructionCancellationRequest.matches(path) && method == "POST" ->
+                setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            cancellationRequestReview.matches(path) && method == "POST" -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path == "/api/payments/outbox/ledger-postings/dispatch-next" && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR", "OPS_MANAGER")
             path == "/api/payments/autopay/agreements" && method == "POST" -> setOf("CUSTOMER")
             autopayRead.matches(path) && method == "GET" ->

@@ -36,6 +36,18 @@ data class CancelPaymentInstructionRequest(
     val reason: String
 )
 
+data class RequestPaymentCancellationApprovalRequest(
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String
+)
+
+data class ReviewPaymentCancellationRequest(
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String
+)
+
 data class PaymentInstructionDto(
     val paymentInstructionId: String,
     val customerId: String,
@@ -56,6 +68,34 @@ data class PaymentInstructionResponse(
     val item: PaymentInstructionDto,
     val replayed: Boolean,
     val auditEventId: String? = null
+)
+
+enum class PaymentCancellationRequestStatus {
+    PENDING,
+    APPROVED,
+    REJECTED
+}
+
+data class PaymentCancellationRequestDto(
+    val cancellationRequestId: String,
+    val paymentInstructionId: String,
+    val status: PaymentCancellationRequestStatus,
+    val makerId: String,
+    val makerRole: String,
+    val makerReason: String,
+    val checkerId: String?,
+    val checkerRole: String?,
+    val checkerReason: String?,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val decidedAt: OffsetDateTime?
+)
+
+data class PaymentCancellationRequestResponse(
+    val item: PaymentCancellationRequestDto,
+    val instruction: PaymentInstructionDto?,
+    val replayed: Boolean
 )
 
 enum class PaymentAutopayStatus {
@@ -205,6 +245,22 @@ data class PaymentInstructionRecord(
     val syntheticOnly: Boolean,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime
+)
+
+data class PaymentCancellationRequestRecord(
+    val cancellationRequestId: String,
+    val paymentInstructionId: String,
+    val status: PaymentCancellationRequestStatus,
+    val makerId: String,
+    val makerRole: String,
+    val makerReason: String,
+    val checkerId: String?,
+    val checkerRole: String?,
+    val checkerReason: String?,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+    val decidedAt: OffsetDateTime?
 )
 
 data class PaymentAutopayAgreementRecord(

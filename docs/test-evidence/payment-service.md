@@ -14,8 +14,10 @@ This evidence covers the first synthetic Payment Service slice:
 - Payment instruction API and service logic for create, idempotent replay,
   settlement reference recording, and pre-settlement cancellation.
 - Direct customer self-cancel remains allowed and audited, while direct staff or
-  ops payment cancellation is denied until a maker-checker staff correction flow
-  is introduced.
+  ops payment cancellation remains denied on the customer cancel endpoint.
+- Staff and ops payment cancellation now goes through durable maker-checker
+  correction requests with independent checker approval before the payment
+  instruction is canceled.
 - Event and OpenAPI contracts for payment-to-core-ledger posting requests.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
@@ -38,7 +40,8 @@ This evidence covers the first synthetic Payment Service slice:
   no-pending-event outcomes.
 - Payment-service route-level authorization filter, signed JWKS JWT decoder,
   dev-only simulator token decoder, and route role policies for instruction,
-  autopay, settlement, due-execution, and Outbox dispatch APIs.
+  autopay, settlement, due-execution, Outbox dispatch, and staff cancellation
+  maker-checker APIs.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 - Docker Compose platform services for the payment REST API and the enabled
@@ -51,7 +54,7 @@ This evidence covers the first synthetic Payment Service slice:
   `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` modes.
 
 The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda and staff payment correction maker-checker flows remain future
+Kafka/Redpanda and live payment-service Keycloak smoke evidence remain future
 work.
 
 ## Commands Run
@@ -59,6 +62,8 @@ work.
 ```bash
 npm run test:payment-service:unit
 npm run test:payment-service:integration
+npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --rerun-tasks
 npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest --tests lab.banking.core.ledger.api.LedgerRuntimeApiParityIntegrationTest --rerun-tasks
 npm run test:core-banking:unit -- --rerun-tasks
 npm test
@@ -98,6 +103,13 @@ need local file-lock socket and Docker access.
   ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
   `PaymentOutboxDispatcherIntegrationTest`, and
   `PaymentOutboxWorkerIntegrationTest`, and `PaymentAuthorizationIntegrationTest`.
+- `npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks`:
+  first sandboxed Gradle run failed with `java.net.SocketException: Operation
+  not permitted`; rerun after sandbox escalation passed and proved the staff
+  cancellation maker-checker route policy and separation controls.
+- `npm run test:payment-service:integration -- --rerun-tasks`: pass after
+  sandbox escalation; the full payment-service integration suite passed with
+  the new cancellation approval migration included.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
   idempotent replay, structured API access, and service-role denial.
@@ -213,8 +225,8 @@ Manifest and API client coverage verifies:
 - `OPS-404` declares ops payment Outbox dispatch with retry/dead-letter result
   metadata;
 - `@banking-lab/api-client` exposes typed payment instruction, settlement,
-  outbox dispatch, and autopay methods matching the payment-service OpenAPI
-  operation set.
+  outbox dispatch, staff cancellation maker-checker, and autopay methods
+  matching the payment-service OpenAPI operation set.
 - Customer Web renders `data-testid="api-backed-customer-payment-domain"` and
   uses `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL` with the standard
   `NEXT_PUBLIC_BANKING_API_BASE_URL` fallback to exercise CWB-701/CWB-702/CWB-703
@@ -239,6 +251,19 @@ Manifest and API client coverage verifies:
 - branch staff direct payment cancellation is rejected with
   `PAYMENT_AUTHORIZATION_POLICY_VIOLATION`, while customer self-cancel remains
   allowed for pre-settlement instructions;
+- staff/ops cancellation correction creation is forbidden to CUSTOMER tokens and
+  allowed to staff/ops maker roles only;
+- maker cancellation requests persist durable `PCR-*` pending rows without
+  mutating the payment instruction;
+- idempotent maker request replay returns the same `PCR-*` request without a
+  duplicate pending row;
+- self-approval is rejected with `PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED`
+  before instruction mutation;
+- an independent manager approval marks the request `APPROVED`, cancels the
+  pre-settlement instruction, appends `CANCELED` status history with the checker
+  actor, and emits one `PaymentInstructionCanceled` durable Outbox event;
+- idempotent checker approval replay returns the same approved result without a
+  duplicate cancellation event;
 - customer tokens cannot record settlement callbacks or run operational
   dispatch/due-execution APIs;
 - `PAYMENT_SERVICE` tokens can record payment settlement, execute due autopay,
@@ -270,6 +295,9 @@ The application keeps `real-payment-network-enabled: false`; Compose,
 Kubernetes, and Helm add only synthetic payment-service API/worker runtime
 settings and a replaceable local synthetic service-token placeholder for the
 core-banking posting bridge.
+Staff cancellation approval creates only synthetic `payment_cancellation_requests`
+rows and a durable `PaymentInstructionCanceled` Outbox event after independent
+checker approval; it never writes core ledger tables directly.
 
 ## Remaining Risk
 
@@ -277,9 +305,9 @@ This is still a partial slice. A successful bill payment can now be created
 from Customer Web, queried from Staff Terminal with reason-required audit,
 dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
-autopay schedules, but Kafka/Redpanda runtime publication, live payment-service
-Keycloak realm smoke evidence, and full staff correction maker-checker flows are
-still pending.
+autopay schedules. Staff payment cancellation now has an API-backed
+maker-checker correction path, but Kafka/Redpanda runtime publication and live
+payment-service Keycloak realm smoke evidence are still pending.
 The new Compose/Kubernetes/Helm surface is structurally validated only; it does
 not yet prove a live payment-service rollout, live worker dispatch against
 core-banking, or a live Keycloak-issued `PAYMENT_SERVICE` service token.
