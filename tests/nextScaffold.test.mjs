@@ -311,6 +311,10 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   assert.match(panel, /data-testid="api-backed-payment-outbox-dispatch"/);
   assert.match(panel, /dispatchNextPaymentLedgerPosting/);
   assert.match(panel, /Browser OPS-404 payment outbox dispatch smoke/);
+  assert.match(panel, /data-testid="api-backed-reconciliation-parameters"/);
+  assert.match(panel, /reconciliationParameters/);
+  assert.match(panel, /requestReconciliationParameterChange/);
+  assert.match(panel, /Browser OPS-301 parameter change smoke/);
   assert.equal(manifest.api.command, "POST /api/payments/outbox/ledger-postings/dispatch-next");
   assert.equal(manifest.audit.reasonRequired, true);
 });

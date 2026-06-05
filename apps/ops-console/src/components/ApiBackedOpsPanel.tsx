@@ -5,6 +5,8 @@ import {
   BankingApiError,
   createBankingApiClient,
   type EodClosingMonitorDto,
+  type ParameterChangeRequestResponse,
+  type ParameterListResponse,
   type PaymentOutboxDispatchResponse,
   type ReconciliationItemDto,
   type StaffApprovalExecutionResponse
@@ -39,6 +41,33 @@ type PaymentOutboxDispatchState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | { readonly status: "loaded"; readonly result: PaymentOutboxDispatchResponse; readonly reason: string }
+  | { readonly status: "failed"; readonly message: string };
+
+type ReconciliationParameterState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly auditEventId: string;
+      readonly parameterKey: string;
+      readonly currentValue: string;
+      readonly currentVersionId: string;
+      readonly scheduledCount: number;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type ReconciliationParameterCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "requested";
+      readonly requestId: string;
+      readonly approvalId: string;
+      readonly parameterKey: string;
+      readonly requestedValue: string;
+      readonly effectiveFrom: string;
+      readonly requestStatus: string;
+    }
   | { readonly status: "failed"; readonly message: string };
 
 type OperatorKeycloakLoginState =
@@ -97,6 +126,10 @@ export function ApiBackedOpsPanel() {
   const [commandState, setCommandState] = useState<CommandState>({ status: "idle" });
   const [workflowFailureState, setWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
   const [paymentDispatchState, setPaymentDispatchState] = useState<PaymentOutboxDispatchState>({ status: "idle" });
+  const [reconciliationParameterState, setReconciliationParameterState] = useState<ReconciliationParameterState>(() =>
+    apiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [reconciliationParameterCommandState, setReconciliationParameterCommandState] = useState<ReconciliationParameterCommandState>({ status: "idle" });
   const [keycloakOperatorState, setKeycloakOperatorState] = useState<OperatorKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -161,6 +194,32 @@ export function ApiBackedOpsPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setEodState({ status: "failed", message: error instanceof Error ? error.message : "Unknown EOD API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    reconciliationParameterClient()
+      .reconciliationParameters("Browser OPS-301 parameter read smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setReconciliationParameterState(toReconciliationParameterState(response));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setReconciliationParameterState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown reconciliation parameter API failure"
+          });
         }
       });
 
@@ -427,6 +486,42 @@ export function ApiBackedOpsPanel() {
     }
   };
 
+  const runReconciliationParameterChangeSmoke = async () => {
+    if (!apiBaseUrl || reconciliationParameterCommandState.status === "running") {
+      return;
+    }
+    setReconciliationParameterCommandState({ status: "running" });
+    try {
+      const current = reconciliationParameterState.status === "loaded"
+        ? reconciliationParameterState
+        : toReconciliationParameterState(
+            await reconciliationParameterClient().reconciliationParameters("Browser OPS-301 parameter command read")
+          );
+      if (current.status !== "loaded") {
+        setReconciliationParameterCommandState({ status: "failed", message: "OPS autoMatchToleranceMinor parameter was not loaded" });
+        return;
+      }
+      const requestedValue = nextNumericParameterValue(current.currentValue, 100);
+      const effectiveFrom = tomorrowIsoDate();
+      const response = await reconciliationParameterClient(true).requestReconciliationParameterChange({
+        parameterKey: "autoMatchToleranceMinor",
+        scheduledValue: requestedValue,
+        effectiveFrom,
+        rollbackPlan: "Create a future synthetic rollback version from the prior auto-match tolerance",
+        requestedBy: "ops01",
+        requestedByRole: "OPS_MANAGER",
+        reason: "Browser OPS-301 parameter change smoke",
+        idempotencyKey: `OPS-PARAM-${globalThis.crypto.randomUUID()}`
+      });
+      setReconciliationParameterCommandState(toReconciliationParameterCommandState(response));
+    } catch (error: unknown) {
+      setReconciliationParameterCommandState({
+        status: "failed",
+        message: error instanceof Error ? error.message : "Unknown reconciliation parameter failure"
+      });
+    }
+  };
+
   const runKeycloakReconciliationAdjustmentSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -661,6 +756,85 @@ export function ApiBackedOpsPanel() {
             <div>
               <dt>Error</dt>
               <dd>{workflowFailureState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-reconciliation-parameters">
+        <button
+          type="button"
+          onClick={runReconciliationParameterChangeSmoke}
+          disabled={!apiBaseUrl || reconciliationParameterCommandState.status === "running"}
+        >
+          Run reconciliation parameter change smoke
+        </button>
+        <dl>
+          <div>
+            <dt>OPS-301</dt>
+            <dd>{reconciliationParameterLabel(reconciliationParameterState)}</dd>
+          </div>
+          {reconciliationParameterState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Parameter</dt>
+                <dd>{reconciliationParameterState.parameterKey}</dd>
+              </div>
+              <div>
+                <dt>Current</dt>
+                <dd>{reconciliationParameterState.currentValue}</dd>
+              </div>
+              <div>
+                <dt>Current version</dt>
+                <dd>{reconciliationParameterState.currentVersionId}</dd>
+              </div>
+              <div>
+                <dt>Scheduled</dt>
+                <dd>{reconciliationParameterState.scheduledCount}</dd>
+              </div>
+              <div>
+                <dt>Audit</dt>
+                <dd>{reconciliationParameterState.auditEventId}</dd>
+              </div>
+            </>
+          ) : null}
+          {reconciliationParameterState.status === "failed" ? (
+            <div>
+              <dt>Parameter error</dt>
+              <dd>{reconciliationParameterState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Command</dt>
+            <dd>{reconciliationParameterCommandLabel(reconciliationParameterCommandState)}</dd>
+          </div>
+          {reconciliationParameterCommandState.status === "requested" ? (
+            <>
+              <div>
+                <dt>Request</dt>
+                <dd>{reconciliationParameterCommandState.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{reconciliationParameterCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Requested value</dt>
+                <dd>{reconciliationParameterCommandState.requestedValue}</dd>
+              </div>
+              <div>
+                <dt>Effective from</dt>
+                <dd>{reconciliationParameterCommandState.effectiveFrom}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{reconciliationParameterCommandState.requestStatus}</dd>
+              </div>
+            </>
+          ) : null}
+          {reconciliationParameterCommandState.status === "failed" ? (
+            <div>
+              <dt>Command error</dt>
+              <dd>{reconciliationParameterCommandState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -959,6 +1133,32 @@ function paymentDispatchLabel(state: PaymentOutboxDispatchState): string {
   return "failed";
 }
 
+function reconciliationParameterLabel(state: ReconciliationParameterState): string {
+  if (state.status === "offline") {
+    return "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return "reconciliation parameters loaded";
+  }
+  return "failed";
+}
+
+function reconciliationParameterCommandLabel(state: ReconciliationParameterCommandState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "requested") {
+    return "reconciliation parameter change requested";
+  }
+  return "failed";
+}
+
 function keycloakOperatorLabel(state: OperatorKeycloakLoginState): string {
   if (state.status === "offline") {
     return "Keycloak URL not configured";
@@ -1008,6 +1208,66 @@ function keycloakCommandLabel(state: KeycloakCommandState): string {
     return "Keycloak reconciliation adjusted";
   }
   return "failed";
+}
+
+function toReconciliationParameterState(response: ParameterListResponse): ReconciliationParameterState {
+  const parameter = response.items.find((item) => item.parameterKey === "autoMatchToleranceMinor");
+  if (!parameter) {
+    return { status: "failed", message: "autoMatchToleranceMinor parameter missing" };
+  }
+  return {
+    status: "loaded",
+    auditEventId: response.auditEventId,
+    parameterKey: parameter.parameterKey,
+    currentValue: parameter.currentValue,
+    currentVersionId: parameter.currentVersionId,
+    scheduledCount: parameter.scheduled.length
+  };
+}
+
+function toReconciliationParameterCommandState(response: ParameterChangeRequestResponse): ReconciliationParameterCommandState {
+  return {
+    status: "requested",
+    requestId: response.item.requestId,
+    approvalId: response.approval?.approvalId ?? "approval-missing",
+    parameterKey: response.item.parameterKey,
+    requestedValue: response.item.requestedValue,
+    effectiveFrom: response.item.effectiveFrom,
+    requestStatus: response.item.status
+  };
+}
+
+function nextNumericParameterValue(currentValue: string, increment: number): number {
+  const parsed = Number.parseInt(currentValue, 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("OPS autoMatchToleranceMinor parameter is not numeric");
+  }
+  return parsed + increment;
+}
+
+function tomorrowIsoDate(): string {
+  const value = new Date();
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function reconciliationParameterClient(stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "ops01",
+      roles: ["OPS_MANAGER"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
 }
 
 function isOidcIntent(value: string | null): value is OidcIntent {

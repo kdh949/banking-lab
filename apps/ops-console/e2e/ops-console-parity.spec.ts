@@ -101,6 +101,21 @@ test("ops console shows Spring API-backed reconciliation workflow state failure 
   await expect(panel).toContainText("/api/ops/reconciliation-items/REC-SYN-FAIL-001/adjustment-requests");
 });
 
+test("ops console requests Spring API-backed reconciliation parameter change when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed OPS-301 parameter command smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-reconciliation-parameters");
+  await expect(panel).toContainText("reconciliation parameters loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("autoMatchToleranceMinor");
+  await page.getByRole("button", { name: "Run reconciliation parameter change smoke" }).click();
+  await expect(panel).toContainText("reconciliation parameter change requested", { timeout: 15_000 });
+  await expect(panel).toContainText("PENDING_APPROVAL");
+  await expect(panel).toContainText("APR-");
+  await expect(panel).toContainText("RPC-");
+});
+
 test("ops console executes Payment Service OPS404 outbox dispatch when configured", async ({ page }) => {
   test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment outbox dispatch smoke.");
 
