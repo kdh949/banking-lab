@@ -73,3 +73,32 @@ test("Spring Boot scaffold declares structured errors and PostgreSQL Flyway migr
   assert.match(ledgerService, /account_balance_projections/);
   assert.match(ledgerService, /outbox_events/);
 });
+
+test("notification-service platform profile includes API and Redpanda consumer worker", async () => {
+  const settings = await readFile("settings.gradle.kts", "utf8");
+  const serviceBuild = await readFile("services/notification-service/build.gradle.kts", "utf8");
+  const dockerfile = await readFile("infra/docker-compose/notification-service.Dockerfile", "utf8");
+  const compose = await readFile("docker-compose.yml", "utf8");
+  const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
+
+  assert.match(settings, /include\(":services:notification-service"\)/);
+  assert.match(serviceBuild, /org\.apache\.kafka:kafka-clients/);
+  assert.match(serviceBuild, /org\.testcontainers:redpanda/);
+  assert.match(dockerfile, /notification-service-\*-migration\.jar/);
+  assert.match(compose, /notification-service:/);
+  assert.match(compose, /notification-event-consumer:/);
+  assert.match(compose, /SPRING_FLYWAY_TABLE: notification_flyway_schema_history/);
+  assert.match(
+    compose,
+    /notification-service:[\s\S]*BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED: "false"/
+  );
+  assert.match(
+    compose,
+    /notification-event-consumer:[\s\S]*BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED: "true"/
+  );
+  assert.match(compose, /BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED: "false"/);
+  assert.match(compose, /BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS: redpanda:9092/);
+  assert.match(prometheus, /job_name: notification-service/);
+  assert.match(prometheus, /notification-service:8089/);
+  assert.match(prometheus, /notification-event-consumer:8089/);
+});

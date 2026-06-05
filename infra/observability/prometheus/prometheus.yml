@@ -9,6 +9,12 @@ scrape_configs:
           - core-banking:8081
           - core-banking-temporal-worker:8081
           - core-banking-outbox-worker:8081
+  - job_name: notification-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - notification-service:8089
+          - notification-event-consumer:8089
   - job_name: redpanda
     static_configs:
       - targets:

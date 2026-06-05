@@ -16,6 +16,9 @@ This evidence covers the first synthetic Notification Service slice:
 - Kafka/Redpanda outbox envelope consumption through
   `NotificationKafkaConsumer`, plus a disabled-by-default runtime worker and
   Micrometer counters.
+- Docker Compose platform services for the notification REST API and the
+  enabled Redpanda event-consumer worker, both using synthetic-only provider
+  settings and an isolated notification Flyway history table.
 - Retry/failure and dead-letter state transitions.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
@@ -26,8 +29,9 @@ This evidence covers the first synthetic Notification Service slice:
 
 The slice does not claim full Notification Service completion. Customer
 preference screens, admin template approval, live Compose notification-consumer
-smoke evidence, live notification-service Keycloak smoke evidence, and live
-provider integrations are not in scope. Live providers remain prohibited.
+end-to-end smoke evidence, live notification-service Keycloak smoke evidence,
+and live provider integrations are not in scope. Live providers remain
+prohibited.
 
 ## Commands Run
 
@@ -37,6 +41,8 @@ npm run test:notification-service:integration
 npm run test:notification-service:integration -- --rerun-tasks
 npm run test:notification-service:unit -- --rerun-tasks
 npm --workspace @banking-lab/api-client run typecheck
+docker compose --profile platform config
+npm test
 ```
 
 The commands require the same Gradle file-lock socket and Testcontainers access
@@ -59,6 +65,13 @@ were rerun sequentially with `--rerun-tasks`.
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
   service API client methods compile.
+- `docker compose --profile platform config`: pass; platform profile renders
+  `notification-service` and `notification-event-consumer` with Redpanda
+  bootstrap configuration, synthetic provider disablement, and
+  `notification_flyway_schema_history`.
+- `npm test`: pass; the Node oracle/static scaffold suite verifies the
+  notification-service Dockerfile, Compose API/consumer services, disabled API
+  consumer setting, enabled worker setting, and Prometheus scrape targets.
 
 ## Integration Coverage
 
@@ -106,6 +119,19 @@ were rerun sequentially with `--rerun-tasks`.
   counts;
 - disabled workers do not auto-start.
 
+`springScaffold.test.mjs` verifies:
+
+- `docker-compose.yml` includes `notification-service` and
+  `notification-event-consumer` in the platform profile;
+- the REST API container keeps `BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED=false`;
+- the worker container sets `BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED=true`;
+- both containers keep `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`;
+- the platform profile uses `redpanda:9092` and a dedicated
+  `notification_flyway_schema_history` table to avoid core-banking Flyway
+  version conflicts;
+- Prometheus scrapes `notification-service:8089` and
+  `notification-event-consumer:8089`.
+
 API client typecheck verifies:
 
 - `consumeNotificationEvent`, `getNotificationDelivery`,
@@ -119,10 +145,13 @@ The migration constrains provider kinds to `SYNTHETIC_SMS_SINK`,
 email, push, chat, telecom, or external notification provider configuration.
 The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=true`
 in payload or headers before creating delivery side effects.
+The Docker Compose services explicitly set
+`BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 
 ## Remaining Risk
 
-This is still a partial feature slice. Live Compose evidence for the
-notification-service Kafka worker, template maker-checker approval, customer
-preference APIs, admin screens, and live notification-service Keycloak smoke
-evidence remain future work.
+This is still a partial feature slice. Docker Compose rendering is proven, but
+live Compose evidence that inserts a broker event and observes the
+`notification-event-consumer` writing delivery rows remains future work.
+Template maker-checker approval, customer preference APIs, admin screens, and
+live notification-service Keycloak smoke evidence also remain future work.
