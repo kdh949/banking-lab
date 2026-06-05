@@ -1,5 +1,6 @@
 package lab.banking.payment.domain
 
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import org.springframework.http.HttpStatus
 
@@ -53,6 +54,98 @@ data class PaymentInstructionDto(
 
 data class PaymentInstructionResponse(
     val item: PaymentInstructionDto,
+    val replayed: Boolean
+)
+
+enum class PaymentAutopayStatus {
+    ACTIVE,
+    PAUSED,
+    CANCELED
+}
+
+enum class PaymentAutopayFrequency {
+    DAILY,
+    WEEKLY,
+    MONTHLY
+}
+
+data class CreateAutopayAgreementRequest(
+    val customerId: String,
+    val debitAccountId: String,
+    val billerId: String,
+    val amountMinor: Long,
+    val currency: String = "KRW",
+    val frequency: PaymentAutopayFrequency,
+    val nextRunOn: LocalDate,
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val requestedChannel: String = "CUSTOMER_WEB",
+    val reason: String
+)
+
+data class PauseAutopayAgreementRequest(
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String
+)
+
+data class ResumeAutopayAgreementRequest(
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String,
+    val nextRunOn: LocalDate? = null
+)
+
+data class CancelAutopayAgreementRequest(
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String
+)
+
+data class ExecuteDueAutopayRequest(
+    val businessDate: LocalDate,
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val reason: String,
+    val limit: Int = 50
+)
+
+data class PaymentAutopayAgreementDto(
+    val autopayAgreementId: String,
+    val customerId: String,
+    val debitAccountId: String,
+    val billerId: String,
+    val billerName: String,
+    val amountMinor: Long,
+    val currency: String,
+    val frequency: PaymentAutopayFrequency,
+    val status: PaymentAutopayStatus,
+    val nextRunOn: LocalDate,
+    val lastRunOn: LocalDate?,
+    val lastPaymentInstructionId: String?,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime
+)
+
+data class PaymentAutopayAgreementResponse(
+    val item: PaymentAutopayAgreementDto,
+    val replayed: Boolean
+)
+
+data class PaymentAutopayExecutionDto(
+    val autopayExecutionId: String,
+    val autopayAgreementId: String,
+    val scheduledRunOn: LocalDate,
+    val paymentInstructionId: String,
+    val status: String,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime
+)
+
+data class ExecuteDueAutopayResponse(
+    val items: List<PaymentAutopayExecutionDto>,
+    val executedCount: Int,
     val replayed: Boolean
 )
 
@@ -111,6 +204,33 @@ data class PaymentInstructionRecord(
     val syntheticOnly: Boolean,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime
+)
+
+data class PaymentAutopayAgreementRecord(
+    val autopayAgreementId: String,
+    val customerId: String,
+    val debitAccountId: String,
+    val billerId: String,
+    val billerName: String,
+    val amountMinor: Long,
+    val currency: String,
+    val frequency: PaymentAutopayFrequency,
+    val status: PaymentAutopayStatus,
+    val nextRunOn: LocalDate,
+    val lastRunOn: LocalDate?,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime
+)
+
+data class PaymentAutopayExecutionRecord(
+    val autopayExecutionId: String,
+    val autopayAgreementId: String,
+    val scheduledRunOn: LocalDate,
+    val paymentInstructionId: String,
+    val status: String,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime
 )
 
 data class PaymentOutboxRecord(

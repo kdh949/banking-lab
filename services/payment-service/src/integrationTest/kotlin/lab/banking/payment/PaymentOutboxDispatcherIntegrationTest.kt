@@ -43,6 +43,9 @@ class PaymentOutboxDispatcherIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              payment_autopay_executions,
+              payment_autopay_status_history,
+              payment_autopay_agreements,
               payment_outbox_events,
               payment_status_history,
               payment_attempts,

@@ -1,13 +1,21 @@
 package lab.banking.payment.api
 
 import lab.banking.payment.domain.CancelPaymentInstructionRequest
+import lab.banking.payment.domain.CancelAutopayAgreementRequest
 import lab.banking.payment.domain.CreatePaymentInstructionRequest
+import lab.banking.payment.domain.CreateAutopayAgreementRequest
 import lab.banking.payment.domain.DispatchPaymentLedgerPostingRequest
+import lab.banking.payment.domain.ExecuteDueAutopayRequest
+import lab.banking.payment.domain.ExecuteDueAutopayResponse
+import lab.banking.payment.domain.PauseAutopayAgreementRequest
+import lab.banking.payment.domain.PaymentAutopayAgreementResponse
+import lab.banking.payment.domain.PaymentAutopayService
 import lab.banking.payment.domain.PaymentOutboxDispatchResponse
 import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionService
 import lab.banking.payment.domain.PaymentOutboxDispatcherService
 import lab.banking.payment.domain.RecordPaymentSettlementRequest
+import lab.banking.payment.domain.ResumeAutopayAgreementRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -21,7 +29,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/payments")
 class PaymentController(
     private val paymentInstructionService: PaymentInstructionService,
-    private val paymentOutboxDispatcherService: PaymentOutboxDispatcherService
+    private val paymentOutboxDispatcherService: PaymentOutboxDispatcherService,
+    private val paymentAutopayService: PaymentAutopayService
 ) {
     @PostMapping("/instructions")
     fun createInstruction(
@@ -59,4 +68,48 @@ class PaymentController(
         @RequestBody request: DispatchPaymentLedgerPostingRequest
     ): ResponseEntity<PaymentOutboxDispatchResponse> =
         ResponseEntity.ok(paymentOutboxDispatcherService.dispatchNextLedgerPosting(request))
+
+    @PostMapping("/autopay/agreements")
+    fun createAutopayAgreement(
+        @RequestBody request: CreateAutopayAgreementRequest
+    ): ResponseEntity<PaymentAutopayAgreementResponse> {
+        val response = paymentAutopayService.createAgreement(request)
+        return ResponseEntity
+            .status(if (response.replayed) HttpStatus.OK else HttpStatus.CREATED)
+            .body(response)
+    }
+
+    @GetMapping("/autopay/agreements/{agreementId}")
+    fun autopayAgreement(@PathVariable agreementId: String): PaymentAutopayAgreementResponse =
+        PaymentAutopayAgreementResponse(
+            item = paymentAutopayService.agreement(agreementId),
+            replayed = false
+        )
+
+    @PostMapping("/autopay/agreements/{agreementId}/pause")
+    fun pauseAutopayAgreement(
+        @PathVariable agreementId: String,
+        @RequestBody request: PauseAutopayAgreementRequest
+    ): PaymentAutopayAgreementResponse =
+        paymentAutopayService.pauseAgreement(agreementId, request)
+
+    @PostMapping("/autopay/agreements/{agreementId}/resume")
+    fun resumeAutopayAgreement(
+        @PathVariable agreementId: String,
+        @RequestBody request: ResumeAutopayAgreementRequest
+    ): PaymentAutopayAgreementResponse =
+        paymentAutopayService.resumeAgreement(agreementId, request)
+
+    @PostMapping("/autopay/agreements/{agreementId}/cancel")
+    fun cancelAutopayAgreement(
+        @PathVariable agreementId: String,
+        @RequestBody request: CancelAutopayAgreementRequest
+    ): PaymentAutopayAgreementResponse =
+        paymentAutopayService.cancelAgreement(agreementId, request)
+
+    @PostMapping("/autopay/executions/due")
+    fun executeDueAutopay(
+        @RequestBody request: ExecuteDueAutopayRequest
+    ): ResponseEntity<ExecuteDueAutopayResponse> =
+        ResponseEntity.ok(paymentAutopayService.executeDue(request))
 }

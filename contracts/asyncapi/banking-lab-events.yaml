@@ -21,6 +21,12 @@ channels:
       PaymentLedgerPostingSettled:
         payload:
           $ref: ../events/payment-ledger-posting-settled.schema.json
+  payment.autopay.execution.created:
+    address: payment.autopay.execution.created
+    messages:
+      PaymentAutopayExecutionCreated:
+        payload:
+          $ref: ../events/payment-autopay-execution-created.schema.json
   notification.delivery.requested:
     address: notification.delivery.requested
     messages:
@@ -40,6 +46,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/payment.ledger.posting.settled'
+  publishPaymentAutopayExecutionCreated:
+    action: send
+    channel:
+      $ref: '#/channels/payment.autopay.execution.created'
   publishNotificationDeliveryRequested:
     action: send
     channel:

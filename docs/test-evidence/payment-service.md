@@ -20,11 +20,13 @@ This evidence covers the first synthetic Payment Service slice:
   `PaymentLedgerPostingRequested` events, calls a core-banking posting port,
   records settlement, and marks retry/dead-letter state without real payment
   network integration.
+- Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
+  commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
 
 The slice does not claim full Payment Service completion. Runtime publication to
 Kafka/Redpanda, a scheduled/background worker runner around the dispatcher,
-customer/staff screens, autopay, and staff payment correction maker-checker
-flows remain future work.
+customer/staff screens, and staff payment correction maker-checker flows remain
+future work.
 
 ## Commands Run
 
@@ -55,7 +57,7 @@ need local file-lock socket and Docker access.
 - `npm run test:payment-service:unit`: pass; payment-service Kotlin compiled
   with no unit test sources.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
-  ran `PaymentInstructionIntegrationTest` and
+  ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
   `PaymentOutboxDispatcherIntegrationTest`.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
@@ -112,6 +114,20 @@ now verify the core-banking settlement bridge:
   core ledger idempotency key, and later settles the same outbox event;
 - dead-letter threshold failure marks `DEAD_LETTER` without settlement mutation.
 
+`PaymentAutopayIntegrationTest` verifies:
+
+- autopay creation persists `payment_autopay_agreements` and
+  `payment_autopay_status_history`, and duplicate idempotency keys replay the
+  same agreement;
+- pause, resume, and cancel commands are idempotent and append status history;
+- canceled agreements cannot be resumed;
+- due execution creates a payment instruction, durable
+  `PaymentLedgerPostingRequested` outbox event, durable
+  `PaymentAutopayExecutionCreated` outbox event, and advances the schedule from
+  January 31, 2026 to February 28, 2026;
+- paused and canceled agreements are skipped by due execution;
+- non-synthetic biller identifiers are rejected before autopay persistence.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -122,7 +138,7 @@ institution API, or real money path is configured.
 ## Remaining Risk
 
 This is still a partial slice. A successful bill payment can now be dispatched
-from durable payment-service outbox state to a core-banking posting port and
-settled idempotently, but Kafka/Redpanda runtime publication, a scheduled worker
-runner, UI/API client coverage, autopay scheduling, and staff correction
-maker-checker flows are still pending.
+from durable payment-service outbox state to a core-banking posting port,
+settled idempotently, and created from durable autopay schedules, but
+Kafka/Redpanda runtime publication, a scheduled worker runner, UI/API client
+coverage, and staff correction maker-checker flows are still pending.

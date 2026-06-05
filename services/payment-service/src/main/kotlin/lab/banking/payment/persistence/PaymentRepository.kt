@@ -3,12 +3,16 @@ package lab.banking.payment.persistence
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.sql.ResultSet
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
+import lab.banking.payment.domain.PaymentAutopayAgreementRecord
+import lab.banking.payment.domain.PaymentAutopayExecutionRecord
+import lab.banking.payment.domain.PaymentAutopayFrequency
+import lab.banking.payment.domain.PaymentAutopayStatus
 import lab.banking.payment.domain.PaymentBillerRecord
 import lab.banking.payment.domain.PaymentIdempotencyRecord
 import lab.banking.payment.domain.PaymentInstructionRecord
-import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionStatus
 import lab.banking.payment.domain.PaymentOutboxRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -129,7 +133,8 @@ class PaymentRepository(
         aggregateId: String,
         eventType: String,
         idempotencyKey: String,
-        payload: Map<String, Any?>
+        payload: Map<String, Any?>,
+        aggregateType: String = "payment_instruction"
     ): String {
         val outboxEventId = "POB-${UUID.randomUUID().toString().uppercase()}"
         jdbc.update(
@@ -139,12 +144,13 @@ class PaymentRepository(
               payload_json, headers_json, status
             )
             VALUES (
-              :outboxEventId, 'payment_instruction', :aggregateId, :eventType, :idempotencyKey,
+              :outboxEventId, :aggregateType, :aggregateId, :eventType, :idempotencyKey,
               CAST(:payloadJson AS jsonb), '{}'::jsonb, 'PENDING'
             )
             """.trimIndent(),
             mapOf(
                 "outboxEventId" to outboxEventId,
+                "aggregateType" to aggregateType,
                 "aggregateId" to aggregateId,
                 "eventType" to eventType,
                 "idempotencyKey" to idempotencyKey,
@@ -159,7 +165,7 @@ class PaymentRepository(
         commandType: String,
         requestHash: String,
         aggregateId: String,
-        response: PaymentInstructionResponse
+        response: Any
     ) {
         jdbc.update(
             """
@@ -294,6 +300,207 @@ class PaymentRepository(
             mapOf("instructionId" to instructionId)
         ) { rs, _ -> rs.getString("outbox_event_id") }.firstOrNull()
 
+    fun insertAutopayAgreement(
+        agreementId: String,
+        customerId: String,
+        debitAccountId: String,
+        biller: PaymentBillerRecord,
+        amountMinor: Long,
+        currency: String,
+        frequency: PaymentAutopayFrequency,
+        nextRunOn: LocalDate,
+        createdBy: String,
+        reason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO payment_autopay_agreements (
+              autopay_agreement_id, customer_id, debit_account_id, biller_id, biller_name,
+              amount_minor, currency, frequency, status, next_run_on, synthetic_only,
+              created_by, created_reason
+            )
+            VALUES (
+              :agreementId, :customerId, :debitAccountId, :billerId, :billerName,
+              :amountMinor, :currency, :frequency, 'ACTIVE', :nextRunOn, true,
+              :createdBy, :reason
+            )
+            """.trimIndent(),
+            mapOf(
+                "agreementId" to agreementId,
+                "customerId" to customerId,
+                "debitAccountId" to debitAccountId,
+                "billerId" to biller.billerId,
+                "billerName" to biller.displayName,
+                "amountMinor" to amountMinor,
+                "currency" to currency,
+                "frequency" to frequency.name,
+                "nextRunOn" to nextRunOn,
+                "createdBy" to createdBy,
+                "reason" to reason
+            )
+        )
+    }
+
+    fun insertAutopayStatusHistory(
+        agreementId: String,
+        status: PaymentAutopayStatus,
+        actorId: String,
+        reason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO payment_autopay_status_history (
+              autopay_status_history_id, autopay_agreement_id, status, actor_id, reason
+            )
+            VALUES (:historyId, :agreementId, :status, :actorId, :reason)
+            """.trimIndent(),
+            mapOf(
+                "historyId" to "PAH-${UUID.randomUUID().toString().uppercase()}",
+                "agreementId" to agreementId,
+                "status" to status.name,
+                "actorId" to actorId,
+                "reason" to reason
+            )
+        )
+    }
+
+    fun findAutopayAgreement(agreementId: String): PaymentAutopayAgreementRecord? =
+        findAutopayAgreementBySql(
+            """
+            SELECT autopay_agreement_id, customer_id, debit_account_id, biller_id, biller_name,
+                   amount_minor, currency, frequency, status, next_run_on, last_run_on,
+                   synthetic_only, created_at, updated_at
+            FROM payment_autopay_agreements
+            WHERE autopay_agreement_id = :agreementId
+            """.trimIndent(),
+            mapOf("agreementId" to agreementId)
+        )
+
+    fun findAutopayAgreementForUpdate(agreementId: String): PaymentAutopayAgreementRecord? =
+        findAutopayAgreementBySql(
+            """
+            SELECT autopay_agreement_id, customer_id, debit_account_id, biller_id, biller_name,
+                   amount_minor, currency, frequency, status, next_run_on, last_run_on,
+                   synthetic_only, created_at, updated_at
+            FROM payment_autopay_agreements
+            WHERE autopay_agreement_id = :agreementId
+            FOR UPDATE
+            """.trimIndent(),
+            mapOf("agreementId" to agreementId)
+        )
+
+    fun updateAutopayStatus(
+        agreementId: String,
+        status: PaymentAutopayStatus,
+        nextRunOn: LocalDate? = null
+    ) {
+        jdbc.update(
+            """
+            UPDATE payment_autopay_agreements
+            SET status = :status,
+                next_run_on = COALESCE(:nextRunOn, next_run_on),
+                updated_at = now()
+            WHERE autopay_agreement_id = :agreementId
+            """.trimIndent(),
+            mapOf("agreementId" to agreementId, "status" to status.name, "nextRunOn" to nextRunOn)
+        )
+    }
+
+    fun findDueAutopayAgreementsForUpdate(businessDate: LocalDate, limit: Int): List<PaymentAutopayAgreementRecord> =
+        jdbc.query(
+            """
+            SELECT autopay_agreement_id, customer_id, debit_account_id, biller_id, biller_name,
+                   amount_minor, currency, frequency, status, next_run_on, last_run_on,
+                   synthetic_only, created_at, updated_at
+            FROM payment_autopay_agreements
+            WHERE status = 'ACTIVE'
+              AND next_run_on <= :businessDate
+            ORDER BY next_run_on ASC, autopay_agreement_id ASC
+            LIMIT :limit
+            FOR UPDATE SKIP LOCKED
+            """.trimIndent(),
+            mapOf("businessDate" to businessDate, "limit" to limit),
+            this::mapAutopayAgreement
+        )
+
+    fun insertAutopayExecution(
+        executionId: String,
+        agreementId: String,
+        scheduledRunOn: LocalDate,
+        paymentInstructionId: String,
+        idempotencyKey: String,
+        requestedBy: String,
+        reason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO payment_autopay_executions (
+              autopay_execution_id, autopay_agreement_id, scheduled_run_on,
+              payment_instruction_id, status, idempotency_key, requested_by, reason, synthetic_only
+            )
+            VALUES (
+              :executionId, :agreementId, :scheduledRunOn,
+              :paymentInstructionId, 'INSTRUCTION_CREATED', :idempotencyKey, :requestedBy, :reason, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "executionId" to executionId,
+                "agreementId" to agreementId,
+                "scheduledRunOn" to scheduledRunOn,
+                "paymentInstructionId" to paymentInstructionId,
+                "idempotencyKey" to idempotencyKey,
+                "requestedBy" to requestedBy,
+                "reason" to reason
+            )
+        )
+    }
+
+    fun updateAutopayAfterExecution(
+        agreementId: String,
+        lastRunOn: LocalDate,
+        nextRunOn: LocalDate
+    ) {
+        jdbc.update(
+            """
+            UPDATE payment_autopay_agreements
+            SET last_run_on = :lastRunOn,
+                next_run_on = :nextRunOn,
+                updated_at = now()
+            WHERE autopay_agreement_id = :agreementId
+            """.trimIndent(),
+            mapOf("agreementId" to agreementId, "lastRunOn" to lastRunOn, "nextRunOn" to nextRunOn)
+        )
+    }
+
+    fun latestAutopayPaymentInstructionId(agreementId: String): String? =
+        jdbc.query(
+            """
+            SELECT payment_instruction_id
+            FROM payment_autopay_executions
+            WHERE autopay_agreement_id = :agreementId
+            ORDER BY scheduled_run_on DESC, created_at DESC, autopay_execution_id DESC
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("agreementId" to agreementId)
+        ) { rs, _ -> rs.getString("payment_instruction_id") }.firstOrNull()
+
+    fun findAutopayExecutionsByIds(executionIds: List<String>): List<PaymentAutopayExecutionRecord> {
+        if (executionIds.isEmpty()) {
+            return emptyList()
+        }
+        return jdbc.query(
+            """
+            SELECT autopay_execution_id, autopay_agreement_id, scheduled_run_on,
+                   payment_instruction_id, status, synthetic_only, created_at
+            FROM payment_autopay_executions
+            WHERE autopay_execution_id IN (:executionIds)
+            ORDER BY created_at ASC, autopay_execution_id ASC
+            """.trimIndent(),
+            mapOf("executionIds" to executionIds),
+            this::mapAutopayExecution
+        )
+    }
+
     fun findNextLedgerPostingOutboxForUpdate(): PaymentOutboxRecord? =
         jdbc.query(
             """
@@ -353,6 +560,9 @@ class PaymentRepository(
     private fun findInstructionBySql(sql: String, instructionId: String): PaymentInstructionRecord? =
         jdbc.query(sql, mapOf("instructionId" to instructionId), this::mapInstruction).firstOrNull()
 
+    private fun findAutopayAgreementBySql(sql: String, params: Map<String, Any?>): PaymentAutopayAgreementRecord? =
+        jdbc.query(sql, params, this::mapAutopayAgreement).firstOrNull()
+
     private fun mapInstruction(rs: ResultSet, rowNum: Int): PaymentInstructionRecord =
         PaymentInstructionRecord(
             paymentInstructionId = rs.getString("payment_instruction_id"),
@@ -367,6 +577,35 @@ class PaymentRepository(
             syntheticOnly = rs.getBoolean("synthetic_only"),
             createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapAutopayAgreement(rs: ResultSet, rowNum: Int): PaymentAutopayAgreementRecord =
+        PaymentAutopayAgreementRecord(
+            autopayAgreementId = rs.getString("autopay_agreement_id"),
+            customerId = rs.getString("customer_id"),
+            debitAccountId = rs.getString("debit_account_id"),
+            billerId = rs.getString("biller_id"),
+            billerName = rs.getString("biller_name"),
+            amountMinor = rs.getLong("amount_minor"),
+            currency = rs.getString("currency"),
+            frequency = PaymentAutopayFrequency.valueOf(rs.getString("frequency")),
+            status = PaymentAutopayStatus.valueOf(rs.getString("status")),
+            nextRunOn = rs.getObject("next_run_on", LocalDate::class.java),
+            lastRunOn = rs.getObject("last_run_on", LocalDate::class.java),
+            syntheticOnly = rs.getBoolean("synthetic_only"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapAutopayExecution(rs: ResultSet, rowNum: Int): PaymentAutopayExecutionRecord =
+        PaymentAutopayExecutionRecord(
+            autopayExecutionId = rs.getString("autopay_execution_id"),
+            autopayAgreementId = rs.getString("autopay_agreement_id"),
+            scheduledRunOn = rs.getObject("scheduled_run_on", LocalDate::class.java),
+            paymentInstructionId = rs.getString("payment_instruction_id"),
+            status = rs.getString("status"),
+            syntheticOnly = rs.getBoolean("synthetic_only"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
         )
 
     private fun mapOutbox(rs: ResultSet, rowNum: Int): PaymentOutboxRecord =

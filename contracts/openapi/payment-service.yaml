@@ -97,6 +97,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentOutboxDispatchResponse'
+  /api/payments/autopay/agreements:
+    post:
+      summary: Create a synthetic autopay agreement
+      operationId: createAutopayAgreement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutopayAgreementRequest'
+      responses:
+        '201':
+          description: Autopay agreement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+        '200':
+          description: Idempotent replay of the same autopay agreement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}:
+    get:
+      summary: Read a synthetic autopay agreement
+      operationId: getAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      responses:
+        '200':
+          description: Autopay agreement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/pause:
+    post:
+      summary: Pause an active synthetic autopay agreement
+      operationId: pauseAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/resume:
+    post:
+      summary: Resume a paused synthetic autopay agreement
+      operationId: resumeAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/cancel:
+    post:
+      summary: Cancel a synthetic autopay agreement
+      operationId: cancelAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/executions/due:
+    post:
+      summary: Execute due synthetic autopay agreements by creating payment instructions
+      operationId: executeDueAutopay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteDueAutopayRequest'
+      responses:
+        '200':
+          description: Due autopay execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteDueAutopayResponse'
 components:
   parameters:
     InstructionId:
@@ -106,6 +216,13 @@ components:
       schema:
         type: string
         pattern: '^PAY-'
+    AutopayAgreementId:
+      name: agreementId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^APAY-'
   schemas:
     CreatePaymentInstructionRequest:
       type: object
@@ -187,6 +304,172 @@ components:
           minimum: 0
         syntheticOnly:
           const: true
+    CreateAutopayAgreementRequest:
+      type: object
+      required: [customerId, debitAccountId, billerId, amountMinor, currency, frequency, nextRunOn, idempotencyKey, requestedBy, requestedChannel, reason]
+      properties:
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          default: KRW
+        frequency:
+          enum: [DAILY, WEEKLY, MONTHLY]
+        nextRunOn:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        requestedChannel:
+          type: string
+        reason:
+          type: string
+    PauseAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    ResumeAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        nextRunOn:
+          type: string
+          format: date
+          nullable: true
+    CancelAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    ExecuteDueAutopayRequest:
+      type: object
+      required: [businessDate, idempotencyKey, requestedBy, reason]
+      properties:
+        businessDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          default: 50
+    PaymentAutopayAgreementResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentAutopayAgreement'
+        replayed:
+          type: boolean
+    ExecuteDueAutopayResponse:
+      type: object
+      required: [items, executedCount, replayed]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAutopayExecution'
+        executedCount:
+          type: integer
+          minimum: 0
+        replayed:
+          type: boolean
+    PaymentAutopayAgreement:
+      type: object
+      required: [autopayAgreementId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, frequency, status, nextRunOn, syntheticOnly, createdAt, updatedAt]
+      properties:
+        autopayAgreementId:
+          type: string
+          pattern: '^APAY-'
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+        billerName:
+          type: string
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        frequency:
+          enum: [DAILY, WEEKLY, MONTHLY]
+        status:
+          enum: [ACTIVE, PAUSED, CANCELED]
+        nextRunOn:
+          type: string
+          format: date
+        lastRunOn:
+          type: string
+          format: date
+          nullable: true
+        lastPaymentInstructionId:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaymentAutopayExecution:
+      type: object
+      required: [autopayExecutionId, autopayAgreementId, scheduledRunOn, paymentInstructionId, status, syntheticOnly, createdAt]
+      properties:
+        autopayExecutionId:
+          type: string
+          pattern: '^APEX-'
+        autopayAgreementId:
+          type: string
+          pattern: '^APAY-'
+        scheduledRunOn:
+          type: string
+          format: date
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        status:
+          const: INSTRUCTION_CREATED
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
     PaymentInstructionResponse:
       type: object
       required: [item, replayed]
