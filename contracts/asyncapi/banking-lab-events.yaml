@@ -15,6 +15,12 @@ channels:
       PaymentLedgerPostingRequested:
         payload:
           $ref: ../events/payment-ledger-posting-requested.schema.json
+  notification.delivery.requested:
+    address: notification.delivery.requested
+    messages:
+      NotificationDeliveryRequested:
+        payload:
+          $ref: ../events/notification-delivery-requested.schema.json
 operations:
   publishLedgerTransactionPosted:
     action: send
@@ -24,3 +30,7 @@ operations:
     action: send
     channel:
       $ref: '#/channels/payment.ledger.posting.requested'
+  publishNotificationDeliveryRequested:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.requested'

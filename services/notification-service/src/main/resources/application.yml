@@ -1,0 +1,39 @@
+server:
+  port: ${PORT:8089}
+
+banking-lab:
+  synthetic-only: true
+  migration-target: kotlin-spring-boot
+  notification-service:
+    real-provider-enabled: false
+
+spring:
+  application:
+    name: banking-lab-notification-service
+  datasource:
+    url: ${BANKING_LAB_NOTIFICATION_DATABASE_URL:jdbc:postgresql://localhost:5432/banking_lab_notification}
+    username: ${BANKING_LAB_NOTIFICATION_DATABASE_USER:banking_lab}
+    password: ${BANKING_LAB_NOTIFICATION_DATABASE_PASSWORD:banking_lab}
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    enabled: ${BANKING_LAB_TRACING_ENABLED:false}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${BANKING_LAB_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      export:
+        enabled: ${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:false}
+      endpoint: ${BANKING_LAB_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${BANKING_LAB_OTEL_SERVICE_NAME:banking-lab-notification-service}
+      synthetic.only: "true"

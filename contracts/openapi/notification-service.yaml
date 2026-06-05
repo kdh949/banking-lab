@@ -1,0 +1,160 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Notification Service API
+  version: 0.1.0
+  description: Synthetic-only notification event consumption and delivery status API with durable retry and dead-letter state.
+paths:
+  /api/notifications/events:
+    post:
+      summary: Consume a domain event and create masked synthetic delivery requests
+      operationId: consumeNotificationEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeNotificationEventRequest'
+      responses:
+        '200':
+          description: Delivery requests created or idempotently replayed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDeliveryResponse'
+  /api/notifications/deliveries/{deliveryRequestId}:
+    get:
+      summary: Read notification delivery state
+      operationId: getNotificationDelivery
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      responses:
+        '200':
+          description: Delivery request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/deliveries/{deliveryRequestId}/failures:
+    post:
+      summary: Record a synthetic provider failure and possibly dead-letter
+      operationId: recordNotificationFailure
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordNotificationFailureRequest'
+      responses:
+        '200':
+          description: Failure recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/deliveries/{deliveryRequestId}/delivered:
+    post:
+      summary: Mark synthetic delivery as accepted by the local sink
+      operationId: markNotificationDelivered
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkNotificationDeliveredRequest'
+      responses:
+        '200':
+          description: Delivery marked delivered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+components:
+  parameters:
+    DeliveryRequestId:
+      name: deliveryRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^NDL-'
+  schemas:
+    ConsumeNotificationEventRequest:
+      type: object
+      required: [sourceEventId, eventType, recipientId, channel, payload]
+      properties:
+        sourceEventId:
+          type: string
+        eventType:
+          type: string
+        recipientId:
+          type: string
+        channel:
+          enum: [SMS, EMAIL, PUSH]
+        payload:
+          type: object
+          additionalProperties: true
+        requestedBy:
+          type: string
+    RecordNotificationFailureRequest:
+      type: object
+      required: [errorMessage, requestedBy, reason]
+      properties:
+        errorMessage:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        deadLetterThreshold:
+          type: integer
+          default: 3
+    MarkNotificationDeliveredRequest:
+      type: object
+      required: [requestedBy, reason]
+      properties:
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    NotificationDeliveryResponse:
+      type: object
+      required: [items, replayed]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDelivery'
+        replayed:
+          type: boolean
+    NotificationDelivery:
+      type: object
+      required: [deliveryRequestId, sourceEventId, eventType, recipientId, channel, providerKind, status, maskedMessage, syntheticOnly, createdAt, updatedAt]
+      properties:
+        deliveryRequestId:
+          type: string
+        sourceEventId:
+          type: string
+        eventType:
+          type: string
+        recipientId:
+          type: string
+        channel:
+          enum: [SMS, EMAIL, PUSH]
+        providerKind:
+          enum: [SYNTHETIC_SMS_SINK, SYNTHETIC_EMAIL_SINK, SYNTHETIC_PUSH_SINK]
+        status:
+          enum: [PENDING, DELIVERED, FAILED, DEAD_LETTER]
+        maskedMessage:
+          type: string
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
