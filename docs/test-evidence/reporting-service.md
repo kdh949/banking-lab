@@ -20,6 +20,14 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - Live Keycloak client-credentials smoke proves the confidential
   `reporting-service-api` service account can call catalog, generate, and list
   report artifact routes with simulator tokens disabled.
+- TypeScript API client methods expose reporting catalog, metadata-only artifact
+  generation, and artifact list contracts.
+- Admin-console screen manifest `ADM-701` and API-backed panel wiring expose
+  reporting catalog, artifact generation, and artifact list controls when
+  `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
+- Audit-console screen manifest `AUD-401` and API-backed panel wiring expose
+  reason-required reporting artifact history when
+  `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
 
 ## Controls
 
@@ -28,9 +36,19 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, and `REPORT_ARTIFACT_LIST_VIEW` audit rows.
+- Admin/audit channel panels use simulator tokens only for local API-backed
+  smoke paths; live service-token coverage remains in the Keycloak smoke script
+  with simulator fallback disabled.
 
 ## Verification
 
+- `npm --workspace @banking-lab/api-client run typecheck`
+- `npm run packages:typecheck`
+- `npm run next:admin-console:typecheck`
+- `npm run next:audit-console:typecheck`
+- `npm run validate:manifests`
+- `node --test tests/nextScaffold.test.mjs`
+- `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
 - `npm run test:reporting-service:keycloak-service-token`
 - `docker compose --profile platform config`
@@ -43,7 +61,9 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 
 ## Remaining Risk
 
-- This slice stores artifact metadata only; runnable report rendering, retention lifecycle, export packaging, and channel UI wiring remain pending.
+- This slice stores artifact metadata only; runnable report rendering, retention lifecycle, and export packaging remain pending.
 - No Kafka/Outbox dispatch is added for report-generated events yet.
-- Live Kubernetes/Helm rollout and browser/channel propagation for reporting
-  routes remain future work.
+- Live Kubernetes/Helm rollout and reporting browser propagation against a
+  configured live reporting-service URL remain future work; the Playwright
+  reporting smokes are present but skipped locally when the reporting E2E URL is
+  not configured.

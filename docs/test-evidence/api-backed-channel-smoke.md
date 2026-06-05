@@ -51,9 +51,16 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `ops-console` can execute a Spring API-backed browser failure-state smoke by attempting an adjustment request for already adjusted `REC-SYN-FAIL-001` and rendering structured `WORKFLOW_STATE_VIOLATION` details from the real route.
 - `ops-console` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange ops operator and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render `REC-SYN-001` with the `ops01` token, request a reconciliation adjustment as `ops01`, approve it as `manager01`, and render the adjusted-item `WORKFLOW_STATE_VIOLATION` while Spring simulator tokens are disabled.
 - `audit-console` renders an API-backed audit panel that calls `GET /api/audit/events` and displays hash-chain validity.
+- `audit-console` renders an API-backed reporting artifact panel that calls
+  reason-required `GET /api/reports/artifacts` when a reporting-service URL is
+  configured.
 - `audit-console` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange an auditor code through the Next BFF route `POST /api/auth/keycloak-token`, and render hash-chain validity plus `AUD-SYN-SEED-001` while Spring simulator tokens are disabled.
 - `fds-aml-console` renders an API-backed risk panel that calls `GET /api/staff/fds-cases` and `GET /api/staff/aml-cases`.
 - `admin-console` renders an API-backed platform-control panel that calls `GET /api/admin/platform/summary`, keeps synthetic-only and Node reference boundary controls visible, calls reason-required `GET /api/admin/platform/evidence-coverage` for curated feature/evidence metadata, calls reason-required `GET /api/admin/platform/system-status` for system, batch, and monitoring metadata, and can execute a live Keycloak Authorization Code + PKCE browser smoke for `security-admin01`.
+- `admin-console` renders an API-backed reporting panel that calls
+  reason-required `GET /api/reports/catalog`, idempotent
+  `POST /api/reports/artifacts`, and reason-required `GET /api/reports/artifacts`
+  when a reporting-service URL is configured.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting release for `FDS-SYN-CMD-001`, approving the generated maker-checker approval, and observing a posted ledger transaction.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting block for `FDS-SYN-BLOCK-CMD-001`, approving the generated maker-checker approval, and observing `BLOCKED` with no ledger posting.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting AML closure for `AML-SYN-CMD-001`, approving the generated maker-checker approval, and observing the workflow status move to `CLOSED` with `STR_SIMULATED`.
@@ -74,6 +81,28 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - Customer complaint entry uses bounded SERIALIZABLE retry so parallel browser audit writes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint confirmation uses the same bounded SERIALIZABLE retry and writes a customer `COMMAND_EXECUTED` audit event while preserving customer ownership checks.
 - Playwright exercises the real browser path from Next.js to the live Spring API.
+
+## Reporting Admin/Audit UI Update
+
+This update adds reporting-service channel wiring without claiming a live
+reporting browser run in the current local environment.
+
+Commands run:
+
+- `npm --workspace @banking-lab/api-client run typecheck` passed.
+- `npm run packages:typecheck` passed.
+- `npm run next:admin-console:typecheck` passed.
+- `npm run next:audit-console:typecheck` passed.
+- `npm run validate:manifests` passed with 106 manifests.
+- `node --test tests/nextScaffold.test.mjs` passed with 14 tests.
+- `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts` passed with 4 manifest-rendering/shell tests and 6 skipped because API, Keycloak, and reporting E2E URLs were not configured.
+
+Not proven locally:
+
+- API-backed reporting browser calls against a live reporting-service URL. The
+  conditional Playwright tests are present and require
+  `BANKING_LAB_E2E_REPORTING_API_BASE_URL` plus a running admin/audit app with
+  `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` configured.
 
 ## 2026-06-04 APR001/AUD001 Manifest Workspace Update
 

@@ -76,12 +76,14 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   const appPackage = JSON.parse(await readFile("apps/admin-console/package.json", "utf8"));
   const page = await readFile("apps/admin-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/admin-console/src/components/ApiBackedAdminPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const loader = await readFile("apps/admin-console/src/lib/manifestLoader.ts", "utf8");
   const securityManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-201.security-policy-parameters.json", "utf8"));
   const notificationTemplateManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-401.notification-template-approval.json", "utf8"));
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-402.notification-preference-management.json", "utf8"));
   const evidenceCoverageManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-501.platform-evidence-coverage.json", "utf8"));
   const systemStatusManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-601.system-batch-status.json", "utf8"));
+  const reportingManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-701.reporting-artifact-management.json", "utf8"));
 
   assert.equal(appPackage.name, "@banking-lab/admin-console");
   assert.match(appPackage.scripts.dev, /3007/);
@@ -96,6 +98,14 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(panel, /listNotificationTemplates/);
   assert.match(panel, /listNotificationPreferences/);
   assert.match(panel, /data-testid="api-backed-notification-admin"/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL/);
+  assert.match(panel, /reportCatalog/);
+  assert.match(panel, /generateReportArtifact/);
+  assert.match(panel, /reportArtifacts/);
+  assert.match(panel, /data-testid="api-backed-reporting-admin"/);
+  assert.match(client, /ReportCatalogResponse/);
+  assert.match(client, /generateReportArtifact/);
+  assert.match(client, /reportArtifacts/);
   assert.match(loader, /admin-console/);
   assert.equal(securityManifest.type, "PARAMETER");
   assert.equal(securityManifest.approval.makerChecker, true);
@@ -107,6 +117,10 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(systemStatusManifest.type, "DASHBOARD");
   assert.equal(systemStatusManifest.audit.reasonRequired, true);
   assert.equal(systemStatusManifest.audit.eventTypes[0], "ADMIN_SYSTEM_STATUS_VIEW");
+  assert.equal(reportingManifest.type, "COMMAND");
+  assert.equal(reportingManifest.api.command, "POST /api/reports/artifacts");
+  assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_CATALOG_VIEW");
+  assert.equal(reportingManifest.actions[0].target, "GET /api/reports/catalog");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
 });
@@ -116,8 +130,10 @@ test("audit-console exposes notification delivery history through manifests and 
   const appPackage = JSON.parse(await readFile("apps/audit-console/package.json", "utf8"));
   const page = await readFile("apps/audit-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/audit-console/src/components/ApiBackedAuditPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const loader = await readFile("apps/audit-console/src/lib/manifestLoader.ts", "utf8");
   const deliveryManifest = JSON.parse(await readFile("screen-manifests/audit-console/AUD-301.notification-delivery-history.json", "utf8"));
+  const reportingManifest = JSON.parse(await readFile("screen-manifests/audit-console/AUD-401.reporting-artifact-history.json", "utf8"));
 
   assert.equal(appPackage.name, "@banking-lab/audit-console");
   assert.equal(rootPackage.scripts["next:audit-console:typecheck"], "npm --workspace @banking-lab/audit-console run typecheck");
@@ -126,10 +142,18 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
   assert.match(panel, /listNotificationDeliveries/);
   assert.match(panel, /data-testid="api-backed-notification-delivery-history"/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL/);
+  assert.match(panel, /reportArtifacts/);
+  assert.match(panel, /data-testid="api-backed-reporting-artifact-history"/);
+  assert.match(client, /ReportArtifactListResponse/);
   assert.match(loader, /audit-console/);
   assert.equal(deliveryManifest.type, "INQUIRY");
   assert.equal(deliveryManifest.audit.reasonRequired, true);
   assert.equal(deliveryManifest.audit.piiAccess, true);
+  assert.equal(reportingManifest.type, "INQUIRY");
+  assert.equal(reportingManifest.query.endpoint, "GET /api/reports/artifacts");
+  assert.equal(reportingManifest.audit.reasonRequired, true);
+  assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_ARTIFACT_LIST_VIEW");
 });
 
 test("complaint-portal exposes self-service complaint extensions through manifests and API client", async () => {

@@ -1470,6 +1470,55 @@ export interface NotificationPreferenceDto {
   readonly updatedAt: string;
 }
 
+export interface ReportDefinitionDto {
+  readonly reportType: string;
+  readonly title: string;
+  readonly category: string;
+  readonly defaultMaskingPolicy: string;
+  readonly sensitive: boolean;
+  readonly sourceSystems: readonly string[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface ReportCatalogResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ReportDefinitionDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface GenerateReportArtifactRequest {
+  readonly reportType: string;
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey?: string;
+}
+
+export interface ReportArtifactDto {
+  readonly artifactId: string;
+  readonly reportType: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly artifactPath: string;
+  readonly sourceReferences: readonly string[];
+  readonly maskedByDefault: boolean;
+  readonly syntheticOnly: boolean;
+  readonly generatedAt?: string | null;
+}
+
+export interface GenerateReportArtifactResponse {
+  readonly item: ReportArtifactDto;
+  readonly replayed: boolean;
+}
+
+export interface ReportArtifactListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ReportArtifactDto[];
+  readonly syntheticOnly: boolean;
+}
+
 export interface ParameterVersionDto {
   readonly namespace: string;
   readonly parameterVersionId: string;
@@ -2629,6 +2678,40 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    reportCatalog(reason: string) {
+      return request<ReportCatalogResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/catalog",
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    generateReportArtifact(command: GenerateReportArtifactRequest) {
+      return request<GenerateReportArtifactResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/artifacts",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reportArtifacts(filters: { readonly reason: string; readonly reportType?: string }) {
+      return request<ReportArtifactListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/artifacts",
+        {
+          reason: filters.reason,
+          ...(filters.reportType ? { reportType: filters.reportType } : {})
+        },
+        options.bearerToken
       );
     },
 

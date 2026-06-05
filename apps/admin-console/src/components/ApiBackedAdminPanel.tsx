@@ -6,6 +6,8 @@ import {
   type AdminEvidenceCoverageResponse,
   type AdminPlatformSummaryResponse,
   type AdminSystemStatusResponse,
+  type ReportArtifactDto,
+  type ReportDefinitionDto,
   type NotificationPreferenceDto,
   type NotificationTemplateDto
 } from "@banking-lab/api-client";
@@ -40,8 +42,20 @@ type NotificationAdminState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type ReportingAdminState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly definitions: readonly ReportDefinitionDto[];
+      readonly artifact: ReportArtifactDto;
+      readonly artifacts: readonly ReportArtifactDto[];
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
+const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabAdminOidcState";
 const oidcVerifierKey = "bankingLabAdminOidcVerifier";
@@ -51,6 +65,9 @@ export function ApiBackedAdminPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
   const [notificationState, setNotificationState] = useState<NotificationAdminState>(() =>
     notificationApiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [reportingState, setReportingState] = useState<ReportingAdminState>(() =>
+    reportingApiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
   const [keycloakAdminState, setKeycloakAdminState] = useState<KeycloakAdminState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
@@ -120,6 +137,59 @@ export function ApiBackedAdminPanel() {
           setNotificationState({
             status: "failed",
             message: error instanceof Error ? error.message : "Unknown notification API failure"
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!reportingApiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: reportingApiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "reporting-admin01",
+        roles: ["REPORTING_ANALYST"]
+      })
+    });
+
+    void (async () => {
+      const catalog = await client.reportCatalog("API-backed reporting catalog review");
+      const generated = await client.generateReportArtifact({
+        reportType: "EVIDENCE_COVERAGE",
+        requestedBy: "reporting-admin01",
+        requestedByRole: "REPORTING_ANALYST",
+        reason: "API-backed reporting artifact generation",
+        idempotencyKey: "RPT-ADMIN-UI-SMOKE-001"
+      });
+      const artifacts = await client.reportArtifacts({
+        reason: "API-backed reporting artifact list review",
+        reportType: "EVIDENCE_COVERAGE"
+      });
+
+      return { catalog, generated, artifacts };
+    })()
+      .then(({ catalog, generated, artifacts }) => {
+        if (!cancelled) {
+          setReportingState({
+            status: "loaded",
+            definitions: catalog.items,
+            artifact: generated.item,
+            artifacts: artifacts.items
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setReportingState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown reporting API failure"
           });
         }
       });
@@ -360,6 +430,42 @@ export function ApiBackedAdminPanel() {
           </div>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-reporting-admin">
+        <div>
+          <dt>Reporting API</dt>
+          <dd>{reportingApiBaseUrl || "not configured"}</dd>
+        </div>
+        <div>
+          <dt>Reporting Status</dt>
+          <dd>{reportingAdminStatusLabel(reportingState)}</dd>
+        </div>
+        {reportingState.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Catalog</dt>
+              <dd>{reportingState.definitions.map((definition) => definition.reportType).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Generated Artifact</dt>
+              <dd>{`${reportingState.artifact.artifactId}:${reportingState.artifact.reportType}`}</dd>
+            </div>
+            <div>
+              <dt>Masking</dt>
+              <dd>{reportingState.artifact.maskedByDefault ? "masked by default" : "unsafe"}</dd>
+            </div>
+            <div>
+              <dt>Listed Artifacts</dt>
+              <dd>{reportingState.artifacts.map((artifact) => `${artifact.artifactId}:${artifact.status}`).join(", ") || "none"}</dd>
+            </div>
+          </>
+        ) : null}
+        {reportingState.status === "failed" ? (
+          <div>
+            <dt>Reporting Error</dt>
+            <dd>{reportingState.message}</dd>
+          </div>
+        ) : null}
+      </dl>
       <div className="api-actions" data-testid="api-backed-admin-keycloak-login">
         <button
           type="button"
@@ -468,6 +574,19 @@ function notificationAdminStatusLabel(state: NotificationAdminState): string {
       return "notification controls loaded";
     case "failed":
       return "notification API request failed";
+  }
+}
+
+function reportingAdminStatusLabel(state: ReportingAdminState): string {
+  switch (state.status) {
+    case "offline":
+      return "Reporting API URL not configured";
+    case "loading":
+      return "loading reporting controls";
+    case "loaded":
+      return "reporting controls loaded";
+    case "failed":
+      return "reporting API request failed";
   }
 }
 
