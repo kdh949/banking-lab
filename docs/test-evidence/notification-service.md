@@ -28,6 +28,9 @@ This evidence covers the first synthetic Notification Service slice:
 - Customer-owned notification preference self-service with token `customerId`
   scope checks, self-service access audit, and a customer-web `CWB-801`
   manifest/API-backed smoke panel.
+- Customer-owned masked notification delivery history self-service with token
+  `customerId` scope checks, self-service access audit, and a customer-web
+  `CWB-802` manifest/API-backed smoke panel.
 - Reason-required masked delivery history listing with status/channel/event
   filters and `NOTIFICATION_DELIVERY_HISTORY_VIEW` audit rows.
 - Admin-console screen manifests and API-backed smoke panel wiring for
@@ -38,11 +41,12 @@ This evidence covers the first synthetic Notification Service slice:
 - TypeScript API client methods for notification event consumption, delivery
   reads/history, provider failure recording, delivered-state marking, template
   reads, template change-request approval/rejection, admin preference list/upsert,
-  and customer-owned preference list/upsert.
+  customer-owned preference list/upsert, and customer-owned delivery history.
 - Notification-service route-level authorization filter, signed JWKS JWT
   decoder, dev-only simulator token decoder, and route role policies for event
   consumption, delivery reads, failure recording, delivered-state marking, and
-  template/preference administration plus CUSTOMER-owned preference self-service.
+  template/preference administration plus CUSTOMER-owned preference and
+  delivery-history self-service.
 
 The slice does not claim full Notification Service completion. Browser E2E for
 live customer/admin/audit notification API paths remains conditional on local
@@ -94,8 +98,10 @@ were rerun sequentially with `--rerun-tasks`.
   `NotificationKafkaConsumerIntegrationTest`.
 - `npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks`:
   pass; customer-owned preference self-service accepts matching CUSTOMER
-  `customerId` scope, rejects cross-customer access, and keeps admin preference
-  mutation restricted to operations roles.
+  `customerId` scope, customer-owned delivery history self-service returns only
+  the matching customer's masked delivery rows, cross-customer access is
+  rejected, and admin preference/history routes stay restricted to operations,
+  audit, or compliance roles as modeled.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
@@ -107,7 +113,7 @@ were rerun sequentially with `--rerun-tasks`.
 - `npm run next:audit-console:typecheck`: pass; audit-console compiles with the
   notification delivery-history API-backed panel wiring.
 - `npm run next:customer-web:typecheck`: pass; customer-web compiles with the
-  owned notification preference self-service panel wiring.
+  owned notification preference and delivery-history self-service panel wiring.
 - `npm run packages:typecheck`: pass; shared screen/form/auth/api packages compile
   after notification client contract expansion.
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`:
@@ -159,6 +165,11 @@ were rerun sequentially with `--rerun-tasks`.
 - `AUDITOR` tokens can read masked delivery state but cannot mutate it;
 - customer tokens cannot list masked delivery history;
 - auditor tokens can list masked delivery history with a reason-required query;
+- customer delivery-history self-service uses only
+  `/api/notifications/customers/{customerId}/deliveries`, accepts matching
+  CUSTOMER token `customerId` scope, returns masked messages, records
+  `NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW`, and rejects
+  cross-customer/ops calls on that customer route;
 - customers cannot create template change requests;
 - operations makers can create template change requests but cannot approve them
   through the route policy;
@@ -258,8 +269,8 @@ API client typecheck verifies:
   `approveNotificationTemplateChangeRequest`, and
   `rejectNotificationTemplateChangeRequest`, `listNotificationPreferences`, and
   `upsertNotificationPreference`, `listCustomerNotificationPreferences`, and
-  `upsertCustomerNotificationPreference` methods are available with typed
-  request/response contracts.
+  `upsertCustomerNotificationPreference`, and `listCustomerNotificationDeliveries`
+  methods are available with typed request/response contracts.
 
 `nextScaffold.test.mjs` verifies:
 
@@ -274,10 +285,12 @@ API client typecheck verifies:
   and the typed `listNotificationDeliveries` client method.
 - customer-web keeps the `CWB-801` notification preference self-service command
   manifest under the shared renderer path;
+- customer-web keeps the `CWB-802` notification delivery-history self-service
+  inquiry manifest under the shared renderer path;
 - the customer API-backed panel uses
   `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL` and the typed
   `listCustomerNotificationPreferences`/`upsertCustomerNotificationPreference`
-  client methods.
+  and `listCustomerNotificationDeliveries` client methods.
 
 ## Synthetic Boundary
 
@@ -289,13 +302,13 @@ The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=tru
 in payload or headers before creating delivery side effects.
 Template administration rejects `syntheticOnly=false`, non-matching provider
 kinds, and raw account/phone/email literals in template bodies.
-Delivery history and admin preference reads require reasons and persist
-synthetic access-audit rows. Customer preference self-service is scoped to the
-CUSTOMER token `customerId`, records self-service access audit, and stores the
-customer actor/reason through the same synthetic preference table. Preference
-administration rejects `syntheticOnly=false`, stores only synthetic
-recipient/channel/event filters, and suppression audit records persist masked
-payload JSON.
+Admin delivery history and admin preference reads require reasons and persist
+synthetic access-audit rows. Customer preference and delivery-history
+self-service are scoped to the CUSTOMER token `customerId`, record self-service
+access audit, and return or store only masked synthetic recipient/channel/event
+data. Preference administration rejects `syntheticOnly=false`, stores only
+synthetic recipient/channel/event filters, and suppression audit records persist
+masked payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 

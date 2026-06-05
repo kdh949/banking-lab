@@ -66,6 +66,26 @@ class NotificationController(
             limit = limit
         )
 
+    @GetMapping("/customers/{customerId}/deliveries")
+    fun customerDeliveryHistory(
+        @PathVariable customerId: String,
+        @RequestParam(required = false) sourceEventId: String?,
+        @RequestParam(required = false) eventType: String?,
+        @RequestParam(required = false) channel: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam(required = false) limit: Int?,
+        servletRequest: HttpServletRequest
+    ): List<NotificationDeliveryDto> =
+        notificationDeliveryService.customerDeliveryHistory(
+            customerId = customerId,
+            sourceEventId = sourceEventId,
+            eventType = eventType,
+            channel = channel,
+            status = status,
+            limit = limit,
+            principal = notificationPrincipal(servletRequest)
+        )
+
     @PostMapping("/deliveries/{deliveryRequestId}/failures")
     fun recordFailure(
         @PathVariable deliveryRequestId: String,

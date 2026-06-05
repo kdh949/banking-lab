@@ -1,0 +1,69 @@
+{
+  "screenId": "CWB-802",
+  "transactionCode": "CWB802",
+  "title": "Notification Delivery History",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "notification",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "eventTypes": ["NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW"],
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "query": {
+    "endpoint": "GET /api/notifications/customers/{customerId}/deliveries",
+    "fields": [
+      {
+        "name": "customerId",
+        "label": "Customer ID",
+        "type": "text",
+        "required": true,
+        "mask": "customer-self"
+      },
+      {
+        "name": "channel",
+        "label": "Channel",
+        "type": "select",
+        "required": false
+      },
+      {
+        "name": "status",
+        "label": "Delivery Status",
+        "type": "select",
+        "required": false
+      },
+      {
+        "name": "eventType",
+        "label": "Event Type",
+        "type": "text",
+        "required": false
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": [
+      "deliveryRequestId",
+      "eventType",
+      "channel",
+      "status",
+      "maskedMessage",
+      "createdAt"
+    ]
+  },
+  "actions": [
+    {
+      "id": "list-owned-notification-deliveries",
+      "label": "List Owned Notification Deliveries",
+      "type": "inquiry",
+      "target": "GET /api/notifications/customers/{customerId}/deliveries"
+    }
+  ]
+}

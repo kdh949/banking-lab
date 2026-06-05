@@ -243,3 +243,15 @@ test("customer web manages owned Notification Service preferences when configure
   await expect(panel).toContainText("disabled");
   await expect(panel).toContainText("customer01");
 });
+
+test("customer web reads owned Notification Service delivery history when configured", async ({ page }) => {
+  test.skip(!notificationApiBaseUrl, "Set BANKING_LAB_E2E_NOTIFICATION_API_BASE_URL to run API-backed notification-service history smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run notification history smoke" }).click();
+  const panel = page.getByTestId("api-backed-customer-notification-delivery-history");
+  await expect(panel).toContainText("notification history loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("SYN-CUS-001");
+  await expect(panel).toContainText("Rows");
+});

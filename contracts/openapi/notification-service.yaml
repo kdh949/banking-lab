@@ -184,6 +184,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPreference'
+  /api/notifications/customers/{customerId}/deliveries:
+    get:
+      summary: List owned customer masked notification delivery history
+      operationId: listCustomerNotificationDeliveries
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+        - name: sourceEventId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationDeliveryStatus'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Owned customer masked delivery history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationDelivery'
   /api/notifications/events:
     post:
       summary: Consume a domain event and create masked synthetic delivery requests

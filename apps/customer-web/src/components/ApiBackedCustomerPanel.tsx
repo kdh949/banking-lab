@@ -21,6 +21,7 @@ import {
   type LoanExecutionResponse,
   type LoanPaymentResponse,
   type LoanDto,
+  type NotificationDeliveryDto,
   type NotificationPreferenceDto,
   type PaymentAutopayAgreementResponse,
   type PaymentInstructionResponse,
@@ -145,6 +146,12 @@ type NotificationPreferenceState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type NotificationDeliveryHistoryState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | { readonly status: "loaded"; readonly deliveries: readonly NotificationDeliveryDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -204,6 +211,7 @@ export function ApiBackedCustomerPanel() {
   const [cardDomainState, setCardDomainState] = useState<CardDomainState>({ status: "idle" });
   const [paymentDomainState, setPaymentDomainState] = useState<PaymentDomainState>({ status: "idle" });
   const [notificationPreferenceState, setNotificationPreferenceState] = useState<NotificationPreferenceState>({ status: "idle" });
+  const [notificationDeliveryHistoryState, setNotificationDeliveryHistoryState] = useState<NotificationDeliveryHistoryState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -945,6 +953,40 @@ export function ApiBackedCustomerPanel() {
       setNotificationPreferenceState({
         status: "failed",
         message: error instanceof Error ? error.message : "Unknown notification preference failure"
+      });
+    }
+  };
+
+  const runNotificationDeliveryHistorySmoke = async () => {
+    if (!notificationApiBaseUrl || notificationDeliveryHistoryState.status === "running") {
+      return;
+    }
+    setNotificationDeliveryHistoryState({ status: "running" });
+    try {
+      const customerId = "SYN-CUS-001";
+      const client = createBankingApiClient({
+        baseUrl: notificationApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId
+        })
+      });
+      const deliveries = await client.listCustomerNotificationDeliveries(customerId, {
+        eventType: "PaymentLedgerPostingRequested",
+        limit: 10
+      });
+      const crossCustomerLeak = deliveries.find((delivery) => delivery.recipientId !== customerId);
+      const rawContactLeak = deliveries.find((delivery) => /010-\d{4}-\d{4}|@/.test(delivery.maskedMessage));
+      if (crossCustomerLeak || rawContactLeak) {
+        setNotificationDeliveryHistoryState({ status: "failed", message: "notification delivery history returned out-of-scope or unmasked data" });
+        return;
+      }
+      setNotificationDeliveryHistoryState({ status: "loaded", deliveries });
+    } catch (error: unknown) {
+      setNotificationDeliveryHistoryState({
+        status: "failed",
+        message: error instanceof Error ? error.message : "Unknown notification delivery history failure"
       });
     }
   };
@@ -1795,6 +1837,55 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-notification-delivery-history">
+        <button
+          type="button"
+          onClick={runNotificationDeliveryHistorySmoke}
+          disabled={!notificationApiBaseUrl || notificationDeliveryHistoryState.status === "running"}
+        >
+          Run notification history smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Notification API</dt>
+            <dd>{notificationApiBaseUrl || "not configured"}</dd>
+          </div>
+          <div>
+            <dt>History</dt>
+            <dd>{notificationDeliveryHistoryLabel(notificationDeliveryHistoryState)}</dd>
+          </div>
+          {notificationDeliveryHistoryState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Customer</dt>
+                <dd>SYN-CUS-001</dd>
+              </div>
+              <div>
+                <dt>Rows</dt>
+                <dd>{notificationDeliveryHistoryState.deliveries.length}</dd>
+              </div>
+              <div>
+                <dt>Latest</dt>
+                <dd>
+                  {notificationDeliveryHistoryState.deliveries[0]
+                    ? `${notificationDeliveryHistoryState.deliveries[0].eventType}:${notificationDeliveryHistoryState.deliveries[0].channel}:${notificationDeliveryHistoryState.deliveries[0].status}`
+                    : "none"}
+                </dd>
+              </div>
+              <div>
+                <dt>Message</dt>
+                <dd>{notificationDeliveryHistoryState.deliveries[0]?.maskedMessage ?? "none"}</dd>
+              </div>
+            </>
+          ) : null}
+          {notificationDeliveryHistoryState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{notificationDeliveryHistoryState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -2144,6 +2235,19 @@ function notificationPreferenceLabel(state: NotificationPreferenceState): string
   }
   if (state.status === "loaded") {
     return "notification preferences saved";
+  }
+  return "failed";
+}
+
+function notificationDeliveryHistoryLabel(state: NotificationDeliveryHistoryState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "notification history loaded";
   }
   return "failed";
 }

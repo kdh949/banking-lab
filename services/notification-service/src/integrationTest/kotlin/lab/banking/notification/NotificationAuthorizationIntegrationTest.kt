@@ -327,6 +327,60 @@ class NotificationAuthorizationIntegrationTest {
         assertEquals(1, countRows("notification_recipient_preferences WHERE requested_by = 'customer01'"))
     }
 
+    @Test
+    fun `customer notification delivery history routes enforce owned self service scope`() {
+        val eventBody = """
+            {
+              "sourceEventId": "OBX-NOTIF-SELF-HISTORY-001",
+              "eventType": "PaymentLedgerPostingRequested",
+              "recipientId": "CUS-NOTIF-HISTORY-001",
+              "channel": "SMS",
+              "payload": {
+                "paymentInstructionId": "PAY-NOTIF-HISTORY-001",
+                "amountMinor": 15000,
+                "currency": "KRW",
+                "accountNo": "LAB-HISTORY-0001",
+                "phone": "010-1111-2222"
+              },
+              "requestedBy": "notification-event-consumer"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/events")
+                .header("Authorization", bearer("notification-service", listOf("NOTIFICATION_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(eventBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[0].recipientId").value("CUS-NOTIF-HISTORY-001"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS&status=PENDING")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-HISTORY-001"))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-HISTORY-001"))
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("010-1111-2222"))))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS")
+                .header("Authorization", bearer("customer02", listOf("CUSTOMER"), customerId = "CUS-NOTIF-HISTORY-002"))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_CUSTOMER_SCOPE_VIOLATION"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS")
+                .header("Authorization", bearer("ops01", listOf("OPS_OPERATOR")))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_AUTHORIZATION_POLICY_VIOLATION"))
+
+        assertEquals(1, countRows("notification_access_audit_events WHERE action = 'NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW'"))
+    }
+
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {
         val payload = mutableMapOf<String, Any>(
             "sub" to subject,

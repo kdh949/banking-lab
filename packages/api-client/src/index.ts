@@ -2355,6 +2355,28 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    listCustomerNotificationDeliveries(customerId: string, filters: {
+      readonly sourceEventId?: string;
+      readonly eventType?: string;
+      readonly channel?: NotificationChannel;
+      readonly status?: NotificationDeliveryStatus;
+      readonly limit?: number;
+    } = {}) {
+      return request<readonly NotificationDeliveryDto[]>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/deliveries`,
+        {
+          ...(filters.sourceEventId ? { sourceEventId: filters.sourceEventId } : {}),
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.limit ? { limit: String(filters.limit) } : {})
+        },
+        options.bearerToken
+      );
+    },
+
     upsertCustomerNotificationPreference(customerId: string, command: UpsertCustomerNotificationPreferenceRequest) {
       return request<NotificationPreferenceDto>(
         fetchImpl,

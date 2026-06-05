@@ -29,6 +29,7 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
+  const notificationDeliveryManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-802.notification-delivery-history.json", "utf8"));
 
   assert.match(page, /loadCustomerWebManifests/);
   assert.match(loader, /screen-manifests/);
@@ -43,15 +44,21 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   assert.match(panel, /cancelAutopayAgreement/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
   assert.match(panel, /data-testid="api-backed-customer-notification-preferences"/);
+  assert.match(panel, /data-testid="api-backed-customer-notification-delivery-history"/);
   assert.match(panel, /listCustomerNotificationPreferences/);
   assert.match(panel, /upsertCustomerNotificationPreference/);
+  assert.match(panel, /listCustomerNotificationDeliveries/);
   assert.match(client, /createPaymentInstruction/);
   assert.match(client, /createAutopayAgreement/);
   assert.match(client, /listCustomerNotificationPreferences/);
   assert.match(client, /upsertCustomerNotificationPreference/);
+  assert.match(client, /listCustomerNotificationDeliveries/);
   assert.equal(notificationPreferenceManifest.api.command, "PUT /api/notifications/customers/{customerId}/preferences");
   assert.equal(notificationPreferenceManifest.audit.selfService, true);
   assert.equal(notificationPreferenceManifest.audit.reasonRequired, false);
+  assert.equal(notificationDeliveryManifest.query.endpoint, "GET /api/notifications/customers/{customerId}/deliveries");
+  assert.equal(notificationDeliveryManifest.audit.selfService, true);
+  assert.equal(notificationDeliveryManifest.audit.eventTypes[0], "NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW");
 });
 
 test("Next dependency lock uses the postcss security override", async () => {

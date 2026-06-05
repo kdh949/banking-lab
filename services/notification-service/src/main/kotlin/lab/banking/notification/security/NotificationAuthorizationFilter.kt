@@ -27,6 +27,7 @@ class NotificationAuthorizationFilter(
     private val templateChangeRead = Regex("^/api/notifications/templates/change-requests/[^/]+$")
     private val templateChangeApprove = Regex("^/api/notifications/templates/change-requests/[^/]+/approve$")
     private val templateChangeReject = Regex("^/api/notifications/templates/change-requests/[^/]+/reject$")
+    private val customerDeliveries = Regex("^/api/notifications/customers/[^/]+/deliveries$")
     private val customerPreferences = Regex("^/api/notifications/customers/[^/]+/preferences$")
 
     override fun doFilterInternal(
@@ -89,6 +90,7 @@ class NotificationAuthorizationFilter(
                 setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/notifications/preferences" && method == "PUT" ->
                 setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            customerDeliveries.matches(path) && method == "GET" -> setOf("CUSTOMER")
             customerPreferences.matches(path) && method == "GET" -> setOf("CUSTOMER")
             customerPreferences.matches(path) && method == "PUT" -> setOf("CUSTOMER")
             else -> emptySet()

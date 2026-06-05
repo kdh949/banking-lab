@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.security.MessageDigest
 import java.util.UUID
 import lab.banking.notification.persistence.NotificationRepository
+import lab.banking.notification.security.NotificationPrincipal
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -121,20 +122,7 @@ class NotificationDeliveryService(
         limit: Int?
     ): List<NotificationDeliveryDto> {
         validateOperatorCommand(requestedBy, reason)
-        val normalizedStatus = status?.trim()?.takeIf { it.isNotBlank() }?.uppercase()?.let {
-            try {
-                NotificationDeliveryStatus.valueOf(it)
-            } catch (ex: IllegalArgumentException) {
-                throw notificationError(
-                    code = "NOTIFICATION_DELIVERY_STATUS_INVALID",
-                    status = HttpStatus.BAD_REQUEST,
-                    message = "notification delivery status is not supported",
-                    cause = "Delivery history filtering only accepts modeled notification delivery statuses.",
-                    fix = "Use one of ${NotificationDeliveryStatus.entries.joinToString(", ") { value -> value.name }}.",
-                    details = mapOf("status" to status)
-                )
-            }
-        }
+        val normalizedStatus = parseDeliveryStatus(status)
         val boundedLimit = (limit ?: 100).coerceIn(1, 200)
         val normalizedRecipientId = recipientId?.trim()?.takeIf { it.isNotBlank() }
         val normalizedSourceEventId = sourceEventId?.trim()?.takeIf { it.isNotBlank() }
@@ -160,6 +148,53 @@ class NotificationDeliveryService(
         return repository
             .listDeliveries(
                 recipientId = normalizedRecipientId,
+                sourceEventId = normalizedSourceEventId,
+                eventType = normalizedEventType,
+                channel = normalizedChannel,
+                status = normalizedStatus,
+                limit = boundedLimit
+            )
+            .map { it.toDto() }
+    }
+
+    @Transactional
+    fun customerDeliveryHistory(
+        customerId: String,
+        sourceEventId: String?,
+        eventType: String?,
+        channel: String?,
+        status: String?,
+        limit: Int?,
+        principal: NotificationPrincipal
+    ): List<NotificationDeliveryDto> {
+        validateCustomerScope(customerId, principal)
+        val normalizedCustomerId = customerId.trim()
+        val normalizedStatus = parseDeliveryStatus(status)
+        val boundedLimit = (limit ?: 25).coerceIn(1, 100)
+        val normalizedSourceEventId = sourceEventId?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedEventType = eventType?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedChannel = channel?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
+        repository.insertAccessAudit(
+            auditEventId = auditEventId(),
+            action = "NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW",
+            actorId = principal.subject,
+            reason = "Customer self-service notification delivery history review",
+            targetType = "NOTIFICATION_DELIVERY",
+            targetId = normalizedCustomerId,
+            details = mapOf(
+                "recipientId" to normalizedCustomerId,
+                "sourceEventId" to normalizedSourceEventId,
+                "eventType" to normalizedEventType,
+                "channel" to normalizedChannel,
+                "status" to normalizedStatus?.name,
+                "limit" to boundedLimit,
+                "selfService" to true,
+                "syntheticOnly" to true
+            )
+        )
+        return repository
+            .listDeliveries(
+                recipientId = normalizedCustomerId,
                 sourceEventId = normalizedSourceEventId,
                 eventType = normalizedEventType,
                 channel = normalizedChannel,
@@ -262,6 +297,44 @@ class NotificationDeliveryService(
         requireNonBlank(requestedBy, "requestedBy")
         requireNonBlank(reason, "reason")
     }
+
+    private fun validateCustomerScope(customerId: String, principal: NotificationPrincipal) {
+        requireNonBlank(customerId, "customerId")
+        val normalizedCustomerId = customerId.trim()
+        if (!principal.roles.contains("CUSTOMER") || principal.customerId != normalizedCustomerId) {
+            throw notificationError(
+                code = "NOTIFICATION_CUSTOMER_SCOPE_VIOLATION",
+                status = HttpStatus.FORBIDDEN,
+                policy = "CUSTOMER_OWNED_NOTIFICATION_DELIVERIES",
+                message = "customer may access only their own notification delivery history",
+                cause = "The notification delivery self-service route was called with a customerId outside the token scope.",
+                fix = "Retry with a CUSTOMER token whose customerId claim matches the path customerId.",
+                details = mapOf(
+                    "pathCustomerId" to normalizedCustomerId,
+                    "tokenCustomerId" to principal.customerId,
+                    "actor" to principal.subject,
+                    "roles" to principal.roles.sorted(),
+                    "syntheticOnly" to true
+                )
+            )
+        }
+    }
+
+    private fun parseDeliveryStatus(status: String?): NotificationDeliveryStatus? =
+        status?.trim()?.takeIf { it.isNotBlank() }?.uppercase()?.let {
+            try {
+                NotificationDeliveryStatus.valueOf(it)
+            } catch (ex: IllegalArgumentException) {
+                throw notificationError(
+                    code = "NOTIFICATION_DELIVERY_STATUS_INVALID",
+                    status = HttpStatus.BAD_REQUEST,
+                    message = "notification delivery status is not supported",
+                    cause = "Delivery history filtering only accepts modeled notification delivery statuses.",
+                    fix = "Use one of ${NotificationDeliveryStatus.entries.joinToString(", ") { value -> value.name }}.",
+                    details = mapOf("status" to status)
+                )
+            }
+        }
 
     private fun requireNonBlank(value: String, field: String) {
         if (value.isBlank()) {
