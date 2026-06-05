@@ -75,6 +75,13 @@ data class UpsertNotificationPreferenceRequest(
     val syntheticOnly: Boolean = true
 )
 
+data class UpsertCustomerNotificationPreferenceRequest(
+    val channel: String,
+    val eventType: String? = null,
+    val enabled: Boolean,
+    val syntheticOnly: Boolean = true
+)
+
 data class NotificationDeliveryDto(
     val deliveryRequestId: String,
     val sourceEventId: String,

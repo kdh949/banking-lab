@@ -9,6 +9,7 @@ const app = "customer-web";
 const baseUrl = "http://localhost:3001";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
 const paymentApiBaseUrl = process.env.BANKING_LAB_E2E_PAYMENT_API_BASE_URL ?? "";
+const notificationApiBaseUrl = process.env.BANKING_LAB_E2E_NOTIFICATION_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -225,4 +226,20 @@ test("customer web executes Payment Service bill payment and autopay smoke when 
   await expect(panel).toContainText("APAY-");
   await expect(panel).toContainText("PAUSED / ACTIVE / CANCELED");
   await expect(panel).toContainText("2026-04-30");
+});
+
+test("customer web manages owned Notification Service preferences when configured", async ({ page }) => {
+  test.skip(!notificationApiBaseUrl, "Set BANKING_LAB_E2E_NOTIFICATION_API_BASE_URL to run API-backed notification-service preference smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run notification preference smoke" }).click();
+  const panel = page.getByTestId("api-backed-customer-notification-preferences");
+  await expect(panel).toContainText("notification preferences saved", { timeout: 15_000 });
+  await expect(panel).toContainText("NPF-");
+  await expect(panel).toContainText("SYN-CUS-001");
+  await expect(panel).toContainText("PUSH");
+  await expect(panel).toContainText("PaymentLedgerPostingRequested");
+  await expect(panel).toContainText("disabled");
+  await expect(panel).toContainText("customer01");
 });

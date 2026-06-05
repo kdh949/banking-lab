@@ -1323,6 +1323,13 @@ export interface UpsertNotificationPreferenceRequest {
   readonly syntheticOnly?: boolean;
 }
 
+export interface UpsertCustomerNotificationPreferenceRequest {
+  readonly channel: NotificationChannel;
+  readonly eventType?: string | null;
+  readonly enabled: boolean;
+  readonly syntheticOnly?: boolean;
+}
+
 export interface NotificationDeliveryDto {
   readonly deliveryRequestId: string;
   readonly sourceEventId: string;
@@ -2330,6 +2337,29 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         "/api/notifications/preferences",
+        {},
+        options.bearerToken,
+        { method: "PUT", body: command }
+      );
+    },
+
+    listCustomerNotificationPreferences(customerId: string, filters: { readonly channel?: NotificationChannel } = {}) {
+      return request<readonly NotificationPreferenceDto[]>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/preferences`,
+        {
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    upsertCustomerNotificationPreference(customerId: string, command: UpsertCustomerNotificationPreferenceRequest) {
+      return request<NotificationPreferenceDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/preferences`,
         {},
         options.bearerToken,
         { method: "PUT", body: command }

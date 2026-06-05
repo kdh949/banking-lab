@@ -146,6 +146,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationPreference'
+  /api/notifications/customers/{customerId}/preferences:
+    get:
+      summary: List owned customer notification preferences
+      operationId: listCustomerNotificationPreferences
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+      responses:
+        '200':
+          description: Owned customer notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+    put:
+      summary: Create or update an owned customer notification preference
+      operationId: upsertCustomerNotificationPreference
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCustomerNotificationPreferenceRequest'
+      responses:
+        '200':
+          description: Updated owned customer notification preference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
   /api/notifications/events:
     post:
       summary: Consume a domain event and create masked synthetic delivery requests
@@ -286,6 +324,12 @@ components:
       schema:
         type: string
         pattern: '^NTCR-'
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     NotificationChannel:
       type: string
@@ -394,6 +438,21 @@ components:
           type: string
         reason:
           type: string
+        syntheticOnly:
+          const: true
+          default: true
+    UpsertCustomerNotificationPreferenceRequest:
+      type: object
+      required: [channel, enabled]
+      properties:
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+          nullable: true
+          description: Optional event type; omitted or blank values are stored as the wildcard preference.
+        enabled:
+          type: boolean
         syntheticOnly:
           const: true
           default: true

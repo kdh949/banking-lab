@@ -277,6 +277,56 @@ class NotificationAuthorizationIntegrationTest {
             .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-PREF-AUTH"))
     }
 
+    @Test
+    fun `customer notification preference routes enforce owned self service scope`() {
+        val customerBody = """
+            {
+              "channel": "PUSH",
+              "eventType": "PaymentLedgerPostingRequested",
+              "enabled": false
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            put("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(customerBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.recipientId").value("CUS-NOTIF-SELF-001"))
+            .andExpect(jsonPath("$.channel").value("PUSH"))
+            .andExpect(jsonPath("$.enabled").value(false))
+            .andExpect(jsonPath("$.requestedBy").value("customer01"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences?channel=PUSH")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-001"))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-SELF-001"))
+            .andExpect(jsonPath("$[0].eventType").value("PaymentLedgerPostingRequested"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences?channel=PUSH")
+                .header("Authorization", bearer("customer02", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-002"))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_CUSTOMER_SCOPE_VIOLATION"))
+
+        mockMvc.perform(
+            put("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences")
+                .header("Authorization", bearer("ops01", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(customerBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_AUTHORIZATION_POLICY_VIOLATION"))
+
+        assertEquals(1, countRows("notification_access_audit_events WHERE action = 'NOTIFICATION_CUSTOMER_PREFERENCE_VIEW'"))
+        assertEquals(1, countRows("notification_recipient_preferences WHERE requested_by = 'customer01'"))
+    }
+
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {
         val payload = mutableMapOf<String, Any>(
             "sub" to subject,

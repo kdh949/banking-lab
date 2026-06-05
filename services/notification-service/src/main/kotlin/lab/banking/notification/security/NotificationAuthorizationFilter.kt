@@ -27,6 +27,7 @@ class NotificationAuthorizationFilter(
     private val templateChangeRead = Regex("^/api/notifications/templates/change-requests/[^/]+$")
     private val templateChangeApprove = Regex("^/api/notifications/templates/change-requests/[^/]+/approve$")
     private val templateChangeReject = Regex("^/api/notifications/templates/change-requests/[^/]+/reject$")
+    private val customerPreferences = Regex("^/api/notifications/customers/[^/]+/preferences$")
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -51,6 +52,7 @@ class NotificationAuthorizationFilter(
             deny(request, response, principal, HttpStatus.FORBIDDEN, "actor role is not allowed for this notification API route")
             return
         }
+        request.setAttribute(PRINCIPAL_ATTRIBUTE, principal)
         filterChain.doFilter(request, response)
     }
 
@@ -87,6 +89,8 @@ class NotificationAuthorizationFilter(
                 setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/notifications/preferences" && method == "PUT" ->
                 setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
+            customerPreferences.matches(path) && method == "GET" -> setOf("CUSTOMER")
+            customerPreferences.matches(path) && method == "PUT" -> setOf("CUSTOMER")
             else -> emptySet()
         }
     }
@@ -122,5 +126,9 @@ class NotificationAuthorizationFilter(
                 )
             )
         )
+    }
+
+    companion object {
+        const val PRINCIPAL_ATTRIBUTE = "notificationPrincipal"
     }
 }

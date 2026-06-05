@@ -28,6 +28,7 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   const loader = await readFile("apps/customer-web/src/lib/manifestLoader.ts", "utf8");
   const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
 
   assert.match(page, /loadCustomerWebManifests/);
   assert.match(loader, /screen-manifests/);
@@ -40,8 +41,17 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   assert.match(panel, /pauseAutopayAgreement/);
   assert.match(panel, /resumeAutopayAgreement/);
   assert.match(panel, /cancelAutopayAgreement/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
+  assert.match(panel, /data-testid="api-backed-customer-notification-preferences"/);
+  assert.match(panel, /listCustomerNotificationPreferences/);
+  assert.match(panel, /upsertCustomerNotificationPreference/);
   assert.match(client, /createPaymentInstruction/);
   assert.match(client, /createAutopayAgreement/);
+  assert.match(client, /listCustomerNotificationPreferences/);
+  assert.match(client, /upsertCustomerNotificationPreference/);
+  assert.equal(notificationPreferenceManifest.api.command, "PUT /api/notifications/customers/{customerId}/preferences");
+  assert.equal(notificationPreferenceManifest.audit.selfService, true);
+  assert.equal(notificationPreferenceManifest.audit.reasonRequired, false);
 });
 
 test("Next dependency lock uses the postcss security override", async () => {

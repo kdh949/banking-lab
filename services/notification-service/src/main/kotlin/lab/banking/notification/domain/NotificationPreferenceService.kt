@@ -2,6 +2,7 @@ package lab.banking.notification.domain
 
 import java.util.UUID
 import lab.banking.notification.persistence.NotificationRepository
+import lab.banking.notification.security.NotificationPrincipal
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -54,6 +55,52 @@ class NotificationPreferenceService(
         ).toDto()
     }
 
+    @Transactional
+    fun customerPreferences(
+        customerId: String,
+        channel: String?,
+        principal: NotificationPrincipal
+    ): List<NotificationPreferenceDto> {
+        validateCustomerScope(customerId, principal)
+        val normalizedCustomerId = customerId.trim()
+        val normalizedChannel = channel?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
+        repository.insertAccessAudit(
+            auditEventId = auditEventId(),
+            action = "NOTIFICATION_CUSTOMER_PREFERENCE_VIEW",
+            actorId = principal.subject,
+            reason = "Customer self-service notification preference review",
+            targetType = "NOTIFICATION_PREFERENCE",
+            targetId = normalizedCustomerId,
+            details = mapOf("channel" to normalizedChannel, "selfService" to true, "syntheticOnly" to true)
+        )
+        return repository
+            .listPreferences(
+                recipientId = normalizedCustomerId,
+                channel = normalizedChannel
+            )
+            .map { it.toDto() }
+    }
+
+    @Transactional
+    fun upsertCustomerPreference(
+        customerId: String,
+        request: UpsertCustomerNotificationPreferenceRequest,
+        principal: NotificationPrincipal
+    ): NotificationPreferenceDto {
+        validateCustomerScope(customerId, principal)
+        return upsertPreference(
+            UpsertNotificationPreferenceRequest(
+                recipientId = customerId.trim(),
+                channel = request.channel,
+                eventType = request.eventType,
+                enabled = request.enabled,
+                requestedBy = principal.subject,
+                reason = "Customer self-service notification preference update",
+                syntheticOnly = request.syntheticOnly
+            )
+        )
+    }
+
     private fun validate(request: UpsertNotificationPreferenceRequest) {
         requireNonBlank(request.recipientId, "recipientId")
         requireNonBlank(request.channel, "channel")
@@ -78,6 +125,28 @@ class NotificationPreferenceService(
                 cause = "Notification Service supports only synthetic SMS, EMAIL, PUSH, and CHAT channels.",
                 fix = "Use one of ${supportedChannels.sorted().joinToString(", ")}.",
                 details = mapOf("channel" to request.channel)
+            )
+        }
+    }
+
+    private fun validateCustomerScope(customerId: String, principal: NotificationPrincipal) {
+        requireNonBlank(customerId, "customerId")
+        val normalizedCustomerId = customerId.trim()
+        if (!principal.roles.contains("CUSTOMER") || principal.customerId != normalizedCustomerId) {
+            throw notificationError(
+                code = "NOTIFICATION_CUSTOMER_SCOPE_VIOLATION",
+                status = HttpStatus.FORBIDDEN,
+                policy = "CUSTOMER_OWNED_NOTIFICATION_PREFERENCES",
+                message = "customer may access only their own notification preferences",
+                cause = "The notification preference self-service route was called with a customerId outside the token scope.",
+                fix = "Retry with a CUSTOMER token whose customerId claim matches the path customerId.",
+                details = mapOf(
+                    "pathCustomerId" to normalizedCustomerId,
+                    "tokenCustomerId" to principal.customerId,
+                    "actor" to principal.subject,
+                    "roles" to principal.roles.sorted(),
+                    "syntheticOnly" to true
+                )
             )
         }
     }

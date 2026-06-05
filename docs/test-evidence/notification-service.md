@@ -25,6 +25,9 @@ This evidence covers the first synthetic Notification Service slice:
 - Recipient notification preferences with wildcard and event-specific channel
   filters, reason-required preference reads, access audit rows, masked
   suppression audit rows, and idempotent suppressed replays.
+- Customer-owned notification preference self-service with token `customerId`
+  scope checks, self-service access audit, and a customer-web `CWB-801`
+  manifest/API-backed smoke panel.
 - Reason-required masked delivery history listing with status/channel/event
   filters and `NOTIFICATION_DELIVERY_HISTORY_VIEW` audit rows.
 - Admin-console screen manifests and API-backed smoke panel wiring for
@@ -34,16 +37,18 @@ This evidence covers the first synthetic Notification Service slice:
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
   reads/history, provider failure recording, delivered-state marking, template
-  reads, template change-request approval/rejection, and preference list/upsert.
+  reads, template change-request approval/rejection, admin preference list/upsert,
+  and customer-owned preference list/upsert.
 - Notification-service route-level authorization filter, signed JWKS JWT
   decoder, dev-only simulator token decoder, and route role policies for event
   consumption, delivery reads, failure recording, delivered-state marking, and
-  template/preference administration.
+  template/preference administration plus CUSTOMER-owned preference self-service.
 
-The slice does not claim full Notification Service completion. Customer
-preference screens, browser E2E for the new notification admin/audit panels,
-live notification-service Keycloak smoke evidence, and live provider
-integrations are not in scope. Live providers remain prohibited.
+The slice does not claim full Notification Service completion. Browser E2E for
+live customer/admin/audit notification API paths remains conditional on local
+notification-service URLs, live notification-service Keycloak smoke evidence is
+not complete, and live provider integrations are not in scope. Live providers
+remain prohibited.
 
 ## Commands Run
 
@@ -56,8 +61,11 @@ npm --workspace @banking-lab/api-client run typecheck
 npm run validate:manifests
 npm run next:admin-console:typecheck
 npm run next:audit-console:typecheck
+npm run next:customer-web:typecheck
 npm run packages:typecheck
+npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
+npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 docker compose --profile platform config
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda notification-event-consumer
 env BANKING_LAB_LIVE_NOTIFICATION_COMPOSE_PROJECT=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh :services:notification-service:integrationTest --tests 'lab.banking.notification.LiveNotificationConsumerComposeSmokeIntegrationTest.live notification event consumer writes masked delivery from Compose Redpanda record' --rerun-tasks
@@ -84,6 +92,10 @@ were rerun sequentially with `--rerun-tasks`.
   `NotificationDeliveryIntegrationTest`, `NotificationAuthorizationIntegrationTest`,
   `NotificationTemplateAdminIntegrationTest`, `NotificationPreferenceIntegrationTest`, and
   `NotificationKafkaConsumerIntegrationTest`.
+- `npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks`:
+  pass; customer-owned preference self-service accepts matching CUSTOMER
+  `customerId` scope, rejects cross-customer access, and keeps admin preference
+  mutation restricted to operations roles.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
@@ -94,11 +106,17 @@ were rerun sequentially with `--rerun-tasks`.
   notification template/preference API-backed panel wiring.
 - `npm run next:audit-console:typecheck`: pass; audit-console compiles with the
   notification delivery-history API-backed panel wiring.
+- `npm run next:customer-web:typecheck`: pass; customer-web compiles with the
+  owned notification preference self-service panel wiring.
 - `npm run packages:typecheck`: pass; shared screen/form/auth/api packages compile
   after notification client contract expansion.
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`:
   pass; 4 manifest-rendering tests passed and 4 API/Keycloak live smokes skipped
   because API/Keycloak E2E base URLs were not configured.
+- `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts`: pass;
+  customer-web manifest rendering passed and API/Keycloak/payment/notification
+  live smokes were skipped because the corresponding E2E base URLs were not
+  configured.
 - `docker compose --profile platform config`: pass; platform profile renders
   `notification-service` and `notification-event-consumer` with Redpanda
   bootstrap configuration, synthetic provider disablement, and
@@ -150,6 +168,11 @@ were rerun sequentially with `--rerun-tasks`.
   policy;
 - operations actors can upsert preferences, while auditors can read durable
   preference state with reason-required audit;
+- customer preference self-service uses only
+  `/api/notifications/customers/{customerId}/preferences`, accepts matching
+  CUSTOMER token `customerId` scope, persists preference state with the customer
+  actor, records `NOTIFICATION_CUSTOMER_PREFERENCE_VIEW`, and rejects
+  cross-customer/ops calls on that customer route;
 - authorization tests use only dev-enabled simulator tokens, while the runtime
   also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
 
@@ -234,7 +257,8 @@ API client typecheck verifies:
   `createNotificationTemplateChangeRequest`, `getNotificationTemplateChangeRequest`,
   `approveNotificationTemplateChangeRequest`, and
   `rejectNotificationTemplateChangeRequest`, `listNotificationPreferences`, and
-  `upsertNotificationPreference` methods are available with typed
+  `upsertNotificationPreference`, `listCustomerNotificationPreferences`, and
+  `upsertCustomerNotificationPreference` methods are available with typed
   request/response contracts.
 
 `nextScaffold.test.mjs` verifies:
@@ -248,6 +272,12 @@ API client typecheck verifies:
   manifest under the shared renderer path;
 - the audit API-backed panel uses `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL`
   and the typed `listNotificationDeliveries` client method.
+- customer-web keeps the `CWB-801` notification preference self-service command
+  manifest under the shared renderer path;
+- the customer API-backed panel uses
+  `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL` and the typed
+  `listCustomerNotificationPreferences`/`upsertCustomerNotificationPreference`
+  client methods.
 
 ## Synthetic Boundary
 
@@ -259,16 +289,19 @@ The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=tru
 in payload or headers before creating delivery side effects.
 Template administration rejects `syntheticOnly=false`, non-matching provider
 kinds, and raw account/phone/email literals in template bodies.
-Delivery history and preference reads require reasons and persist synthetic
-access-audit rows. Preference administration rejects `syntheticOnly=false`,
-stores only synthetic recipient/channel/event filters, and suppression audit
-records persist masked payload JSON.
+Delivery history and admin preference reads require reasons and persist
+synthetic access-audit rows. Customer preference self-service is scoped to the
+CUSTOMER token `customerId`, records self-service access audit, and stores the
+customer actor/reason through the same synthetic preference table. Preference
+administration rejects `syntheticOnly=false`, stores only synthetic
+recipient/channel/event filters, and suppression audit records persist masked
+payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 
 ## Remaining Risk
 
-This is still a partial feature slice. Customer preference screens, browser E2E
-for the notification admin/audit panels, retry/dead-letter behavior in a live
-Compose provider-sink loop, and live notification-service Keycloak smoke
-evidence remain future work.
+This is still a partial feature slice. Browser E2E for live notification
+customer/admin/audit API paths remains conditional on local service URLs,
+retry/dead-letter behavior in a live Compose provider-sink loop, and live
+notification-service Keycloak smoke evidence remain future work.

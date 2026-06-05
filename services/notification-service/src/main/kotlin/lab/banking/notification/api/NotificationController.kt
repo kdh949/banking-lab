@@ -1,5 +1,6 @@
 package lab.banking.notification.api
 
+import jakarta.servlet.http.HttpServletRequest
 import lab.banking.notification.domain.ConsumeNotificationEventRequest
 import lab.banking.notification.domain.ApproveNotificationTemplateChangeRequest
 import lab.banking.notification.domain.CreateNotificationTemplateChangeRequest
@@ -7,6 +8,7 @@ import lab.banking.notification.domain.MarkNotificationDeliveredRequest
 import lab.banking.notification.domain.NotificationDeliveryDto
 import lab.banking.notification.domain.NotificationDeliveryResponse
 import lab.banking.notification.domain.NotificationDeliveryService
+import lab.banking.notification.domain.NotificationDomainException
 import lab.banking.notification.domain.NotificationPreferenceDto
 import lab.banking.notification.domain.NotificationPreferenceService
 import lab.banking.notification.domain.NotificationTemplateAdminService
@@ -14,7 +16,10 @@ import lab.banking.notification.domain.NotificationTemplateChangeRequestDto
 import lab.banking.notification.domain.NotificationTemplateDto
 import lab.banking.notification.domain.RecordNotificationFailureRequest
 import lab.banking.notification.domain.RejectNotificationTemplateChangeRequest
+import lab.banking.notification.domain.UpsertCustomerNotificationPreferenceRequest
 import lab.banking.notification.domain.UpsertNotificationPreferenceRequest
+import lab.banking.notification.security.NotificationAuthorizationFilter
+import lab.banking.notification.security.NotificationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -120,4 +125,39 @@ class NotificationController(
         @RequestBody request: UpsertNotificationPreferenceRequest
     ): NotificationPreferenceDto =
         notificationPreferenceService.upsertPreference(request)
+
+    @GetMapping("/customers/{customerId}/preferences")
+    fun customerPreferences(
+        @PathVariable customerId: String,
+        @RequestParam(required = false) channel: String?,
+        servletRequest: HttpServletRequest
+    ): List<NotificationPreferenceDto> =
+        notificationPreferenceService.customerPreferences(
+            customerId = customerId,
+            channel = channel,
+            principal = notificationPrincipal(servletRequest)
+        )
+
+    @PutMapping("/customers/{customerId}/preferences")
+    fun upsertCustomerPreference(
+        @PathVariable customerId: String,
+        @RequestBody request: UpsertCustomerNotificationPreferenceRequest,
+        servletRequest: HttpServletRequest
+    ): NotificationPreferenceDto =
+        notificationPreferenceService.upsertCustomerPreference(
+            customerId = customerId,
+            request = request,
+            principal = notificationPrincipal(servletRequest)
+        )
+
+    private fun notificationPrincipal(request: HttpServletRequest): NotificationPrincipal =
+        request.getAttribute(NotificationAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? NotificationPrincipal
+            ?: throw NotificationDomainException(
+                code = "NOTIFICATION_PRINCIPAL_CONTEXT_MISSING",
+                status = org.springframework.http.HttpStatus.UNAUTHORIZED,
+                policy = "NOTIFICATION_RBAC_ROUTE_POLICY",
+                message = "notification principal context is missing",
+                causeText = "The authorization filter did not attach a decoded notification principal to the request.",
+                fix = "Call the customer notification route with a valid synthetic CUSTOMER bearer token."
+            )
 }
