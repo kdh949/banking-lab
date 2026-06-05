@@ -4,6 +4,12 @@ export interface SimulatorTokenClaims {
   readonly customerId?: string;
   readonly issuer?: string;
   readonly active?: boolean;
+  readonly sessionId?: string;
+  readonly authTimeEpochSeconds?: number;
+  readonly issuedAtEpochSeconds?: number;
+  readonly authenticationMethods?: readonly string[];
+  readonly assuranceLevel?: string;
+  readonly deviceFingerprint?: string;
 }
 
 export function createSimulatorBearerToken(claims: SimulatorTokenClaims): string {
@@ -12,7 +18,13 @@ export function createSimulatorBearerToken(claims: SimulatorTokenClaims): string
     sub: claims.subject,
     roles: claims.roles,
     customerId: claims.customerId,
-    active: claims.active ?? true
+    active: claims.active ?? true,
+    sid: claims.sessionId,
+    auth_time: claims.authTimeEpochSeconds,
+    iat: claims.issuedAtEpochSeconds,
+    amr: claims.authenticationMethods,
+    acr: claims.assuranceLevel,
+    deviceFingerprint: claims.deviceFingerprint
   };
   const encoded = base64UrlEncode(JSON.stringify(payload));
   return `Bearer lab.${encoded}.sig`;

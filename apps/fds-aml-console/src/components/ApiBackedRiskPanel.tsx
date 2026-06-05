@@ -6,6 +6,8 @@ import {
   createBankingApiClient,
   type AmlCaseDto,
   type FdsCaseDto,
+  type ParameterChangeRequestResponse,
+  type ParameterListResponse,
   type StaffApprovalExecutionResponse
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -38,6 +40,33 @@ type WorkflowFailureState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | { readonly status: "rejected"; readonly error: StructuredErrorSummary }
+  | { readonly status: "failed"; readonly message: string };
+
+type FdsParameterState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly auditEventId: string;
+      readonly parameterKey: string;
+      readonly currentValue: string;
+      readonly currentVersionId: string;
+      readonly scheduledCount: number;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type FdsParameterCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "requested";
+      readonly requestId: string;
+      readonly approvalId: string;
+      readonly parameterKey: string;
+      readonly requestedValue: string;
+      readonly effectiveFrom: string;
+      readonly requestStatus: string;
+    }
   | { readonly status: "failed"; readonly message: string };
 
 type ReviewerKeycloakLoginState =
@@ -105,6 +134,10 @@ export function ApiBackedRiskPanel() {
   const [amlCommandState, setAmlCommandState] = useState<AmlCommandState>({ status: "idle" });
   const [workflowFailureState, setWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
   const [amlWorkflowFailureState, setAmlWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
+  const [fdsParameterState, setFdsParameterState] = useState<FdsParameterState>(() =>
+    apiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [fdsParameterCommandState, setFdsParameterCommandState] = useState<FdsParameterCommandState>({ status: "idle" });
   const [keycloakReviewerState, setKeycloakReviewerState] = useState<ReviewerKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -142,6 +175,36 @@ export function ApiBackedRiskPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "fds01",
+        roles: ["FDS_REVIEWER"]
+      })
+    });
+
+    client.fdsParameters("Browser FDS parameter read smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setFdsParameterState(toFdsParameterState(response));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setFdsParameterState({ status: "failed", message: error instanceof Error ? error.message : "Unknown parameter API failure" });
         }
       });
 
@@ -478,6 +541,37 @@ export function ApiBackedRiskPanel() {
     }
   };
 
+  const runFdsParameterChangeSmoke = async () => {
+    if (!apiBaseUrl || fdsParameterCommandState.status === "running") {
+      return;
+    }
+    setFdsParameterCommandState({ status: "running" });
+    try {
+      const current = fdsParameterState.status === "loaded"
+        ? fdsParameterState
+        : toFdsParameterState(await fdsParameterClient().fdsParameters("Browser FDS parameter command read"));
+      if (current.status !== "loaded") {
+        setFdsParameterCommandState({ status: "failed", message: "FDS highAmountMinor parameter was not loaded" });
+        return;
+      }
+      const requestedValue = nextNumericParameterValue(current.currentValue);
+      const effectiveFrom = tomorrowIsoDate();
+      const response = await fdsParameterClient(true).requestFdsParameterChange({
+        parameterKey: "highAmountMinor",
+        scheduledValue: requestedValue,
+        effectiveFrom,
+        rollbackPlan: "Create a future synthetic rollback version from the prior highAmountMinor value",
+        requestedBy: "fds01",
+        requestedByRole: "FDS_REVIEWER",
+        reason: "Browser FDS-301 parameter change smoke",
+        idempotencyKey: `FDS-PARAM-${globalThis.crypto.randomUUID()}`
+      });
+      setFdsParameterCommandState(toFdsParameterCommandState(response));
+    } catch (error: unknown) {
+      setFdsParameterCommandState({ status: "failed", message: error instanceof Error ? error.message : "Unknown FDS parameter failure" });
+    }
+  };
+
   const runKeycloakRiskCommandSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -675,6 +769,85 @@ export function ApiBackedRiskPanel() {
             <div>
               <dt>Error</dt>
               <dd>{commandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-fds-parameters">
+        <button
+          type="button"
+          onClick={runFdsParameterChangeSmoke}
+          disabled={!apiBaseUrl || fdsParameterCommandState.status === "running"}
+        >
+          Run FDS parameter change smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Parameters</dt>
+            <dd>{fdsParameterLabel(fdsParameterState)}</dd>
+          </div>
+          {fdsParameterState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Parameter</dt>
+                <dd>{fdsParameterState.parameterKey}</dd>
+              </div>
+              <div>
+                <dt>Current</dt>
+                <dd>{fdsParameterState.currentValue}</dd>
+              </div>
+              <div>
+                <dt>Current version</dt>
+                <dd>{fdsParameterState.currentVersionId}</dd>
+              </div>
+              <div>
+                <dt>Scheduled</dt>
+                <dd>{fdsParameterState.scheduledCount}</dd>
+              </div>
+              <div>
+                <dt>Audit</dt>
+                <dd>{fdsParameterState.auditEventId}</dd>
+              </div>
+            </>
+          ) : null}
+          {fdsParameterState.status === "failed" ? (
+            <div>
+              <dt>Parameter error</dt>
+              <dd>{fdsParameterState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Command</dt>
+            <dd>{fdsParameterCommandLabel(fdsParameterCommandState)}</dd>
+          </div>
+          {fdsParameterCommandState.status === "requested" ? (
+            <>
+              <div>
+                <dt>Request</dt>
+                <dd>{fdsParameterCommandState.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{fdsParameterCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Requested value</dt>
+                <dd>{fdsParameterCommandState.requestedValue}</dd>
+              </div>
+              <div>
+                <dt>Effective from</dt>
+                <dd>{fdsParameterCommandState.effectiveFrom}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{fdsParameterCommandState.requestStatus}</dd>
+              </div>
+            </>
+          ) : null}
+          {fdsParameterCommandState.status === "failed" ? (
+            <div>
+              <dt>Command error</dt>
+              <dd>{fdsParameterCommandState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -1070,6 +1243,32 @@ function statusLabel(state: ApiState): string {
   return "failed";
 }
 
+function fdsParameterLabel(state: FdsParameterState): string {
+  if (state.status === "offline") {
+    return "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return "FDS parameters loaded";
+  }
+  return "failed";
+}
+
+function fdsParameterCommandLabel(state: FdsParameterCommandState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "requested") {
+    return "FDS parameter change requested";
+  }
+  return "failed";
+}
+
 function amlCommandLabel(state: AmlCommandState): string {
   if (state.status === "idle") {
     return "ready";
@@ -1209,6 +1408,66 @@ function keycloakCommandLabel(state: KeycloakCommandState): string {
     return "Keycloak risk approvals completed";
   }
   return "failed";
+}
+
+function toFdsParameterState(response: ParameterListResponse): FdsParameterState {
+  const parameter = response.items.find((item) => item.parameterKey === "highAmountMinor");
+  if (!parameter) {
+    return { status: "failed", message: "highAmountMinor parameter missing" };
+  }
+  return {
+    status: "loaded",
+    auditEventId: response.auditEventId,
+    parameterKey: parameter.parameterKey,
+    currentValue: parameter.currentValue,
+    currentVersionId: parameter.currentVersionId,
+    scheduledCount: parameter.scheduled.length
+  };
+}
+
+function toFdsParameterCommandState(response: ParameterChangeRequestResponse): FdsParameterCommandState {
+  return {
+    status: "requested",
+    requestId: response.item.requestId,
+    approvalId: response.approval?.approvalId ?? "approval-missing",
+    parameterKey: response.item.parameterKey,
+    requestedValue: response.item.requestedValue,
+    effectiveFrom: response.item.effectiveFrom,
+    requestStatus: response.item.status
+  };
+}
+
+function nextNumericParameterValue(currentValue: string): number {
+  const parsed = Number.parseInt(currentValue, 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("FDS highAmountMinor parameter is not numeric");
+  }
+  return parsed + 1_000;
+}
+
+function tomorrowIsoDate(): string {
+  const value = new Date();
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function fdsParameterClient(stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "fds01",
+      roles: ["FDS_REVIEWER"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
 }
 
 function isOidcIntent(value: string | null): value is OidcIntent {

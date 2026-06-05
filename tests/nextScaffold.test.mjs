@@ -318,6 +318,7 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {
   const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");
+  const riskPanel = await readFile("apps/fds-aml-console/src/components/ApiBackedRiskPanel.tsx", "utf8");
   const artifact = JSON.parse(await readFile("docs/test-evidence/generated/fds-aml-analytics.json", "utf8"));
 
   assert.match(page, /AnalyticsEvidencePanel/);
@@ -325,6 +326,10 @@ test("fds-aml-console exposes generated analytics evidence through the Spring an
   assert.match(panel, /fdsAnalyticsEvidence/);
   assert.doesNotMatch(panel, /fds-aml-analytics\.json/);
   assert.match(panel, /data-testid="analytics-evidence-panel"/);
+  assert.match(riskPanel, /data-testid="api-backed-fds-parameters"/);
+  assert.match(riskPanel, /fdsParameters/);
+  assert.match(riskPanel, /requestFdsParameterChange/);
+  assert.match(riskPanel, /Browser FDS-301 parameter change smoke/);
   assert.equal(artifact.controls.realMoneyUsed, false);
   assert.equal(artifact.controls.realPiiUsed, false);
   assert.ok(artifact.results.length > 0);
