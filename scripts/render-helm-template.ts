@@ -40,6 +40,8 @@ for (const expected of [
   "Secret/banking-lab-secret",
   "Deployment/banking-lab-core-banking",
   "Service/banking-lab-core-banking",
+  "Deployment/banking-lab-reporting-service",
+  "Service/banking-lab-reporting-service",
   "Deployment/banking-lab-temporal-worker",
   "Service/banking-lab-postgres",
   "StatefulSet/banking-lab-postgres",
@@ -55,6 +57,9 @@ if (!rendered.includes("replace-with-local-synthetic-password")) {
 }
 if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
   errors.push("Rendered Helm output must include the Temporal worker enablement flag.");
+}
+if (!rendered.includes("reporting_flyway_schema_history") || !rendered.includes("reporting-service-api")) {
+  errors.push("Rendered Helm output must include reporting-service Flyway and audience settings.");
 }
 
 const payload = {
@@ -127,6 +132,14 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.coreBanking.resources.requests.memory": scalarFromSection(source, "coreBanking", ["resources", "requests", "memory"]),
     ".Values.coreBanking.resources.limits.cpu": scalarFromSection(source, "coreBanking", ["resources", "limits", "cpu"]),
     ".Values.coreBanking.resources.limits.memory": scalarFromSection(source, "coreBanking", ["resources", "limits", "memory"]),
+    ".Values.reportingService.replicas": scalarFromSection(source, "reportingService", ["replicas"]),
+    ".Values.reportingService.image": scalarFromSection(source, "reportingService", ["image"]),
+    ".Values.reportingService.port": scalarFromSection(source, "reportingService", ["port"]),
+    ".Values.reportingService.securityAudience": scalarFromSection(source, "reportingService", ["securityAudience"]),
+    ".Values.reportingService.resources.requests.cpu": scalarFromSection(source, "reportingService", ["resources", "requests", "cpu"]),
+    ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),
+    ".Values.reportingService.resources.limits.cpu": scalarFromSection(source, "reportingService", ["resources", "limits", "cpu"]),
+    ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
     ".Values.temporalWorker.replicas": scalarFromSection(source, "temporalWorker", ["replicas"]),
     ".Values.temporalWorker.image": scalarFromSection(source, "temporalWorker", ["image"]),
     ".Values.temporalWorker.resources.requests.cpu": scalarFromSection(source, "temporalWorker", ["resources", "requests", "cpu"]),

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:01:00.824Z",
+  "generatedAt": "2026-06-05T15:04:02.515Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -22,6 +22,20 @@
     {
       "file": "services/reporting-service/src/main/resources/application.yml",
       "description": "Reporting service defaults security on and simulator fallback off.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/reporting-service-deployment.yaml",
+      "description": "Reporting Kubernetes deployment uses secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
+      "description": "Reporting Helm deployment renders secure route audience and separate Flyway state.",
       "status": "pass",
       "missing": [],
       "forbidden": []

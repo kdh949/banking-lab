@@ -16,6 +16,8 @@ const requiredFiles = [
   "secret.example.yaml",
   "core-banking-deployment.yaml",
   "core-banking-service.yaml",
+  "reporting-service-deployment.yaml",
+  "reporting-service.yaml",
   "core-banking-temporal-worker-deployment.yaml",
   "postgres-statefulset.yaml",
   "keycloak-deployment.yaml",
@@ -43,6 +45,8 @@ requireDocument(documents, "ConfigMap", "banking-lab-config", errors);
 const secret = requireDocument(documents, "Secret", "banking-lab-secret", errors);
 const coreDeployment = requireDocument(documents, "Deployment", "core-banking-service", errors);
 requireDocument(documents, "Service", "core-banking-service", errors);
+const reportingDeployment = requireDocument(documents, "Deployment", "reporting-service", errors);
+requireDocument(documents, "Service", "reporting-service", errors);
 const workerDeployment = requireDocument(documents, "Deployment", "core-banking-temporal-worker", errors);
 const postgres = requireDocument(documents, "StatefulSet", "postgres", errors);
 const keycloak = requireDocument(documents, "Deployment", "keycloak", errors);
@@ -50,13 +54,16 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
 }
 if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasText(workerDeployment, "value: \"true\"")) {
   errors.push("Temporal worker deployment must explicitly enable BANKING_LAB_TEMPORAL_WORKER_ENABLED=true.");
+}
+if (!hasText(reportingDeployment, "reporting_flyway_schema_history") || !hasText(reportingDeployment, "reporting-service-api")) {
+  errors.push("Reporting service deployment must use its own Flyway table and reporting-service audience.");
 }
 if (!hasText(secret, "replace-with-local-synthetic-password")) {
   errors.push("secret.example.yaml must use replace-with-local-synthetic-password placeholders only.");

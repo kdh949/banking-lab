@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T17:02:15.793Z",
+  "generatedAt": "2026-06-05T15:04:02.294Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {
@@ -14,6 +14,8 @@
     "secret.example.yaml",
     "core-banking-deployment.yaml",
     "core-banking-service.yaml",
+    "reporting-service-deployment.yaml",
+    "reporting-service.yaml",
     "core-banking-temporal-worker-deployment.yaml",
     "postgres-statefulset.yaml",
     "keycloak-deployment.yaml",
@@ -21,7 +23,7 @@
     "temporal-deployment.yaml",
     "network-policy.yaml"
   ],
-  "documentCount": 15,
+  "documentCount": 17,
   "resources": [
     {
       "file": "infra/k8s/configmap.yaml",
@@ -104,6 +106,20 @@
       "apiVersion": "v1",
       "kind": "Service",
       "name": "redpanda",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/reporting-service-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "reporting-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/reporting-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "reporting-service",
       "namespace": "banking-lab"
     },
     {

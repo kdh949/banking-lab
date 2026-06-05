@@ -13,6 +13,19 @@ coreBanking:
       cpu: "1"
       memory: 1Gi
 
+reportingService:
+  replicas: 1
+  image: banking-lab/reporting-service:local
+  port: 8090
+  securityAudience: reporting-service-api
+  resources:
+    requests:
+      cpu: 150m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+
 temporalWorker:
   replicas: 1
   image: banking-lab/core-banking-service:local

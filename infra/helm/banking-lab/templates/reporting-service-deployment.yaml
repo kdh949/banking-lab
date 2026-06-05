@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-reporting-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: {{ .Release.Name }}-reporting-service
+spec:
+  replicas: {{ .Values.reportingService.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Release.Name }}-reporting-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: {{ .Release.Name }}-reporting-service
+    spec:
+      containers:
+        - name: reporting-service
+          image: {{ .Values.reportingService.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.reportingService.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+          env:
+            - name: PORT
+              value: {{ .Values.reportingService.port | quote }}
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: {{ .Values.syntheticOnly | quote }}
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-reporting-service"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: {{ .Values.reportingService.securityAudience | quote }}
+            - name: BANKING_LAB_REPORTING_DATABASE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: BANKING_LAB_REPORTING_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_REPORTING_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "reporting_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: {{ .Values.reportingService.resources.requests.cpu | quote }}
+              memory: {{ .Values.reportingService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.reportingService.resources.limits.cpu | quote }}
+              memory: {{ .Values.reportingService.resources.limits.memory | quote }}

@@ -58,6 +58,27 @@ const checks: Check[] = [
     ]
   },
   {
+    file: "infra/k8s/reporting-service-deployment.yaml",
+    description: "Reporting Kubernetes deployment uses secure route audience and separate Flyway state.",
+    mustContain: [
+      "value: \"reporting-service-api\"",
+      "value: \"reporting_flyway_schema_history\"",
+      "BANKING_LAB_REPORTING_DATABASE_URL"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
+    description: "Reporting Helm deployment renders secure route audience and separate Flyway state.",
+    mustContain: [
+      "value: {{ .Values.reportingService.securityAudience | quote }}",
+      "value: \"reporting_flyway_schema_history\"",
+      "BANKING_LAB_REPORTING_DATABASE_URL"
+    ]
+  },
+  {
     file: "infra/k8s/configmap.yaml",
     description: "Kubernetes configmap keeps secure defaults and Keycloak JWKS settings.",
     mustContain: [

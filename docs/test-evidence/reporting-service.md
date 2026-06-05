@@ -13,6 +13,7 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
+- Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service with the reporting audience and dedicated Flyway table.
 - Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.
 - Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
@@ -29,6 +30,8 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
 - `docker compose --profile platform config`
+- `npm run k8s:validate`
+- `npm run helm:template`
 - `npm run security:posture-check`
 - `npm test`
 - `npm run evidence:refresh-check`

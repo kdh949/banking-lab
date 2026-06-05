@@ -21,8 +21,8 @@ kind delete cluster --name banking-lab-evidence
 
 Structural, template, and disposable live-cluster commands passed.
 
-- `npm run k8s:validate` checked 11 required `infra/k8s` files and 15 Kubernetes resources. The final `npm test` rerun was executed while the disposable kind cluster was still live, so `docs/test-evidence/generated/k8s-validation.json` records `kubectlClientDryRun.status = "pass"`.
-- `npm run helm:template` used the local Helm CLI and validated 9 rendered resources.
+- `npm run k8s:validate` checked 13 required `infra/k8s` files and 17 Kubernetes resources. The current rerun had no reachable local cluster, so `docs/test-evidence/generated/k8s-validation.json` records `kubectlClientDryRun.status = "skipped_no_cluster"` while structural validation passed.
+- `npm run helm:template` used the local Helm CLI and validated 11 rendered resources.
 - The disposable kind cluster `banking-lab-evidence` was created and deleted in this evidence run.
 - `helm install ... --set temporalWorker.replicas=0 --wait --timeout 5m` installed the chart successfully. The live scope was PostgreSQL plus the core-banking Spring service; the Temporal worker was scaled to zero because this chart does not deploy a Temporal server.
 - `banking-lab-core-banking` and `banking-lab-postgres` both reached `1/1` Ready.
@@ -37,8 +37,8 @@ Generated evidence:
 
 ## Scope
 
-This is a synthetic lab deployment skeleton, not production deployment proof. The manifests include namespace, config, example-only secrets, core banking service, Temporal worker, PostgreSQL, Keycloak, Redpanda, Temporal, and network policy intent. Secrets are placeholders only and must not contain real credentials.
+This is a synthetic lab deployment skeleton, not production deployment proof. The manifests include namespace, config, example-only secrets, core banking service, reporting service, Temporal worker, PostgreSQL, Keycloak, Redpanda, Temporal, and network policy intent. Secrets are placeholders only and must not contain real credentials.
 
 ## Remaining Risk
 
-This run proves a disposable live Helm install/readiness/smoke path for PostgreSQL and core banking, plus live API server dry-run for the raw manifests. It does not prove ingress, TLS, production secret manager, Argo CD sync, canary promotion, multi-node storage behavior, or a full live Temporal/Redpanda/Keycloak runtime. A first `./gradlew :services:core-banking:bootJar` attempt failed under the default JDK 26.0.1, but `JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew :services:core-banking:bootJar` passed before the Docker image was rebuilt and deployed.
+This run proves structural Kubernetes/Helm coverage for PostgreSQL, core banking, reporting service, platform dependencies, and network policy intent. The older disposable live Helm install/readiness/smoke evidence still covers PostgreSQL plus core banking only. It does not prove ingress, TLS, production secret manager, Argo CD sync, canary promotion, multi-node storage behavior, reporting-service live rollout, or a full live Temporal/Redpanda/Keycloak runtime. A first `./gradlew :services:core-banking:bootJar` attempt failed under the default JDK 26.0.1, but `JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew :services:core-banking:bootJar` passed before the Docker image was rebuilt and deployed.
