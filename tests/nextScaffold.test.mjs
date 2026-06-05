@@ -26,11 +26,22 @@ test("customer-web Next workspace keeps the Node reference shell outside target 
 test("customer-web Next page is manifest-driven rather than one-off screen code", async () => {
   const page = await readFile("apps/customer-web/src/app/page.tsx", "utf8");
   const loader = await readFile("apps/customer-web/src/lib/manifestLoader.ts", "utf8");
+  const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
 
   assert.match(page, /loadCustomerWebManifests/);
   assert.match(loader, /screen-manifests/);
   assert.match(loader, /customer-web/);
   assert.match(loader, /manifest\.app === "customer-web"/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
+  assert.match(panel, /data-testid="api-backed-customer-payment-domain"/);
+  assert.match(panel, /createPaymentInstruction/);
+  assert.match(panel, /createAutopayAgreement/);
+  assert.match(panel, /pauseAutopayAgreement/);
+  assert.match(panel, /resumeAutopayAgreement/);
+  assert.match(panel, /cancelAutopayAgreement/);
+  assert.match(client, /createPaymentInstruction/);
+  assert.match(client, /createAutopayAgreement/);
 });
 
 test("Next dependency lock uses the postcss security override", async () => {

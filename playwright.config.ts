@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 process.env.BANKING_LAB_ROOT = repoRoot;
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.BANKING_LAB_E2E_PAYMENT_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 const apps = [
@@ -34,7 +35,7 @@ export default defineConfig({
     }
   ],
   webServer: apps.map(([, workspace, port]) => ({
-    command: `${apiBaseUrl ? `NEXT_PUBLIC_BANKING_API_BASE_URL=${shellQuote(apiBaseUrl)} ` : ""}${keycloakBaseUrl ? `NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} BANKING_LAB_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} ` : ""}npm --workspace ${workspace} run dev`,
+    command: `${apiBaseUrl ? `NEXT_PUBLIC_BANKING_API_BASE_URL=${shellQuote(apiBaseUrl)} ` : ""}${paymentApiBaseUrl ? `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL=${shellQuote(paymentApiBaseUrl)} ` : ""}${keycloakBaseUrl ? `NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} BANKING_LAB_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} ` : ""}npm --workspace ${workspace} run dev`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

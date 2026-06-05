@@ -8,6 +8,7 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "customer-web";
 const baseUrl = "http://localhost:3001";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.BANKING_LAB_E2E_PAYMENT_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -208,4 +209,20 @@ test("customer web confirms Spring API-backed answered complaint when configured
   await expect(panel).toContainText("CMP-SYN-CONFIRM-001");
   await expect(panel).toContainText("SYN-CUS-001");
   await expect(panel).toContainText("CLOSED");
+});
+
+test("customer web executes Payment Service bill payment and autopay smoke when configured", async ({ page }) => {
+  test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment-service smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run payment domain smoke" }).click();
+  const panel = page.getByTestId("api-backed-customer-payment-domain");
+  await expect(panel).toContainText("payment and autopay recorded", { timeout: 15_000 });
+  await expect(panel).toContainText("PAY-");
+  await expect(panel).toContainText("same instruction");
+  await expect(panel).toContainText("Synthetic Utility Biller");
+  await expect(panel).toContainText("APAY-");
+  await expect(panel).toContainText("PAUSED / ACTIVE / CANCELED");
+  await expect(panel).toContainText("2026-04-30");
 });

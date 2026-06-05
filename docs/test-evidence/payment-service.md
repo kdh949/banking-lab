@@ -25,6 +25,9 @@ This evidence covers the first synthetic Payment Service slice:
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
   and ops payment outbox dispatch manifests, plus TypeScript API client methods
   for the payment-service OpenAPI operations.
+- Customer Web API-backed payment panel that uses the payment-service client for
+  idempotent bill-payment creation/replay, instruction read/outbox visibility,
+  and customer autopay create/pause/resume/cancel smoke coverage.
 - Payment-service route-level authorization filter, signed JWKS JWT decoder,
   dev-only simulator token decoder, and route role policies for instruction,
   autopay, settlement, due-execution, and Outbox dispatch APIs.
@@ -32,8 +35,8 @@ This evidence covers the first synthetic Payment Service slice:
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 
 The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda, a dedicated rendered Next.js payment panel, and staff payment
-correction maker-checker flows remain future work.
+Kafka/Redpanda, staff/ops dedicated payment panels, and staff payment correction
+maker-checker flows remain future work.
 
 ## Commands Run
 
@@ -48,6 +51,8 @@ npm run evidence:refresh-check
 npm run scripts:typecheck
 npm run validate:manifests
 npm run packages:typecheck
+npm run next:customer-web:typecheck
+npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 ```
 
 The Gradle-backed commands were first attempted inside the managed sandbox and
@@ -79,10 +84,15 @@ need local file-lock socket and Docker access.
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
 - `npm run scripts:typecheck`: pass.
-- `npm run validate:manifests`: pass; 92 manifests validated, including
+- `npm run validate:manifests`: pass; 95 manifests validated, including
   `CWB-701`, `CWB-702`, `CWB-703`, `PAY-101`, and `OPS-404`.
 - `npm run packages:typecheck`: pass; screen/form/api/auth clients compiled,
   including the new payment API client contract.
+- `npm run next:customer-web:typecheck`: pass; Customer Web compiled with the
+  payment-service panel and environment variable fallback.
+- `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts`: pass;
+  local shell and API-gated customer E2E coverage ran, with payment-service
+  smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
 
 ## Integration Coverage
 
@@ -155,6 +165,10 @@ Manifest and API client coverage verifies:
 - `@banking-lab/api-client` exposes typed payment instruction, settlement,
   outbox dispatch, and autopay methods matching the payment-service OpenAPI
   operation set.
+- Customer Web renders `data-testid="api-backed-customer-payment-domain"` and
+  uses `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL` with the standard
+  `NEXT_PUBLIC_BANKING_API_BASE_URL` fallback to exercise CWB-701/CWB-702/CWB-703
+  through the typed API client when a payment-service runtime is configured.
 
 `PaymentAuthorizationIntegrationTest` verifies:
 
@@ -192,9 +206,9 @@ institution API, or real money path is configured.
 
 ## Remaining Risk
 
-This is still a partial slice. A successful bill payment can now be dispatched
-from durable payment-service outbox state to a core-banking posting port,
-settled idempotently, and created from durable autopay schedules, but
-Kafka/Redpanda runtime publication, dedicated Next.js payment panels, live
-payment-service Keycloak realm smoke evidence, and staff correction
-maker-checker flows are still pending.
+This is still a partial slice. A successful bill payment can now be created
+from Customer Web, dispatched from durable payment-service outbox state to a
+core-banking posting port, settled idempotently, and created from durable
+autopay schedules, but Kafka/Redpanda runtime publication, staff/ops dedicated
+payment panels, live payment-service Keycloak realm smoke evidence, and staff
+correction maker-checker flows are still pending.

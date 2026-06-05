@@ -21,6 +21,8 @@ import {
   type LoanExecutionResponse,
   type LoanPaymentResponse,
   type LoanDto,
+  type PaymentAutopayAgreementResponse,
+  type PaymentInstructionResponse,
   type ThreeDsSimulationDto,
   type TransactionConfirmationDto
 } from "@banking-lab/api-client";
@@ -116,6 +118,21 @@ type CardDomainState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type PaymentDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly instruction: PaymentInstructionResponse;
+      readonly replay: PaymentInstructionResponse;
+      readonly read: PaymentInstructionResponse;
+      readonly autopay: PaymentAutopayAgreementResponse;
+      readonly paused: PaymentAutopayAgreementResponse;
+      readonly resumed: PaymentAutopayAgreementResponse;
+      readonly canceled: PaymentAutopayAgreementResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -149,6 +166,7 @@ interface StructuredErrorSummary {
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabCustomerOidcState";
 const oidcVerifierKey = "bankingLabCustomerOidcVerifier";
@@ -171,6 +189,7 @@ export function ApiBackedCustomerPanel() {
   const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
   const [loanDomainState, setLoanDomainState] = useState<LoanDomainState>({ status: "idle" });
   const [cardDomainState, setCardDomainState] = useState<CardDomainState>({ status: "idle" });
+  const [paymentDomainState, setPaymentDomainState] = useState<PaymentDomainState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -786,6 +805,91 @@ export function ApiBackedCustomerPanel() {
       setCardDomainState({ status: "loaded", issue, threeDs, authorization, capture, lostCard });
     } catch (error: unknown) {
       setCardDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown card domain failure" });
+    }
+  };
+
+  const runPaymentDomainSmoke = async () => {
+    if (!paymentApiBaseUrl || paymentDomainState.status === "running") {
+      return;
+    }
+    setPaymentDomainState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const runId = Date.now();
+      const paymentCommand = {
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 5_000,
+        currency: "KRW",
+        idempotencyKey: `CWB-PAY-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic bill payment smoke"
+      };
+      const instruction = await client.createPaymentInstruction(paymentCommand);
+      const replay = await client.createPaymentInstruction(paymentCommand);
+      const read = await client.getPaymentInstruction(instruction.item.paymentInstructionId);
+      if (
+        !instruction.item.syntheticOnly ||
+        !replay.replayed ||
+        replay.item.paymentInstructionId !== instruction.item.paymentInstructionId ||
+        read.item.lastOutboxEventId === null ||
+        read.item.lastOutboxEventId === undefined
+      ) {
+        setPaymentDomainState({ status: "failed", message: "payment instruction did not persist idempotent synthetic outbox state" });
+        return;
+      }
+
+      const autopay = await client.createAutopayAgreement({
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 7_000,
+        currency: "KRW",
+        frequency: "MONTHLY",
+        nextRunOn: "2026-03-31",
+        idempotencyKey: `CWB-APAY-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic autopay agreement smoke"
+      });
+      const paused = await client.pauseAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-PAUSE-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay pause smoke"
+      });
+      const resumed = await client.resumeAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-RESUME-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay resume smoke",
+        nextRunOn: "2026-04-30"
+      });
+      const canceled = await client.cancelAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-CANCEL-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay cancel smoke"
+      });
+      if (
+        !autopay.item.syntheticOnly ||
+        autopay.item.status !== "ACTIVE" ||
+        paused.item.status !== "PAUSED" ||
+        resumed.item.status !== "ACTIVE" ||
+        canceled.item.status !== "CANCELED"
+      ) {
+        setPaymentDomainState({ status: "failed", message: "autopay state transitions did not complete" });
+        return;
+      }
+      setPaymentDomainState({ status: "loaded", instruction, replay, read, autopay, paused, resumed, canceled });
+    } catch (error: unknown) {
+      setPaymentDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment domain failure" });
     }
   };
 
@@ -1520,6 +1624,62 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-payment-domain">
+        <button type="button" onClick={runPaymentDomainSmoke} disabled={!paymentApiBaseUrl || paymentDomainState.status === "running"}>
+          Run payment domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment</dt>
+            <dd>{paymentDomainLabel(paymentDomainState)}</dd>
+          </div>
+          {paymentDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentDomainState.instruction.item.paymentInstructionId}</dd>
+              </div>
+              <div>
+                <dt>Replay</dt>
+                <dd>{paymentDomainState.replay.replayed ? "same instruction" : "not replayed"}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{paymentDomainState.read.item.status}</dd>
+              </div>
+              <div>
+                <dt>Biller</dt>
+                <dd>{paymentDomainState.read.item.billerName}</dd>
+              </div>
+              <div>
+                <dt>Outbox</dt>
+                <dd>{paymentDomainState.read.item.lastOutboxEventId}</dd>
+              </div>
+              <div>
+                <dt>Autopay</dt>
+                <dd>{paymentDomainState.autopay.item.autopayAgreementId}</dd>
+              </div>
+              <div>
+                <dt>Autopay states</dt>
+                <dd>
+                  {paymentDomainState.paused.item.status} / {paymentDomainState.resumed.item.status} /{" "}
+                  {paymentDomainState.canceled.item.status}
+                </dd>
+              </div>
+              <div>
+                <dt>Next run</dt>
+                <dd>{paymentDomainState.resumed.item.nextRunOn}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{paymentDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1843,6 +2003,19 @@ function cardDomainLabel(state: CardDomainState): string {
   }
   if (state.status === "loaded") {
     return "card captured and lost";
+  }
+  return "failed";
+}
+
+function paymentDomainLabel(state: PaymentDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "payment and autopay recorded";
   }
   return "failed";
 }
