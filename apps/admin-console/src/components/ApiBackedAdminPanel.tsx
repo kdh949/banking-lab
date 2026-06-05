@@ -6,6 +6,8 @@ import {
   type AdminEvidenceCoverageResponse,
   type AdminPlatformSummaryResponse,
   type AdminSystemStatusResponse,
+  type ParameterChangeRequestResponse,
+  type ParameterListResponse,
   type ReportArtifactDto,
   type ReportArtifactExportResponse,
   type ReportDefinitionDto,
@@ -57,6 +59,33 @@ type ReportingAdminState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type SecurityParameterState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly auditEventId: string;
+      readonly parameterKey: string;
+      readonly currentValue: string;
+      readonly currentVersionId: string;
+      readonly scheduledCount: number;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type SecurityParameterCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "requested";
+      readonly requestId: string;
+      readonly approvalId: string;
+      readonly parameterKey: string;
+      readonly requestedValue: string;
+      readonly effectiveFrom: string;
+      readonly requestStatus: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
@@ -73,6 +102,10 @@ export function ApiBackedAdminPanel() {
   const [reportingState, setReportingState] = useState<ReportingAdminState>(() =>
     reportingApiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
+  const [securityParameterState, setSecurityParameterState] = useState<SecurityParameterState>(() =>
+    apiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [securityParameterCommandState, setSecurityParameterCommandState] = useState<SecurityParameterCommandState>({ status: "idle" });
   const [keycloakAdminState, setKeycloakAdminState] = useState<KeycloakAdminState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -210,6 +243,29 @@ export function ApiBackedAdminPanel() {
   }, []);
 
   useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    securityParameterClient()
+      .securityParameters("Browser ADM-201 parameter read smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setSecurityParameterState(toSecurityParameterState(response));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setSecurityParameterState({ status: "failed", message: error instanceof Error ? error.message : "Unknown security parameter API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!apiBaseUrl || !keycloakBaseUrl) {
       return;
     }
@@ -308,6 +364,37 @@ export function ApiBackedAdminPanel() {
       setKeycloakAdminState({ status: "failed", message: error instanceof Error ? error.message : "Unknown Keycloak redirect failure" });
     }
   }
+
+  const runSecurityParameterChangeSmoke = async () => {
+    if (!apiBaseUrl || securityParameterCommandState.status === "running") {
+      return;
+    }
+    setSecurityParameterCommandState({ status: "running" });
+    try {
+      const current = securityParameterState.status === "loaded"
+        ? securityParameterState
+        : toSecurityParameterState(await securityParameterClient().securityParameters("Browser ADM-201 parameter command read"));
+      if (current.status !== "loaded") {
+        setSecurityParameterCommandState({ status: "failed", message: "ADM staffSessionTtlSeconds parameter was not loaded" });
+        return;
+      }
+      const requestedValue = nextNumericParameterValue(current.currentValue, 300);
+      const effectiveFrom = tomorrowIsoDate();
+      const response = await securityParameterClient(true).requestSecurityParameterChange({
+        parameterKey: "staffSessionTtlSeconds",
+        scheduledValue: requestedValue,
+        effectiveFrom,
+        rollbackPlan: "Create a future synthetic rollback version from the prior staff session TTL",
+        requestedBy: "security-admin01",
+        requestedByRole: "COMPLIANCE_MANAGER",
+        reason: "Browser ADM-201 parameter change smoke",
+        idempotencyKey: `ADM-SEC-PARAM-${globalThis.crypto.randomUUID()}`
+      });
+      setSecurityParameterCommandState(toSecurityParameterCommandState(response));
+    } catch (error: unknown) {
+      setSecurityParameterCommandState({ status: "failed", message: error instanceof Error ? error.message : "Unknown security parameter failure" });
+    }
+  };
 
   return (
     <section className="api-panel" aria-label="API-backed admin platform summary">
@@ -511,6 +598,85 @@ export function ApiBackedAdminPanel() {
           </div>
         ) : null}
       </dl>
+      <div className="api-actions" data-testid="api-backed-security-parameters">
+        <button
+          type="button"
+          onClick={runSecurityParameterChangeSmoke}
+          disabled={!apiBaseUrl || securityParameterCommandState.status === "running"}
+        >
+          Run security parameter change smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Security parameters</dt>
+            <dd>{securityParameterLabel(securityParameterState)}</dd>
+          </div>
+          {securityParameterState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Parameter</dt>
+                <dd>{securityParameterState.parameterKey}</dd>
+              </div>
+              <div>
+                <dt>Current</dt>
+                <dd>{securityParameterState.currentValue}</dd>
+              </div>
+              <div>
+                <dt>Current version</dt>
+                <dd>{securityParameterState.currentVersionId}</dd>
+              </div>
+              <div>
+                <dt>Scheduled</dt>
+                <dd>{securityParameterState.scheduledCount}</dd>
+              </div>
+              <div>
+                <dt>Audit</dt>
+                <dd>{securityParameterState.auditEventId}</dd>
+              </div>
+            </>
+          ) : null}
+          {securityParameterState.status === "failed" ? (
+            <div>
+              <dt>Parameter error</dt>
+              <dd>{securityParameterState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Command</dt>
+            <dd>{securityParameterCommandLabel(securityParameterCommandState)}</dd>
+          </div>
+          {securityParameterCommandState.status === "requested" ? (
+            <>
+              <div>
+                <dt>Request</dt>
+                <dd>{securityParameterCommandState.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{securityParameterCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Requested value</dt>
+                <dd>{securityParameterCommandState.requestedValue}</dd>
+              </div>
+              <div>
+                <dt>Effective from</dt>
+                <dd>{securityParameterCommandState.effectiveFrom}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{securityParameterCommandState.requestStatus}</dd>
+              </div>
+            </>
+          ) : null}
+          {securityParameterCommandState.status === "failed" ? (
+            <div>
+              <dt>Command error</dt>
+              <dd>{securityParameterCommandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-admin-keycloak-login">
         <button
           type="button"
@@ -633,6 +799,92 @@ function reportingAdminStatusLabel(state: ReportingAdminState): string {
     case "failed":
       return "reporting API request failed";
   }
+}
+
+function securityParameterLabel(state: SecurityParameterState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading";
+    case "loaded":
+      return "security parameters loaded";
+    case "failed":
+      return "failed";
+  }
+}
+
+function securityParameterCommandLabel(state: SecurityParameterCommandState): string {
+  switch (state.status) {
+    case "idle":
+      return "ready";
+    case "running":
+      return "running";
+    case "requested":
+      return "security parameter change requested";
+    case "failed":
+      return "failed";
+  }
+}
+
+function toSecurityParameterState(response: ParameterListResponse): SecurityParameterState {
+  const parameter = response.items.find((item) => item.parameterKey === "staffSessionTtlSeconds");
+  if (!parameter) {
+    return { status: "failed", message: "staffSessionTtlSeconds parameter missing" };
+  }
+  return {
+    status: "loaded",
+    auditEventId: response.auditEventId,
+    parameterKey: parameter.parameterKey,
+    currentValue: parameter.currentValue,
+    currentVersionId: parameter.currentVersionId,
+    scheduledCount: parameter.scheduled.length
+  };
+}
+
+function toSecurityParameterCommandState(response: ParameterChangeRequestResponse): SecurityParameterCommandState {
+  return {
+    status: "requested",
+    requestId: response.item.requestId,
+    approvalId: response.approval?.approvalId ?? "approval-missing",
+    parameterKey: response.item.parameterKey,
+    requestedValue: response.item.requestedValue,
+    effectiveFrom: response.item.effectiveFrom,
+    requestStatus: response.item.status
+  };
+}
+
+function nextNumericParameterValue(currentValue: string, increment: number): number {
+  const parsed = Number.parseInt(currentValue, 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("ADM staffSessionTtlSeconds parameter is not numeric");
+  }
+  return parsed + increment;
+}
+
+function tomorrowIsoDate(): string {
+  const value = new Date();
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function securityParameterClient(stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "security-admin01",
+      roles: ["COMPLIANCE_MANAGER"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
 }
 
 function clearOidcSession() {

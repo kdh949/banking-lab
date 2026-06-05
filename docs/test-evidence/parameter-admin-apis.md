@@ -25,6 +25,7 @@ All values are synthetic lab controls. No real security policy, real PII, real f
 - `packages/api-client` has typed parameter DTOs and endpoint methods for all five domains.
 - `apps/ops-console` now exposes a conditional `OPS-301` browser smoke panel that reads `reconciliationParameters` and can submit a future-effective `autoMatchToleranceMinor` change request through `requestReconciliationParameterChange` when a Spring API URL is configured.
 - `apps/audit-console` now exposes a conditional `AUD-201` browser smoke panel that reads `auditParameters` and can submit a future-effective `retentionYears` change request through `requestAuditParameterChange` when a Spring API URL is configured.
+- `apps/admin-console` now exposes a conditional `ADM-201` browser smoke panel that reads `securityParameters` and can submit a future-effective `staffSessionTtlSeconds` change request through `requestSecurityParameterChange` when a Spring API URL is configured.
 - `apps/fds-aml-console` now exposes a conditional `FDS-301` browser smoke panel that reads `fdsParameters` and can submit a future-effective `highAmountMinor` change request through `requestFdsParameterChange` when a Spring API URL is configured.
 - `packages/auth-client` simulator tokens can carry optional synthetic `auth_time`, `iat`, `amr`, and `acr` claims so local browser smokes can model the same step-up claims enforced by Spring high-risk parameter routes.
 
@@ -39,10 +40,12 @@ npm run scripts:typecheck
 npm run next:fds-aml-console:typecheck
 npm run next:ops-console:typecheck
 npm run next:audit-console:typecheck
+npm run next:admin-console:typecheck
 node --test tests/nextScaffold.test.mjs
 npm run test:e2e -- apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts
 npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts
 npm run test:e2e -- apps/audit-console/e2e/audit-console-parity.spec.ts
+npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts
 npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks
 ```
 
@@ -59,11 +62,13 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - `npm run next:fds-aml-console:typecheck`: passed.
 - `npm run next:ops-console:typecheck`: passed.
 - `npm run next:audit-console:typecheck`: passed after removing a duplicate `AUD-201` panel label that conflicted with manifest-card strict locators.
+- `npm run next:admin-console:typecheck`: passed.
 - `npm run packages:typecheck`: passed after adding optional simulator step-up claims to `@banking-lab/auth-client`.
-- `node --test tests/nextScaffold.test.mjs`: passed with static coverage for the new `api-backed-fds-parameters`, `api-backed-reconciliation-parameters`, and `api-backed-audit-parameters` panels plus API client calls.
+- `node --test tests/nextScaffold.test.mjs`: passed with static coverage for the new `api-backed-fds-parameters`, `api-backed-reconciliation-parameters`, `api-backed-audit-parameters`, and `api-backed-security-parameters` panels plus API client calls.
 - `npm run test:e2e -- apps/fds-aml-console/e2e/fds-aml-console-parity.spec.ts`: passed after sandbox escalation for Chromium; 2 shell tests passed and 8 API/Keycloak tests, including the new FDS parameter command smoke, were skipped because `BANKING_LAB_E2E_API_BASE_URL` was not set.
 - `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts`: passed with 2 shell tests and 6 API/Keycloak tests, including the new OPS parameter command smoke, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_PAYMENT_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
 - `npm run test:e2e -- apps/audit-console/e2e/audit-console-parity.spec.ts`: first run failed because the new panel duplicated exact `AUD-201` text already used by the manifest card; after relabeling the panel field to `Parameters`, rerun passed with 2 shell tests and 4 API/Reporting/Keycloak tests, including the new AUD parameter command smoke, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_REPORTING_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
+- `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts`: passed with 2 shell tests and 4 API/Reporting/Keycloak tests, including the new ADM-201 parameter command smoke, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_REPORTING_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: approved escalated rerun passed.
 
 ## Invariants Verified
@@ -79,8 +84,9 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - Parameter audit events are appended and marked synthetic-only.
 - The ops console now keeps `OPS-301` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day reconciliation tolerance during local shell rendering.
 - The audit console now keeps `AUD-201` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day retention parameters during local shell rendering.
+- The admin console now keeps `ADM-201` security parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day staff session policy during local shell rendering.
 - The FDS/AML console now keeps `FDS-301` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day FDS behavior during local shell rendering.
 
 ## Remaining Risk
 
-This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, and audit retention browser wiring. The FDS/AML, ops, and audit console panels are conditional, but local browser runs do not execute the API-backed parameter commands unless a Spring API URL is configured. Future hardening should add equivalent UI smoke buttons per admin app, richer validation for structured JSON menu-role parameters, and Temporal/activity evidence if parameter application is later delegated to scheduled workers.
+This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, audit retention, and admin security policy browser wiring. The FDS/AML, ops, audit, and admin security panels are conditional, but local browser runs do not execute the API-backed parameter commands unless a Spring API URL is configured. Future hardening should add `ADM-301` menu-role browser wiring, richer validation for structured JSON menu-role parameters, and Temporal/activity evidence if parameter application is later delegated to scheduled workers.
