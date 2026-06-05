@@ -80,7 +80,9 @@ test("notification-service platform profile includes API and Redpanda consumer w
   const application = await readFile("services/notification-service/src/main/resources/application.yml", "utf8");
   const dockerfile = await readFile("infra/docker-compose/notification-service.Dockerfile", "utf8");
   const compose = await readFile("docker-compose.yml", "utf8");
+  const packageJson = await readFile("package.json", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
+  const keycloakServiceTokenSmoke = await readFile("scripts/run-notification-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:notification-service"\)/);
   assert.match(serviceBuild, /org\.apache\.kafka:kafka-clients/);
@@ -101,6 +103,15 @@ test("notification-service platform profile includes API and Redpanda consumer w
   );
   assert.match(compose, /BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED: "false"/);
   assert.match(compose, /BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS: redpanda:9092/);
+  assert.match(packageJson, /test:notification-service:keycloak-service-token/);
+  assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
+  assert.match(keycloakServiceTokenSmoke, /client_id=notification-service-api/);
+  assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(keycloakServiceTokenSmoke, /NOTIFICATION_SERVICE/);
+  assert.match(keycloakServiceTokenSmoke, /notification-service-api audience/);
+  assert.match(keycloakServiceTokenSmoke, /\/api\/notifications\/events/);
+  assert.match(keycloakServiceTokenSmoke, /PENDING/);
+  assert.match(keycloakServiceTokenSmoke, /maskedMessage/);
   assert.match(prometheus, /job_name: notification-service/);
   assert.match(prometheus, /notification-service:8089/);
   assert.match(prometheus, /notification-event-consumer:8089/);

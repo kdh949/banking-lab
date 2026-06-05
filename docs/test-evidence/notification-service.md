@@ -52,12 +52,15 @@ This evidence covers the first synthetic Notification Service slice:
   consumption, delivery reads, failure recording, delivered-state marking, and
   template/preference administration plus CUSTOMER-owned preference and
   delivery-history self-service.
+- Live Keycloak client-credentials smoke for the confidential
+  `notification-service-api` client, proving a signed `NOTIFICATION_SERVICE`
+  service-account token can call the notification event route with simulator
+  tokens disabled and create a masked pending synthetic delivery.
 
 The slice does not claim full Notification Service completion. Browser E2E for
 live customer/admin/audit notification API paths remains conditional on local
-notification-service URLs, live notification-service Keycloak smoke evidence is
-not complete, and live provider integrations are not in scope. Live providers
-remain prohibited.
+notification-service URLs, and live provider integrations are not in scope. Live
+providers remain prohibited.
 
 ## Commands Run
 
@@ -73,6 +76,7 @@ npm run next:audit-console:typecheck
 npm run next:customer-web:typecheck
 npm run packages:typecheck
 npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks
+npm run test:notification-service:keycloak-service-token
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 docker compose --profile platform config
@@ -152,6 +156,14 @@ were rerun sequentially with `--rerun-tasks`.
   worker batch log with `processed=1`, `duplicates=1`, `deliveries=1`, and
   `syntheticOnly=true`; the stack and volumes were removed with
   `docker compose --profile platform down -v`.
+- `npm run test:notification-service:keycloak-service-token`: pass; a
+  disposable Compose project started PostgreSQL, Redpanda, Keycloak, and
+  `notification-service` with `BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false`.
+  Keycloak issued a signed client-credentials token for
+  `notification-service-api` containing the `NOTIFICATION_SERVICE` realm role
+  and `notification-service-api` audience, and the notification API accepted it
+  on `POST /api/notifications/events` to create one `PENDING`,
+  `syntheticOnly=true` delivery item without exposing the raw phone number.
 - `npm test`: pass; the Node oracle/static scaffold suite verifies the
   notification-service Dockerfile, Compose API/consumer services, disabled API
   consumer setting, enabled worker setting, and Prometheus scrape targets.
@@ -259,6 +271,11 @@ were rerun sequentially with `--rerun-tasks`.
 - the REST API container keeps `BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED=false`;
 - the worker container sets `BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED=true`;
 - both containers keep `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`;
+- `package.json` exposes `test:notification-service:keycloak-service-token`,
+  and the checked-in smoke script disables simulator tokens, requests a
+  Keycloak `client_credentials` token for `notification-service-api`, verifies
+  the `NOTIFICATION_SERVICE` role/audience, and calls
+  `/api/notifications/events` through Bearer auth;
 - the platform profile uses `redpanda:9092` and a dedicated
   `notification_flyway_schema_history` table with Flyway baseline version `0`
   to avoid core-banking Flyway version conflicts on the shared synthetic schema;
@@ -329,6 +346,9 @@ synthetic recipient/channel/event filters, and suppression audit records persist
 masked payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
+The Keycloak service-token smoke explicitly disables simulator tokens and uses
+only the synthetic `notification-service-api` service account to create a masked
+pending delivery through the REST event route.
 The raw Kubernetes and Helm deployment manifests also set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`, use the
 service-specific `notification-service-api` audience, and keep the event
@@ -338,6 +358,5 @@ consumer on the synthetic `redpanda:9092` domain-events stream.
 
 This is still a partial feature slice. Browser E2E for live notification
 customer/admin/audit API paths remains conditional on local service URLs,
-retry/dead-letter behavior in a live Compose provider-sink loop, live
-notification-service Keycloak smoke evidence, and live Kubernetes/Helm rollout
-of the notification API/worker remain future work.
+retry/dead-letter behavior in a live Compose provider-sink loop, and live
+Kubernetes/Helm rollout of the notification API/worker remain future work.

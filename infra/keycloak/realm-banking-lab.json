@@ -5,19 +5,48 @@
   "displayName": "Synthetic Banking Lab",
   "roles": {
     "realm": [
-      { "name": "CUSTOMER" },
-      { "name": "BRANCH_STAFF" },
-      { "name": "BRANCH_MANAGER" },
-      { "name": "CALL_CENTER" },
-      { "name": "COMPLAINT_HANDLER" },
-      { "name": "FDS_REVIEWER" },
-      { "name": "AML_REVIEWER" },
-      { "name": "OPS_OPERATOR" },
-      { "name": "PAYMENT_SERVICE" },
-      { "name": "AUDITOR" },
-      { "name": "COMPLIANCE_MANAGER" },
-      { "name": "PASSKEY_RECOVERY_ADMIN" },
-      { "name": "SYSTEM" }
+      {
+        "name": "CUSTOMER"
+      },
+      {
+        "name": "BRANCH_STAFF"
+      },
+      {
+        "name": "BRANCH_MANAGER"
+      },
+      {
+        "name": "CALL_CENTER"
+      },
+      {
+        "name": "COMPLAINT_HANDLER"
+      },
+      {
+        "name": "FDS_REVIEWER"
+      },
+      {
+        "name": "AML_REVIEWER"
+      },
+      {
+        "name": "OPS_OPERATOR"
+      },
+      {
+        "name": "PAYMENT_SERVICE"
+      },
+      {
+        "name": "NOTIFICATION_SERVICE"
+      },
+      {
+        "name": "AUDITOR"
+      },
+      {
+        "name": "COMPLIANCE_MANAGER"
+      },
+      {
+        "name": "PASSKEY_RECOVERY_ADMIN"
+      },
+      {
+        "name": "SYSTEM"
+      }
     ]
   },
   "clients": [
@@ -27,8 +56,13 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3000/*", "http://localhost:3001/*"],
-      "webOrigins": ["http://localhost:3001"],
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3001"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -65,6 +99,17 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "name": "notification-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "notification-service-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
         }
       ]
     },
@@ -74,8 +119,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3002/*"],
-      "webOrigins": ["http://localhost:3002"],
+      "redirectUris": [
+        "http://localhost:3002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3002"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -107,8 +156,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3003/*"],
-      "webOrigins": ["http://localhost:3003"],
+      "redirectUris": [
+        "http://localhost:3003/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3003"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -129,8 +182,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3004/*"],
-      "webOrigins": ["http://localhost:3004"],
+      "redirectUris": [
+        "http://localhost:3004/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3004"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -162,8 +219,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3005/*"],
-      "webOrigins": ["http://localhost:3005"],
+      "redirectUris": [
+        "http://localhost:3005/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3005"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -172,6 +233,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "notification-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "notification-service-api",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
@@ -184,8 +256,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3006/*"],
-      "webOrigins": ["http://localhost:3006"],
+      "redirectUris": [
+        "http://localhost:3006/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3006"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -206,8 +282,12 @@
       "publicClient": true,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3007/*"],
-      "webOrigins": ["http://localhost:3007"],
+      "redirectUris": [
+        "http://localhost:3007/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3007"
+      ],
       "protocolMappers": [
         {
           "name": "core-banking-api-audience",
@@ -216,6 +296,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "notification-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "notification-service-api",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
@@ -258,6 +349,30 @@
       ]
     },
     {
+      "clientId": "notification-service-api",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "notification-service-api-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "notification-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "notification-service-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "core-banking-api",
       "enabled": true,
       "publicClient": false,
@@ -272,7 +387,9 @@
   "otpPolicyLookAheadWindow": 1,
   "webAuthnPolicyRpEntityName": "Synthetic Banking Lab",
   "webAuthnPolicyRpId": "localhost",
-  "webAuthnPolicySignatureAlgorithms": ["ES256"],
+  "webAuthnPolicySignatureAlgorithms": [
+    "ES256"
+  ],
   "webAuthnPolicyAttestationConveyancePreference": "none",
   "webAuthnPolicyAuthenticatorAttachment": "not specified",
   "webAuthnPolicyRequireResidentKey": "not specified",
@@ -304,7 +421,18 @@
       "enabled": true,
       "emailVerified": true,
       "serviceAccountClientId": "payment-service-api",
-      "realmRoles": ["PAYMENT_SERVICE"]
+      "realmRoles": [
+        "PAYMENT_SERVICE"
+      ]
+    },
+    {
+      "username": "service-account-notification-service-api",
+      "enabled": true,
+      "emailVerified": true,
+      "serviceAccountClientId": "notification-service-api",
+      "realmRoles": [
+        "NOTIFICATION_SERVICE"
+      ]
     },
     {
       "username": "branch01",
@@ -319,7 +447,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_STAFF"]
+      "realmRoles": [
+        "BRANCH_STAFF"
+      ]
     },
     {
       "username": "manager01",
@@ -334,7 +464,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_MANAGER"]
+      "realmRoles": [
+        "BRANCH_MANAGER"
+      ]
     },
     {
       "username": "complaint01",
@@ -349,7 +481,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["COMPLAINT_HANDLER"]
+      "realmRoles": [
+        "COMPLAINT_HANDLER"
+      ]
     },
     {
       "username": "ops01",
@@ -364,7 +498,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["OPS_OPERATOR"]
+      "realmRoles": [
+        "OPS_OPERATOR"
+      ]
     },
     {
       "username": "auditor01",
@@ -379,7 +515,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["AUDITOR"]
+      "realmRoles": [
+        "AUDITOR"
+      ]
     },
     {
       "username": "risk01",
@@ -394,7 +532,10 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["FDS_REVIEWER", "AML_REVIEWER"]
+      "realmRoles": [
+        "FDS_REVIEWER",
+        "AML_REVIEWER"
+      ]
     },
     {
       "username": "compliance01",
@@ -409,7 +550,10 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_MANAGER", "COMPLIANCE_MANAGER"]
+      "realmRoles": [
+        "BRANCH_MANAGER",
+        "COMPLIANCE_MANAGER"
+      ]
     },
     {
       "username": "customer01",
@@ -418,7 +562,9 @@
       "firstName": "Synthetic",
       "lastName": "Customer",
       "attributes": {
-        "banking_lab_customer_id": ["SYN-CUS-001"]
+        "banking_lab_customer_id": [
+          "SYN-CUS-001"
+        ]
       },
       "credentials": [
         {
@@ -427,7 +573,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["CUSTOMER"]
+      "realmRoles": [
+        "CUSTOMER"
+      ]
     },
     {
       "username": "manager-mfa01",
@@ -435,7 +583,9 @@
       "emailVerified": true,
       "firstName": "Synthetic",
       "lastName": "MfaManager",
-      "requiredActions": ["CONFIGURE_TOTP"],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ],
       "credentials": [
         {
           "type": "password",
@@ -443,7 +593,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_MANAGER"]
+      "realmRoles": [
+        "BRANCH_MANAGER"
+      ]
     },
     {
       "username": "manager-webauthn01",
@@ -451,7 +603,9 @@
       "emailVerified": true,
       "firstName": "Synthetic",
       "lastName": "WebAuthnManager",
-      "requiredActions": ["webauthn-register"],
+      "requiredActions": [
+        "webauthn-register"
+      ],
       "credentials": [
         {
           "type": "password",
@@ -459,7 +613,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_MANAGER"]
+      "realmRoles": [
+        "BRANCH_MANAGER"
+      ]
     },
     {
       "username": "manager-webauthn-block01",
@@ -467,7 +623,9 @@
       "emailVerified": true,
       "firstName": "Synthetic",
       "lastName": "WebAuthnBlockManager",
-      "requiredActions": ["webauthn-register"],
+      "requiredActions": [
+        "webauthn-register"
+      ],
       "credentials": [
         {
           "type": "password",
@@ -475,7 +633,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BRANCH_MANAGER"]
+      "realmRoles": [
+        "BRANCH_MANAGER"
+      ]
     },
     {
       "username": "security-admin01",
@@ -490,7 +650,11 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["COMPLIANCE_MANAGER", "AUDITOR", "PASSKEY_RECOVERY_ADMIN"]
+      "realmRoles": [
+        "COMPLIANCE_MANAGER",
+        "AUDITOR",
+        "PASSKEY_RECOVERY_ADMIN"
+      ]
     }
   ]
 }

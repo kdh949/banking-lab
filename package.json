@@ -29,6 +29,7 @@
     "test:payment-service:keycloak-service-token": "bash scripts/run-payment-keycloak-service-token-smoke.sh",
     "test:notification-service:unit": "scripts/run-core-banking-tests.sh :services:notification-service:test",
     "test:notification-service:integration": "scripts/run-core-banking-tests.sh :services:notification-service:integrationTest",
+    "test:notification-service:keycloak-service-token": "bash scripts/run-notification-keycloak-service-token-smoke.sh",
     "test:reporting-service:unit": "scripts/run-core-banking-tests.sh :services:reporting-service:test",
     "test:reporting-service:integration": "scripts/run-core-banking-tests.sh :services:reporting-service:integrationTest",
     "ledger:integrity-check": "npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --rerun-tasks",

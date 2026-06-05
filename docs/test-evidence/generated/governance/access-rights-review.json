@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "artifactId": "H8-ACCESS-RIGHTS-REVIEW",
-  "generatedAt": "2026-06-05T17:39:30.490Z",
+  "generatedAt": "2026-06-05T17:53:03.943Z",
   "syntheticOnly": true,
   "source": "infra/keycloak/realm-banking-lab.json",
-  "sourceSha256": "54aa93c06a685ca450a1ef0ad73d966449b8227b1541bd2caf7e09964235e6e3",
+  "sourceSha256": "90ca3828a1ac3eb14fd54c7bfdb9f2ed178e1b1e442b5a254c107ef5041476a8",
   "reviewPeriod": "2026-Q2",
   "controls": {
     "realMoneyUsed": false,
@@ -60,6 +60,11 @@
       "role": "FDS_REVIEWER",
       "critical": false,
       "owner": "synthetic-compliance-owner"
+    },
+    {
+      "role": "NOTIFICATION_SERVICE",
+      "critical": false,
+      "owner": "synthetic-business-owner"
     },
     {
       "role": "OPS_OPERATOR",
@@ -270,6 +275,19 @@
       "reviewStatus": "review-required"
     },
     {
+      "principalId": "service-account-notification-service-api",
+      "subjectType": "STAFF",
+      "roles": [
+        "NOTIFICATION_SERVICE"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
       "principalId": "service-account-payment-service-api",
       "subjectType": "STAFF",
       "roles": [
@@ -286,8 +304,8 @@
     }
   ],
   "summary": {
-    "principalCount": 13,
-    "roleAssignmentCount": 17,
+    "principalCount": 14,
+    "roleAssignmentCount": 18,
     "overPrivilegeFlagCount": 4,
     "status": "pass"
   }
