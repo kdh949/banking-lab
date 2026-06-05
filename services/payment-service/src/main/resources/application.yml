@@ -11,6 +11,14 @@ banking-lab:
       http-enabled: ${BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED:true}
       base-url: ${BANKING_LAB_CORE_BANKING_BASE_URL:http://localhost:8081}
       service-token: ${BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN:}
+    outbox-worker:
+      enabled: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED:false}
+      initial-delay-ms: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_INITIAL_DELAY_MS:5000}
+      fixed-delay-ms: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_FIXED_DELAY_MS:5000}
+      max-batch-size: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_MAX_BATCH_SIZE:10}
+      dead-letter-threshold: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_DEAD_LETTER_THRESHOLD:3}
+      requested-by: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY:payment-service-outbox-worker}
+      reason: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON:Synthetic payment outbox worker dispatch}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}

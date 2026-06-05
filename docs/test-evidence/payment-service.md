@@ -28,11 +28,12 @@ This evidence covers the first synthetic Payment Service slice:
 - Payment-service route-level authorization filter, signed JWKS JWT decoder,
   dev-only simulator token decoder, and route role policies for instruction,
   autopay, settlement, due-execution, and Outbox dispatch APIs.
+- Configurable payment Outbox worker runner that can drain durable
+  `PaymentLedgerPostingRequested` events in bounded batches after commit.
 
 The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda, a scheduled/background worker runner around the dispatcher,
-a dedicated rendered Next.js payment panel, and staff payment correction
-maker-checker flows remain future work.
+Kafka/Redpanda, a dedicated rendered Next.js payment panel, and staff payment
+correction maker-checker flows remain future work.
 
 ## Commands Run
 
@@ -67,7 +68,7 @@ need local file-lock socket and Docker access.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
   ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
   `PaymentOutboxDispatcherIntegrationTest`, and
-  `PaymentAuthorizationIntegrationTest`.
+  `PaymentOutboxWorkerIntegrationTest`, and `PaymentAuthorizationIntegrationTest`.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
   idempotent replay, structured API access, and service-role denial.
@@ -169,6 +170,19 @@ Manifest and API client coverage verifies:
 - authorization tests use only dev-enabled simulator tokens, while the runtime
   also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
 
+`PaymentOutboxWorkerIntegrationTest` verifies:
+
+- the worker is property-gated through
+  `banking-lab.payment-service.outbox-worker.enabled`;
+- worker dispatch uses configured actor, reason, dead-letter threshold, and
+  maximum batch size;
+- a batch of three durable ledger posting events is drained as two postings on
+  the first run and one posting on the second run when `max-batch-size=2`;
+- each worker-dispatched event settles the payment instruction and marks the
+  source durable outbox row `PUBLISHED`;
+- the third empty run returns `noPendingEvent=true` without external payment
+  network integration.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -181,6 +195,6 @@ institution API, or real money path is configured.
 This is still a partial slice. A successful bill payment can now be dispatched
 from durable payment-service outbox state to a core-banking posting port,
 settled idempotently, and created from durable autopay schedules, but
-Kafka/Redpanda runtime publication, a scheduled worker runner, dedicated Next.js
-payment panels, live payment-service Keycloak realm smoke evidence, and staff
-correction maker-checker flows are still pending.
+Kafka/Redpanda runtime publication, dedicated Next.js payment panels, live
+payment-service Keycloak realm smoke evidence, and staff correction
+maker-checker flows are still pending.
