@@ -26,6 +26,9 @@ This evidence covers the first synthetic Payment Service slice:
   `PaymentLedgerPostingRequested` events, calls a core-banking posting port,
   records settlement, and marks retry/dead-letter state without real payment
   network integration.
+- Payment-service Kafka outbox publisher that publishes non-ledger payment
+  domain events to Redpanda/Kafka after durable persistence while leaving
+  `PaymentLedgerPostingRequested` rows on the core-ledger dispatch path.
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
   commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
@@ -57,9 +60,9 @@ This evidence covers the first synthetic Payment Service slice:
   synthetic core-banking service-token placeholder, and explicit API-vs-worker
   `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` modes.
 
-The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda and live payment-service Keycloak smoke evidence remain future
-work.
+The slice does not claim full Payment Service completion. A deployed
+payment-domain event publisher worker/API path and live payment-service Keycloak
+smoke evidence remain future work.
 
 ## Commands Run
 
@@ -67,6 +70,7 @@ work.
 npm run test:payment-service:unit
 npm run test:payment-service:integration
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --rerun-tasks
 npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest --tests lab.banking.core.ledger.api.LedgerRuntimeApiParityIntegrationTest --rerun-tasks
 npm run test:core-banking:unit -- --rerun-tasks
@@ -107,14 +111,18 @@ need local file-lock socket and Docker access.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
   ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
   `PaymentOutboxDispatcherIntegrationTest`, and
-  `PaymentOutboxWorkerIntegrationTest`, and `PaymentAuthorizationIntegrationTest`.
+  `PaymentOutboxWorkerIntegrationTest`, `PaymentKafkaOutboxPublisherIntegrationTest`,
+  and `PaymentAuthorizationIntegrationTest`.
 - `npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks`:
   first sandboxed Gradle run failed with `java.net.SocketException: Operation
   not permitted`; rerun after sandbox escalation passed and proved the staff
   cancellation maker-checker route policy and separation controls.
+- `npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks`:
+  pass after sandbox escalation; PostgreSQL and Redpanda Testcontainers proved
+  payment-domain event publication without publishing ledger command events.
 - `npm run test:payment-service:integration -- --rerun-tasks`: pass after
   sandbox escalation; the full payment-service integration suite passed with
-  the new cancellation approval migration included.
+  the cancellation approval migration and payment Kafka publisher included.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
   idempotent replay, structured API access, and service-role denial.
@@ -307,6 +315,19 @@ Manifest and API client coverage verifies:
 - the third empty run returns `noPendingEvent=true` without external payment
   network integration.
 
+`PaymentKafkaOutboxPublisherIntegrationTest` verifies:
+
+- `PaymentKafkaOutboxPublisher` publishes durable non-ledger payment domain
+  events to Redpanda with an idempotent producer and synthetic-only headers;
+- `PaymentInstructionCanceled` is published as a Kafka envelope containing the
+  persisted outbox id, aggregate id, idempotency key, payload, and
+  `sourceService=payment-service`;
+- `PaymentLedgerPostingRequested` remains `PENDING` and is not published by the
+  domain-event publisher, preserving the existing core-banking ledger dispatch
+  boundary;
+- successful broker acknowledgement marks only the published payment domain
+  event `PUBLISHED`.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -329,8 +350,8 @@ dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
 maker-checker correction path and PAY-102 staff-terminal smoke panel, but
-Kafka/Redpanda runtime publication and live payment-service Keycloak realm smoke
-evidence are still pending.
+live deployed payment-domain publisher worker/API evidence and live
+payment-service Keycloak realm smoke evidence are still pending.
 The new Compose/Kubernetes/Helm surface is structurally validated only; it does
 not yet prove a live payment-service rollout, live worker dispatch against
 core-banking, or a live Keycloak-issued `PAYMENT_SERVICE` service token.

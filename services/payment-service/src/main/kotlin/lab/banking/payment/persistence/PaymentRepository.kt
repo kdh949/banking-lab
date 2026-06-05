@@ -657,6 +657,27 @@ class PaymentRepository(
             this::mapOutbox
         ).firstOrNull()
 
+    fun findNextPublishableDomainOutboxForUpdate(eventTypes: Collection<String>): PaymentOutboxRecord? {
+        if (eventTypes.isEmpty()) {
+            return null
+        }
+        return jdbc.query(
+            """
+            SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+                   payload_json::text AS payload_json, status, retry_count, error_message
+            FROM payment_outbox_events
+            WHERE event_type IN (:eventTypes)
+              AND status IN ('PENDING', 'FAILED')
+              AND (next_retry_at IS NULL OR next_retry_at <= now())
+            ORDER BY created_at ASC, outbox_event_id ASC
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """.trimIndent(),
+            mapOf("eventTypes" to eventTypes),
+            this::mapOutbox
+        ).firstOrNull()
+    }
+
     fun markOutboxPublished(outboxEventId: String) {
         jdbc.update(
             """
