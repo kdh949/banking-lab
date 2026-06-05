@@ -82,6 +82,7 @@ Status values are limited to `complete`, `api-backed-read`, `api-backed-command`
 ## Runtime Coverage Notes
 
 - `payment-service`: `LivePaymentOutboxWorkerComposeSmokeIntegrationTest` and `npm run test:payment-service:outbox-worker-compose` now prove the live Compose `payment-outbox-worker` settles an API-created synthetic payment through live `core-banking` as balanced `BILL_PAYMENT` postings and leaves the core settlement event in durable outbox state.
+- `payment-service`: `npm run test:payment-service:keycloak-service-token` now proves the imported Keycloak `payment-service-api` service account can issue a signed `PAYMENT_SERVICE` client-credentials token with `payment-service-api` and `core-banking-api` audiences, and payment-service accepts it on the dispatch route with simulator fallback disabled.
 - `payment-service`, `notification-service`, and `reporting-service`: service-specific Flyway history tables now use shared-schema baseline version `0` so V001+ service migrations can initialize after core-banking has already populated the shared synthetic PostgreSQL `public` schema.
 
 ## Baseline Commands

@@ -41,8 +41,8 @@ test("H8 generated governance artifacts are synthetic and complete", async () =>
   );
 
   assert.equal(access.syntheticOnly, true);
-  assert.equal(access.summary.principalCount, 12);
-  assert.equal(access.summary.roleAssignmentCount, 16);
+  assert.equal(access.summary.principalCount, 13);
+  assert.equal(access.summary.roleAssignmentCount, 17);
   assert.ok(access.summary.overPrivilegeFlagCount > 0);
   assert.ok(access.principals.some((principal) => principal.principalId === "security-admin01" && principal.overPrivilegeFlags.length > 0));
 

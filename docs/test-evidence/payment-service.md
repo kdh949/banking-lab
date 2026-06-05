@@ -56,6 +56,11 @@ This evidence covers the first synthetic Payment Service slice:
   dev-only simulator token decoder, and route role policies for instruction,
   autopay, settlement, due-execution, Outbox dispatch, and staff cancellation
   maker-checker APIs.
+- Live Keycloak client-credentials smoke coverage proving the imported
+  `payment-service-api` service account receives a signed `PAYMENT_SERVICE`
+  token with `payment-service-api` and `core-banking-api` audiences, and that
+  payment-service accepts it on the dispatch route with simulator fallback
+  disabled.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 - Live Docker Compose smoke coverage for `payment-service` plus
@@ -73,8 +78,10 @@ This evidence covers the first synthetic Payment Service slice:
   `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` /
   `BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED` mode splits.
 
-The slice does not claim full Payment Service completion. Live payment-service
-Keycloak smoke evidence remains future work.
+The slice does not claim full Payment Service completion. The live Keycloak
+service-token smoke proves route authorization for payment-service dispatch,
+but the scheduled worker still uses an injected service token rather than
+fetching client credentials itself.
 
 ## Commands Run
 
@@ -87,6 +94,7 @@ npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaym
 npm run test:payment-service:domain-publisher-compose
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks
 npm run test:payment-service:outbox-worker-compose
+npm run test:payment-service:keycloak-service-token
 npm run test:payment-service:integration -- --rerun-tasks
 npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest --tests lab.banking.core.ledger.api.LedgerRuntimeApiParityIntegrationTest --rerun-tasks
 npm run test:core-banking:unit -- --rerun-tasks
@@ -160,6 +168,13 @@ need local file-lock socket and Docker access.
   the shared `public` schema; the fix sets service Flyway baseline-on-migrate at
   version `0`, allowing payment V001 and later migrations to run in the shared
   synthetic schema.
+- `npm run test:payment-service:keycloak-service-token`: pass after sandbox
+  escalation; the wrapper built core-banking and payment-service boot jars,
+  started disposable PostgreSQL, Keycloak, `core-banking`, and `payment-service`
+  with simulator tokens disabled, obtained a live Keycloak client-credentials
+  token for `payment-service-api`, asserted the `PAYMENT_SERVICE` role plus
+  `payment-service-api` and `core-banking-api` audiences, and called the payment
+  dispatch route successfully with `NO_PENDING_EVENT`.
 - `npm run test:payment-service:integration -- --rerun-tasks`: pass after
   sandbox escalation; the full payment-service integration suite passed with
   the cancellation approval migration and payment Kafka publisher included.
@@ -427,7 +442,9 @@ Kubernetes, and Helm add only synthetic payment-service API/worker/runtime
 settings, Redpanda publisher settings, and a replaceable local synthetic
 service-token placeholder for the core-banking posting bridge.
 The live payment outbox worker smoke uses dev-only simulator tokens with
-security enabled; it does not claim a real Keycloak-issued service token.
+security enabled. The separate live Keycloak service-token smoke uses a signed
+Keycloak client-credentials token with simulator fallback disabled, but it does
+not yet make the scheduled worker fetch that token by itself.
 Staff cancellation approval creates only synthetic `payment_cancellation_requests`
 rows and a durable `PaymentInstructionCanceled` Outbox event after independent
 checker approval; it never writes core ledger tables directly.
@@ -441,7 +458,9 @@ core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
 maker-checker correction path, PAY-102 staff-terminal smoke panel, and
 live Compose payment domain-event publisher and ledger outbox worker smoke
-evidence. Live payment-service Keycloak realm smoke evidence is still pending.
+evidence. Live payment-service Keycloak service-token route smoke evidence now
+passes for dispatch authorization.
 The new Compose/Kubernetes/Helm surface is structurally validated, and the
 domain-event publisher plus ledger outbox worker now have live Compose proof.
-It does not yet prove a live Keycloak-issued `PAYMENT_SERVICE` service token.
+The remaining service-token gap is scheduled worker token acquisition/rotation,
+not route acceptance of a Keycloak-issued `PAYMENT_SERVICE` token.

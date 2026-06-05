@@ -115,6 +115,7 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const liveSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentDomainEventPublisherComposeSmokeIntegrationTest.kt", "utf8");
   const liveWorkerSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentOutboxWorkerComposeSmokeIntegrationTest.kt", "utf8");
+  const keycloakServiceTokenSmoke = await readFile("scripts/run-payment-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:payment-service"\)/);
   assert.match(application, /real-payment-network-enabled: false/);
@@ -156,6 +157,7 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN/);
   assert.match(packageJson, /test:payment-service:domain-publisher-compose/);
   assert.match(packageJson, /test:payment-service:outbox-worker-compose/);
+  assert.match(packageJson, /test:payment-service:keycloak-service-token/);
   assert.match(liveSmoke, /BANKING_LAB_LIVE_PAYMENT_DOMAIN_PUBLISHER_COMPOSE_PROJECT/);
   assert.match(liveSmoke, /PaymentLedgerPostingRequested/);
   assert.match(liveSmoke, /PaymentInstructionCanceled/);
@@ -163,6 +165,12 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   assert.match(liveWorkerSmoke, /PaymentLedgerPostingRequested/);
   assert.match(liveWorkerSmoke, /PaymentLedgerPostingSettled/);
   assert.match(liveWorkerSmoke, /BANK-SETTLEMENT/);
+  assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
+  assert.match(keycloakServiceTokenSmoke, /client_id=payment-service-api/);
+  assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(keycloakServiceTokenSmoke, /PAYMENT_SERVICE/);
+  assert.match(keycloakServiceTokenSmoke, /payment-service-api audience/);
+  assert.match(keycloakServiceTokenSmoke, /NO_PENDING_EVENT/);
   assert.match(prometheus, /job_name: payment-service/);
   assert.match(prometheus, /payment-service:8088/);
   assert.match(prometheus, /payment-outbox-worker:8088/);

@@ -13,6 +13,7 @@
       { "name": "FDS_REVIEWER" },
       { "name": "AML_REVIEWER" },
       { "name": "OPS_OPERATOR" },
+      { "name": "PAYMENT_SERVICE" },
       { "name": "AUDITOR" },
       { "name": "COMPLIANCE_MANAGER" },
       { "name": "PASSKEY_RECOVERY_ADMIN" },
@@ -189,6 +190,41 @@
       ]
     },
     {
+      "clientId": "payment-service-api",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "payment-service-api-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "payment-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "payment-service-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "core-banking-api",
       "enabled": true,
       "publicClient": false,
@@ -230,6 +266,13 @@
     }
   ],
   "users": [
+    {
+      "username": "service-account-payment-service-api",
+      "enabled": true,
+      "emailVerified": true,
+      "serviceAccountClientId": "payment-service-api",
+      "realmRoles": ["PAYMENT_SERVICE"]
+    },
     {
       "username": "branch01",
       "enabled": true,

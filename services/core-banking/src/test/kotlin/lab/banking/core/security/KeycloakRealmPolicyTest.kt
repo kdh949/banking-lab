@@ -30,8 +30,13 @@ class KeycloakRealmPolicyTest {
 
         val roles = listMap(mapValue(realm["roles"])["realm"]).map { it["name"]?.toString() }.toSet()
         assertTrue(roles.contains("PASSKEY_RECOVERY_ADMIN"))
+        assertTrue(roles.contains("PAYMENT_SERVICE"))
 
         val users = listMap(realm["users"])
+        val paymentServiceAccount = users.single { it["username"] == "service-account-payment-service-api" }
+        assertEquals("payment-service-api", paymentServiceAccount["serviceAccountClientId"])
+        assertTrue(listValue(paymentServiceAccount["realmRoles"]).contains("PAYMENT_SERVICE"))
+
         val webAuthnUser = users.single { it["username"] == "manager-webauthn01" }
         assertTrue(listValue(webAuthnUser["requiredActions"]).contains("webauthn-register"))
 
@@ -48,6 +53,16 @@ class KeycloakRealmPolicyTest {
         val adminClient = clients.single { it["clientId"] == "admin-console" }
         assertTrue(listValue(adminClient["redirectUris"]).contains("http://localhost:3007/*"))
         assertTrue(listValue(adminClient["webOrigins"]).contains("http://localhost:3007"))
+
+        val paymentServiceClient = clients.single { it["clientId"] == "payment-service-api" }
+        assertEquals(false, paymentServiceClient["publicClient"])
+        assertEquals(true, paymentServiceClient["serviceAccountsEnabled"])
+        assertEquals(false, paymentServiceClient["directAccessGrantsEnabled"])
+        val paymentMappers = listMap(paymentServiceClient["protocolMappers"])
+            .map { it["name"]?.toString() }
+            .toSet()
+        assertTrue(paymentMappers.contains("payment-service-api-audience"))
+        assertTrue(paymentMappers.contains("core-banking-api-audience"))
     }
 
     @Suppress("UNCHECKED_CAST")
