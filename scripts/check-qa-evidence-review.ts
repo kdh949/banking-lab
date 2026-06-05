@@ -44,11 +44,11 @@ const structuredErrors = await readFile("docs/test-evidence/structured-error-con
 
 const mappedScenarioCount = parity.suites.reduce((sum, suite) => sum + suite.scenarioCount, 0);
 assert.equal(mappedScenarioCount, parity.nodeReferenceTestCount);
-assert.equal(parity.nodeReferenceTestCount, 42);
+assert.equal(parity.nodeReferenceTestCount, 43);
 assert.equal(gate.status, "blocked");
 assert.match(recommendation, /Keep the Node reference runtime/);
 assert.match(recommendation, /Do not mark `docs\/migration\/node-retirement-gate\.json` ready/);
-assert.match(matrix, /Total mapped reference scenarios: 42/);
+assert.match(matrix, /Total mapped reference scenarios: 43/);
 
 for (const code of [
   "POLICY_REASON_REQUIRED",

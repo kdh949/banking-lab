@@ -212,6 +212,8 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   const manifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-404.payment-outbox-dispatch.json", "utf8"));
 
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
+  assert.match(panel, /mismatchType/);
+  assert.match(panel, /detectedReason/);
   assert.match(panel, /data-testid="api-backed-payment-outbox-dispatch"/);
   assert.match(panel, /dispatchNextPaymentLedgerPosting/);
   assert.match(panel, /Browser OPS-404 payment outbox dispatch smoke/);

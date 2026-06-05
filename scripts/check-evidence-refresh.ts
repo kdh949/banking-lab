@@ -328,7 +328,7 @@ if (summary) {
 }
 
 const parityMatrix = await readFile(parityMatrixPath, "utf8").catch(() => "");
-requireIncludes(parityMatrix, "Total mapped reference scenarios: 42", "Parity matrix must keep the 42 mapped scenario count.");
+requireIncludes(parityMatrix, "Total mapped reference scenarios: 43", "Parity matrix must keep the 43 mapped scenario count.");
 requireIncludes(parityMatrix, "Pass for current mapped parity", "Parity matrix must report pass for current mapped parity, not stale partial status.");
 requireIncludes(parityMatrix, "non-synthetic passkey evidence", "Parity matrix must name non-synthetic passkey evidence.");
 requireIncludes(parityMatrix, "final review", "Parity matrix must name final review state.");

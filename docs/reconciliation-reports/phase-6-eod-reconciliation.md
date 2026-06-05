@@ -21,10 +21,17 @@ Unmatched or mismatched entries become reconciliation items with:
 
 - status `OPEN`
 - owner `ops01`
-- mismatch type
+- mismatch type (`AMOUNT_MISMATCH`, `MISSING_EXTERNAL`, `UNEXPECTED_EXTERNAL`, `DUPLICATE_EXTERNAL`, `STALE_EXTERNAL`, or `STATUS_MISMATCH`)
 - internal amount
 - external amount
+- synthetic feed file id
+- detected reason
 - timeline
+
+The synthetic external file simulator supports matched, amount mismatch, missing external,
+external-only, duplicate external, stale external, and status-mismatch modes. These modes
+are stored as durable reconciliation item metadata and surfaced through the shared API
+client for staff and operations screens.
 
 ## Adjustment Control
 
@@ -34,4 +41,4 @@ After checker approval, the ledger posts a balanced `ADJUSTMENT` transaction aga
 
 ## Evidence
 
-`docs/test-evidence/generated/phase-6-fds-aml-reconciliation.json` records the passing checks for ledger validation, unmatched item creation, closed-day rejection, and approved adjustment posting.
+`docs/test-evidence/generated/phase-6-fds-aml-reconciliation.json` records the passing checks for ledger validation, unmatched item creation, closed-day rejection, and approved adjustment posting. `ReconciliationOpsApiParityIntegrationTest` also covers the target Spring/PostgreSQL mismatch taxonomy for duplicate, stale, external-only, and missing-external simulator feeds.

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { createLabHttpServer, createLabState } from "../runtime/labApp.mjs";
 
 async function withServer(fn) {
@@ -223,4 +224,23 @@ test("EOD reconciliation creates owned mismatch item and adjustment posts on ope
     assert.equal(approved.payload.ledgerTransaction.businessDate, nextDate);
     assert.equal(state.ledgerCore.validateInvariants(), true);
   });
+});
+
+test("target reconciliation schema and API expose synthetic mismatch taxonomy", async () => {
+  const migration = await readFile("db/migrations/V033__reconciliation_mismatch_taxonomy.sql", "utf8");
+  const service = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsService.kt", "utf8");
+  const models = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsModels.kt", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+
+  assert.match(migration, /mismatch_type TEXT NOT NULL/);
+  assert.match(migration, /DUPLICATE_EXTERNAL/);
+  assert.match(migration, /STALE_EXTERNAL/);
+  assert.match(migration, /feed_file_id/);
+  assert.match(service, /normalizedMode == "DUPLICATE"/);
+  assert.match(service, /normalizedMode == "STALE"/);
+  assert.match(service, /mismatchType = "UNEXPECTED_EXTERNAL"/);
+  assert.match(models, /val mismatchType: String/);
+  assert.match(models, /val detectedReason: String/);
+  assert.match(client, /readonly mismatchType: string/);
+  assert.match(client, /readonly detectedReason: string/);
 });

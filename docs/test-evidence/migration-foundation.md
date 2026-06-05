@@ -3,7 +3,7 @@
 ## Acceptance Checks
 
 - Node reference runtime is retained until parity gates pass.
-- Current 42 Node reference scenarios are mapped to Kotlin/Spring and Next/Playwright target tests.
+- Current 43 Node reference scenarios are mapped to Kotlin/Spring and Next/Playwright target tests.
 - Parity command runs Node reference tests, manifest validation, target screen-engine manifest parity tests, and evidence pack generation.
 - API failures expose structured error fields for invariant, policy, cause, fix, request ID, and documentation.
 - Spring Boot/Kotlin scaffold declares `/health`, structured error DTOs, PostgreSQL, Flyway, and Testcontainers dependencies.

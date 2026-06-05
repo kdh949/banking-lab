@@ -136,7 +136,7 @@
     {
       "id": "node-reference-parity",
       "status": "pass",
-      "description": "All 42 current Node reference scenarios are mapped and pass against Kotlin/Spring or Next/Playwright parity tests.",
+      "description": "All 43 current Node reference scenarios are mapped and pass against Kotlin/Spring or Next/Playwright parity tests.",
       "evidence": [
         "docs/migration/parity-scenarios.json"
       ]

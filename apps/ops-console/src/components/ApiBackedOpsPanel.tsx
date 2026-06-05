@@ -532,8 +532,16 @@ export function ApiBackedOpsPanel() {
             <div>
               <dt>Mismatch</dt>
               <dd>
-                {state.item.amountMinor} {state.item.currency}
+                {state.item.mismatchType}: {state.item.amountMinor} {state.item.currency}
               </dd>
+            </div>
+            <div>
+              <dt>Feed</dt>
+              <dd>{state.item.feedFileId ?? "synthetic feed pending"}</dd>
+            </div>
+            <div>
+              <dt>Reason</dt>
+              <dd>{state.item.detectedReason}</dd>
             </div>
           </>
         ) : null}

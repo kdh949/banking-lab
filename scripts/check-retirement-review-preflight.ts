@@ -121,7 +121,7 @@ function buildDelegatedChecks(state: {
         "Reference boundary: pass",
         "Target stack anchors: pass",
         "Evidence paths: pass",
-        "Parity map: pass (42/42 mapped scenarios)",
+        "Parity map: pass (43/43 mapped scenarios)",
         ...incompleteGateLines
       ],
       forbiddenOutput: ["- evidence-refresh: in-progress", "- evidence-refresh: pending", ...staleIncompleteLines]

@@ -111,7 +111,13 @@ class ReconciliationOpsApiParityIntegrationTest {
             .andExpect(jsonPath("$.item.unmatchedItemCount").value(1))
             .andExpect(jsonPath("$.reconciliationItems[0].status").value("OPEN"))
             .andExpect(jsonPath("$.reconciliationItems[0].owner").value("ops01"))
+            .andExpect(jsonPath("$.reconciliationItems[0].mismatchType").value("AMOUNT_MISMATCH"))
             .andExpect(jsonPath("$.reconciliationItems[0].amountMinor").value(1000))
+            .andExpect(jsonPath("$.reconciliationItems[0].internalAmountMinor").value(1234))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalAmountMinor").value(2234))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalStatus").value("SETTLED"))
+            .andExpect(jsonPath("$.reconciliationItems[0].feedFileId").value(org.hamcrest.Matchers.startsWith("EXT-FILE-")))
+            .andExpect(jsonPath("$.reconciliationItems[0].detectedReason").value("Synthetic external feed amount differs from the posted internal transfer"))
             .andReturn()
 
         val itemId = objectMapper.readTree(closingResponse.response.contentAsString)
@@ -236,6 +242,94 @@ class ReconciliationOpsApiParityIntegrationTest {
             .andExpect(jsonPath("$.error.requestId").value("REQ-REC-ADJUSTED-ADJUSTMENT"))
             .andExpect(jsonPath("$.error.route").value("/api/ops/reconciliation-items/$itemId/adjustment-requests"))
     }
+
+    @Test
+    fun `external simulator feed modes classify duplicate stale external-only and missing-external items`() {
+        val duplicateDate = LocalDate.of(2026, 2, 10)
+        postSyntheticTransfer(duplicateDate, "RECON-TRF-DUP-001", 1_500)
+        mockMvc.perform(
+            post("/api/ops/daily-closings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(closingCommand(duplicateDate, "RECON-EOD-DUP-001", "DUPLICATE"))
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.reconciliationItems[0].mismatchType").value("DUPLICATE_EXTERNAL"))
+            .andExpect(jsonPath("$.reconciliationItems[0].amountMinor").value(1_500))
+            .andExpect(jsonPath("$.reconciliationItems[0].internalAmountMinor").value(1_500))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalAmountMinor").value(3_000))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalStatus").value("DUPLICATE"))
+
+        val staleDate = LocalDate.of(2026, 2, 11)
+        postSyntheticTransfer(staleDate, "RECON-TRF-STALE-001", 2_000)
+        mockMvc.perform(
+            post("/api/ops/daily-closings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(closingCommand(staleDate, "RECON-EOD-STALE-001", "STALE"))
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.reconciliationItems[0].mismatchType").value("STALE_EXTERNAL"))
+            .andExpect(jsonPath("$.reconciliationItems[0].amountMinor").value(2_000))
+            .andExpect(jsonPath("$.reconciliationItems[0].internalAmountMinor").value(2_000))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalAmountMinor").value(2_000))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalStatus").value("STALE"))
+
+        val externalOnlyDate = LocalDate.of(2026, 2, 12)
+        mockMvc.perform(
+            post("/api/ops/daily-closings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(closingCommand(externalOnlyDate, "RECON-EOD-EXT-ONLY-001", "EXTERNAL_ONLY"))
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.reconciliationItems[0].mismatchType").value("UNEXPECTED_EXTERNAL"))
+            .andExpect(jsonPath("$.reconciliationItems[0].internalAmountMinor").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalAmountMinor").value(1_000))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalStatus").value("SETTLED"))
+
+        val missingDate = LocalDate.of(2026, 2, 13)
+        postSyntheticTransfer(missingDate, "RECON-TRF-MISSING-001", 2_500)
+        mockMvc.perform(
+            post("/api/ops/daily-closings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(closingCommand(missingDate, "RECON-EOD-MISSING-001", "MISSING_EXTERNAL"))
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.reconciliationItems[0].mismatchType").value("MISSING_EXTERNAL"))
+            .andExpect(jsonPath("$.reconciliationItems[0].internalAmountMinor").value(2_500))
+            .andExpect(jsonPath("$.reconciliationItems[0].externalAmountMinor").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.reconciliationItems[0].detectedReason").value("Internal posted transfer is missing from synthetic external feed"))
+    }
+
+    private fun postSyntheticTransfer(businessDate: LocalDate, idempotencyKey: String, amountMinor: Long) {
+        mockMvc.perform(
+            post("/api/ledger/transfers")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "fromAccountId": "ACC-SYN-001-001",
+                      "toAccountId": "ACC-SYN-002-001",
+                      "amountMinor": $amountMinor,
+                      "idempotencyKey": "$idempotencyKey",
+                      "businessDate": "$businessDate",
+                      "requestedBy": "ops01",
+                      "requestedChannel": "OPS_CONSOLE",
+                      "reason": "Seed reconciliation simulator feed taxonomy"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+    }
+
+    private fun closingCommand(businessDate: LocalDate, idempotencyKey: String, externalMode: String): String =
+        """
+        {
+          "businessDate": "$businessDate",
+          "idempotencyKey": "$idempotencyKey",
+          "requestedBy": "ops01",
+          "externalMode": "$externalMode"
+        }
+        """.trimIndent()
 
     private fun seedAccountsAndBalances() {
         TransactionTemplate(transactionManager).executeWithoutResult {

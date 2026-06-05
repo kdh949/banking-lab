@@ -18,7 +18,7 @@ test("retirement boundary audit passes with current gate ready", async () => {
   assert.match(stdout, /Reference boundary: pass/);
   assert.match(stdout, /Target stack anchors: pass/);
   assert.match(stdout, /Evidence paths: pass/);
-  assert.match(stdout, /Parity map: pass \(42\/42 mapped scenarios\)/);
+  assert.match(stdout, /Parity map: pass \(43\/43 mapped scenarios\)/);
   assert.doesNotMatch(stdout, /Incomplete gates:/);
 });
 

@@ -1592,7 +1592,13 @@ export interface ReconciliationItemDto {
   readonly sourceSystem: string;
   readonly internalReferenceId?: string | null;
   readonly externalReferenceId?: string | null;
+  readonly mismatchType: string;
   readonly amountMinor: number;
+  readonly internalAmountMinor?: number | null;
+  readonly externalAmountMinor?: number | null;
+  readonly externalStatus?: string | null;
+  readonly feedFileId?: string | null;
+  readonly detectedReason: string;
   readonly currency: string;
   readonly status: string;
   readonly owner?: string | null;
