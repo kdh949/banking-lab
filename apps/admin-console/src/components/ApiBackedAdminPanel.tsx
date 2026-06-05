@@ -10,6 +10,7 @@ import {
   type ReportArtifactExportResponse,
   type ReportDefinitionDto,
   type NotificationPreferenceDto,
+  type NotificationTemplateChangeRequestDto,
   type NotificationTemplateDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -39,6 +40,7 @@ type NotificationAdminState =
   | {
       readonly status: "loaded";
       readonly templates: readonly NotificationTemplateDto[];
+      readonly templateChanges: readonly NotificationTemplateChangeRequestDto[];
       readonly preferences: readonly NotificationPreferenceDto[];
     }
   | { readonly status: "failed"; readonly message: string };
@@ -124,14 +126,15 @@ export function ApiBackedAdminPanel() {
 
     Promise.all([
       client.listNotificationTemplates(),
+      client.listNotificationTemplateChangeRequests(),
       client.listNotificationPreferences({
         requestedBy: "notification-admin01",
         reason: "API-backed notification preference review"
       })
     ])
-      .then(([templates, preferences]) => {
+      .then(([templates, templateChanges, preferences]) => {
         if (!cancelled) {
-          setNotificationState({ status: "loaded", templates, preferences });
+          setNotificationState({ status: "loaded", templates, templateChanges, preferences });
         }
       })
       .catch((error: unknown) => {
@@ -419,6 +422,21 @@ export function ApiBackedAdminPanel() {
             <div>
               <dt>Preferences</dt>
               <dd>{notificationState.preferences.length}</dd>
+            </div>
+            <div>
+              <dt>Template Workflows</dt>
+              <dd>
+                {notificationState.templateChanges.map((change) => `${change.changeRequestId}:${change.workflowStatus}`).join(", ") ||
+                  "none"}
+              </dd>
+            </div>
+            <div>
+              <dt>Workflow Timeline</dt>
+              <dd>
+                {notificationState.templateChanges[0]
+                  ? notificationState.templateChanges[0].workflowTimeline.map((entry) => entry.eventType).join(" -> ")
+                  : "none"}
+              </dd>
             </div>
             <div>
               <dt>Template Sample</dt>

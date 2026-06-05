@@ -16,6 +16,12 @@ enum class NotificationTemplateChangeStatus {
     REJECTED
 }
 
+enum class NotificationWorkflowStatus {
+    PENDING_REVIEW,
+    APPROVED,
+    REJECTED
+}
+
 data class ConsumeNotificationEventRequest(
     val sourceEventId: String,
     val eventType: String,
@@ -124,6 +130,20 @@ data class NotificationTemplateChangeRequestDto(
     val reviewedAt: OffsetDateTime?,
     val reviewReason: String?,
     val approvedTemplateId: String?,
+    val workflowInstanceId: String,
+    val workflowStatus: NotificationWorkflowStatus,
+    val workflowTimeline: List<NotificationWorkflowTimelineEntryDto>,
+    val syntheticOnly: Boolean
+)
+
+data class NotificationWorkflowTimelineEntryDto(
+    val workflowEventId: String,
+    val eventType: String,
+    val fromStatus: NotificationWorkflowStatus?,
+    val toStatus: NotificationWorkflowStatus,
+    val actorId: String,
+    val reason: String,
+    val occurredAt: OffsetDateTime,
     val syntheticOnly: Boolean
 )
 
@@ -168,6 +188,20 @@ data class NotificationTemplateChangeRequestRecord(
     val reviewedAt: OffsetDateTime?,
     val reviewReason: String?,
     val approvedTemplateId: String?,
+    val workflowInstanceId: String,
+    val workflowStatus: NotificationWorkflowStatus,
+    val syntheticOnly: Boolean
+)
+
+data class NotificationWorkflowEventRecord(
+    val workflowEventId: String,
+    val workflowInstanceId: String,
+    val eventType: String,
+    val fromStatus: NotificationWorkflowStatus?,
+    val toStatus: NotificationWorkflowStatus,
+    val actorId: String,
+    val reason: String,
+    val occurredAt: OffsetDateTime,
     val syntheticOnly: Boolean
 )
 

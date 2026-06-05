@@ -39,6 +39,24 @@ paths:
                 items:
                   $ref: '#/components/schemas/NotificationTemplate'
   /api/notifications/templates/change-requests:
+    get:
+      summary: List notification template change requests with workflow timeline state
+      operationId: listNotificationTemplateChangeRequests
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            enum: [PENDING, APPROVED, REJECTED]
+      responses:
+        '200':
+          description: Template change requests with Temporal-compatible workflow state
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationTemplateChangeRequest'
     post:
       summary: Request a notification template change for maker-checker approval
       operationId: createNotificationTemplateChangeRequest
@@ -562,7 +580,7 @@ components:
           format: date-time
     NotificationTemplateChangeRequest:
       type: object
-      required: [changeRequestId, eventType, channel, requestedVersion, bodyTemplate, providerKind, status, requestedBy, requestReason, requestedAt, syntheticOnly]
+      required: [changeRequestId, eventType, channel, requestedVersion, bodyTemplate, providerKind, status, requestedBy, requestReason, requestedAt, workflowInstanceId, workflowStatus, workflowTimeline, syntheticOnly]
       properties:
         changeRequestId:
           type: string
@@ -602,6 +620,41 @@ components:
         approvedTemplateId:
           type: string
           nullable: true
+        workflowInstanceId:
+          type: string
+          pattern: '^NWF-'
+        workflowStatus:
+          $ref: '#/components/schemas/NotificationWorkflowStatus'
+        workflowTimeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationWorkflowTimelineEntry'
+        syntheticOnly:
+          const: true
+    NotificationWorkflowStatus:
+      enum: [PENDING_REVIEW, APPROVED, REJECTED]
+    NotificationWorkflowTimelineEntry:
+      type: object
+      required: [workflowEventId, eventType, toStatus, actorId, reason, occurredAt, syntheticOnly]
+      properties:
+        workflowEventId:
+          type: string
+          pattern: '^NWE-'
+        eventType:
+          enum: [REQUESTED, APPROVED, REJECTED]
+        fromStatus:
+          allOf:
+            - $ref: '#/components/schemas/NotificationWorkflowStatus'
+          nullable: true
+        toStatus:
+          $ref: '#/components/schemas/NotificationWorkflowStatus'
+        actorId:
+          type: string
+        reason:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
         syntheticOnly:
           const: true
     NotificationPreference:
