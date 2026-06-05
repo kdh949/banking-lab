@@ -48,6 +48,10 @@ spec:
               value: "1000"
             - name: BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS
               value: "5000"
+            - name: BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD
+              value: "3"
+            - name: BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS
+              value: "60"
             - name: BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES
               value: "ReportArtifactGenerated,ReportArtifactExported,ReportRetentionSweepCompleted"
             - name: BANKING_LAB_OTEL_SERVICE_NAME

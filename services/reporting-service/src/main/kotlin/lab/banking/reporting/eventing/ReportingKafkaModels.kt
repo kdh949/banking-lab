@@ -6,7 +6,9 @@ data class ReportingOutboxRecord(
     val aggregateType: String,
     val aggregateId: String,
     val idempotencyKey: String?,
-    val payload: Map<String, Any?>
+    val payload: Map<String, Any?>,
+    val retryCount: Int = 0,
+    val errorMessage: String? = null
 )
 
 data class ReportingOutboxKafkaEnvelope(
@@ -24,6 +26,8 @@ data class ReportingKafkaPublisherConfig(
     val topic: String = "banking.lab.reporting-events",
     val clientId: String = "reporting-service-domain-event-publisher",
     val publishTimeoutMillis: Long = 5_000,
+    val deadLetterThreshold: Int = 3,
+    val retryDelaySeconds: Int = 60,
     val eventTypes: Set<String> = ReportingOutboxPublisherPort.defaultEventTypes
 )
 
@@ -41,6 +45,7 @@ data class ReportingKafkaPublishBatchResult(
     val attempted: Int,
     val published: Int,
     val failed: Int,
+    val deadLettered: Int,
     val results: List<ReportingKafkaPublishResult>
 )
 

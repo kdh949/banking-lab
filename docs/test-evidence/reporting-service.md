@@ -14,9 +14,11 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `POST /api/reports/retention/sweeps` expires artifacts past `retention_until`, records `SYNTHETIC_RETENTION_EXPIRED`, and requires an authorized ops/compliance/reporting actor.
 - Report generation, export, and retention sweep completion append durable `reporting_outbox_events` rows in the same transaction as reporting metadata changes.
 - `ReportingKafkaOutboxPublisher` reads allow-listed `PENDING reporting_outbox_events`, publishes reporting domain events to Redpanda/Kafka, and marks rows `PUBLISHED` only after broker acknowledgement.
-- `ReportingDomainEventPublisherWorker` provides a disabled-by-default scheduled worker controlled by `banking-lab.reporting-service.domain-event-publisher.*` settings.
+- `ReportingKafkaOutboxPublisher` records broker failures as retryable `FAILED` rows until the configured dead-letter threshold moves the row to `DEAD_LETTER`.
+- `ReportingDomainEventPublisherWorker` provides a disabled-by-default scheduled worker controlled by `banking-lab.reporting-service.domain-event-publisher.*` settings, including retry delay and dead-letter threshold.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - `V004__reporting_outbox_events.sql` adds a durable `PENDING` outbox table with idempotency-key uniqueness for report-generated events.
+- `V005__reporting_outbox_retry_dead_letter.sql` adds `retry_count`, `next_retry_at`, `error_message`, and `DEAD_LETTER` status support.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Docker Compose platform profile also exposes `reporting-domain-event-publisher`, which uses the same Spring image with the reporting publisher enabled and the API container publisher mode disabled.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
@@ -49,6 +51,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - Durable reporting outbox rows are created for `ReportArtifactGenerated`, `ReportArtifactExported`, and `ReportRetentionSweepCompleted`; idempotent generation replay does not create a duplicate generated event.
 - Broker-published reporting envelopes carry `sourceService=reporting-service`, `syntheticOnly=true`, aggregate metadata, and payload controls proving `ledgerRowsMutated=false`.
 - The reporting publisher uses an allow-list for reporting event types and Redpanda integration coverage proves `ReportArtifactGenerated` and `ReportArtifactExported` transition from `PENDING` to `PUBLISHED`.
+- Broker failure coverage proves retryable `FAILED` rows keep `published_at` empty, record bounded `error_message`, increment `retry_count`, honor `next_retry_at`, and move to `DEAD_LETTER` at threshold.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, `REPORT_ARTIFACT_LIST_VIEW`, `REPORT_ARTIFACT_EXPORTED`, and `REPORT_RETENTION_SWEEP_RUN` audit rows.
@@ -79,7 +82,8 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 ## Remaining Risk
 
 - Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, retention lifecycle expiration, and Redpanda-backed domain event publication are implemented.
-- Broker publication is proven with Redpanda Testcontainers, and Compose/Kubernetes/Helm worker runtime wiring is structurally validated; live worker smoke and retry/dead-letter hardening remain future work.
+- Broker publication and retry/dead-letter state transitions are proven with Redpanda/Testcontainers, and Compose/Kubernetes/Helm worker runtime wiring is structurally validated.
+- Live worker smoke, operator dead-letter remediation screens, and richer backoff policy controls remain future work.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
   reporting smokes are present but skipped locally when the reporting E2E URL is

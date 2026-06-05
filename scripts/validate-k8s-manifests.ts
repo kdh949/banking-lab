@@ -92,6 +92,8 @@ if (
   !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
   !hasText(reportingDomainEventPublisherDeployment, "value: \"true\"") ||
   !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS") ||
   !hasText(reportingDomainEventPublisherDeployment, "redpanda:9092") ||
   !hasText(reportingDomainEventPublisherDeployment, "ReportRetentionSweepCompleted")
 ) {

@@ -42,6 +42,8 @@ const checks: Check[] = [
       "reporting-domain-event-publisher:",
       "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED: \"true\"",
       "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS",
       "SPRING_FLYWAY_TABLE: notification_flyway_schema_history",
       "SPRING_FLYWAY_TABLE: payment_flyway_schema_history"
     ],
@@ -104,6 +106,8 @@ const checks: Check[] = [
       "value: \"true\"",
       "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS",
       "value: \"redpanda:9092\"",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS",
       "ReportRetentionSweepCompleted"
     ],
     mustNotContain: [
@@ -130,6 +134,10 @@ const checks: Check[] = [
       "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED",
       "value: \"true\"",
       "value: {{ .Values.reportingService.domainEventPublisherBootstrapServers | quote }}",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD",
+      "value: {{ .Values.reportingService.domainEventPublisherDeadLetterThreshold | quote }}",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS",
+      "value: {{ .Values.reportingService.domainEventPublisherRetryDelaySeconds | quote }}",
       "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES",
       "value: {{ .Values.reportingService.domainEventPublisherEventTypes | quote }}"
     ]
@@ -323,7 +331,9 @@ const checks: Check[] = [
       "devSimulatorToken: \"false\"",
       "jwksUri: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs",
       "audience: core-banking-api",
-      "domainEventPublisherClientId: reporting-helm-domain-event-publisher"
+      "domainEventPublisherClientId: reporting-helm-domain-event-publisher",
+      "domainEventPublisherDeadLetterThreshold: 3",
+      "domainEventPublisherRetryDelaySeconds: 60"
     ]
   },
   {

@@ -192,10 +192,12 @@ class ReportingRepository(
         jdbc.query(
             """
             SELECT outbox_event_id, event_type, aggregate_type, aggregate_id,
-                   idempotency_key, payload_json
+                   idempotency_key, payload_json::text AS payload_json,
+                   retry_count, error_message
             FROM reporting_outbox_events
-            WHERE status = 'PENDING'
+            WHERE status IN ('PENDING', 'FAILED')
               AND event_type IN (:eventTypes)
+              AND (next_retry_at IS NULL OR next_retry_at <= now())
             ORDER BY created_at, outbox_event_id
             FOR UPDATE SKIP LOCKED
             LIMIT 1
@@ -208,21 +210,39 @@ class ReportingRepository(
             """
             UPDATE reporting_outbox_events
             SET status = 'PUBLISHED',
-                published_at = now()
+                published_at = now(),
+                next_retry_at = NULL,
+                error_message = NULL
             WHERE outbox_event_id = :outboxEventId
             """.trimIndent(),
             mapOf("outboxEventId" to outboxEventId)
         )
     }
 
-    fun markOutboxFailed(outboxEventId: String) {
+    fun markOutboxFailed(
+        outboxEventId: String,
+        retryCount: Int,
+        retryDelaySeconds: Int,
+        errorMessage: String,
+        deadLetter: Boolean
+    ) {
         jdbc.update(
             """
             UPDATE reporting_outbox_events
-            SET status = 'FAILED'
+            SET status = :status,
+                retry_count = :retryCount,
+                next_retry_at = CASE WHEN :deadLetter THEN NULL ELSE now() + (:retryDelaySeconds * interval '1 second') END,
+                error_message = :errorMessage
             WHERE outbox_event_id = :outboxEventId
             """.trimIndent(),
-            mapOf("outboxEventId" to outboxEventId)
+            mapOf(
+                "outboxEventId" to outboxEventId,
+                "retryCount" to retryCount,
+                "retryDelaySeconds" to retryDelaySeconds,
+                "errorMessage" to errorMessage.take(500),
+                "deadLetter" to deadLetter,
+                "status" to if (deadLetter) "DEAD_LETTER" else "FAILED"
+            )
         )
     }
 
@@ -275,7 +295,9 @@ class ReportingRepository(
             aggregateType = rs.getString("aggregate_type"),
             aggregateId = rs.getString("aggregate_id"),
             idempotencyKey = rs.getString("idempotency_key"),
-            payload = readMap(rs.getString("payload_json"))
+            payload = readMap(rs.getString("payload_json")),
+            retryCount = rs.getInt("retry_count"),
+            errorMessage = rs.getString("error_message")
         )
 
     private fun readStringList(value: String): List<String> =

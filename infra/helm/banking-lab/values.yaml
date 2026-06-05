@@ -22,6 +22,8 @@ reportingService:
   domainEventPublisherBootstrapServers: redpanda:9092
   domainEventPublisherTopic: banking.lab.reporting-events
   domainEventPublisherClientId: reporting-helm-domain-event-publisher
+  domainEventPublisherDeadLetterThreshold: 3
+  domainEventPublisherRetryDelaySeconds: 60
   domainEventPublisherEventTypes: ReportArtifactGenerated,ReportArtifactExported,ReportRetentionSweepCompleted
   resources:
     requests:

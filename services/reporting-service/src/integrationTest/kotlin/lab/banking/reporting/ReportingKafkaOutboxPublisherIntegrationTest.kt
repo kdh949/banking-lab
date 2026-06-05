@@ -93,6 +93,7 @@ class ReportingKafkaOutboxPublisherIntegrationTest {
         assertEquals(2, result.attempted)
         assertEquals(2, result.published)
         assertEquals(0, result.failed)
+        assertEquals(0, result.deadLettered)
         assertEquals(1, countRows("reporting_outbox_events WHERE event_type = 'ReportArtifactGenerated' AND status = 'PUBLISHED'"))
         assertEquals(1, countRows("reporting_outbox_events WHERE event_type = 'ReportArtifactExported' AND status = 'PUBLISHED'"))
 
@@ -109,6 +110,73 @@ class ReportingKafkaOutboxPublisherIntegrationTest {
             assertEquals(false, envelope.payload["ledgerRowsMutated"])
         }
     }
+
+    @Test
+    fun `publisher records retry delay and dead letter state on broker failure`() {
+        val principal = ReportingPrincipal("reporting01", setOf("REPORTING_ANALYST"))
+        val generated = reportingService.generate(
+            GenerateReportCommand(
+                reportType = "EVIDENCE_COVERAGE",
+                requestedBy = "reporting01",
+                requestedByRole = "REPORTING_ANALYST",
+                reason = "Synthetic reporting Kafka dead-letter generation",
+                idempotencyKey = "RPT-KAFKA-DLQ-001"
+            ),
+            principal
+        ).item
+
+        val outboxEventId = querySingleString(
+            "SELECT outbox_event_id FROM reporting_outbox_events WHERE aggregate_id = :artifactId",
+            mapOf("artifactId" to generated.artifactId)
+        )
+        val firstFailure = publisher.publishAvailable(
+            failingPublisherConfig(deadLetterThreshold = 2),
+            limit = 1
+        )
+
+        assertEquals(1, firstFailure.attempted)
+        assertEquals(0, firstFailure.published)
+        assertEquals(1, firstFailure.failed)
+        assertEquals(0, firstFailure.deadLettered)
+        assertEquals("FAILED", outboxStatus(outboxEventId))
+        assertEquals(1, retryCount(outboxEventId))
+        assertEquals(1, countRows("reporting_outbox_events WHERE outbox_event_id = '$outboxEventId' AND next_retry_at > now()"))
+        assertEquals(1, countRows("reporting_outbox_events WHERE outbox_event_id = '$outboxEventId' AND error_message IS NOT NULL"))
+
+        val skippedUntilRetry = publisher.publishAvailable(
+            failingPublisherConfig(deadLetterThreshold = 2),
+            limit = 1
+        )
+        assertEquals(0, skippedUntilRetry.attempted)
+
+        jdbc.update(
+            "UPDATE reporting_outbox_events SET next_retry_at = now() - interval '1 second' WHERE outbox_event_id = :outboxEventId",
+            mapOf("outboxEventId" to outboxEventId)
+        )
+        val deadLettered = publisher.publishAvailable(
+            failingPublisherConfig(deadLetterThreshold = 2),
+            limit = 1
+        )
+
+        assertEquals(1, deadLettered.attempted)
+        assertEquals(0, deadLettered.published)
+        assertEquals(0, deadLettered.failed)
+        assertEquals(1, deadLettered.deadLettered)
+        assertEquals("DEAD_LETTER", outboxStatus(outboxEventId))
+        assertEquals(2, retryCount(outboxEventId))
+        assertEquals(1, countRows("reporting_outbox_events WHERE outbox_event_id = '$outboxEventId' AND next_retry_at IS NULL"))
+        assertEquals(0, countRows("reporting_outbox_events WHERE outbox_event_id = '$outboxEventId' AND published_at IS NOT NULL"))
+    }
+
+    private fun failingPublisherConfig(deadLetterThreshold: Int): ReportingKafkaPublisherConfig =
+        ReportingKafkaPublisherConfig(
+            bootstrapServers = "127.0.0.1:1",
+            topic = "banking-lab-reporting-events-unavailable-${UUID.randomUUID().toString().lowercase()}",
+            clientId = "reporting-kafka-failure-${UUID.randomUUID()}",
+            publishTimeoutMillis = 300,
+            deadLetterThreshold = deadLetterThreshold,
+            retryDelaySeconds = 60
+        )
 
     private fun createTopic(topic: String) {
         val props = Properties().apply {
@@ -153,6 +221,23 @@ class ReportingKafkaOutboxPublisherIntegrationTest {
 
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM $tableExpression", emptyMap<String, Any?>(), Int::class.java) ?: 0
+
+    private fun outboxStatus(outboxEventId: String): String =
+        querySingleString(
+            "SELECT status FROM reporting_outbox_events WHERE outbox_event_id = :outboxEventId",
+            mapOf("outboxEventId" to outboxEventId)
+        )
+
+    private fun retryCount(outboxEventId: String): Int =
+        jdbc.queryForObject(
+            "SELECT retry_count FROM reporting_outbox_events WHERE outbox_event_id = :outboxEventId",
+            mapOf("outboxEventId" to outboxEventId),
+            Int::class.java
+        ) ?: 0
+
+    private fun querySingleString(sql: String, params: Map<String, Any?>): String =
+        jdbc.queryForObject(sql, params, String::class.java)
+            ?: throw AssertionError("query returned no string value: $sql")
 
     private fun uniqueTopic(prefix: String): String =
         "$prefix-${UUID.randomUUID().toString().lowercase()}"

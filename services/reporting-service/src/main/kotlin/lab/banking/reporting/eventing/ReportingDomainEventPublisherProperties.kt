@@ -18,6 +18,8 @@ data class ReportingDomainEventPublisherProperties(
 
     data class Publish(
         val timeoutMillis: Long = 5_000,
+        val deadLetterThreshold: Int = 3,
+        val retryDelaySeconds: Int = 60,
         val eventTypes: Set<String> = ReportingOutboxPublisherPort.defaultEventTypes
     )
 
@@ -27,6 +29,8 @@ data class ReportingDomainEventPublisherProperties(
             topic = topic,
             clientId = worker.clientId,
             publishTimeoutMillis = publish.timeoutMillis,
+            deadLetterThreshold = publish.deadLetterThreshold,
+            retryDelaySeconds = publish.retryDelaySeconds,
             eventTypes = publish.eventTypes
         )
 }

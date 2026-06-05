@@ -71,6 +71,7 @@ if (
   !rendered.includes("reporting-service-api") ||
   !rendered.includes("BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
   !rendered.includes("BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !rendered.includes("BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD") ||
   !rendered.includes("banking.lab.reporting-events") ||
   !rendered.includes("ReportRetentionSweepCompleted")
 ) {
@@ -177,6 +178,8 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.reportingService.domainEventPublisherBootstrapServers": scalarFromSection(source, "reportingService", ["domainEventPublisherBootstrapServers"]),
     ".Values.reportingService.domainEventPublisherTopic": scalarFromSection(source, "reportingService", ["domainEventPublisherTopic"]),
     ".Values.reportingService.domainEventPublisherClientId": scalarFromSection(source, "reportingService", ["domainEventPublisherClientId"]),
+    ".Values.reportingService.domainEventPublisherDeadLetterThreshold": scalarFromSection(source, "reportingService", ["domainEventPublisherDeadLetterThreshold"]),
+    ".Values.reportingService.domainEventPublisherRetryDelaySeconds": scalarFromSection(source, "reportingService", ["domainEventPublisherRetryDelaySeconds"]),
     ".Values.reportingService.domainEventPublisherEventTypes": scalarFromSection(source, "reportingService", ["domainEventPublisherEventTypes"]),
     ".Values.reportingService.resources.requests.cpu": scalarFromSection(source, "reportingService", ["resources", "requests", "cpu"]),
     ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),

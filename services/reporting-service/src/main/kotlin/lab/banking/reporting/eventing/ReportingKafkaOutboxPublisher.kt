@@ -29,6 +29,8 @@ class ReportingKafkaOutboxPublisher(
         require(config.topic.isNotBlank()) { "reporting Kafka topic must be configured" }
         require(config.clientId.isNotBlank()) { "reporting Kafka client id must be configured" }
         require(config.publishTimeoutMillis > 0) { "reporting Kafka publish timeout must be positive" }
+        require(config.deadLetterThreshold > 0) { "reporting Kafka dead-letter threshold must be positive" }
+        require(config.retryDelaySeconds >= 0) { "reporting Kafka retry delay must be non-negative" }
         require(config.eventTypes.isNotEmpty()) { "reporting Kafka event type allow-list must not be empty" }
 
         val results = mutableListOf<ReportingKafkaPublishResult>()
@@ -40,6 +42,7 @@ class ReportingKafkaOutboxPublisher(
             attempted = results.size,
             published = results.count { it.status == "PUBLISHED" },
             failed = results.count { it.status == "FAILED" },
+            deadLettered = results.count { it.status == "DEAD_LETTER" },
             results = results
         )
     }
@@ -80,15 +83,25 @@ class ReportingKafkaOutboxPublisher(
                 errorMessage = null
             )
         } catch (ex: Exception) {
-            repository.markOutboxFailed(event.outboxEventId)
+            val errorMessage = summarize(ex)
+            val nextRetryCount = event.retryCount + 1
+            val deadLetter = nextRetryCount >= config.deadLetterThreshold
+            val status = if (deadLetter) "DEAD_LETTER" else "FAILED"
+            repository.markOutboxFailed(
+                outboxEventId = event.outboxEventId,
+                retryCount = nextRetryCount,
+                retryDelaySeconds = config.retryDelaySeconds,
+                errorMessage = errorMessage,
+                deadLetter = deadLetter
+            )
             ReportingKafkaPublishResult(
                 outboxEventId = event.outboxEventId,
                 eventType = event.eventType,
-                status = "FAILED",
+                status = status,
                 topic = config.topic,
                 partition = null,
                 offset = null,
-                errorMessage = summarize(ex)
+                errorMessage = errorMessage
             )
         } finally {
             producer.close(Duration.ZERO)

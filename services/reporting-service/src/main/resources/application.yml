@@ -17,6 +17,8 @@ banking-lab:
         poll-interval-millis: ${BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_POLL_INTERVAL_MILLIS:1000}
       publish:
         timeout-millis: ${BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS:5000}
+        dead-letter-threshold: ${BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD:3}
+        retry-delay-seconds: ${BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS:60}
         event-types: ${BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:ReportArtifactGenerated,ReportArtifactExported,ReportRetentionSweepCompleted}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}

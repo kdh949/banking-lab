@@ -76,12 +76,13 @@ class ReportingDomainEventPublisherWorker(
         val result = publisher.publishAvailable(properties.publisherConfig(), properties.worker.batchSize)
         if (result.attempted > 0) {
             logger.info(
-                "observability.reporting.publisher event=batch topic={} clientId={} attempted={} published={} failed={} syntheticOnly=true",
+                "observability.reporting.publisher event=batch topic={} clientId={} attempted={} published={} failed={} deadLettered={} syntheticOnly=true",
                 properties.topic,
                 properties.worker.clientId,
                 result.attempted,
                 result.published,
-                result.failed
+                result.failed,
+                result.deadLettered
             )
         }
         return result
@@ -119,6 +120,12 @@ class ReportingDomainEventPublisherWorker(
         }
         require(properties.publish.timeoutMillis > 0) {
             "banking-lab.reporting-service.domain-event-publisher.publish.timeout-millis must be positive"
+        }
+        require(properties.publish.deadLetterThreshold > 0) {
+            "banking-lab.reporting-service.domain-event-publisher.publish.dead-letter-threshold must be positive"
+        }
+        require(properties.publish.retryDelaySeconds >= 0) {
+            "banking-lab.reporting-service.domain-event-publisher.publish.retry-delay-seconds must be non-negative"
         }
         require(properties.publish.eventTypes.isNotEmpty()) {
             "banking-lab.reporting-service.domain-event-publisher.publish.event-types must not be empty"
