@@ -38,11 +38,15 @@ spec:
               value: "true"
             - name: BANKING_LAB_CORE_BANKING_BASE_URL
               value: "http://{{ .Release.Name }}-core-banking:{{ .Values.coreBanking.port }}"
-            - name: BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL
+              value: {{ .Values.paymentService.coreBankingTokenUrl | quote }}
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID
+              value: {{ .Values.paymentService.coreBankingClientId | quote }}
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-secret
-                  key: PAYMENT_CORE_BANKING_SERVICE_TOKEN
+                  key: PAYMENT_CORE_BANKING_CLIENT_SECRET
             - name: BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC
               value: {{ .Values.paymentService.ledgerCommandTopic | quote }}
             - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED

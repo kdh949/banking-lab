@@ -12,6 +12,10 @@ This evidence records the live Keycloak realm import, Spring JWKS authorization 
 - `infra/keycloak/realm-banking-lab.json` imports the `banking-lab` synthetic realm with staff, complaint handler, ops operator, auditor, risk reviewer, compliance manager, manager, customer, TOTP MFA-required, and WebAuthn-required synthetic users.
 - Public channel clients issue direct-grant test tokens for local synthetic smoke only.
 - Channel clients add the `core-banking-api` audience to access tokens.
+- Payment-facing channel clients (`customer-web`, `staff-terminal`, and
+  `ops-console`) also add the `payment-service-api` audience so local
+  payment-service smokes can use live Keycloak tokens instead of simulator
+  tokens.
 - The realm declares a confidential `payment-service-api` client with
   service-account client credentials, a synthetic `PAYMENT_SERVICE` realm role,
   and a `service-account-payment-service-api` principal mapped only to that role.
@@ -47,6 +51,10 @@ This evidence records the live Keycloak realm import, Spring JWKS authorization 
 - `fds-aml-console` redirects to live Keycloak, exchanges risk reviewer and checker authorization codes through the Next BFF route `POST /api/auth/keycloak-token`, and uses the resulting signed Bearer tokens against Spring with simulator fallback disabled.
 - The FDS/AML browser smoke renders `FDS-SYN-001` and `AML-SYN-001` with the `risk01` token, requests FDS release, FDS block, and AML closure as `risk01`, approves them as `compliance01`, and renders duplicate FDS/AML `WORKFLOW_STATE_VIOLATION` evidence.
 - Docker Compose passes JWKS URI, issuer, and audience settings into `core-banking` so the container can run with simulator token fallback disabled.
+- The payment outbox worker Compose smoke passes an explicit local
+  split-horizon issuer allow-list into Spring so host-side direct-grant tokens
+  and container-side client-credentials tokens are both accepted only by exact
+  configured issuer match.
 
 ## Commands
 
@@ -114,6 +122,10 @@ env COMPOSE_PROJECT_NAME=banking-lab-webauthn-smoke docker compose --profile pla
 node -e "const fs=require('fs'); JSON.parse(fs.readFileSync('infra/keycloak/realm-banking-lab.json','utf8')); console.log('realm ok')"
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.security.KeycloakRealmPolicyTest
 npm run test:payment-service:keycloak-service-token
+npm run test:payment-service:unit -- --tests lab.banking.payment.core.CoreBankingServiceTokenProviderTest --rerun-tasks
+npm run test:core-banking:integration -- --tests lab.banking.core.security.JwksAuthorizationIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks
+npm run test:payment-service:outbox-worker-compose
 env COMPOSE_PROJECT_NAME=banking-lab-passkey-policy-smoke BANKING_LAB_POSTGRES_PORT=15478 BANKING_LAB_CORE_BANKING_PORT=18128 BANKING_LAB_KEYCLOAK_PORT=18129 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18129/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres keycloak core-banking
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18129/realms/banking-lab/.well-known/openid-configuration
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18128/health
@@ -143,6 +155,14 @@ client-credentials token containing the `PAYMENT_SERVICE` realm role and both
 `payment-service-api` and `core-banking-api` audiences, and payment-service
 accepted that token on `POST /api/payments/outbox/ledger-postings/dispatch-next`
 with a safe `NO_PENDING_EVENT` response.
+
+The payment outbox worker client-credentials slice also passed. A disposable
+Compose stack started PostgreSQL, Keycloak, `core-banking`, `payment-service`,
+and `payment-outbox-worker` with simulator tokens disabled. The test obtained
+live Keycloak ops/customer tokens for host-side funding and payment creation,
+then restarted the worker and proved it fetched its own
+`payment-service-api` client-credentials token before settling the payment as a
+balanced core-banking `BILL_PAYMENT` ledger transaction.
 
 The customer-web browser propagation slice also passed. Baseline `npm run test:e2e` passed 12 manifest-shell tests with 23 API-backed tests skipped when no API or Keycloak URL was configured. The targeted live browser smoke passed 1 Playwright test against `http://127.0.0.1:18107` Keycloak and `http://127.0.0.1:18106` Spring, with simulator tokens disabled in Spring. The page rendered `Keycloak account loaded`, `Bearer`, `SYN-CUS-001`, `LAB-***-0001`, `100000000 KRW`, `Keycloak transfer replayed`, `CWB-OIDC-TRF-...`, `TX-...`, `POSTED`, `same transaction id`, `Keycloak transfer rejected`, `LEDGER_INSUFFICIENT_AVAILABLE_BALANCE`, `Keycloak history and held status loaded`, `CWB-OIDC-HIST-...`, `FDS-SYN-001`, `HELD`, `Keycloak held and failed statuses loaded`, `CWB-OIDC-HELD-...`, `CWB-OIDC-FAILED-...`, `FAILED`, `REQUEST_VALIDATION_FAILED`, `Keycloak complaint received`, `ACCOUNT_ACCESS`, `RECEIVED`, `Keycloak complaint closed`, `CMP-SYN-CONFIRM-001`, and `CLOSED`.
 

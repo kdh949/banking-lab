@@ -11,6 +11,11 @@ banking-lab:
       http-enabled: ${BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED:true}
       base-url: ${BANKING_LAB_CORE_BANKING_BASE_URL:http://localhost:8081}
       service-token: ${BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN:}
+      client-credentials:
+        token-url: ${BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL:}
+        client-id: ${BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID:payment-service-api}
+        client-secret: ${BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET:}
+        refresh-skew-seconds: ${BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_REFRESH_SKEW_SECONDS:30}
     outbox-worker:
       enabled: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED:false}
       initial-delay-ms: ${BANKING_LAB_PAYMENT_OUTBOX_WORKER_INITIAL_DELAY_MS:5000}

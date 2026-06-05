@@ -18,8 +18,7 @@ import org.springframework.web.client.RestClient
 class HttpCoreLedgerPostingClient(
     @param:Value("\${banking-lab.payment-service.core-banking.base-url:http://localhost:8081}")
     private val baseUrl: String,
-    @param:Value("\${banking-lab.payment-service.core-banking.service-token:}")
-    private val serviceToken: String,
+    private val tokenProvider: CoreBankingServiceTokenProvider,
     restClientBuilder: RestClient.Builder
 ) : CoreLedgerPostingClient {
     private val restClient: RestClient = restClientBuilder.baseUrl(baseUrl).build()
@@ -29,8 +28,9 @@ class HttpCoreLedgerPostingClient(
             .post()
             .uri("/api/ledger/payment-postings")
             .headers { headers ->
-                if (serviceToken.isNotBlank()) {
-                    headers.setBearerAuth(serviceToken)
+                val bearerToken = tokenProvider.bearerToken()
+                if (!bearerToken.isNullOrBlank()) {
+                    headers.setBearerAuth(bearerToken)
                 }
             }
             .body(command)

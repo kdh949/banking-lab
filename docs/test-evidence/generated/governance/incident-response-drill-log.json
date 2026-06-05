@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "artifactId": "H8-INCIDENT-RESPONSE-DRILL-LOG",
   "incidentId": "IR-H8-SYNTHETIC-HA-DR-2026-06-05",
-  "generatedAt": "2026-06-05T17:13:04.187Z",
+  "generatedAt": "2026-06-05T17:39:30.490Z",
   "syntheticOnly": true,
   "runbook": "docs/incident-response/synthetic-incident-response-runbook.md",
   "scenario": "Synthetic core-banking service disruption with PostgreSQL restore verification.",

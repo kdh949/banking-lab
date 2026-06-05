@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "artifactId": "H8-ACCESS-RIGHTS-REVIEW",
-  "generatedAt": "2026-06-05T17:13:04.187Z",
+  "generatedAt": "2026-06-05T17:39:30.490Z",
   "syntheticOnly": true,
   "source": "infra/keycloak/realm-banking-lab.json",
-  "sourceSha256": "e25cd832dceb1c67cf857d870d8048cbccf0e2ec364848f047542c8ca93ec023",
+  "sourceSha256": "54aa93c06a685ca450a1ef0ad73d966449b8227b1541bd2caf7e09964235e6e3",
   "reviewPeriod": "2026-Q2",
   "controls": {
     "realMoneyUsed": false,

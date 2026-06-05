@@ -74,7 +74,8 @@ if (
   !rendered.includes("BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
   !rendered.includes("BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
   !rendered.includes("BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
-  !rendered.includes("PAYMENT_CORE_BANKING_SERVICE_TOKEN") ||
+  !rendered.includes("BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL") ||
+  !rendered.includes("PAYMENT_CORE_BANKING_CLIENT_SECRET") ||
   !rendered.includes("banking.lab.core-banking.ledger-commands") ||
   !rendered.includes("banking.lab.payment-events")
 ) {

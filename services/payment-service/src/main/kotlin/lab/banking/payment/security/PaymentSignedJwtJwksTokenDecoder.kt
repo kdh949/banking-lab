@@ -26,6 +26,11 @@ class PaymentSignedJwtJwksTokenDecoder(
 ) {
     private val base64Url = Base64.getUrlDecoder()
     private val clockSkewSeconds = 30L
+    private val allowedIssuers = expectedIssuer
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .toSet()
 
     fun decodeToken(token: String): PaymentPrincipal? {
         if (jwksUri.isBlank()) {
@@ -94,7 +99,7 @@ class PaymentSignedJwtJwksTokenDecoder(
         if (claims["active"] == false) {
             return false
         }
-        if (expectedIssuer.isNotBlank() && claims["iss"]?.toString() != expectedIssuer) {
+        if (allowedIssuers.isNotEmpty() && claims["iss"]?.toString() !in allowedIssuers) {
             return false
         }
         if (expectedAudience.isNotBlank() && !stringSet(claims["aud"]).contains(expectedAudience)) {

@@ -116,6 +116,8 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   const liveSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentDomainEventPublisherComposeSmokeIntegrationTest.kt", "utf8");
   const liveWorkerSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentOutboxWorkerComposeSmokeIntegrationTest.kt", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-payment-keycloak-service-token-smoke.sh", "utf8");
+  const coreTokenProvider = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/core/CoreBankingServiceTokenProvider.kt", "utf8");
+  const outboxWorkerComposeSmokeScript = await readFile("scripts/run-payment-outbox-worker-compose-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:payment-service"\)/);
   assert.match(application, /real-payment-network-enabled: false/);
@@ -155,6 +157,12 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   );
   assert.match(compose, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092/);
   assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN/);
+  assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL/);
+  assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET/);
+  assert.match(coreTokenProvider, /grant_type/);
+  assert.match(coreTokenProvider, /client_credentials/);
+  assert.match(coreTokenProvider, /access_token/);
+  assert.match(coreTokenProvider, /cachedToken/);
   assert.match(packageJson, /test:payment-service:domain-publisher-compose/);
   assert.match(packageJson, /test:payment-service:outbox-worker-compose/);
   assert.match(packageJson, /test:payment-service:keycloak-service-token/);
@@ -165,6 +173,15 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   assert.match(liveWorkerSmoke, /PaymentLedgerPostingRequested/);
   assert.match(liveWorkerSmoke, /PaymentLedgerPostingSettled/);
   assert.match(liveWorkerSmoke, /BANK-SETTLEMENT/);
+  assert.match(liveWorkerSmoke, /passwordGrant/);
+  assert.match(liveWorkerSmoke, /BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_URL/);
+  assert.match(liveWorkerSmoke, /OPS_OPERATOR/);
+  assert.match(liveWorkerSmoke, /payment-service-api/);
+  assert.match(outboxWorkerComposeSmokeScript, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
+  assert.match(outboxWorkerComposeSmokeScript, /DEFAULT_KEYCLOAK_HOST_ISSUER/);
+  assert.match(outboxWorkerComposeSmokeScript, /DEFAULT_KEYCLOAK_CONTAINER_ISSUER/);
+  assert.match(outboxWorkerComposeSmokeScript, /BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL/);
+  assert.match(outboxWorkerComposeSmokeScript, /BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET/);
   assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
   assert.match(keycloakServiceTokenSmoke, /client_id=payment-service-api/);
   assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);

@@ -33,6 +33,8 @@ paymentService:
   image: banking-lab/payment-service:local
   port: 8088
   securityAudience: payment-service-api
+  coreBankingTokenUrl: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/token
+  coreBankingClientId: payment-service-api
   ledgerCommandTopic: banking.lab.core-banking.ledger-commands
   domainEventPublisherBootstrapServers: redpanda:9092
   domainEventPublisherTopic: banking.lab.payment-events

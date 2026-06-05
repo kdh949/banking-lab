@@ -61,11 +61,17 @@ This evidence covers the first synthetic Payment Service slice:
   token with `payment-service-api` and `core-banking-api` audiences, and that
   payment-service accepts it on the dispatch route with simulator fallback
   disabled.
+- Payment-service core-banking posting client now obtains and caches a
+  Keycloak client-credentials access token for `payment-service-api` when no
+  static local fallback token is configured, failing closed when token endpoint
+  or secret configuration is incomplete.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 - Live Docker Compose smoke coverage for `payment-service` plus
-  `payment-outbox-worker` against live `core-banking`, proving an API-created
-  payment can be settled as balanced core ledger postings through the worker.
+  `payment-outbox-worker` against live Keycloak and `core-banking`, proving an
+  API-created payment can be settled as balanced core ledger postings through
+  the worker with simulator token fallback disabled and the worker fetching its
+  own `payment-service-api` client-credentials token.
 - Docker Compose platform services for the payment REST API, the enabled
   payment ledger outbox worker, and the enabled payment domain-event publisher,
   all using `payment_flyway_schema_history`, the service-specific
@@ -73,15 +79,14 @@ This evidence covers the first synthetic Payment Service slice:
   and explicit API-vs-worker publisher modes.
 - Raw Kubernetes and Helm manifests for the payment REST API, ledger outbox
   worker, and domain-event publisher, using readiness/liveness probes,
-  `payment_flyway_schema_history`, the synthetic core-banking service-token
-  placeholder, Redpanda publisher configuration, and explicit
+  `payment_flyway_schema_history`, Keycloak token URL/client-secret wiring for
+  the core-banking posting bridge, Redpanda publisher configuration, and explicit
   `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` /
   `BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED` mode splits.
 
 The slice does not claim full Payment Service completion. The live Keycloak
-service-token smoke proves route authorization for payment-service dispatch,
-but the scheduled worker still uses an injected service token rather than
-fetching client credentials itself.
+smokes now prove both route authorization for payment-service dispatch and
+scheduled worker token acquisition for the core-banking posting bridge.
 
 ## Commands Run
 
@@ -93,6 +98,9 @@ npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentK
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks
 npm run test:payment-service:domain-publisher-compose
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks
+npm run test:payment-service:unit -- --tests lab.banking.payment.core.CoreBankingServiceTokenProviderTest --rerun-tasks
+npm run test:core-banking:unit -- --tests lab.banking.core.security.KeycloakRealmPolicyTest --rerun-tasks
+npm run test:core-banking:integration -- --tests lab.banking.core.security.JwksAuthorizationIntegrationTest --rerun-tasks
 npm run test:payment-service:outbox-worker-compose
 npm run test:payment-service:keycloak-service-token
 npm run test:payment-service:integration -- --rerun-tasks
@@ -159,15 +167,35 @@ need local file-lock socket and Docker access.
   pass after sandbox escalation; the live worker smoke test compiled and
   skipped the runtime path because `BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_COMPOSE_PROJECT`
   was not set for the compile/skip check.
+- `npm run test:payment-service:unit -- --tests lab.banking.payment.core.CoreBankingServiceTokenProviderTest --rerun-tasks`:
+  first sandboxed Gradle run failed with `java.net.SocketException: Operation
+  not permitted`; rerun after sandbox escalation passed and proved static-token
+  fallback, client-credentials token fetch/caching, and fail-closed incomplete
+  client-secret handling.
+- `npm run test:core-banking:unit -- --tests lab.banking.core.security.KeycloakRealmPolicyTest --rerun-tasks`:
+  pass after sandbox escalation; the realm policy test proves the
+  `PAYMENT_SERVICE` role, confidential `payment-service-api` service account,
+  core/payment audiences, and payment-facing client audience mappings remain in
+  the imported realm JSON.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.security.JwksAuthorizationIntegrationTest --rerun-tasks`:
+  pass after sandbox escalation; signed JWKS authorization remains valid when
+  the Spring decoder is configured with an explicit comma-separated local
+  split-horizon issuer allow-list.
 - `npm run test:payment-service:outbox-worker-compose`: pass after sandbox
   escalation; the wrapper built core-banking and payment-service boot jars,
-  started disposable PostgreSQL, `core-banking`, `payment-service`, and
-  `payment-outbox-worker` Compose services, and ran the gated live worker smoke.
+  started disposable PostgreSQL, Keycloak, `core-banking`, `payment-service`,
+  and `payment-outbox-worker` Compose services with simulator tokens disabled,
+  and ran the gated live worker smoke. The worker fetched its own
+  `payment-service-api` client-credentials token from Keycloak before calling
+  the core-banking posting bridge.
   The first live attempts failed because payment-service Flyway refused to
   initialize `payment_flyway_schema_history` after core-banking had populated
   the shared `public` schema; the fix sets service Flyway baseline-on-migrate at
   version `0`, allowing payment V001 and later migrations to run in the shared
-  synthetic schema.
+  synthetic schema. A later live attempt failed with a host/container Keycloak
+  issuer mismatch; the current passing smoke declares an explicit local
+  split-horizon issuer allow-list and validates the host-side tokens before
+  domain calls.
 - `npm run test:payment-service:keycloak-service-token`: pass after sandbox
   escalation; the wrapper built core-banking and payment-service boot jars,
   started disposable PostgreSQL, Keycloak, `core-banking`, and `payment-service`
@@ -218,12 +246,12 @@ need local file-lock socket and Docker access.
 - `npm run k8s:validate`: pass; structural validation covers
   `payment-service`, `payment-outbox-worker`, and
   `payment-domain-event-publisher` deployments with readiness/liveness probes,
-  service-specific Flyway history, synthetic-only core-banking service-token
-  placeholder, Redpanda bootstrap configuration, and the expected worker mode
-  splits.
+  service-specific Flyway history, Keycloak client-credentials configuration
+  for core-banking posting, Redpanda bootstrap configuration, and the expected
+  worker mode splits.
 - `npm run helm:template`: pass; Helm renders the payment REST API
   Deployment/Service, outbox-worker Deployment, and domain-event publisher
-  Deployment with the same audience, Flyway, token-reference, Redpanda
+  Deployment with the same audience, Flyway, client-credentials, Redpanda
   publisher, and worker-mode controls.
 - `npm run security:posture-check`: pass; static posture checks include the
   payment application synthetic-only payment network default and raw/Helm
@@ -379,8 +407,11 @@ Manifest and API client coverage verifies:
 `LivePaymentOutboxWorkerComposeSmokeIntegrationTest` verifies:
 
 - `core-banking`, `payment-service`, and `payment-outbox-worker` can start in
-  one shared PostgreSQL Compose project after service-specific Flyway history is
-  initialized at baseline version `0`;
+  one shared PostgreSQL/Keycloak Compose project after service-specific Flyway
+  history is initialized at baseline version `0`;
+- host-side ops/customer tokens are obtained from live Keycloak direct grant
+  with simulator fallback disabled, and their role, audience, and configured
+  issuer claims are asserted before API calls;
 - a synthetic customer/account shell is funded through live core-banking
   `POST /api/ledger/deposits`, preserving posting-derived balances rather than
   direct balance mutation;
@@ -388,9 +419,10 @@ Manifest and API client coverage verifies:
   `POSTING_REQUESTED` instruction and a pending
   `PaymentLedgerPostingRequested` outbox row;
 - after the live `payment-outbox-worker` is restarted, the worker calls the
-  core-banking payment-posting API with a dev-only simulator
-  `PAYMENT_SERVICE` token, marks the payment outbox row `PUBLISHED`, records
-  the payment as `SETTLED`, and stores the returned `TX-*` id;
+  core-banking payment-posting API with its own Keycloak
+  `payment-service-api` client-credentials token, marks the payment outbox row
+  `PUBLISHED`, records the payment as `SETTLED`, and stores the returned
+  `TX-*` id;
 - core-banking persists a `BILL_PAYMENT` ledger transaction with two balanced
   `PAYMENT` postings, debiting the synthetic customer account and crediting
   `BANK-SETTLEMENT`;
@@ -439,12 +471,13 @@ No real biller, payment network, payment provider, customer PII, financial
 institution API, or real money path is configured.
 The application keeps `real-payment-network-enabled: false`; Compose,
 Kubernetes, and Helm add only synthetic payment-service API/worker/runtime
-settings, Redpanda publisher settings, and a replaceable local synthetic
-service-token placeholder for the core-banking posting bridge.
-The live payment outbox worker smoke uses dev-only simulator tokens with
-security enabled. The separate live Keycloak service-token smoke uses a signed
-Keycloak client-credentials token with simulator fallback disabled, but it does
-not yet make the scheduled worker fetch that token by itself.
+settings, Redpanda publisher settings, and Keycloak client-credentials wiring
+for the core-banking posting bridge. A static service-token property remains as
+a local fallback for narrow tests, but Compose payment API/ledger worker
+defaults leave it blank so client credentials are used.
+The live payment outbox worker smoke runs with simulator-token fallback disabled
+and requires Keycloak-issued ops/customer tokens plus the worker's
+`payment-service-api` client-credentials token.
 Staff cancellation approval creates only synthetic `payment_cancellation_requests`
 rows and a durable `PaymentInstructionCanceled` Outbox event after independent
 checker approval; it never writes core ledger tables directly.
@@ -462,5 +495,7 @@ evidence. Live payment-service Keycloak service-token route smoke evidence now
 passes for dispatch authorization.
 The new Compose/Kubernetes/Helm surface is structurally validated, and the
 domain-event publisher plus ledger outbox worker now have live Compose proof.
-The remaining service-token gap is scheduled worker token acquisition/rotation,
-not route acceptance of a Keycloak-issued `PAYMENT_SERVICE` token.
+Remaining hardening is production-grade secret rotation, mTLS/service-mesh
+identity, and single-public-issuer Keycloak deployment evidence; the local
+Compose worker smoke uses an explicit two-issuer allow-list only for
+host/container split-horizon development traffic.

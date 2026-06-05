@@ -42,6 +42,17 @@
           }
         },
         {
+          "name": "payment-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "payment-service-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
           "name": "synthetic-customer-id",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
@@ -73,6 +84,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "payment-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "payment-service-api",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
@@ -117,6 +139,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "payment-service-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "payment-service-api",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }

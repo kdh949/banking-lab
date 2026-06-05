@@ -54,6 +54,14 @@ class KeycloakRealmPolicyTest {
         assertTrue(listValue(adminClient["redirectUris"]).contains("http://localhost:3007/*"))
         assertTrue(listValue(adminClient["webOrigins"]).contains("http://localhost:3007"))
 
+        val paymentFacingClients = setOf("customer-web", "staff-terminal", "ops-console")
+        paymentFacingClients.forEach { clientId ->
+            val client = clients.single { it["clientId"] == clientId }
+            assertTrue(mapperNames(client).contains("payment-service-api-audience"), "$clientId must carry payment-service-api audience")
+        }
+        val complaintClient = clients.single { it["clientId"] == "complaint-portal" }
+        assertFalse(mapperNames(complaintClient).contains("payment-service-api-audience"))
+
         val paymentServiceClient = clients.single { it["clientId"] == "payment-service-api" }
         assertEquals(false, paymentServiceClient["publicClient"])
         assertEquals(true, paymentServiceClient["serviceAccountsEnabled"])
@@ -64,6 +72,11 @@ class KeycloakRealmPolicyTest {
         assertTrue(paymentMappers.contains("payment-service-api-audience"))
         assertTrue(paymentMappers.contains("core-banking-api-audience"))
     }
+
+    private fun mapperNames(client: Map<String, Any?>): Set<String> =
+        listMap(client["protocolMappers"])
+            .mapNotNull { it["name"]?.toString() }
+            .toSet()
 
     @Suppress("UNCHECKED_CAST")
     private fun loadRealm(): Map<String, Any?> {

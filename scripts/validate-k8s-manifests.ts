@@ -96,9 +96,10 @@ if (
   !hasText(paymentWorkerDeployment, "value: \"true\"") ||
   !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
   !hasText(paymentWorkerDeployment, "value: \"false\"") ||
-  !hasText(paymentWorkerDeployment, "PAYMENT_CORE_BANKING_SERVICE_TOKEN")
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL") ||
+  !hasText(paymentWorkerDeployment, "PAYMENT_CORE_BANKING_CLIENT_SECRET")
 ) {
-  errors.push("Payment outbox worker deployment must enable ledger dispatch, disable domain publishing, and use a synthetic core-banking service token reference.");
+  errors.push("Payment outbox worker deployment must enable ledger dispatch, disable domain publishing, and use Keycloak client credentials for the core-banking posting bridge.");
 }
 if (
   !hasText(paymentDomainEventPublisherDeployment, "payment_flyway_schema_history") ||

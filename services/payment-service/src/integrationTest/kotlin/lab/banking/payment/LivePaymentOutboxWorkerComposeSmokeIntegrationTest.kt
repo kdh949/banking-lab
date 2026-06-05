@@ -2,10 +2,13 @@ package lab.banking.payment
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Duration
@@ -41,12 +44,19 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
             ?: "http://127.0.0.1:${System.getenv("BANKING_LAB_CORE_BANKING_PORT") ?: "8081"}"
         val paymentBaseUrl = System.getenv("BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_PAYMENT_URL")
             ?: "http://127.0.0.1:${System.getenv("BANKING_LAB_PAYMENT_SERVICE_PORT") ?: "8088"}"
+        val keycloakBaseUrl = System.getenv("BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_URL")
+            ?.trim()
+            ?.trimEnd('/')
+            ?.takeIf { it.isNotBlank() }
+        val keycloakHostHeader = System.getenv("BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_HOST_HEADER")
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
         val workerService = System.getenv("BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_SERVICE")
             ?: "payment-outbox-worker"
         val composeEnv = composeEnvironment()
 
         val suffix = UUID.randomUUID().toString().uppercase()
-        val customerId = "CUS-LIVE-PAY-WORKER-${suffix.take(12)}"
+        val customerId = if (keycloakBaseUrl != null) "SYN-CUS-001" else "CUS-LIVE-PAY-WORKER-${suffix.take(12)}"
         val accountId = "ACC-LIVE-PAY-WORKER-${suffix.take(12)}"
         val accountNo = "LAB-LIVE-${suffix.take(12)}"
         val depositIdempotencyKey = "IDEMP-LIVE-DEPOSIT-$suffix"
@@ -55,6 +65,9 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
         val startingBalanceMinor = 100_000L
 
         waitForSchemas(databaseUrl, databaseUser, databasePassword, Duration.ofSeconds(120))
+        if (keycloakBaseUrl != null) {
+            waitForKeycloak(keycloakBaseUrl, keycloakHostHeader, Duration.ofSeconds(120))
+        }
         waitForHttpOk("$coreBaseUrl/health", Duration.ofSeconds(120))
         waitForHttpOk("$paymentBaseUrl/actuator/health", Duration.ofSeconds(120))
 
@@ -62,6 +75,35 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
         try {
             runDockerCompose(composeProject, composeEnv, "kill", workerService)
             workerKilled = true
+
+            val coreOpsToken = if (keycloakBaseUrl != null) {
+                passwordGrant(
+                    baseUrl = keycloakBaseUrl,
+                    hostHeader = keycloakHostHeader,
+                    clientId = "ops-console",
+                    username = "ops01",
+                    password = "ops01-pass"
+                ).also {
+                    assertJwtClaimSet(it, requiredRole = "OPS_OPERATOR", requiredAudience = "core-banking-api")
+                }
+            } else {
+                simulatorToken("live-core-ops", listOf("OPS_OPERATOR"))
+            }
+            val paymentCustomerToken = if (keycloakBaseUrl != null) {
+                passwordGrant(
+                    baseUrl = keycloakBaseUrl,
+                    hostHeader = keycloakHostHeader,
+                    clientId = "customer-web",
+                    username = "customer01",
+                    password = "customer01-pass"
+                ).also {
+                    assertJwtClaimSet(it, requiredRole = "CUSTOMER", requiredAudience = "payment-service-api")
+                }
+            } else {
+                simulatorToken("live-payment-customer", listOf("CUSTOMER"), customerId)
+            }
+            val depositRequestedBy = if (keycloakBaseUrl != null) "ops01" else "live-compose-core-ops"
+            val paymentRequestedBy = if (keycloakBaseUrl != null) "customer01" else "live-payment-customer"
 
             seedCoreCustomerAccount(
                 databaseUrl = databaseUrl,
@@ -73,12 +115,12 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
             )
             val deposit = postJson(
                 url = "$coreBaseUrl/api/ledger/deposits",
-                token = simulatorToken("live-core-ops", listOf("OPS_OPERATOR")),
+                token = coreOpsToken,
                 body = mapOf(
                     "accountId" to accountId,
                     "amountMinor" to startingBalanceMinor,
                     "idempotencyKey" to depositIdempotencyKey,
-                    "requestedBy" to "live-compose-core-ops",
+                    "requestedBy" to depositRequestedBy,
                     "requestedChannel" to "CORE_BANKING",
                     "reason" to "Synthetic live payment outbox worker funding"
                 ),
@@ -89,7 +131,7 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
 
             val payment = postJson(
                 url = "$paymentBaseUrl/api/payments/instructions",
-                token = simulatorToken("live-payment-customer", listOf("CUSTOMER"), customerId),
+                token = paymentCustomerToken,
                 body = mapOf(
                     "customerId" to customerId,
                     "debitAccountId" to accountId,
@@ -97,7 +139,7 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
                     "amountMinor" to paymentAmountMinor,
                     "currency" to "KRW",
                     "idempotencyKey" to paymentIdempotencyKey,
-                    "requestedBy" to "live-payment-customer",
+                    "requestedBy" to paymentRequestedBy,
                     "requestedChannel" to "CUSTOMER_WEB",
                     "reason" to "Synthetic live payment outbox worker payment"
                 ),
@@ -252,6 +294,112 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
         }
         fail<Unit>("HTTP endpoint $url was not ready: status=$lastStatus error=${lastError?.message}")
     }
+
+    private fun waitForKeycloak(baseUrl: String, hostHeader: String?, timeout: Duration) {
+        val discoveryUrl = "$baseUrl/realms/banking-lab/.well-known/openid-configuration"
+        val deadline = System.nanoTime() + timeout.toNanos()
+        var lastStatus: Int? = null
+        var lastError: Throwable? = null
+        while (System.nanoTime() < deadline) {
+            try {
+                val response = httpUrlConnection(
+                    method = "GET",
+                    url = discoveryUrl,
+                    hostHeader = hostHeader
+                )
+                lastStatus = response.status
+                if (response.status in 200..299) {
+                    return
+                }
+            } catch (error: Throwable) {
+                lastError = error
+            }
+            Thread.sleep(500)
+        }
+        fail<Unit>("Keycloak discovery was not ready: status=$lastStatus error=${lastError?.message}")
+    }
+
+    private fun passwordGrant(
+        baseUrl: String,
+        hostHeader: String?,
+        clientId: String,
+        username: String,
+        password: String
+    ): String {
+        val response = httpUrlConnection(
+            method = "POST",
+            url = "$baseUrl/realms/banking-lab/protocol/openid-connect/token",
+            hostHeader = hostHeader,
+            form = mapOf(
+                "grant_type" to "password",
+                "client_id" to clientId,
+                "username" to username,
+                "password" to password
+            )
+        )
+        if (response.status !in 200..299) {
+            fail<Unit>("Keycloak password grant for $username returned ${response.status}:\n${response.body}")
+        }
+        val json = objectMapper.readTree(response.body)
+        return json.path("access_token").asText().takeIf { it.isNotBlank() }
+            ?: fail("Keycloak password grant for $username did not return access_token")
+    }
+
+    private fun assertJwtClaimSet(token: String, requiredRole: String, requiredAudience: String) {
+        val parts = token.split(".")
+        assertTrue(parts.size >= 2, "expected JWT token")
+        val claims = objectMapper.readTree(Base64.getUrlDecoder().decode(parts[1]))
+        val roles = claims.path("realm_access").path("roles").map { it.asText() }.toSet()
+        val audiences = when {
+            claims.path("aud").isArray -> claims.path("aud").map { it.asText() }.toSet()
+            claims.path("aud").isTextual -> setOf(claims.path("aud").asText())
+            else -> emptySet()
+        }
+        val allowedIssuers = System.getenv("BANKING_LAB_SECURITY_ISSUER")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            ?: emptySet()
+        assertTrue(roles.contains(requiredRole), claims.toPrettyString())
+        assertTrue(audiences.contains(requiredAudience), claims.toPrettyString())
+        if (allowedIssuers.isNotEmpty()) {
+            assertTrue(allowedIssuers.contains(claims.path("iss").asText()), claims.toPrettyString())
+        }
+    }
+
+    private fun httpUrlConnection(
+        method: String,
+        url: String,
+        hostHeader: String?,
+        form: Map<String, String> = emptyMap()
+    ): UrlConnectionResponse {
+        val connection = URI.create(url).toURL().openConnection() as HttpURLConnection
+        connection.connectTimeout = 5_000
+        connection.readTimeout = 10_000
+        connection.requestMethod = method
+        if (!hostHeader.isNullOrBlank()) {
+            connection.setRequestProperty("Host", hostHeader)
+        }
+        if (form.isNotEmpty()) {
+            val body = form.entries
+                .joinToString("&") { (key, value) -> "${encodeForm(key)}=${encodeForm(value)}" }
+                .toByteArray(StandardCharsets.UTF_8)
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            connection.outputStream.use { it.write(body) }
+        }
+        val status = connection.responseCode
+        val body = if (status in 200..299) {
+            connection.inputStream.use { it.readBytes() }
+        } else {
+            connection.errorStream?.use { it.readBytes() } ?: ByteArray(0)
+        }.toString(StandardCharsets.UTF_8)
+        return UrlConnectionResponse(status, body)
+    }
+
+    private fun encodeForm(value: String): String =
+        URLEncoder.encode(value, StandardCharsets.UTF_8)
 
     private fun seedCoreCustomerAccount(
         databaseUrl: String,
@@ -639,10 +787,20 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
             putOrCopyEnvironment("BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED", "false")
             copyEnvironmentIfPresent("BANKING_LAB_POSTGRES_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_CORE_BANKING_PORT")
+            copyEnvironmentIfPresent("BANKING_LAB_KEYCLOAK_PORT")
             copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_SERVICE_PORT")
+            copyEnvironmentIfPresent("BANKING_LAB_SECURITY_ENABLED")
+            copyEnvironmentIfPresent("BANKING_LAB_SECURITY_JWKS_URI")
+            copyEnvironmentIfPresent("BANKING_LAB_SECURITY_ISSUER")
+            copyEnvironmentIfPresent("BANKING_LAB_SECURITY_AUDIENCE")
+            copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_SECURITY_AUDIENCE")
             copyEnvironmentIfPresent("BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED")
             copyEnvironmentIfPresent("BANKING_LAB_DEV_SIMULATOR_TOKEN")
             copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN")
+            copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL")
+            copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID")
+            copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET")
+            copyEnvironmentIfPresent("BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_REFRESH_SKEW_SECONDS")
         }
 
     private fun MutableMap<String, String>.putOrCopyEnvironment(name: String, value: String?) {
@@ -669,5 +827,10 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
     private data class CommandResult(
         val exitCode: Int,
         val output: String
+    )
+
+    private data class UrlConnectionResponse(
+        val status: Int,
+        val body: String
     )
 }
