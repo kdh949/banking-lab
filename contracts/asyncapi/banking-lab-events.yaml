@@ -9,8 +9,18 @@ channels:
       LedgerTransactionPosted:
         payload:
           $ref: ../events/ledger-transaction-posted.schema.json
+  payment.ledger.posting.requested:
+    address: payment.ledger.posting.requested
+    messages:
+      PaymentLedgerPostingRequested:
+        payload:
+          $ref: ../events/payment-ledger-posting-requested.schema.json
 operations:
   publishLedgerTransactionPosted:
     action: send
     channel:
       $ref: '#/channels/ledger.transaction.posted'
+  publishPaymentLedgerPostingRequested:
+    action: send
+    channel:
+      $ref: '#/channels/payment.ledger.posting.requested'

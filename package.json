@@ -22,6 +22,8 @@
     "test:core-banking:rerun": "scripts/run-core-banking-tests.sh --rerun-tasks",
     "test:core-banking:unit": "scripts/run-core-banking-tests.sh :services:core-banking:test",
     "test:core-banking:integration": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest",
+    "test:payment-service:unit": "scripts/run-core-banking-tests.sh :services:payment-service:test",
+    "test:payment-service:integration": "scripts/run-core-banking-tests.sh :services:payment-service:integrationTest",
     "ledger:integrity-check": "npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --rerun-tasks",
     "dr:multi-instance-drill": "node --experimental-strip-types scripts/run-multi-instance-drill.ts",
     "siem:alert-drill": "node --experimental-strip-types scripts/run-siem-alert-drill.ts",

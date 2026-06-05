@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Payment Service API
+  version: 0.1.0
+  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly.
+paths:
+  /api/payments/instructions:
+    post:
+      summary: Create a synthetic bill payment instruction
+      operationId: createPaymentInstruction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentInstructionRequest'
+      responses:
+        '201':
+          description: Created and ledger posting requested through durable Outbox
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+        '200':
+          description: Idempotent replay of the same payment instruction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+        '409':
+          description: Idempotency or state conflict
+  /api/payments/instructions/{instructionId}:
+    get:
+      summary: Read a synthetic payment instruction
+      operationId: getPaymentInstruction
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      responses:
+        '200':
+          description: Payment instruction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+  /api/payments/instructions/{instructionId}/settlements:
+    post:
+      summary: Record core-banking ledger settlement reference
+      operationId: recordPaymentSettlement
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentSettlementRequest'
+      responses:
+        '200':
+          description: Settlement recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+  /api/payments/instructions/{instructionId}/cancel:
+    post:
+      summary: Cancel before ledger settlement
+      operationId: cancelPaymentInstruction
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelPaymentInstructionRequest'
+      responses:
+        '200':
+          description: Cancellation recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+components:
+  parameters:
+    InstructionId:
+      name: instructionId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^PAY-'
+  schemas:
+    CreatePaymentInstructionRequest:
+      type: object
+      required: [customerId, debitAccountId, billerId, amountMinor, currency, idempotencyKey, requestedBy, requestedChannel]
+      properties:
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          default: KRW
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        requestedChannel:
+          type: string
+        reason:
+          type: string
+    RecordPaymentSettlementRequest:
+      type: object
+      required: [ledgerTransactionId, idempotencyKey, requestedBy, reason]
+      properties:
+        ledgerTransactionId:
+          type: string
+          pattern: '^TX-'
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    CancelPaymentInstructionRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    PaymentInstructionResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentInstruction'
+        replayed:
+          type: boolean
+    PaymentInstruction:
+      type: object
+      required: [paymentInstructionId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, status, syntheticOnly, createdAt, updatedAt]
+      properties:
+        paymentInstructionId:
+          type: string
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+        billerName:
+          type: string
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        status:
+          enum: [POSTING_REQUESTED, SETTLED, CANCELED, FAILED]
+        ledgerTransactionId:
+          type: string
+          nullable: true
+        lastOutboxEventId:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
