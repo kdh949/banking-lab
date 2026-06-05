@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:04:02.515Z",
+  "generatedAt": "2026-06-05T15:11:40.057Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -36,6 +36,34 @@
     {
       "file": "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
       "description": "Reporting Helm deployment renders secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/notification-service-deployment.yaml",
+      "description": "Notification Kubernetes API deployment keeps synthetic provider and service audience controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/notification-event-consumer-deployment.yaml",
+      "description": "Notification Kubernetes worker deployment consumes synthetic Redpanda events only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/notification-service-deployment.yaml",
+      "description": "Notification Helm API deployment renders synthetic provider and service audience controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/notification-event-consumer-deployment.yaml",
+      "description": "Notification Helm worker deployment renders synthetic Redpanda consumer controls.",
       "status": "pass",
       "missing": [],
       "forbidden": []

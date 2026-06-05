@@ -18,6 +18,9 @@ const requiredFiles = [
   "core-banking-service.yaml",
   "reporting-service-deployment.yaml",
   "reporting-service.yaml",
+  "notification-service-deployment.yaml",
+  "notification-service.yaml",
+  "notification-event-consumer-deployment.yaml",
   "core-banking-temporal-worker-deployment.yaml",
   "postgres-statefulset.yaml",
   "keycloak-deployment.yaml",
@@ -47,6 +50,9 @@ const coreDeployment = requireDocument(documents, "Deployment", "core-banking-se
 requireDocument(documents, "Service", "core-banking-service", errors);
 const reportingDeployment = requireDocument(documents, "Deployment", "reporting-service", errors);
 requireDocument(documents, "Service", "reporting-service", errors);
+const notificationDeployment = requireDocument(documents, "Deployment", "notification-service", errors);
+requireDocument(documents, "Service", "notification-service", errors);
+const notificationConsumerDeployment = requireDocument(documents, "Deployment", "notification-event-consumer", errors);
 const workerDeployment = requireDocument(documents, "Deployment", "core-banking-temporal-worker", errors);
 const postgres = requireDocument(documents, "StatefulSet", "postgres", errors);
 const keycloak = requireDocument(documents, "Deployment", "keycloak", errors);
@@ -54,7 +60,7 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, reportingDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
@@ -64,6 +70,23 @@ if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasTex
 }
 if (!hasText(reportingDeployment, "reporting_flyway_schema_history") || !hasText(reportingDeployment, "reporting-service-api")) {
   errors.push("Reporting service deployment must use its own Flyway table and reporting-service audience.");
+}
+if (
+  !hasText(notificationDeployment, "notification_flyway_schema_history") ||
+  !hasText(notificationDeployment, "notification-service-api") ||
+  !hasText(notificationDeployment, "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED") ||
+  !hasText(notificationDeployment, "value: \"false\"")
+) {
+  errors.push("Notification service deployment must use its own Flyway table, notification-service audience, and synthetic provider boundary.");
+}
+if (
+  !hasText(notificationConsumerDeployment, "notification_flyway_schema_history") ||
+  !hasText(notificationConsumerDeployment, "notification-service-api") ||
+  !hasText(notificationConsumerDeployment, "BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED") ||
+  !hasText(notificationConsumerDeployment, "value: \"true\"") ||
+  !hasText(notificationConsumerDeployment, "redpanda:9092")
+) {
+  errors.push("Notification event consumer deployment must enable the worker against the Redpanda domain-events stream.");
 }
 if (!hasText(secret, "replace-with-local-synthetic-password")) {
   errors.push("secret.example.yaml must use replace-with-local-synthetic-password placeholders only.");

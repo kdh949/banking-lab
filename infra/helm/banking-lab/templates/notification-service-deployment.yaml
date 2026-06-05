@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-notification-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: {{ .Release.Name }}-notification-service
+spec:
+  replicas: {{ .Values.notificationService.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Release.Name }}-notification-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: {{ .Release.Name }}-notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: {{ .Values.notificationService.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.notificationService.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+          env:
+            - name: PORT
+              value: {{ .Values.notificationService.port | quote }}
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: {{ .Values.syntheticOnly | quote }}
+            - name: BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS
+              value: {{ .Values.notificationService.eventConsumerBootstrapServers | quote }}
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC
+              value: {{ .Values.notificationService.eventConsumerTopic | quote }}
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-notification-service"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: {{ .Values.notificationService.securityAudience | quote }}
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "notification_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: {{ .Values.notificationService.resources.requests.cpu | quote }}
+              memory: {{ .Values.notificationService.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.notificationService.resources.limits.cpu | quote }}
+              memory: {{ .Values.notificationService.resources.limits.memory | quote }}

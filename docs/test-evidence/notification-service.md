@@ -19,6 +19,10 @@ This evidence covers the first synthetic Notification Service slice:
 - Docker Compose platform services for the notification REST API and the
   enabled Redpanda event-consumer worker, both using synthetic-only provider
   settings and an isolated notification Flyway history table.
+- Raw Kubernetes and Helm manifests for the notification REST API and the
+  Redpanda event-consumer worker, both using the notification-service JWT
+  audience, `notification_flyway_schema_history`, and synthetic provider
+  disablement.
 - Retry/failure and dead-letter state transitions.
 - Admin template change requests with maker-checker approval/rejection,
   append-only template versioning, and the synthetic `CHAT` sink.
@@ -71,6 +75,9 @@ npm run test:notification-service:integration -- --tests lab.banking.notificatio
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 docker compose --profile platform config
+npm run k8s:validate
+npm run helm:template
+npm run security:posture-check
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda notification-event-consumer
 env BANKING_LAB_LIVE_NOTIFICATION_COMPOSE_PROJECT=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh :services:notification-service:integrationTest --tests 'lab.banking.notification.LiveNotificationConsumerComposeSmokeIntegrationTest.live notification event consumer writes masked delivery from Compose Redpanda record' --rerun-tasks
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v
@@ -127,6 +134,16 @@ were rerun sequentially with `--rerun-tasks`.
   `notification-service` and `notification-event-consumer` with Redpanda
   bootstrap configuration, synthetic provider disablement, and
   `notification_flyway_schema_history`.
+- `npm run k8s:validate`: pass; structural validation covers
+  `notification-service` and `notification-event-consumer` deployments with
+  readiness/liveness probes, Redpanda bootstrap configuration, synthetic
+  provider disablement, `notification-service-api`, and
+  `notification_flyway_schema_history`.
+- `npm run helm:template`: pass; Helm renders the notification REST API
+  Deployment/Service and event-consumer Deployment with the same synthetic
+  provider, audience, Flyway, and Redpanda consumer controls.
+- `npm run security:posture-check`: pass; static posture checks include raw
+  Kubernetes and Helm notification API/worker deployment controls.
 - Live Compose notification consumer smoke: pass; a disposable Compose project
   started PostgreSQL, Redpanda, and `notification-event-consumer`, produced the
   same synthetic `PaymentLedgerPostingRequested` broker record twice, observed
@@ -311,10 +328,15 @@ synthetic recipient/channel/event filters, and suppression audit records persist
 masked payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
+The raw Kubernetes and Helm deployment manifests also set
+`BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`, use the
+service-specific `notification-service-api` audience, and keep the event
+consumer on the synthetic `redpanda:9092` domain-events stream.
 
 ## Remaining Risk
 
 This is still a partial feature slice. Browser E2E for live notification
 customer/admin/audit API paths remains conditional on local service URLs,
-retry/dead-letter behavior in a live Compose provider-sink loop, and live
-notification-service Keycloak smoke evidence remain future work.
+retry/dead-letter behavior in a live Compose provider-sink loop, live
+notification-service Keycloak smoke evidence, and live Kubernetes/Helm rollout
+of the notification API/worker remain future work.

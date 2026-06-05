@@ -42,6 +42,9 @@ for (const expected of [
   "Service/banking-lab-core-banking",
   "Deployment/banking-lab-reporting-service",
   "Service/banking-lab-reporting-service",
+  "Deployment/banking-lab-notification-service",
+  "Service/banking-lab-notification-service",
+  "Deployment/banking-lab-notification-event-consumer",
   "Deployment/banking-lab-temporal-worker",
   "Service/banking-lab-postgres",
   "StatefulSet/banking-lab-postgres",
@@ -60,6 +63,15 @@ if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
 }
 if (!rendered.includes("reporting_flyway_schema_history") || !rendered.includes("reporting-service-api")) {
   errors.push("Rendered Helm output must include reporting-service Flyway and audience settings.");
+}
+if (
+  !rendered.includes("notification_flyway_schema_history") ||
+  !rendered.includes("notification-service-api") ||
+  !rendered.includes("BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED") ||
+  !rendered.includes("BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED") ||
+  !rendered.includes("redpanda:9092")
+) {
+  errors.push("Rendered Helm output must include notification-service synthetic provider, consumer, Flyway, and audience settings.");
 }
 
 const payload = {
@@ -140,6 +152,23 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),
     ".Values.reportingService.resources.limits.cpu": scalarFromSection(source, "reportingService", ["resources", "limits", "cpu"]),
     ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
+    ".Values.notificationService.replicas": scalarFromSection(source, "notificationService", ["replicas"]),
+    ".Values.notificationService.eventConsumerReplicas": scalarFromSection(source, "notificationService", ["eventConsumerReplicas"]),
+    ".Values.notificationService.image": scalarFromSection(source, "notificationService", ["image"]),
+    ".Values.notificationService.port": scalarFromSection(source, "notificationService", ["port"]),
+    ".Values.notificationService.securityAudience": scalarFromSection(source, "notificationService", ["securityAudience"]),
+    ".Values.notificationService.eventConsumerBootstrapServers": scalarFromSection(source, "notificationService", ["eventConsumerBootstrapServers"]),
+    ".Values.notificationService.eventConsumerTopic": scalarFromSection(source, "notificationService", ["eventConsumerTopic"]),
+    ".Values.notificationService.eventConsumerClientId": scalarFromSection(source, "notificationService", ["eventConsumerClientId"]),
+    ".Values.notificationService.eventConsumerGroupId": scalarFromSection(source, "notificationService", ["eventConsumerGroupId"]),
+    ".Values.notificationService.resources.requests.cpu": scalarFromSection(source, "notificationService", ["resources", "requests", "cpu"]),
+    ".Values.notificationService.resources.requests.memory": scalarFromSection(source, "notificationService", ["resources", "requests", "memory"]),
+    ".Values.notificationService.resources.limits.cpu": scalarFromSection(source, "notificationService", ["resources", "limits", "cpu"]),
+    ".Values.notificationService.resources.limits.memory": scalarFromSection(source, "notificationService", ["resources", "limits", "memory"]),
+    ".Values.notificationService.workerResources.requests.cpu": scalarFromSection(source, "notificationService", ["workerResources", "requests", "cpu"]),
+    ".Values.notificationService.workerResources.requests.memory": scalarFromSection(source, "notificationService", ["workerResources", "requests", "memory"]),
+    ".Values.notificationService.workerResources.limits.cpu": scalarFromSection(source, "notificationService", ["workerResources", "limits", "cpu"]),
+    ".Values.notificationService.workerResources.limits.memory": scalarFromSection(source, "notificationService", ["workerResources", "limits", "memory"]),
     ".Values.temporalWorker.replicas": scalarFromSection(source, "temporalWorker", ["replicas"]),
     ".Values.temporalWorker.image": scalarFromSection(source, "temporalWorker", ["image"]),
     ".Values.temporalWorker.resources.requests.cpu": scalarFromSection(source, "temporalWorker", ["resources", "requests", "cpu"]),

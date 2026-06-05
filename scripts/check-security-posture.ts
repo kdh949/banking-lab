@@ -36,7 +36,9 @@ const checks: Check[] = [
       "BANKING_LAB_SECURITY_JWKS_URI: \"${BANKING_LAB_SECURITY_JWKS_URI:-http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs}\"",
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_SECURITY_AUDIENCE:-core-banking-api}\"",
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_REPORTING_SECURITY_AUDIENCE:-reporting-service-api}\"",
-      "SPRING_FLYWAY_TABLE: reporting_flyway_schema_history"
+      "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_NOTIFICATION_SECURITY_AUDIENCE:-notification-service-api}\"",
+      "SPRING_FLYWAY_TABLE: reporting_flyway_schema_history",
+      "SPRING_FLYWAY_TABLE: notification_flyway_schema_history"
     ],
     mustNotContain: [
       "BANKING_LAB_SECURITY_ENABLED: \"${BANKING_LAB_SECURITY_ENABLED:-false}\"",
@@ -76,6 +78,60 @@ const checks: Check[] = [
       "value: {{ .Values.reportingService.securityAudience | quote }}",
       "value: \"reporting_flyway_schema_history\"",
       "BANKING_LAB_REPORTING_DATABASE_URL"
+    ]
+  },
+  {
+    file: "infra/k8s/notification-service-deployment.yaml",
+    description: "Notification Kubernetes API deployment keeps synthetic provider and service audience controls.",
+    mustContain: [
+      "value: \"notification-service-api\"",
+      "value: \"notification_flyway_schema_history\"",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED",
+      "value: \"false\"",
+      "BANKING_LAB_NOTIFICATION_DATABASE_URL"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\"",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/k8s/notification-event-consumer-deployment.yaml",
+    description: "Notification Kubernetes worker deployment consumes synthetic Redpanda events only.",
+    mustContain: [
+      "value: \"notification-service-api\"",
+      "value: \"notification_flyway_schema_history\"",
+      "BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED",
+      "value: \"true\"",
+      "value: \"redpanda:9092\"",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED"
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\"",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/notification-service-deployment.yaml",
+    description: "Notification Helm API deployment renders synthetic provider and service audience controls.",
+    mustContain: [
+      "value: {{ .Values.notificationService.securityAudience | quote }}",
+      "value: \"notification_flyway_schema_history\"",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED",
+      "value: \"false\"",
+      "BANKING_LAB_NOTIFICATION_DATABASE_URL"
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/notification-event-consumer-deployment.yaml",
+    description: "Notification Helm worker deployment renders synthetic Redpanda consumer controls.",
+    mustContain: [
+      "value: {{ .Values.notificationService.securityAudience | quote }}",
+      "value: \"notification_flyway_schema_history\"",
+      "BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED",
+      "value: \"true\"",
+      "value: {{ .Values.notificationService.eventConsumerBootstrapServers | quote }}",
+      "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED"
     ]
   },
   {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:04:02.294Z",
+  "generatedAt": "2026-06-05T15:11:40.233Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {
@@ -16,6 +16,9 @@
     "core-banking-service.yaml",
     "reporting-service-deployment.yaml",
     "reporting-service.yaml",
+    "notification-service-deployment.yaml",
+    "notification-service.yaml",
+    "notification-event-consumer-deployment.yaml",
     "core-banking-temporal-worker-deployment.yaml",
     "postgres-statefulset.yaml",
     "keycloak-deployment.yaml",
@@ -23,7 +26,7 @@
     "temporal-deployment.yaml",
     "network-policy.yaml"
   ],
-  "documentCount": 17,
+  "documentCount": 20,
   "resources": [
     {
       "file": "infra/k8s/configmap.yaml",
@@ -78,6 +81,27 @@
       "apiVersion": "networking.k8s.io/v1",
       "kind": "NetworkPolicy",
       "name": "banking-lab-default-deny-and-app-allow",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/notification-event-consumer-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "notification-event-consumer",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/notification-service-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/notification-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "notification-service",
       "namespace": "banking-lab"
     },
     {
