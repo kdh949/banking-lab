@@ -234,3 +234,33 @@ test("payment-service cancellation outbox event has checked-in AsyncAPI contract
   assert.equal(schema.properties.cancellationRequestId.pattern, "^PCR-");
   assert.equal(schema.properties.realPaymentNetworkUsed.const, false);
 });
+
+test("notification-service delivery lifecycle events have checked-in AsyncAPI contract coverage", async () => {
+  const asyncapi = await readFile("contracts/asyncapi/banking-lab-events.yaml", "utf8");
+  const requested = JSON.parse(await readFile("contracts/events/notification-delivery-requested.schema.json", "utf8"));
+  const lifecycleSchemas = [
+    ["notification.delivery.attempted", "NotificationDeliveryAttempted", "notification-delivery-attempted.schema.json", "PENDING", undefined],
+    ["notification.delivery.delivered", "NotificationDeliveryDelivered", "notification-delivery-delivered.schema.json", "DELIVERED", undefined],
+    ["notification.delivery.failed", "NotificationDeliveryFailed", "notification-delivery-failed.schema.json", "FAILED", true],
+    ["notification.delivery.dead-lettered", "NotificationDeliveryDeadLettered", "notification-delivery-dead-lettered.schema.json", "DEAD_LETTER", false]
+  ];
+
+  assert.ok(requested.properties.channel.enum.includes("CHAT"));
+  assert.ok(requested.properties.providerKind.enum.includes("SYNTHETIC_CHAT_SINK"));
+  for (const [channel, title, fileName, status, retryable] of lifecycleSchemas) {
+    const schema = JSON.parse(await readFile(`contracts/events/${fileName}`, "utf8"));
+    assert.match(asyncapi, new RegExp(channel.replaceAll(".", "\\.")));
+    assert.match(asyncapi, new RegExp(title));
+    assert.match(asyncapi, new RegExp(fileName.replaceAll(".", "\\.")));
+    assert.equal(schema.title, title);
+    assert.equal(schema.properties.status.const, status);
+    assert.equal(schema.properties.syntheticOnly.const, true);
+    assert.equal(schema.properties.realProviderUsed.const, false);
+    assert.equal(schema.properties.realPiiExposed.const, false);
+    assert.ok(schema.properties.channel.enum.includes("CHAT"));
+    assert.ok(schema.properties.providerKind.enum.includes("SYNTHETIC_CHAT_SINK"));
+    if (retryable !== undefined) {
+      assert.equal(schema.properties.retryable.const, retryable);
+    }
+  }
+});

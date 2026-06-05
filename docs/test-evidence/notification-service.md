@@ -49,7 +49,9 @@ This evidence covers the first synthetic Notification Service slice:
   notification template approval and recipient preference management.
 - Audit-console screen manifest and API-backed smoke panel wiring for masked
   notification delivery history review.
-- Synthetic-only OpenAPI and event contracts.
+- Synthetic-only OpenAPI and event contracts, including AsyncAPI lifecycle
+  schemas for requested, attempted, delivered, failed, and dead-lettered
+  delivery states.
 - TypeScript API client methods for notification event consumption, delivery
   reads/history, provider failure recording, delivered-state marking, template
   reads, template change-request approval/rejection, admin preference list/upsert,
@@ -92,6 +94,8 @@ docker compose --profile platform config
 npm run k8s:validate
 npm run helm:template
 npm run security:posture-check
+node --test tests/springScaffold.test.mjs
+npm test
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda notification-event-consumer
 env BANKING_LAB_LIVE_NOTIFICATION_COMPOSE_PROJECT=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh :services:notification-service:integrationTest --tests 'lab.banking.notification.LiveNotificationConsumerComposeSmokeIntegrationTest.live notification event consumer writes masked delivery from Compose Redpanda record' --rerun-tasks
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform down -v
@@ -360,6 +364,15 @@ API client typecheck verifies:
   `listCustomerNotificationPreferences`/`upsertCustomerNotificationPreference`
   and `listCustomerNotificationDeliveries` client methods.
 
+`springScaffold.test.mjs` verifies:
+
+- `contracts/asyncapi/banking-lab-events.yaml` declares notification delivery
+  requested, attempted, delivered, failed, and dead-lettered channels;
+- checked-in lifecycle schemas require synthetic-only, no-real-provider, and
+  no-real-PII controls;
+- lifecycle schemas include the synthetic `CHAT` channel and
+  `SYNTHETIC_CHAT_SINK` provider kind.
+
 ## Synthetic Boundary
 
 The migration constrains provider kinds to `SYNTHETIC_SMS_SINK`,
@@ -393,6 +406,9 @@ The raw Kubernetes and Helm deployment manifests also set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`, use the
 service-specific `notification-service-api` audience, and keep the event
 consumer on the synthetic `redpanda:9092` domain-events stream.
+Notification lifecycle event schemas require `syntheticOnly=true`,
+`realProviderUsed=false`, and `realPiiExposed=false` for attempted, delivered,
+failed, and dead-lettered states.
 
 ## Remaining Risk
 
