@@ -119,6 +119,8 @@ class ParameterAdminIntegrationTest {
             assertEquals(0, countRows("parameter_change_requests WHERE approval_id = '$approvalId' AND status = 'APPLIED'"))
         }
 
+        assertAuthorizationParameterValidation(tomorrow)
+
         mockMvc.perform(
             post("/api/staff/fds-parameters/change-requests")
                 .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-PARAM-001"))
@@ -183,6 +185,42 @@ class ParameterAdminIntegrationTest {
 
         assertTrue(countRows("audit_events WHERE event_type LIKE 'PARAMETER_%'") >= 4)
         assertEquals(0, unbalancedTransactionCount())
+    }
+
+    private fun assertAuthorizationParameterValidation(tomorrow: LocalDate) {
+        mockMvc.perform(
+            post("/api/admin/platform/authorization-parameters/change-requests")
+                .header("Authorization", bearer("security01", listOf("COMPLIANCE_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    parameterChangeJson(
+                        Endpoint.authorization("roleMenuMap"),
+                        mapOf("COMPLIANCE_MANAGER" to listOf("ADM-201", "ADM-301")),
+                        tomorrow,
+                        "PARAM-AUTH-VALID-JSON"
+                    )
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.item.businessType").value("AUTHORIZATION_PARAMETER_CHANGE"))
+
+        expectInvalidAuthorizationParameter("roleMenuMap", "COMPLIANCE_MANAGER:ADM201", tomorrow, "PARAM-AUTH-BAD-SCREEN")
+        expectInvalidAuthorizationParameter(
+            "roleMenuMap",
+            mapOf("COMPLIANCE_MANAGER" to listOf("ADM-201", "ADM-201")),
+            tomorrow,
+            "PARAM-AUTH-DUP-ROLE-SCREEN"
+        )
+        expectInvalidAuthorizationParameter(
+            "approvalRoleMatrix",
+            mapOf("COMPLIANCE_MANAGER" to listOf("UNKNOWN_PARAMETER_CHANGE")),
+            tomorrow,
+            "PARAM-AUTH-BAD-BUSINESS-TYPE"
+        )
+        expectInvalidAuthorizationParameter("reasonRequiredScreens", "ADM-201,ADM-201", tomorrow, "PARAM-AUTH-DUP-SCREEN")
+
+        assertEquals(2, countRows("parameter_change_requests WHERE namespace = 'authorization'"))
     }
 
     private fun requestFdsThreshold(idempotencyKey: String, threshold: Long, effectiveFrom: LocalDate): String {
@@ -300,6 +338,17 @@ class ParameterAdminIntegrationTest {
           "reason": "Synthetic FDS parameter behavior proof"
         }
         """.trimIndent()
+
+    private fun expectInvalidAuthorizationParameter(parameterKey: String, value: Any, effectiveFrom: LocalDate, idempotencyKey: String) {
+        mockMvc.perform(
+            post("/api/admin/platform/authorization-parameters/change-requests")
+                .header("Authorization", bearer("security01", listOf("COMPLIANCE_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(parameterChangeJson(Endpoint.authorization(parameterKey), value, effectiveFrom, idempotencyKey))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+    }
 
     private fun seedSyntheticTransferFixtures() {
         TransactionTemplate(transactionManager).executeWithoutResult {
@@ -453,6 +502,16 @@ class ParameterAdminIntegrationTest {
                 "fds01",
                 "highAmountMinor",
                 3_000_000
+            )
+
+            fun authorization(parameterKey: String, value: Any = "OPS-301,AUD-201,FDS-301,ADM-201,ADM-301") = Endpoint(
+                "/api/admin/platform/authorization-parameters",
+                "/api/admin/platform/authorization-parameters/history",
+                "/api/admin/platform/authorization-parameters/change-requests",
+                "COMPLIANCE_MANAGER",
+                "security01",
+                parameterKey,
+                value
             )
         }
     }
