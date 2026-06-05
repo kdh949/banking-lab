@@ -98,6 +98,10 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(panel, /securityParameters/);
   assert.match(panel, /requestSecurityParameterChange/);
   assert.match(panel, /Browser ADM-201 parameter change smoke/);
+  assert.match(panel, /data-testid="api-backed-authorization-parameters"/);
+  assert.match(panel, /authorizationParameters/);
+  assert.match(panel, /requestAuthorizationParameterChange/);
+  assert.match(panel, /Browser ADM-301 parameter change smoke/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
   assert.match(panel, /listNotificationTemplates/);
   assert.match(panel, /listNotificationTemplateChangeRequests/);

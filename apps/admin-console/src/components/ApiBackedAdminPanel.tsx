@@ -86,6 +86,33 @@ type SecurityParameterCommandState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type AuthorizationParameterState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly auditEventId: string;
+      readonly parameterKey: string;
+      readonly currentValue: string;
+      readonly currentVersionId: string;
+      readonly scheduledCount: number;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type AuthorizationParameterCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "requested";
+      readonly requestId: string;
+      readonly approvalId: string;
+      readonly parameterKey: string;
+      readonly requestedValue: string;
+      readonly effectiveFrom: string;
+      readonly requestStatus: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
@@ -106,6 +133,12 @@ export function ApiBackedAdminPanel() {
     apiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
   const [securityParameterCommandState, setSecurityParameterCommandState] = useState<SecurityParameterCommandState>({ status: "idle" });
+  const [authorizationParameterState, setAuthorizationParameterState] = useState<AuthorizationParameterState>(() =>
+    apiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [authorizationParameterCommandState, setAuthorizationParameterCommandState] = useState<AuthorizationParameterCommandState>({
+    status: "idle"
+  });
   const [keycloakAdminState, setKeycloakAdminState] = useState<KeycloakAdminState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -266,6 +299,32 @@ export function ApiBackedAdminPanel() {
   }, []);
 
   useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    authorizationParameterClient()
+      .authorizationParameters("Browser ADM-301 parameter read smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setAuthorizationParameterState(toAuthorizationParameterState(response));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setAuthorizationParameterState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown authorization parameter API failure"
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!apiBaseUrl || !keycloakBaseUrl) {
       return;
     }
@@ -393,6 +452,40 @@ export function ApiBackedAdminPanel() {
       setSecurityParameterCommandState(toSecurityParameterCommandState(response));
     } catch (error: unknown) {
       setSecurityParameterCommandState({ status: "failed", message: error instanceof Error ? error.message : "Unknown security parameter failure" });
+    }
+  };
+
+  const runAuthorizationParameterChangeSmoke = async () => {
+    if (!apiBaseUrl || authorizationParameterCommandState.status === "running") {
+      return;
+    }
+    setAuthorizationParameterCommandState({ status: "running" });
+    try {
+      const current = authorizationParameterState.status === "loaded"
+        ? authorizationParameterState
+        : toAuthorizationParameterState(await authorizationParameterClient().authorizationParameters("Browser ADM-301 parameter command read"));
+      if (current.status !== "loaded") {
+        setAuthorizationParameterCommandState({ status: "failed", message: "ADM reasonRequiredScreens parameter was not loaded" });
+        return;
+      }
+      const requestedValue = nextReasonRequiredScreensValue(current.currentValue);
+      const effectiveFrom = tomorrowIsoDate();
+      const response = await authorizationParameterClient(true).requestAuthorizationParameterChange({
+        parameterKey: "reasonRequiredScreens",
+        scheduledValue: requestedValue,
+        effectiveFrom,
+        rollbackPlan: "Create a future synthetic rollback version from the prior reason-required screen catalog",
+        requestedBy: "security-admin01",
+        requestedByRole: "COMPLIANCE_MANAGER",
+        reason: "Browser ADM-301 parameter change smoke",
+        idempotencyKey: `ADM-AUTH-PARAM-${globalThis.crypto.randomUUID()}`
+      });
+      setAuthorizationParameterCommandState(toAuthorizationParameterCommandState(response));
+    } catch (error: unknown) {
+      setAuthorizationParameterCommandState({
+        status: "failed",
+        message: error instanceof Error ? error.message : "Unknown authorization parameter failure"
+      });
     }
   };
 
@@ -677,6 +770,85 @@ export function ApiBackedAdminPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-authorization-parameters">
+        <button
+          type="button"
+          onClick={runAuthorizationParameterChangeSmoke}
+          disabled={!apiBaseUrl || authorizationParameterCommandState.status === "running"}
+        >
+          Run authorization parameter change smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Authorization parameters</dt>
+            <dd>{authorizationParameterLabel(authorizationParameterState)}</dd>
+          </div>
+          {authorizationParameterState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Parameter</dt>
+                <dd>{authorizationParameterState.parameterKey}</dd>
+              </div>
+              <div>
+                <dt>Current</dt>
+                <dd>{authorizationParameterState.currentValue}</dd>
+              </div>
+              <div>
+                <dt>Current version</dt>
+                <dd>{authorizationParameterState.currentVersionId}</dd>
+              </div>
+              <div>
+                <dt>Scheduled</dt>
+                <dd>{authorizationParameterState.scheduledCount}</dd>
+              </div>
+              <div>
+                <dt>Audit</dt>
+                <dd>{authorizationParameterState.auditEventId}</dd>
+              </div>
+            </>
+          ) : null}
+          {authorizationParameterState.status === "failed" ? (
+            <div>
+              <dt>Parameter error</dt>
+              <dd>{authorizationParameterState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Command</dt>
+            <dd>{authorizationParameterCommandLabel(authorizationParameterCommandState)}</dd>
+          </div>
+          {authorizationParameterCommandState.status === "requested" ? (
+            <>
+              <div>
+                <dt>Request</dt>
+                <dd>{authorizationParameterCommandState.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{authorizationParameterCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Requested value</dt>
+                <dd>{authorizationParameterCommandState.requestedValue}</dd>
+              </div>
+              <div>
+                <dt>Effective from</dt>
+                <dd>{authorizationParameterCommandState.effectiveFrom}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{authorizationParameterCommandState.requestStatus}</dd>
+              </div>
+            </>
+          ) : null}
+          {authorizationParameterCommandState.status === "failed" ? (
+            <div>
+              <dt>Command error</dt>
+              <dd>{authorizationParameterCommandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-admin-keycloak-login">
         <button
           type="button"
@@ -854,12 +1026,74 @@ function toSecurityParameterCommandState(response: ParameterChangeRequestRespons
   };
 }
 
+function authorizationParameterLabel(state: AuthorizationParameterState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading";
+    case "loaded":
+      return "authorization parameters loaded";
+    case "failed":
+      return "failed";
+  }
+}
+
+function authorizationParameterCommandLabel(state: AuthorizationParameterCommandState): string {
+  switch (state.status) {
+    case "idle":
+      return "ready";
+    case "running":
+      return "running";
+    case "requested":
+      return "authorization parameter change requested";
+    case "failed":
+      return "failed";
+  }
+}
+
+function toAuthorizationParameterState(response: ParameterListResponse): AuthorizationParameterState {
+  const parameter = response.items.find((item) => item.parameterKey === "reasonRequiredScreens");
+  if (!parameter) {
+    return { status: "failed", message: "reasonRequiredScreens parameter missing" };
+  }
+  return {
+    status: "loaded",
+    auditEventId: response.auditEventId,
+    parameterKey: parameter.parameterKey,
+    currentValue: parameter.currentValue,
+    currentVersionId: parameter.currentVersionId,
+    scheduledCount: parameter.scheduled.length
+  };
+}
+
+function toAuthorizationParameterCommandState(response: ParameterChangeRequestResponse): AuthorizationParameterCommandState {
+  return {
+    status: "requested",
+    requestId: response.item.requestId,
+    approvalId: response.approval?.approvalId ?? "approval-missing",
+    parameterKey: response.item.parameterKey,
+    requestedValue: response.item.requestedValue,
+    effectiveFrom: response.item.effectiveFrom,
+    requestStatus: response.item.status
+  };
+}
+
 function nextNumericParameterValue(currentValue: string, increment: number): number {
   const parsed = Number.parseInt(currentValue, 10);
   if (!Number.isFinite(parsed)) {
     throw new Error("ADM staffSessionTtlSeconds parameter is not numeric");
   }
   return parsed + increment;
+}
+
+function nextReasonRequiredScreensValue(currentValue: string): string {
+  const screens = currentValue
+    .split(",")
+    .map((screen) => screen.trim())
+    .filter((screen) => screen.length > 0);
+  const screenToAdd = ["ADM-401", "ADM-402", "ADM-501", "ADM-601", "ADM-701"].find((screen) => !screens.includes(screen));
+  return [...screens, screenToAdd ?? "ADM-701"].join(",");
 }
 
 function tomorrowIsoDate(): string {
@@ -875,6 +1109,25 @@ function securityParameterClient(stepUp = false) {
     bearerToken: createSimulatorBearerToken({
       subject: "security-admin01",
       roles: ["COMPLIANCE_MANAGER"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
+}
+
+function authorizationParameterClient(stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "security-admin01",
+      roles: ["COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN"],
       ...(stepUp
         ? {
             authTimeEpochSeconds: nowEpochSeconds,
