@@ -240,6 +240,12 @@ test("payment-service cancellation outbox event has checked-in AsyncAPI contract
 test("payment-service instruction lifecycle events have checked-in AsyncAPI contract coverage", async () => {
   const asyncapi = await readFile("contracts/asyncapi/banking-lab-events.yaml", "utf8");
   const service = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/domain/PaymentInstructionService.kt", "utf8");
+  const dispatcher = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/domain/PaymentOutboxDispatcherService.kt", "utf8");
+  const publisherModels = await readFile("services/payment-service/src/main/kotlin/lab/banking/payment/eventing/PaymentKafkaModels.kt", "utf8");
+  const application = await readFile("services/payment-service/src/main/resources/application.yml", "utf8");
+  const compose = await readFile("docker-compose.yml", "utf8");
+  const k8sPublisher = await readFile("infra/k8s/payment-domain-event-publisher-deployment.yaml", "utf8");
+  const helmValues = await readFile("infra/helm/banking-lab/values.yaml", "utf8");
   const lifecycleSchemas = [
     [
       "payment.instruction.settled",
@@ -274,6 +280,10 @@ test("payment-service instruction lifecycle events have checked-in AsyncAPI cont
   assert.match(service, /eventType = "PaymentInstructionSettled"/);
   assert.match(service, /"ledgerPostedViaCoreBanking" to true/);
   assert.match(service, /"realFinancialInstitutionApiUsed" to false/);
+  assert.match(dispatcher, /eventType = "PaymentInstructionFailed"/);
+  assert.match(dispatcher, /eventType = "PaymentInstructionRetryScheduled"/);
+  assert.match(dispatcher, /eventType = "PaymentInstructionDeadLettered"/);
+  assert.match(dispatcher, /PaymentInstructionStatus\.FAILED/);
   for (const [channel, title, fileName, status, retryable] of lifecycleSchemas) {
     const schema = JSON.parse(await readFile(`contracts/events/${fileName}`, "utf8"));
     assert.match(asyncapi, new RegExp(channel.replaceAll(".", "\\.")));
@@ -287,6 +297,11 @@ test("payment-service instruction lifecycle events have checked-in AsyncAPI cont
     assert.equal(schema.properties.realPaymentNetworkUsed.const, false);
     assert.equal(schema.properties.realFinancialInstitutionApiUsed.const, false);
     assert.equal(schema.properties.paymentInstructionId.pattern, "^PAY-");
+    assert.match(publisherModels, new RegExp(title));
+    assert.match(application, new RegExp(title));
+    assert.match(compose, new RegExp(title));
+    assert.match(k8sPublisher, new RegExp(title));
+    assert.match(helmValues, new RegExp(title));
     if (retryable !== undefined) {
       assert.equal(schema.properties.retryable.const, retryable);
       assert.equal(schema.properties.deadLetterThreshold.minimum, 1);

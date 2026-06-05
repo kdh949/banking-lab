@@ -91,7 +91,8 @@ class PaymentKafkaOutboxPublisher(
                 outboxEventId = event.outboxEventId,
                 retryCount = nextRetryCount,
                 errorMessage = summarize(ex),
-                deadLetter = deadLetter
+                deadLetter = deadLetter,
+                retryDelaySeconds = config.retryDelaySeconds
             )
             PaymentKafkaPublishResult(
                 outboxEventId = event.outboxEventId,
