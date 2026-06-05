@@ -122,6 +122,19 @@ class NotificationAuthorizationIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
 
+        mockMvc.perform(
+            get("/api/notifications/deliveries?recipientId=CUS-NOTIF-AUTH-001&requestedBy=customer01&reason=Synthetic%20delivery%20history")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-AUTH-001"))
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            get("/api/notifications/deliveries?recipientId=CUS-NOTIF-AUTH-001&requestedBy=audit01&reason=Synthetic%20delivery%20history")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
+
         val deliveredBody = """
             {
               "requestedBy": "notification-worker",

@@ -2183,6 +2183,34 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    listNotificationDeliveries(filters: {
+      readonly requestedBy: string;
+      readonly reason: string;
+      readonly recipientId?: string;
+      readonly sourceEventId?: string;
+      readonly eventType?: string;
+      readonly channel?: NotificationChannel;
+      readonly status?: NotificationDeliveryStatus;
+      readonly limit?: number;
+    }) {
+      return request<readonly NotificationDeliveryDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/deliveries",
+        {
+          requestedBy: filters.requestedBy,
+          reason: filters.reason,
+          ...(filters.recipientId ? { recipientId: filters.recipientId } : {}),
+          ...(filters.sourceEventId ? { sourceEventId: filters.sourceEventId } : {}),
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.limit ? { limit: String(filters.limit) } : {})
+        },
+        options.bearerToken
+      );
+    },
+
     recordNotificationFailure(deliveryRequestId: string, command: RecordNotificationFailureRequest) {
       return request<NotificationDeliveryDto>(
         fetchImpl,

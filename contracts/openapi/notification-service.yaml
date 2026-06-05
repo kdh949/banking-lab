@@ -163,6 +163,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationDeliveryResponse'
+  /api/notifications/deliveries:
+    get:
+      summary: List masked notification delivery history
+      operationId: listNotificationDeliveries
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sourceEventId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationDeliveryStatus'
+        - name: requestedBy
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Masked delivery history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationDelivery'
   /api/notifications/deliveries/{deliveryRequestId}:
     get:
       summary: Read notification delivery state
@@ -237,6 +293,9 @@ components:
     NotificationProviderKind:
       type: string
       enum: [SYNTHETIC_SMS_SINK, SYNTHETIC_EMAIL_SINK, SYNTHETIC_PUSH_SINK, SYNTHETIC_CHAT_SINK]
+    NotificationDeliveryStatus:
+      type: string
+      enum: [PENDING, DELIVERED, FAILED, DEAD_LETTER]
     ConsumeNotificationEventRequest:
       type: object
       required: [sourceEventId, eventType, recipientId, channel, payload]
@@ -365,7 +424,7 @@ components:
         providerKind:
           $ref: '#/components/schemas/NotificationProviderKind'
         status:
-          enum: [PENDING, DELIVERED, FAILED, DEAD_LETTER]
+          $ref: '#/components/schemas/NotificationDeliveryStatus'
         maskedMessage:
           type: string
         syntheticOnly:

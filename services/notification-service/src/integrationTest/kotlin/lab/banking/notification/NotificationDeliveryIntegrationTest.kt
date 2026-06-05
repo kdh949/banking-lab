@@ -121,6 +121,42 @@ class NotificationDeliveryIntegrationTest {
         assertEquals(1, countRows("notification_delivery_attempts WHERE status = 'DELIVERED'"))
     }
 
+    @Test
+    fun `delivery history is masked filtered and audited with reason`() {
+        notificationDeliveryService.consumeEvent(sampleEvent("OBX-NOTIF-HIST-001")).items.single()
+        notificationDeliveryService.consumeEvent(sampleEvent("OBX-NOTIF-HIST-002")).items.single()
+
+        val history = notificationDeliveryService.deliveryHistory(
+            recipientId = "CUS-NOTIF-001",
+            sourceEventId = null,
+            eventType = "PaymentLedgerPostingRequested",
+            channel = "SMS",
+            status = "PENDING",
+            requestedBy = "audit-delivery-reviewer",
+            reason = "Synthetic delivery history lookup",
+            limit = 1
+        )
+
+        assertEquals(1, history.size)
+        assertTrue(history.single().maskedMessage.contains("LAB-***0001"))
+        assertFalse(history.single().maskedMessage.contains("010-1234-5678"))
+        assertEquals(1, countRows("notification_access_audit_events WHERE action = 'NOTIFICATION_DELIVERY_HISTORY_VIEW'"))
+
+        val missingReason = assertThrows(NotificationDomainException::class.java) {
+            notificationDeliveryService.deliveryHistory(
+                recipientId = "CUS-NOTIF-001",
+                sourceEventId = null,
+                eventType = null,
+                channel = null,
+                status = null,
+                requestedBy = "audit-delivery-reviewer",
+                reason = " ",
+                limit = null
+            )
+        }
+        assertEquals("NOTIFICATION_REQUIRED_FIELD_MISSING", missingReason.code)
+    }
+
     private fun sampleEvent(sourceEventId: String): ConsumeNotificationEventRequest =
         ConsumeNotificationEventRequest(
             sourceEventId = sourceEventId,

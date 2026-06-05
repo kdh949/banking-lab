@@ -67,6 +67,8 @@ class NotificationAuthorizationFilter(
         return when {
             path == "/api/notifications/events" && method == "POST" ->
                 setOf("NOTIFICATION_SERVICE", "CORE_BANKING_SERVICE", "PAYMENT_SERVICE", "OUTBOX_WORKER", "OPS_OPERATOR")
+            path == "/api/notifications/deliveries" && method == "GET" ->
+                setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             deliveryRead.matches(path) && method == "GET" ->
                 setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             deliveryFailure.matches(path) && method == "POST" -> setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR")

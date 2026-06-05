@@ -110,6 +110,66 @@ class NotificationDeliveryService(
         (repository.findDelivery(deliveryRequestId) ?: throw notFound(deliveryRequestId)).toDto()
 
     @Transactional
+    fun deliveryHistory(
+        recipientId: String?,
+        sourceEventId: String?,
+        eventType: String?,
+        channel: String?,
+        status: String?,
+        requestedBy: String,
+        reason: String,
+        limit: Int?
+    ): List<NotificationDeliveryDto> {
+        validateOperatorCommand(requestedBy, reason)
+        val normalizedStatus = status?.trim()?.takeIf { it.isNotBlank() }?.uppercase()?.let {
+            try {
+                NotificationDeliveryStatus.valueOf(it)
+            } catch (ex: IllegalArgumentException) {
+                throw notificationError(
+                    code = "NOTIFICATION_DELIVERY_STATUS_INVALID",
+                    status = HttpStatus.BAD_REQUEST,
+                    message = "notification delivery status is not supported",
+                    cause = "Delivery history filtering only accepts modeled notification delivery statuses.",
+                    fix = "Use one of ${NotificationDeliveryStatus.entries.joinToString(", ") { value -> value.name }}.",
+                    details = mapOf("status" to status)
+                )
+            }
+        }
+        val boundedLimit = (limit ?: 100).coerceIn(1, 200)
+        val normalizedRecipientId = recipientId?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedSourceEventId = sourceEventId?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedEventType = eventType?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedChannel = channel?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
+        repository.insertAccessAudit(
+            auditEventId = auditEventId(),
+            action = "NOTIFICATION_DELIVERY_HISTORY_VIEW",
+            actorId = requestedBy.trim(),
+            reason = reason.trim(),
+            targetType = "NOTIFICATION_DELIVERY",
+            targetId = normalizedRecipientId ?: normalizedSourceEventId ?: "ALL",
+            details = mapOf(
+                "recipientId" to normalizedRecipientId,
+                "sourceEventId" to normalizedSourceEventId,
+                "eventType" to normalizedEventType,
+                "channel" to normalizedChannel,
+                "status" to normalizedStatus?.name,
+                "limit" to boundedLimit,
+                "syntheticOnly" to true
+            )
+        )
+        return repository
+            .listDeliveries(
+                recipientId = normalizedRecipientId,
+                sourceEventId = normalizedSourceEventId,
+                eventType = normalizedEventType,
+                channel = normalizedChannel,
+                status = normalizedStatus,
+                limit = boundedLimit
+            )
+            .map { it.toDto() }
+    }
+
+    @Transactional
     fun recordFailure(
         deliveryRequestId: String,
         request: RecordNotificationFailureRequest
@@ -316,6 +376,8 @@ class NotificationDeliveryService(
     private fun deadLetterId(): String = "NDLQ-${UUID.randomUUID().toString().uppercase()}"
 
     private fun suppressionId(): String = "NSP-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun auditEventId(): String = "NAUD-${UUID.randomUUID().toString().uppercase()}"
 
     private fun sha256(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))

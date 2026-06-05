@@ -25,10 +25,12 @@ This evidence covers the first synthetic Notification Service slice:
 - Recipient notification preferences with wildcard and event-specific channel
   filters, reason-required preference reads, access audit rows, masked
   suppression audit rows, and idempotent suppressed replays.
+- Reason-required masked delivery history listing with status/channel/event
+  filters and `NOTIFICATION_DELIVERY_HISTORY_VIEW` audit rows.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
-  reads, provider failure recording, delivered-state marking, template reads,
-  template change-request approval/rejection, and preference list/upsert.
+  reads/history, provider failure recording, delivered-state marking, template
+  reads, template change-request approval/rejection, and preference list/upsert.
 - Notification-service route-level authorization filter, signed JWKS JWT
   decoder, dev-only simulator token decoder, and route role policies for event
   consumption, delivery reads, failure recording, delivered-state marking, and
@@ -107,6 +109,10 @@ were rerun sequentially with `--rerun-tasks`.
 - retry failures are durable and move to `DEAD_LETTER` at threshold;
 - dead-letter deliveries cannot be marked delivered later;
 - pending deliveries can be marked `DELIVERED` through a synthetic provider sink.
+- delivery history filters by recipient, event, channel, and status while
+  returning masked messages only;
+- delivery history reads require actor/reason and append
+  `NOTIFICATION_DELIVERY_HISTORY_VIEW` audit rows.
 
 `NotificationAuthorizationIntegrationTest` verifies:
 
@@ -116,6 +122,8 @@ were rerun sequentially with `--rerun-tasks`.
 - `NOTIFICATION_SERVICE` tokens can consume domain events and mark synthetic
   deliveries as delivered;
 - `AUDITOR` tokens can read masked delivery state but cannot mutate it;
+- customer tokens cannot list masked delivery history;
+- auditor tokens can list masked delivery history with a reason-required query;
 - customers cannot create template change requests;
 - operations makers can create template change requests but cannot approve them
   through the route policy;
@@ -205,8 +213,8 @@ API client typecheck verifies:
 
 - `consumeNotificationEvent`, `getNotificationDelivery`,
   `recordNotificationFailure`, `markNotificationDelivered`,
-  `listNotificationTemplates`, `createNotificationTemplateChangeRequest`,
-  `getNotificationTemplateChangeRequest`,
+  `listNotificationDeliveries`, `listNotificationTemplates`,
+  `createNotificationTemplateChangeRequest`, `getNotificationTemplateChangeRequest`,
   `approveNotificationTemplateChangeRequest`, and
   `rejectNotificationTemplateChangeRequest`, `listNotificationPreferences`, and
   `upsertNotificationPreference` methods are available with typed
@@ -222,9 +230,10 @@ The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=tru
 in payload or headers before creating delivery side effects.
 Template administration rejects `syntheticOnly=false`, non-matching provider
 kinds, and raw account/phone/email literals in template bodies.
-Preference administration rejects `syntheticOnly=false`, stores only synthetic
-recipient/channel/event filters, records reason-required preference read audits,
-and suppression audit records persist masked payload JSON.
+Delivery history and preference reads require reasons and persist synthetic
+access-audit rows. Preference administration rejects `syntheticOnly=false`,
+stores only synthetic recipient/channel/event filters, and suppression audit
+records persist masked payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 

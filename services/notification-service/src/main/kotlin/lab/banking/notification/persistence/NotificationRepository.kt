@@ -465,6 +465,38 @@ class NotificationRepository(
             this::mapDelivery
         )
 
+    fun listDeliveries(
+        recipientId: String?,
+        sourceEventId: String?,
+        eventType: String?,
+        channel: String?,
+        status: NotificationDeliveryStatus?,
+        limit: Int
+    ): List<NotificationDeliveryRecord> =
+        jdbc.query(
+            """
+            SELECT delivery_request_id, source_event_id, event_type, recipient_id, channel,
+                   provider_kind, status, masked_message, synthetic_only, created_at, updated_at
+            FROM notification_delivery_requests
+            WHERE (CAST(:recipientId AS TEXT) IS NULL OR recipient_id = :recipientId)
+              AND (CAST(:sourceEventId AS TEXT) IS NULL OR source_event_id = :sourceEventId)
+              AND (CAST(:eventType AS TEXT) IS NULL OR event_type = :eventType)
+              AND (CAST(:channel AS TEXT) IS NULL OR channel = :channel)
+              AND (CAST(:status AS TEXT) IS NULL OR status = :status)
+            ORDER BY created_at DESC, delivery_request_id ASC
+            LIMIT :limit
+            """.trimIndent(),
+            mapOf(
+                "recipientId" to recipientId,
+                "sourceEventId" to sourceEventId,
+                "eventType" to eventType,
+                "channel" to channel,
+                "status" to status?.name,
+                "limit" to limit
+            ),
+            this::mapDelivery
+        )
+
     fun findDelivery(deliveryRequestId: String): NotificationDeliveryRecord? =
         findDeliveryBySql(
             """

@@ -39,6 +39,28 @@ class NotificationController(
     fun delivery(@PathVariable deliveryRequestId: String): NotificationDeliveryDto =
         notificationDeliveryService.delivery(deliveryRequestId)
 
+    @GetMapping("/deliveries")
+    fun deliveryHistory(
+        @RequestParam(required = false) recipientId: String?,
+        @RequestParam(required = false) sourceEventId: String?,
+        @RequestParam(required = false) eventType: String?,
+        @RequestParam(required = false) channel: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam requestedBy: String,
+        @RequestParam reason: String,
+        @RequestParam(required = false) limit: Int?
+    ): List<NotificationDeliveryDto> =
+        notificationDeliveryService.deliveryHistory(
+            recipientId = recipientId,
+            sourceEventId = sourceEventId,
+            eventType = eventType,
+            channel = channel,
+            status = status,
+            requestedBy = requestedBy,
+            reason = reason,
+            limit = limit
+        )
+
     @PostMapping("/deliveries/{deliveryRequestId}/failures")
     fun recordFailure(
         @PathVariable deliveryRequestId: String,
