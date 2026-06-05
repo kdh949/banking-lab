@@ -25,6 +25,8 @@ spring:
     password: ${BANKING_LAB_REPORTING_DATABASE_PASSWORD:banking_lab}
   flyway:
     enabled: true
+    baseline-on-migrate: ${BANKING_LAB_REPORTING_FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${BANKING_LAB_REPORTING_FLYWAY_BASELINE_VERSION:0}
 
 management:
   endpoints:

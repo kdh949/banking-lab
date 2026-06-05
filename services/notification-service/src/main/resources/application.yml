@@ -38,6 +38,8 @@ spring:
     password: ${BANKING_LAB_NOTIFICATION_DATABASE_PASSWORD:banking_lab}
   flyway:
     enabled: true
+    baseline-on-migrate: ${BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_VERSION:0}
 
 management:
   endpoints:

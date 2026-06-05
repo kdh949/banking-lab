@@ -10,7 +10,9 @@ This evidence covers the first synthetic Payment Service slice:
 
 - `services/payment-service` Kotlin/Spring Boot module registration.
 - Payment-service Flyway schema for synthetic billers, payment instructions,
-  attempts, status history, idempotency, and durable payment Outbox events.
+  attempts, status history, idempotency, and durable payment Outbox events,
+  with service-specific Flyway history that can initialize after core-banking
+  has already populated the shared synthetic PostgreSQL schema.
 - Payment instruction API and service logic for create, idempotent replay,
   settlement reference recording, and pre-settlement cancellation.
 - Direct customer self-cancel remains allowed and audited, while direct staff or
@@ -56,10 +58,14 @@ This evidence covers the first synthetic Payment Service slice:
   maker-checker APIs.
 - Configurable payment Outbox worker runner that can drain durable
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
+- Live Docker Compose smoke coverage for `payment-service` plus
+  `payment-outbox-worker` against live `core-banking`, proving an API-created
+  payment can be settled as balanced core ledger postings through the worker.
 - Docker Compose platform services for the payment REST API, the enabled
   payment ledger outbox worker, and the enabled payment domain-event publisher,
   all using `payment_flyway_schema_history`, the service-specific
-  `payment-service-api` audience, and explicit API-vs-worker publisher modes.
+  `payment-service-api` audience, shared-schema Flyway baseline version `0`,
+  and explicit API-vs-worker publisher modes.
 - Raw Kubernetes and Helm manifests for the payment REST API, ledger outbox
   worker, and domain-event publisher, using readiness/liveness probes,
   `payment_flyway_schema_history`, the synthetic core-banking service-token
@@ -79,6 +85,8 @@ npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentA
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks
 npm run test:payment-service:domain-publisher-compose
+npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks
+npm run test:payment-service:outbox-worker-compose
 npm run test:payment-service:integration -- --rerun-tasks
 npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest --tests lab.banking.core.ledger.api.LedgerRuntimeApiParityIntegrationTest --rerun-tasks
 npm run test:core-banking:unit -- --rerun-tasks
@@ -99,6 +107,7 @@ npm run k8s:validate
 npm run helm:template
 npm run security:posture-check
 node --test tests/springScaffold.test.mjs
+node --test tests/springScaffold.test.mjs tests/reportingServiceScaffold.test.mjs
 ```
 
 The Gradle-backed commands were first attempted inside the managed sandbox and
@@ -138,6 +147,19 @@ need local file-lock socket and Docker access.
   escalation; the wrapper built the payment-service boot jar, started
   disposable PostgreSQL, Redpanda, and `payment-domain-event-publisher` Compose
   services, and ran the gated live smoke.
+- `npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks`:
+  pass after sandbox escalation; the live worker smoke test compiled and
+  skipped the runtime path because `BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_COMPOSE_PROJECT`
+  was not set for the compile/skip check.
+- `npm run test:payment-service:outbox-worker-compose`: pass after sandbox
+  escalation; the wrapper built core-banking and payment-service boot jars,
+  started disposable PostgreSQL, `core-banking`, `payment-service`, and
+  `payment-outbox-worker` Compose services, and ran the gated live worker smoke.
+  The first live attempts failed because payment-service Flyway refused to
+  initialize `payment_flyway_schema_history` after core-banking had populated
+  the shared `public` schema; the fix sets service Flyway baseline-on-migrate at
+  version `0`, allowing payment V001 and later migrations to run in the shared
+  synthetic schema.
 - `npm run test:payment-service:integration -- --rerun-tasks`: pass after
   sandbox escalation; the full payment-service integration suite passed with
   the cancellation approval migration and payment Kafka publisher included.
@@ -194,6 +216,9 @@ need local file-lock socket and Docker access.
 - `node --test tests/springScaffold.test.mjs`: pass; 6 static Spring scaffold
   checks passed, including payment-service `PaymentInstructionCanceled` AsyncAPI
   contract coverage.
+- `node --test tests/springScaffold.test.mjs tests/reportingServiceScaffold.test.mjs`:
+  pass; 8 static scaffold checks passed, including payment, notification, and
+  reporting service shared-schema Flyway baseline controls.
 
 ## Integration Coverage
 
@@ -336,6 +361,27 @@ Manifest and API client coverage verifies:
 - the third empty run returns `noPendingEvent=true` without external payment
   network integration.
 
+`LivePaymentOutboxWorkerComposeSmokeIntegrationTest` verifies:
+
+- `core-banking`, `payment-service`, and `payment-outbox-worker` can start in
+  one shared PostgreSQL Compose project after service-specific Flyway history is
+  initialized at baseline version `0`;
+- a synthetic customer/account shell is funded through live core-banking
+  `POST /api/ledger/deposits`, preserving posting-derived balances rather than
+  direct balance mutation;
+- a live payment-service `POST /api/payments/instructions` call creates a
+  `POSTING_REQUESTED` instruction and a pending
+  `PaymentLedgerPostingRequested` outbox row;
+- after the live `payment-outbox-worker` is restarted, the worker calls the
+  core-banking payment-posting API with a dev-only simulator
+  `PAYMENT_SERVICE` token, marks the payment outbox row `PUBLISHED`, records
+  the payment as `SETTLED`, and stores the returned `TX-*` id;
+- core-banking persists a `BILL_PAYMENT` ledger transaction with two balanced
+  `PAYMENT` postings, debiting the synthetic customer account and crediting
+  `BANK-SETTLEMENT`;
+- account projections reflect the postings, and core-banking writes one
+  durable `PaymentLedgerPostingSettled` outbox event.
+
 `PaymentKafkaOutboxPublisherIntegrationTest` verifies:
 
 - `PaymentKafkaOutboxPublisher` publishes durable non-ledger payment domain
@@ -380,6 +426,8 @@ The application keeps `real-payment-network-enabled: false`; Compose,
 Kubernetes, and Helm add only synthetic payment-service API/worker/runtime
 settings, Redpanda publisher settings, and a replaceable local synthetic
 service-token placeholder for the core-banking posting bridge.
+The live payment outbox worker smoke uses dev-only simulator tokens with
+security enabled; it does not claim a real Keycloak-issued service token.
 Staff cancellation approval creates only synthetic `payment_cancellation_requests`
 rows and a durable `PaymentInstructionCanceled` Outbox event after independent
 checker approval; it never writes core ledger tables directly.
@@ -392,9 +440,8 @@ dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
 maker-checker correction path, PAY-102 staff-terminal smoke panel, and
-live Compose payment domain-event publisher smoke evidence. Live
-payment-service Keycloak realm smoke evidence is still pending.
+live Compose payment domain-event publisher and ledger outbox worker smoke
+evidence. Live payment-service Keycloak realm smoke evidence is still pending.
 The new Compose/Kubernetes/Helm surface is structurally validated, and the
-domain-event publisher now has live Compose proof. It does not yet prove a live
-payment-service API rollout, live ledger worker dispatch against core-banking,
-or a live Keycloak-issued `PAYMENT_SERVICE` service token.
+domain-event publisher plus ledger outbox worker now have live Compose proof.
+It does not yet prove a live Keycloak-issued `PAYMENT_SERVICE` service token.

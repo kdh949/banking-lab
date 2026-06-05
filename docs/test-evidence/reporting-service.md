@@ -11,7 +11,7 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - `POST /api/reports/artifacts` creates metadata-only report artifacts with idempotency by `(requested_by, idempotency_key)`.
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway.
-- Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table on the shared synthetic PostgreSQL database.
+- Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
 - Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service with the reporting audience and dedicated Flyway table.
 - Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.

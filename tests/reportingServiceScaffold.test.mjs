@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 test("reporting-service is registered as a target Spring Boot service with PostgreSQL backing", async () => {
   const settings = await readFile("settings.gradle.kts", "utf8");
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+  const application = await readFile("services/reporting-service/src/main/resources/application.yml", "utf8");
   const build = await readFile("services/reporting-service/build.gradle.kts", "utf8");
   const dockerfile = await readFile("infra/docker-compose/reporting-service.Dockerfile", "utf8");
   const compose = await readFile("docker-compose.yml", "utf8");
@@ -17,6 +18,8 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(build, /org\.springframework\.boot/);
   assert.match(build, /flyway-database-postgresql/);
   assert.match(build, /org\.testcontainers:postgresql/);
+  assert.match(application, /baseline-on-migrate: \$\{BANKING_LAB_REPORTING_FLYWAY_BASELINE_ON_MIGRATE:true\}/);
+  assert.match(application, /baseline-version: \$\{BANKING_LAB_REPORTING_FLYWAY_BASELINE_VERSION:0\}/);
   assert.match(dockerfile, /reporting-service-\*-migration\.jar/);
   assert.match(compose, /reporting-service:/);
   assert.match(compose, /SPRING_FLYWAY_TABLE: reporting_flyway_schema_history/);

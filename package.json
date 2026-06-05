@@ -25,6 +25,7 @@
     "test:payment-service:unit": "scripts/run-core-banking-tests.sh :services:payment-service:test",
     "test:payment-service:integration": "scripts/run-core-banking-tests.sh :services:payment-service:integrationTest",
     "test:payment-service:domain-publisher-compose": "bash scripts/run-payment-domain-publisher-compose-smoke.sh",
+    "test:payment-service:outbox-worker-compose": "bash scripts/run-payment-outbox-worker-compose-smoke.sh",
     "test:notification-service:unit": "scripts/run-core-banking-tests.sh :services:notification-service:test",
     "test:notification-service:integration": "scripts/run-core-banking-tests.sh :services:notification-service:integrationTest",
     "test:reporting-service:unit": "scripts/run-core-banking-tests.sh :services:reporting-service:test",

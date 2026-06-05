@@ -77,6 +77,7 @@ test("Spring Boot scaffold declares structured errors and PostgreSQL Flyway migr
 test("notification-service platform profile includes API and Redpanda consumer worker", async () => {
   const settings = await readFile("settings.gradle.kts", "utf8");
   const serviceBuild = await readFile("services/notification-service/build.gradle.kts", "utf8");
+  const application = await readFile("services/notification-service/src/main/resources/application.yml", "utf8");
   const dockerfile = await readFile("infra/docker-compose/notification-service.Dockerfile", "utf8");
   const compose = await readFile("docker-compose.yml", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
@@ -84,6 +85,8 @@ test("notification-service platform profile includes API and Redpanda consumer w
   assert.match(settings, /include\(":services:notification-service"\)/);
   assert.match(serviceBuild, /org\.apache\.kafka:kafka-clients/);
   assert.match(serviceBuild, /org\.testcontainers:redpanda/);
+  assert.match(application, /baseline-on-migrate: \$\{BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_ON_MIGRATE:true\}/);
+  assert.match(application, /baseline-version: \$\{BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_VERSION:0\}/);
   assert.match(dockerfile, /notification-service-\*-migration\.jar/);
   assert.match(compose, /notification-service:/);
   assert.match(compose, /notification-event-consumer:/);
@@ -111,11 +114,14 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   const packageJson = await readFile("package.json", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const liveSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentDomainEventPublisherComposeSmokeIntegrationTest.kt", "utf8");
+  const liveWorkerSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentOutboxWorkerComposeSmokeIntegrationTest.kt", "utf8");
 
   assert.match(settings, /include\(":services:payment-service"\)/);
   assert.match(application, /real-payment-network-enabled: false/);
   assert.match(application, /BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED:false/);
   assert.match(application, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED:false/);
+  assert.match(application, /baseline-on-migrate: \$\{BANKING_LAB_PAYMENT_FLYWAY_BASELINE_ON_MIGRATE:true\}/);
+  assert.match(application, /baseline-version: \$\{BANKING_LAB_PAYMENT_FLYWAY_BASELINE_VERSION:0\}/);
   assert.match(dockerfile, /payment-service-\*-migration\.jar/);
   assert.match(compose, /payment-service:/);
   assert.match(compose, /payment-outbox-worker:/);
@@ -149,9 +155,14 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   assert.match(compose, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092/);
   assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN/);
   assert.match(packageJson, /test:payment-service:domain-publisher-compose/);
+  assert.match(packageJson, /test:payment-service:outbox-worker-compose/);
   assert.match(liveSmoke, /BANKING_LAB_LIVE_PAYMENT_DOMAIN_PUBLISHER_COMPOSE_PROJECT/);
   assert.match(liveSmoke, /PaymentLedgerPostingRequested/);
   assert.match(liveSmoke, /PaymentInstructionCanceled/);
+  assert.match(liveWorkerSmoke, /BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_COMPOSE_PROJECT/);
+  assert.match(liveWorkerSmoke, /PaymentLedgerPostingRequested/);
+  assert.match(liveWorkerSmoke, /PaymentLedgerPostingSettled/);
+  assert.match(liveWorkerSmoke, /BANK-SETTLEMENT/);
   assert.match(prometheus, /job_name: payment-service/);
   assert.match(prometheus, /payment-service:8088/);
   assert.match(prometheus, /payment-outbox-worker:8088/);

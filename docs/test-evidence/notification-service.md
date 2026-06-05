@@ -18,7 +18,8 @@ This evidence covers the first synthetic Notification Service slice:
   Micrometer counters.
 - Docker Compose platform services for the notification REST API and the
   enabled Redpanda event-consumer worker, both using synthetic-only provider
-  settings and an isolated notification Flyway history table.
+  settings and an isolated notification Flyway history table with shared-schema
+  baseline version `0`.
 - Raw Kubernetes and Helm manifests for the notification REST API and the
   Redpanda event-consumer worker, both using the notification-service JWT
   audience, `notification_flyway_schema_history`, and synthetic provider
@@ -259,8 +260,8 @@ were rerun sequentially with `--rerun-tasks`.
 - the worker container sets `BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED=true`;
 - both containers keep `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`;
 - the platform profile uses `redpanda:9092` and a dedicated
-  `notification_flyway_schema_history` table to avoid core-banking Flyway
-  version conflicts;
+  `notification_flyway_schema_history` table with Flyway baseline version `0`
+  to avoid core-banking Flyway version conflicts on the shared synthetic schema;
 - Prometheus scrapes `notification-service:8089` and
   `notification-event-consumer:8089`.
 
