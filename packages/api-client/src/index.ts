@@ -186,6 +186,11 @@ export interface BalanceCertificateDto {
   readonly currentLedgerBalanceMinor: number;
   readonly currentAvailableBalanceMinor: number;
   readonly deterministicInputHash: string;
+  readonly sourcePostingCount: number;
+  readonly sourceLastBusinessDate?: string | null;
+  readonly sourceLedgerHash: string;
+  readonly snapshotCreatedAt: string;
+  readonly lastViewedAt: string;
   readonly syntheticOnly: boolean;
 }
 
