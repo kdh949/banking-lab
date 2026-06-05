@@ -28,14 +28,16 @@ This evidence covers the first synthetic Payment Service slice:
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
 - Payment-service outbox dispatcher that locks durable
   `PaymentLedgerPostingRequested` events, calls a core-banking posting port,
-  records settlement, and marks retry/dead-letter state without real payment
-  network integration.
+  records settlement, emits failed/retry-scheduled/dead-lettered lifecycle
+  events, and marks retry/dead-letter state without real payment network
+  integration.
 - Payment-service Kafka outbox publisher that publishes non-ledger payment
   domain events to Redpanda/Kafka after durable persistence while leaving
   `PaymentLedgerPostingRequested` rows on the core-ledger dispatch path.
 - Configurable payment domain-event publisher worker with bounded batch polling,
   Micrometer metrics, retry/dead-letter settings, and synthetic-only
-  observability logs for durable non-ledger payment events.
+  observability logs for durable non-ledger payment events, including payment
+  instruction failure, retry, and dead-letter lifecycle events.
 - Live Docker Compose smoke coverage for the enabled payment domain-event
   publisher worker against disposable PostgreSQL and Redpanda services.
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
@@ -96,6 +98,7 @@ scheduled worker token acquisition for the core-banking posting bridge.
 npm run test:payment-service:unit
 npm run test:payment-service:integration
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentInstructionIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentOutboxDispatcherIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks
@@ -313,8 +316,12 @@ now verify the core-banking settlement bridge:
 - successful dispatch records `SETTLED` payment state, marks the source outbox
   row `PUBLISHED`, and emits `PaymentInstructionSettled`;
 - retry failure persists `FAILED`, increments `retry_count`, preserves a stable
-  core ledger idempotency key, and later settles the same outbox event;
-- dead-letter threshold failure marks `DEAD_LETTER` without settlement mutation.
+  core ledger idempotency key, emits `PaymentInstructionFailed` plus
+  `PaymentInstructionRetryScheduled` with `nextRetryAt`, and later settles the
+  same outbox event;
+- dead-letter threshold failure marks the source outbox row `DEAD_LETTER`,
+  transitions the payment instruction to `FAILED`, appends failed status history,
+  keeps ledger settlement empty, and emits `PaymentInstructionDeadLettered`.
 
 `PaymentAutopayIntegrationTest` verifies:
 
@@ -351,6 +358,11 @@ Manifest and API client coverage verifies:
   `contracts/events/payment-instruction-canceled.schema.json`, matching the
   durable `PaymentInstructionCanceled` outbox rows emitted by customer and
   checker-approved staff cancellation paths.
+- `contracts/asyncapi/banking-lab-events.yaml` now declares
+  `payment.instruction.settled`, `payment.instruction.failed`,
+  `payment.instruction.retry.scheduled`, and
+  `payment.instruction.dead-lettered`; the dispatcher emits the failed,
+  retry-scheduled, and dead-lettered rows on core-ledger dispatch failure.
 - Customer Web renders `data-testid="api-backed-customer-payment-domain"` and
   uses `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL` with the standard
   `NEXT_PUBLIC_BANKING_API_BASE_URL` fallback to exercise CWB-701/CWB-702/CWB-703
@@ -503,9 +515,9 @@ live Compose payment domain-event publisher and ledger outbox worker smoke
 evidence. Live payment-service Keycloak service-token route smoke evidence now
 passes for dispatch authorization.
 Payment instruction lifecycle AsyncAPI contracts now cover settled, failed,
-retry-scheduled, and dead-lettered outcomes, but failed/retry/dead-letter event
-emission remains a follow-up hardening item beyond the existing durable outbox
-retry state evidence.
+retry-scheduled, and dead-lettered outcomes, and the dispatcher emits
+failed/retry/dead-letter lifecycle outbox rows during core-ledger dispatch
+failure.
 The new Compose/Kubernetes/Helm surface is structurally validated, and the
 domain-event publisher plus ledger outbox worker now have live Compose proof.
 Remaining hardening is production-grade secret rotation, mTLS/service-mesh

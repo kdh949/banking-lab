@@ -16,6 +16,7 @@ import lab.banking.payment.domain.PaymentCancellationRequestStatus
 import lab.banking.payment.domain.PaymentIdempotencyRecord
 import lab.banking.payment.domain.PaymentInstructionRecord
 import lab.banking.payment.domain.PaymentInstructionStatus
+import lab.banking.payment.domain.PaymentOutboxFailureRecord
 import lab.banking.payment.domain.PaymentOutboxRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
@@ -277,6 +278,36 @@ class PaymentRepository(
             mapOf("instructionId" to instructionId)
         )
     }
+
+    fun markLatestAttemptFailed(instructionId: String) {
+        jdbc.update(
+            """
+            UPDATE payment_attempts
+            SET status = 'FAILED',
+                completed_at = now()
+            WHERE payment_attempt_id = (
+              SELECT payment_attempt_id
+              FROM payment_attempts
+              WHERE payment_instruction_id = :instructionId
+              ORDER BY attempt_no DESC
+              LIMIT 1
+            )
+            """.trimIndent(),
+            mapOf("instructionId" to instructionId)
+        )
+    }
+
+    fun latestAttemptId(instructionId: String): String? =
+        jdbc.query(
+            """
+            SELECT payment_attempt_id
+            FROM payment_attempts
+            WHERE payment_instruction_id = :instructionId
+            ORDER BY attempt_no DESC
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("instructionId" to instructionId)
+        ) { rs, _ -> rs.getString("payment_attempt_id") }.firstOrNull()
 
     fun updateStatus(instructionId: String, status: PaymentInstructionStatus) {
         jdbc.update(
@@ -696,26 +727,35 @@ class PaymentRepository(
         outboxEventId: String,
         retryCount: Int,
         errorMessage: String,
-        deadLetter: Boolean
-    ) {
-        jdbc.update(
+        deadLetter: Boolean,
+        retryDelaySeconds: Int = 300
+    ): PaymentOutboxFailureRecord =
+        jdbc.query(
             """
             UPDATE payment_outbox_events
             SET status = :status,
                 retry_count = :retryCount,
-                next_retry_at = CASE WHEN :deadLetter THEN NULL ELSE now() + interval '5 minutes' END,
+                next_retry_at = CASE WHEN :deadLetter THEN NULL ELSE now() + (:retryDelaySeconds * interval '1 second') END,
                 error_message = :errorMessage
             WHERE outbox_event_id = :outboxEventId
+            RETURNING status, retry_count, next_retry_at, error_message
             """.trimIndent(),
             mapOf(
                 "outboxEventId" to outboxEventId,
                 "retryCount" to retryCount,
+                "retryDelaySeconds" to retryDelaySeconds,
                 "errorMessage" to errorMessage.take(500),
                 "deadLetter" to deadLetter,
                 "status" to if (deadLetter) "DEAD_LETTER" else "FAILED"
             )
-        )
-    }
+        ) { rs, _ ->
+            PaymentOutboxFailureRecord(
+                status = rs.getString("status"),
+                retryCount = rs.getInt("retry_count"),
+                nextRetryAt = rs.getObject("next_retry_at", OffsetDateTime::class.java),
+                errorMessage = rs.getString("error_message")
+            )
+        }.single()
 
     private fun findInstructionBySql(sql: String, instructionId: String): PaymentInstructionRecord? =
         jdbc.query(sql, mapOf("instructionId" to instructionId), this::mapInstruction).firstOrNull()

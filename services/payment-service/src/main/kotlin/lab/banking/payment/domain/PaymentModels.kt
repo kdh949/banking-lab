@@ -302,6 +302,13 @@ data class PaymentOutboxRecord(
     val errorMessage: String?
 )
 
+data class PaymentOutboxFailureRecord(
+    val status: String,
+    val retryCount: Int,
+    val nextRetryAt: OffsetDateTime?,
+    val errorMessage: String?
+)
+
 data class PaymentIdempotencyRecord(
     val idempotencyKey: String,
     val commandType: String,

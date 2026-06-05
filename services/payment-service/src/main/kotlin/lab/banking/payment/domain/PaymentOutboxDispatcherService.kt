@@ -45,12 +45,72 @@ class PaymentOutboxDispatcherService(
         } catch (error: RuntimeException) {
             val retryCount = event.retryCount + 1
             val deadLetter = retryCount >= request.deadLetterThreshold
-            repository.markOutboxFailed(
+            val errorMessage = (error.message ?: error.javaClass.simpleName).take(500)
+            val failure = repository.markOutboxFailed(
                 outboxEventId = event.outboxEventId,
                 retryCount = retryCount,
-                errorMessage = error.message ?: error.javaClass.simpleName,
+                errorMessage = errorMessage,
                 deadLetter = deadLetter
             )
+            repository.markLatestAttemptFailed(event.aggregateId)
+            if (deadLetter) {
+                repository.updateStatus(event.aggregateId, PaymentInstructionStatus.FAILED)
+                repository.insertStatusHistory(
+                    instructionId = event.aggregateId,
+                    status = PaymentInstructionStatus.FAILED,
+                    actorId = request.requestedBy,
+                    reason = request.reason
+                )
+                repository.insertOutboxEvent(
+                    aggregateId = event.aggregateId,
+                    eventType = "PaymentInstructionDeadLettered",
+                    idempotencyKey = lifecycleIdempotencyKey("DEAD", event.outboxEventId, retryCount),
+                    payload = failureLifecyclePayload(
+                        event = event,
+                        attemptId = latestAttemptId(event.aggregateId),
+                        status = "DEAD_LETTER",
+                        failureCode = "PAYMENT_LEDGER_DISPATCH_DEAD_LETTER",
+                        errorMessage = errorMessage,
+                        retryable = false,
+                        retryCount = retryCount,
+                        deadLetterThreshold = request.deadLetterThreshold
+                    )
+                )
+            } else {
+                val attemptId = latestAttemptId(event.aggregateId)
+                repository.insertOutboxEvent(
+                    aggregateId = event.aggregateId,
+                    eventType = "PaymentInstructionFailed",
+                    idempotencyKey = lifecycleIdempotencyKey("FAILED", event.outboxEventId, retryCount),
+                    payload = failureLifecyclePayload(
+                        event = event,
+                        attemptId = attemptId,
+                        status = "FAILED",
+                        failureCode = "PAYMENT_LEDGER_DISPATCH_FAILED",
+                        errorMessage = errorMessage,
+                        retryable = true,
+                        retryCount = retryCount,
+                        deadLetterThreshold = request.deadLetterThreshold
+                    )
+                )
+                repository.insertOutboxEvent(
+                    aggregateId = event.aggregateId,
+                    eventType = "PaymentInstructionRetryScheduled",
+                    idempotencyKey = lifecycleIdempotencyKey("RETRY", event.outboxEventId, retryCount),
+                    payload = mapOf(
+                        "contractVersion" to "2026-06-05",
+                        "paymentInstructionId" to event.aggregateId,
+                        "paymentAttemptId" to attemptId,
+                        "status" to "RETRY_SCHEDULED",
+                        "retryCount" to retryCount,
+                        "nextRetryAt" to requireNextRetryAt(failure).toString(),
+                        "syntheticOnly" to true,
+                        "directLedgerWrite" to false,
+                        "realPaymentNetworkUsed" to false,
+                        "realFinancialInstitutionApiUsed" to false
+                    )
+                )
+            }
             PaymentOutboxDispatchResponse(
                 outboxEventId = event.outboxEventId,
                 paymentInstructionId = event.aggregateId,
@@ -60,6 +120,32 @@ class PaymentOutboxDispatcherService(
             )
         }
     }
+
+    private fun failureLifecyclePayload(
+        event: PaymentOutboxRecord,
+        attemptId: String,
+        status: String,
+        failureCode: String,
+        errorMessage: String,
+        retryable: Boolean,
+        retryCount: Int,
+        deadLetterThreshold: Int
+    ): Map<String, Any?> =
+        mapOf(
+            "contractVersion" to "2026-06-05",
+            "paymentInstructionId" to event.aggregateId,
+            "paymentAttemptId" to attemptId,
+            "status" to status,
+            "failureCode" to failureCode,
+            "errorMessage" to errorMessage,
+            "retryable" to retryable,
+            "retryCount" to retryCount,
+            "deadLetterThreshold" to deadLetterThreshold,
+            "syntheticOnly" to true,
+            "directLedgerWrite" to false,
+            "realPaymentNetworkUsed" to false,
+            "realFinancialInstitutionApiUsed" to false
+        )
 
     private fun validateRequest(request: DispatchPaymentLedgerPostingRequest) {
         requireNonBlank(request.requestedBy, "requestedBy")
@@ -137,6 +223,22 @@ class PaymentOutboxDispatcherService(
     private fun ledgerIdempotencyKey(outboxEventId: String): String = "PAY-LEDGER-$outboxEventId"
 
     private fun settlementIdempotencyKey(outboxEventId: String): String = "PAY-SETTLEMENT-$outboxEventId"
+
+    private fun lifecycleIdempotencyKey(prefix: String, outboxEventId: String, retryCount: Int): String =
+        "PAY-$prefix-$outboxEventId-$retryCount"
+
+    private fun latestAttemptId(instructionId: String): String =
+        repository.latestAttemptId(instructionId) ?: "PAT-MISSING-$instructionId"
+
+    private fun requireNextRetryAt(failure: PaymentOutboxFailureRecord) =
+        failure.nextRetryAt ?: throw paymentError(
+            code = "PAYMENT_OUTBOX_RETRY_STATE_INVALID",
+            status = HttpStatus.CONFLICT,
+            invariant = "retryable payment outbox failure must have next retry time",
+            message = "payment outbox retry state is missing nextRetryAt",
+            cause = "A non-terminal payment outbox failure was saved without a retry timestamp.",
+            fix = "Inspect the payment_outbox_events retry state before re-dispatching the event."
+        )
 
     private fun paymentError(
         code: String,

@@ -53,7 +53,7 @@ paymentService:
   domainEventPublisherBootstrapServers: redpanda:9092
   domainEventPublisherTopic: banking.lab.payment-events
   domainEventPublisherClientId: payment-helm-domain-event-publisher
-  domainEventPublisherEventTypes: PaymentInstructionSettled,PaymentInstructionCanceled,PaymentAutopayExecutionCreated
+  domainEventPublisherEventTypes: PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated
   resources:
     requests:
       cpu: 150m

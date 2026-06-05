@@ -111,6 +111,19 @@ class PaymentOutboxDispatcherIntegrationTest {
         assertEquals(2, coreLedgerPostingClient.commands.size)
         assertEquals(coreLedgerPostingClient.commands[0].idempotencyKey, coreLedgerPostingClient.commands[1].idempotencyKey)
         assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentLedgerPostingRequested' AND status = 'PUBLISHED' AND retry_count = 1"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionFailed' AND status = 'PENDING'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionRetryScheduled' AND status = 'PENDING'"))
+        assertEquals(1, countRows("payment_attempts WHERE payment_instruction_id = '${created.item.paymentInstructionId}' AND status = 'SETTLED'"))
+
+        val failedPayload = payloadFor(created.item.paymentInstructionId, "PaymentInstructionFailed")
+        assertContains(failedPayload, "\"status\": \"FAILED\"")
+        assertContains(failedPayload, "\"retryable\": true")
+        assertContains(failedPayload, "\"directLedgerWrite\": false")
+        assertContains(failedPayload, "\"realPaymentNetworkUsed\": false")
+        assertContains(failedPayload, "\"realFinancialInstitutionApiUsed\": false")
+        val retryPayload = payloadFor(created.item.paymentInstructionId, "PaymentInstructionRetryScheduled")
+        assertContains(retryPayload, "\"status\": \"RETRY_SCHEDULED\"")
+        assertContains(retryPayload, "\"nextRetryAt\"")
     }
 
     @Test
@@ -123,10 +136,21 @@ class PaymentOutboxDispatcherIntegrationTest {
 
         assertEquals("DEAD_LETTER", failed.status)
         assertEquals(1, failed.retryCount)
-        assertEquals(PaymentInstructionStatus.POSTING_REQUESTED, current.status)
+        assertEquals(PaymentInstructionStatus.FAILED, current.status)
         assertNull(current.ledgerTransactionId)
         assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentLedgerPostingRequested' AND status = 'DEAD_LETTER'"))
         assertEquals(0, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionSettled'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionDeadLettered' AND status = 'PENDING'"))
+        assertEquals(1, countRows("payment_status_history WHERE payment_instruction_id = '${created.item.paymentInstructionId}' AND status = 'FAILED'"))
+        assertEquals(1, countRows("payment_attempts WHERE payment_instruction_id = '${created.item.paymentInstructionId}' AND status = 'FAILED'"))
+
+        val deadLetterPayload = payloadFor(created.item.paymentInstructionId, "PaymentInstructionDeadLettered")
+        assertContains(deadLetterPayload, "\"status\": \"DEAD_LETTER\"")
+        assertContains(deadLetterPayload, "\"retryable\": false")
+        assertContains(deadLetterPayload, "\"deadLetterThreshold\": 1")
+        assertContains(deadLetterPayload, "\"directLedgerWrite\": false")
+        assertContains(deadLetterPayload, "\"realPaymentNetworkUsed\": false")
+        assertContains(deadLetterPayload, "\"realFinancialInstitutionApiUsed\": false")
     }
 
     private fun sampleCreate(idempotencyKey: String): CreatePaymentInstructionRequest =
@@ -151,6 +175,27 @@ class PaymentOutboxDispatcherIntegrationTest {
 
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM $tableExpression", emptyMap<String, Any?>(), Int::class.java) ?: 0
+
+    private fun payloadFor(instructionId: String, eventType: String): String =
+        jdbc.queryForObject(
+            """
+            SELECT payload_json::text
+            FROM payment_outbox_events
+            WHERE aggregate_id = :instructionId
+              AND event_type = :eventType
+            ORDER BY created_at DESC
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("instructionId" to instructionId, "eventType" to eventType),
+            String::class.java
+        ) ?: error("missing payload for $eventType")
+
+    private fun assertContains(actual: String, expected: String) {
+        org.junit.jupiter.api.Assertions.assertTrue(
+            actual.contains(expected),
+            "Expected payload to contain <$expected> but was <$actual>"
+        )
+    }
 
     @TestConfiguration
     class TestCoreLedgerPostingClientConfig {

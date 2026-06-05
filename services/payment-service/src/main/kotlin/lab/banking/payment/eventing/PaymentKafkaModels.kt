@@ -45,6 +45,9 @@ interface PaymentOutboxPublisherPort {
         val defaultEventTypes = setOf(
             "PaymentInstructionSettled",
             "PaymentInstructionCanceled",
+            "PaymentInstructionFailed",
+            "PaymentInstructionRetryScheduled",
+            "PaymentInstructionDeadLettered",
             "PaymentAutopayExecutionCreated"
         )
     }
