@@ -67,6 +67,7 @@ class ReconciliationOpsService(
             createMismatchItems(
                 businessDate = businessDate,
                 owner = requestedBy,
+                feedFileId = externalFile.fileId,
                 internalEntries = internalEntries,
                 externalEntries = externalFile.entries
             )
@@ -275,31 +276,90 @@ class ReconciliationOpsService(
     private fun createMismatchItems(
         businessDate: LocalDate,
         owner: String,
+        feedFileId: String,
         internalEntries: List<ReconciliationExternalEntryDto>,
         externalEntries: List<ReconciliationExternalEntryDto>
     ): List<ReconciliationItemDto> {
-        val externalByReference = externalEntries.associateBy { it.referenceId }
+        val externalByReference = externalEntries.groupBy { it.referenceId }
         val internalReferences = internalEntries.map { it.referenceId }.toSet()
         val createdIds = mutableListOf<String>()
 
         for (internal in internalEntries) {
-            val external = externalByReference[internal.referenceId]
-            if (external == null) {
+            val externalGroup = externalByReference[internal.referenceId].orEmpty()
+            if (externalGroup.isEmpty()) {
                 createdIds += insertMismatch(
                     businessDate = businessDate,
                     owner = owner,
+                    feedFileId = feedFileId,
+                    mismatchType = "MISSING_EXTERNAL",
                     internalReferenceId = internal.referenceId,
                     externalReferenceId = null,
-                    amountMinor = internal.amountMinor
+                    amountMinor = internal.amountMinor,
+                    internalAmountMinor = internal.amountMinor,
+                    externalAmountMinor = null,
+                    externalStatus = null,
+                    detectedReason = "Internal posted transfer is missing from synthetic external feed"
                 )
-            } else if (external.amountMinor != internal.amountMinor || external.status != "SETTLED") {
+            } else if (externalGroup.size > 1) {
+                val externalTotal = externalGroup.sumOf { it.amountMinor }
                 createdIds += insertMismatch(
                     businessDate = businessDate,
                     owner = owner,
+                    feedFileId = feedFileId,
+                    mismatchType = "DUPLICATE_EXTERNAL",
                     internalReferenceId = internal.referenceId,
-                    externalReferenceId = external.referenceId,
-                    amountMinor = kotlin.math.abs(external.amountMinor - internal.amountMinor)
+                    externalReferenceId = internal.referenceId,
+                    amountMinor = kotlin.math.abs(externalTotal - internal.amountMinor).takeIf { it > 0 } ?: internal.amountMinor,
+                    internalAmountMinor = internal.amountMinor,
+                    externalAmountMinor = externalTotal,
+                    externalStatus = "DUPLICATE",
+                    detectedReason = "Synthetic external feed contains duplicate entries for the internal transfer reference"
                 )
+            } else {
+                val external = externalGroup.first()
+                if (external.businessDate != businessDate || external.status == "STALE") {
+                    createdIds += insertMismatch(
+                        businessDate = businessDate,
+                        owner = owner,
+                        feedFileId = feedFileId,
+                        mismatchType = "STALE_EXTERNAL",
+                        internalReferenceId = internal.referenceId,
+                        externalReferenceId = external.referenceId,
+                        amountMinor = internal.amountMinor,
+                        internalAmountMinor = internal.amountMinor,
+                        externalAmountMinor = external.amountMinor,
+                        externalStatus = external.status,
+                        detectedReason = "Synthetic external feed entry is stale for the closing business date"
+                    )
+                } else if (external.amountMinor != internal.amountMinor) {
+                    createdIds += insertMismatch(
+                        businessDate = businessDate,
+                        owner = owner,
+                        feedFileId = feedFileId,
+                        mismatchType = "AMOUNT_MISMATCH",
+                        internalReferenceId = internal.referenceId,
+                        externalReferenceId = external.referenceId,
+                        amountMinor = kotlin.math.abs(external.amountMinor - internal.amountMinor),
+                        internalAmountMinor = internal.amountMinor,
+                        externalAmountMinor = external.amountMinor,
+                        externalStatus = external.status,
+                        detectedReason = "Synthetic external feed amount differs from the posted internal transfer"
+                    )
+                } else if (external.status != "SETTLED") {
+                    createdIds += insertMismatch(
+                        businessDate = businessDate,
+                        owner = owner,
+                        feedFileId = feedFileId,
+                        mismatchType = "STATUS_MISMATCH",
+                        internalReferenceId = internal.referenceId,
+                        externalReferenceId = external.referenceId,
+                        amountMinor = internal.amountMinor,
+                        internalAmountMinor = internal.amountMinor,
+                        externalAmountMinor = external.amountMinor,
+                        externalStatus = external.status,
+                        detectedReason = "Synthetic external feed status is not settled"
+                    )
+                }
             }
         }
         for (external in externalEntries) {
@@ -307,9 +367,15 @@ class ReconciliationOpsService(
                 createdIds += insertMismatch(
                     businessDate = businessDate,
                     owner = owner,
+                    feedFileId = feedFileId,
+                    mismatchType = "UNEXPECTED_EXTERNAL",
                     internalReferenceId = null,
                     externalReferenceId = external.referenceId,
-                    amountMinor = external.amountMinor
+                    amountMinor = external.amountMinor,
+                    internalAmountMinor = null,
+                    externalAmountMinor = external.amountMinor,
+                    externalStatus = external.status,
+                    detectedReason = "Synthetic external feed entry has no matching internal posted transfer"
                 )
             }
         }
@@ -319,20 +385,30 @@ class ReconciliationOpsService(
     private fun insertMismatch(
         businessDate: LocalDate,
         owner: String,
+        feedFileId: String,
+        mismatchType: String,
         internalReferenceId: String?,
         externalReferenceId: String?,
-        amountMinor: Long
+        amountMinor: Long,
+        internalAmountMinor: Long?,
+        externalAmountMinor: Long?,
+        externalStatus: String?,
+        detectedReason: String
     ): String {
         val itemId = "REC-${UUID.randomUUID().toString().uppercase()}"
         jdbc.update(
             """
             INSERT INTO reconciliation_items (
               reconciliation_item_id, business_date, source_system, internal_reference_id,
-              external_reference_id, amount_minor, currency, status, owner_id
+              external_reference_id, mismatch_type, amount_minor, internal_amount_minor,
+              external_amount_minor, external_status, feed_file_id, detected_reason,
+              currency, status, owner_id
             )
             VALUES (
               :itemId, :businessDate, 'EOD_EXTERNAL_SIM', :internalReferenceId,
-              :externalReferenceId, :amountMinor, 'KRW', 'OPEN', :owner
+              :externalReferenceId, :mismatchType, :amountMinor, :internalAmountMinor,
+              :externalAmountMinor, :externalStatus, :feedFileId, :detectedReason,
+              'KRW', 'OPEN', :owner
             )
             """.trimIndent(),
             mapOf(
@@ -340,7 +416,13 @@ class ReconciliationOpsService(
                 "businessDate" to businessDate,
                 "internalReferenceId" to internalReferenceId,
                 "externalReferenceId" to externalReferenceId,
+                "mismatchType" to mismatchType,
                 "amountMinor" to amountMinor,
+                "internalAmountMinor" to internalAmountMinor,
+                "externalAmountMinor" to externalAmountMinor,
+                "externalStatus" to externalStatus,
+                "feedFileId" to feedFileId,
+                "detectedReason" to detectedReason,
                 "owner" to owner
             )
         )
@@ -393,7 +475,9 @@ class ReconciliationOpsService(
     private fun itemSql(suffix: String): String =
         """
         SELECT reconciliation_item_id, business_date, source_system, internal_reference_id,
-               external_reference_id, amount_minor, currency, status, owner_id, approval_id, created_at
+               external_reference_id, mismatch_type, amount_minor, internal_amount_minor,
+               external_amount_minor, external_status, feed_file_id, detected_reason,
+               currency, status, owner_id, approval_id, created_at
         FROM reconciliation_items
         $suffix
         """.trimIndent()
@@ -407,7 +491,13 @@ class ReconciliationOpsService(
             sourceSystem = rs.getString("source_system"),
             internalReferenceId = rs.getString("internal_reference_id"),
             externalReferenceId = rs.getString("external_reference_id"),
+            mismatchType = rs.getString("mismatch_type"),
             amountMinor = rs.getLong("amount_minor"),
+            internalAmountMinor = nullableLong(rs, "internal_amount_minor"),
+            externalAmountMinor = nullableLong(rs, "external_amount_minor"),
+            externalStatus = rs.getString("external_status"),
+            feedFileId = rs.getString("feed_file_id"),
+            detectedReason = rs.getString("detected_reason"),
             currency = rs.getString("currency"),
             status = rs.getString("status"),
             owner = rs.getString("owner_id"),
@@ -416,6 +506,11 @@ class ReconciliationOpsService(
             adjustmentRequest = request,
             createdAt = rs.getObject("created_at", java.time.OffsetDateTime::class.java)
         )
+    }
+
+    private fun nullableLong(rs: ResultSet, column: String): Long? {
+        val value = rs.getLong(column)
+        return if (rs.wasNull()) null else value
     }
 
     private fun latestAdjustmentRequest(itemId: String): ReconciliationAdjustmentRequestDto? =
@@ -504,10 +599,10 @@ class ReconciliationOpsService(
         mode: String,
         internalEntries: List<ReconciliationExternalEntryDto>
     ): ReconciliationExternalFileDto {
-        val entries = if (mode == "MATCHED") {
-            internalEntries
-        } else if (internalEntries.isEmpty()) {
-            listOf(
+        val normalizedMode = mode.uppercase()
+        val entries = when {
+            normalizedMode == "MATCHED" -> internalEntries
+            normalizedMode == "EXTERNAL_ONLY" || internalEntries.isEmpty() -> listOf(
                 ReconciliationExternalEntryDto(
                     referenceId = "EXT-ONLY-$businessDate",
                     businessDate = businessDate,
@@ -515,8 +610,18 @@ class ReconciliationOpsService(
                     status = "SETTLED"
                 )
             )
-        } else {
-            internalEntries.mapIndexed { index, entry ->
+            normalizedMode == "MISSING_EXTERNAL" -> internalEntries.drop(1)
+            normalizedMode == "DUPLICATE" -> listOf(internalEntries.first(), internalEntries.first()) + internalEntries.drop(1)
+            normalizedMode == "STALE" -> listOf(
+                internalEntries.first().copy(
+                    businessDate = businessDate.minusDays(1),
+                    status = "STALE"
+                )
+            ) + internalEntries.drop(1)
+            normalizedMode == "STATUS_MISMATCH" -> listOf(
+                internalEntries.first().copy(status = "PENDING")
+            ) + internalEntries.drop(1)
+            else -> internalEntries.mapIndexed { index, entry ->
                 if (index == 0) {
                     entry.copy(amountMinor = entry.amountMinor + 1_000, status = "SETTLED")
                 } else {

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-ledger-posting-requested.schema.json",
+  "title": "PaymentLedgerPostingRequested",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "ledgerCommandContract",
+    "coreLedgerCommandKind",
+    "paymentInstructionId",
+    "customerId",
+    "debitAccountId",
+    "syntheticBillerId",
+    "amountMinor",
+    "currency",
+    "requestedBy",
+    "requestedChannel",
+    "syntheticOnly",
+    "directLedgerWrite",
+    "realPaymentNetworkUsed",
+    "realFinancialInstitutionApiUsed"
+  ],
+  "properties": {
+    "contractVersion": { "const": "2026-06-05" },
+    "ledgerCommandContract": { "const": "core-banking.ledger.posting-request.v1" },
+    "coreLedgerCommandKind": { "const": "BILL_PAYMENT" },
+    "paymentInstructionId": { "type": "string", "pattern": "^PAY-" },
+    "customerId": { "type": "string" },
+    "debitAccountId": { "type": "string" },
+    "syntheticBillerId": { "type": "string", "pattern": "^SYN-BILLER-" },
+    "amountMinor": { "type": "integer", "exclusiveMinimum": 0 },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "requestedBy": { "type": "string" },
+    "requestedChannel": { "type": "string" },
+    "syntheticOnly": { "const": true },
+    "directLedgerWrite": { "const": false },
+    "realPaymentNetworkUsed": { "const": false },
+    "realFinancialInstitutionApiUsed": { "const": false }
+  }
+}

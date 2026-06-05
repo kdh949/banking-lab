@@ -1,6 +1,7 @@
 package lab.banking.core.ledger.api
 
 import lab.banking.core.ledger.application.AdjustmentCommand
+import lab.banking.core.ledger.application.BillPaymentCommand
 import lab.banking.core.ledger.application.DepositCommand
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
@@ -42,6 +43,10 @@ class LedgerController(
     @PostMapping("/ledger/adjustments")
     fun adjustment(@RequestBody command: AdjustmentCommand): ResponseEntity<LedgerCommandResult> =
         ledgerResponse(ledgerCommandService.adjustment(command))
+
+    @PostMapping("/ledger/payment-postings")
+    fun paymentPosting(@RequestBody command: BillPaymentCommand): ResponseEntity<LedgerCommandResult> =
+        ledgerResponse(ledgerCommandService.billPayment(command))
 
     @PostMapping("/ops/daily-closings")
     fun closeBusinessDay(@RequestBody command: ReconciliationDailyClosingCommand): ResponseEntity<ReconciliationClosingResponse> {

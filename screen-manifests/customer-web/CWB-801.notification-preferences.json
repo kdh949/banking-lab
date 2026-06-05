@@ -1,0 +1,71 @@
+{
+  "screenId": "CWB-801",
+  "transactionCode": "CWB801",
+  "title": "Notification Preferences",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "notification",
+  "highRisk": false,
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF"
+  },
+  "fields": [
+    {
+      "name": "customerId",
+      "label": "Customer ID",
+      "type": "text",
+      "required": true,
+      "mask": "customer-self"
+    },
+    {
+      "name": "channel",
+      "label": "Channel",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "eventType",
+      "label": "Event Type",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "enabled",
+      "label": "Enabled",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "api": {
+    "read": "GET /api/notifications/customers/{customerId}/preferences",
+    "command": "PUT /api/notifications/customers/{customerId}/preferences"
+  },
+  "actions": [
+    {
+      "id": "list-owned-preferences",
+      "label": "List Owned Preferences",
+      "type": "inquiry",
+      "target": "GET /api/notifications/customers/{customerId}/preferences"
+    },
+    {
+      "id": "save-owned-preference",
+      "label": "Save Owned Preference",
+      "type": "command",
+      "target": "PUT /api/notifications/customers/{customerId}/preferences"
+    }
+  ],
+  "postActions": ["createSelfServiceAuditEvent", "applyPreferenceFilter"]
+}

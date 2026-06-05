@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/notification-delivery-requested.schema.json",
+  "title": "NotificationDeliveryRequested",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "deliveryRequestId",
+    "sourceEventId",
+    "eventType",
+    "recipientId",
+    "channel",
+    "providerKind",
+    "maskedMessage",
+    "syntheticOnly",
+    "realProviderUsed"
+  ],
+  "properties": {
+    "contractVersion": { "const": "2026-06-05" },
+    "deliveryRequestId": { "type": "string", "pattern": "^NDL-" },
+    "sourceEventId": { "type": "string" },
+    "eventType": { "type": "string" },
+    "recipientId": { "type": "string" },
+    "channel": { "enum": ["SMS", "EMAIL", "PUSH"] },
+    "providerKind": {
+      "enum": ["SYNTHETIC_SMS_SINK", "SYNTHETIC_EMAIL_SINK", "SYNTHETIC_PUSH_SINK"]
+    },
+    "maskedMessage": { "type": "string" },
+    "syntheticOnly": { "const": true },
+    "realProviderUsed": { "const": false }
+  }
+}

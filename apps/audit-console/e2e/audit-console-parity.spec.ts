@@ -9,6 +9,7 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "audit-console";
 const baseUrl = "http://localhost:3005";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const reportingApiBaseUrl = process.env.BANKING_LAB_E2E_REPORTING_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -69,6 +70,16 @@ test("audit console loads Spring API-backed hash-chain evidence when configured"
   await expect(panel).toContainText("valid");
   await expect(panel).toContainText("AUD-SYN-SEED-001");
   await expect(panel).toContainText("SYNTHETIC_SEED");
+});
+
+test("audit console loads reporting artifact history when configured", async ({ page }) => {
+  test.skip(!reportingApiBaseUrl, "Set BANKING_LAB_E2E_REPORTING_API_BASE_URL to run API-backed reporting audit smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-reporting-artifact-history");
+  await expect(panel).toContainText("reporting artifacts loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("RPA-");
 });
 
 test("audit console propagates interactive Keycloak auditor token when configured", async ({ page }) => {

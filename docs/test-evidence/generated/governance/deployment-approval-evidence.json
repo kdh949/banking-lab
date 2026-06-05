@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "artifactId": "H8-DEPLOYMENT-APPROVAL-EVIDENCE",
   "releaseId": "REL-HARDENING-H1-H8-2026-06-05",
-  "generatedAt": "2026-06-04T21:26:00.411Z",
+  "generatedAt": "2026-06-05T17:59:50.687Z",
   "syntheticOnly": true,
   "controls": {
     "realMoneyUsed": false,
@@ -15,8 +15,8 @@
   },
   "changeRecord": {
     "changeId": "CHG-HARDENING-H1-H8-2026-06-05",
-    "branch": "codex/hardening-h8-governance-artifacts",
-    "commit": "b2c80d97d6f912aae8796404bd7cf25971111ec5",
+    "branch": "codex/full-platform-payment-service",
+    "commit": "b45a5204dca4afb721c10186fcce3a1315a83b28",
     "targetEnvironment": "synthetic-lab",
     "scope": [
       "H1 Spring canonical lock",

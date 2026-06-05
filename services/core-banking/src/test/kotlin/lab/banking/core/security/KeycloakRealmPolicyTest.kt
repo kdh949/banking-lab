@@ -30,8 +30,21 @@ class KeycloakRealmPolicyTest {
 
         val roles = listMap(mapValue(realm["roles"])["realm"]).map { it["name"]?.toString() }.toSet()
         assertTrue(roles.contains("PASSKEY_RECOVERY_ADMIN"))
+        assertTrue(roles.contains("PAYMENT_SERVICE"))
+        assertTrue(roles.contains("NOTIFICATION_SERVICE"))
+        assertTrue(roles.contains("REPORTING_ANALYST"))
 
         val users = listMap(realm["users"])
+        val paymentServiceAccount = users.single { it["username"] == "service-account-payment-service-api" }
+        assertEquals("payment-service-api", paymentServiceAccount["serviceAccountClientId"])
+        assertTrue(listValue(paymentServiceAccount["realmRoles"]).contains("PAYMENT_SERVICE"))
+        val notificationServiceAccount = users.single { it["username"] == "service-account-notification-service-api" }
+        assertEquals("notification-service-api", notificationServiceAccount["serviceAccountClientId"])
+        assertTrue(listValue(notificationServiceAccount["realmRoles"]).contains("NOTIFICATION_SERVICE"))
+        val reportingServiceAccount = users.single { it["username"] == "service-account-reporting-service-api" }
+        assertEquals("reporting-service-api", reportingServiceAccount["serviceAccountClientId"])
+        assertTrue(listValue(reportingServiceAccount["realmRoles"]).contains("REPORTING_ANALYST"))
+
         val webAuthnUser = users.single { it["username"] == "manager-webauthn01" }
         assertTrue(listValue(webAuthnUser["requiredActions"]).contains("webauthn-register"))
 
@@ -48,7 +61,70 @@ class KeycloakRealmPolicyTest {
         val adminClient = clients.single { it["clientId"] == "admin-console" }
         assertTrue(listValue(adminClient["redirectUris"]).contains("http://localhost:3007/*"))
         assertTrue(listValue(adminClient["webOrigins"]).contains("http://localhost:3007"))
+
+        val paymentFacingClients = setOf("customer-web", "staff-terminal", "ops-console")
+        paymentFacingClients.forEach { clientId ->
+            val client = clients.single { it["clientId"] == clientId }
+            assertTrue(mapperNames(client).contains("payment-service-api-audience"), "$clientId must carry payment-service-api audience")
+        }
+        val complaintClient = clients.single { it["clientId"] == "complaint-portal" }
+        assertFalse(mapperNames(complaintClient).contains("payment-service-api-audience"))
+
+        val notificationFacingClients = setOf("customer-web", "audit-console", "admin-console")
+        notificationFacingClients.forEach { clientId ->
+            val client = clients.single { it["clientId"] == clientId }
+            assertTrue(
+                mapperNames(client).contains("notification-service-api-audience"),
+                "$clientId must carry notification-service-api audience"
+            )
+        }
+        val nonNotificationClients = setOf("staff-terminal", "complaint-portal", "ops-console", "fds-aml-console")
+        nonNotificationClients.forEach { clientId ->
+            val client = clients.single { it["clientId"] == clientId }
+            assertFalse(
+                mapperNames(client).contains("notification-service-api-audience"),
+                "$clientId must not carry notification-service-api audience"
+            )
+        }
+
+        val paymentServiceClient = clients.single { it["clientId"] == "payment-service-api" }
+        assertEquals(false, paymentServiceClient["publicClient"])
+        assertEquals(true, paymentServiceClient["serviceAccountsEnabled"])
+        assertEquals(false, paymentServiceClient["directAccessGrantsEnabled"])
+        val paymentMappers = listMap(paymentServiceClient["protocolMappers"])
+            .map { it["name"]?.toString() }
+            .toSet()
+        assertTrue(paymentMappers.contains("payment-service-api-audience"))
+        assertTrue(paymentMappers.contains("core-banking-api-audience"))
+
+        val notificationServiceClient = clients.single { it["clientId"] == "notification-service-api" }
+        assertEquals(false, notificationServiceClient["publicClient"])
+        assertEquals(true, notificationServiceClient["serviceAccountsEnabled"])
+        assertEquals(false, notificationServiceClient["directAccessGrantsEnabled"])
+        val notificationMappers = listMap(notificationServiceClient["protocolMappers"])
+            .map { it["name"]?.toString() }
+            .toSet()
+        assertTrue(notificationMappers.contains("notification-service-api-audience"))
+        assertFalse(notificationMappers.contains("core-banking-api-audience"))
+        assertFalse(notificationMappers.contains("payment-service-api-audience"))
+
+        val reportingServiceClient = clients.single { it["clientId"] == "reporting-service-api" }
+        assertEquals(false, reportingServiceClient["publicClient"])
+        assertEquals(true, reportingServiceClient["serviceAccountsEnabled"])
+        assertEquals(false, reportingServiceClient["directAccessGrantsEnabled"])
+        val reportingMappers = listMap(reportingServiceClient["protocolMappers"])
+            .map { it["name"]?.toString() }
+            .toSet()
+        assertTrue(reportingMappers.contains("reporting-service-api-audience"))
+        assertFalse(reportingMappers.contains("core-banking-api-audience"))
+        assertFalse(reportingMappers.contains("payment-service-api-audience"))
+        assertFalse(reportingMappers.contains("notification-service-api-audience"))
     }
+
+    private fun mapperNames(client: Map<String, Any?>): Set<String> =
+        listMap(client["protocolMappers"])
+            .mapNotNull { it["name"]?.toString() }
+            .toSet()
 
     @Suppress("UNCHECKED_CAST")
     private fun loadRealm(): Map<String, Any?> {

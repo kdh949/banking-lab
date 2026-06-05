@@ -77,15 +77,68 @@ class ComplaintCaseService(
         }
     }
 
+    fun submitCustomerComplaintMaterial(
+        caseId: String,
+        command: CustomerComplaintMaterialCommand
+    ): CustomerComplaintMaterialResponse {
+        return runSerializableComplaintCommand {
+            submitCustomerComplaintMaterialInTransaction(caseId, command)
+        }
+    }
+
+    fun reopenCustomerComplaint(
+        caseId: String,
+        command: CustomerComplaintReopenCommand
+    ): CustomerComplaintReopenResponse {
+        return runSerializableComplaintCommand {
+            reopenCustomerComplaintInTransaction(caseId, command)
+        }
+    }
+
+    fun complaintTypeGuide(): ComplaintTypeGuideResponse =
+        ComplaintTypeGuideResponse(
+            items = listOf(
+                ComplaintTypeGuideDto(
+                    category = "TRANSFER_DISPUTE",
+                    description = "Synthetic transfer dispute or wrong-transfer investigation.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("transactionId", "customerStatement"),
+                    sourceReferenceTypes = listOf("CUSTOMER_TRANSFER", "LEDGER_TRANSACTION")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "ACCOUNT_ACCESS",
+                    description = "Synthetic account access, statement, or login-support complaint.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("screenId", "observedAt")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "FEE_INQUIRY",
+                    description = "Synthetic fee explanation, waiver follow-up, or refund review.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("accountId", "feeTransactionId")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "CARD_DISPUTE",
+                    description = "Synthetic card authorization, capture, or lost-card dispute.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("cardId", "authorizationId"),
+                    sourceReferenceTypes = listOf("CARD_AUTHORIZATION", "CARD_CAPTURE")
+                )
+            )
+        )
+
     private fun createCustomerComplaintInTransaction(command: CustomerComplaintEntryCommand): CustomerComplaintEntryResponse {
         val customerId = command.customerId?.takeIf { it.isNotBlank() }
             ?: BankingLabAuthContext.get()?.customerId
             ?: throw WorkflowErrors.validation("customerId is required for complaint entry")
         BankingLabAuthContext.requireCustomerOwnership(customerId)
         val category = command.category?.takeIf { it.isNotBlank() }
+            ?.trim()
+            ?.uppercase()
             ?: throw WorkflowErrors.validation("complaint category is required")
         val description = command.description?.takeIf { it.isNotBlank() }
             ?: throw WorkflowErrors.validation("complaint description is required")
+        val sourceReference = validateSourceReference(customerId, category, command.sourceReference)
         val actorId = BankingLabAuthContext.get()?.subject
             ?: command.requestedBy?.takeIf { it.isNotBlank() }
             ?: customerId
@@ -95,18 +148,19 @@ class ComplaintCaseService(
             """
             INSERT INTO complaint_cases (
               complaint_case_id, customer_id, category, description, status,
-              sla_due_at, classification, owner_id
+              sla_due_at, classification, owner_id, source_reference_json
             )
             VALUES (
               :caseId, :customerId, :category, :description, 'RECEIVED',
-              now() + interval '7 days', NULL, NULL
+              now() + interval '7 days', NULL, NULL, CAST(:sourceReferenceJson AS jsonb)
             )
             """.trimIndent(),
             mapOf(
                 "caseId" to caseId,
                 "customerId" to customerId,
                 "category" to category,
-                "description" to description
+                "description" to description,
+                "sourceReferenceJson" to sourceReference?.let { objectMapper.writeValueAsString(it) }
             )
         )
         appendTimeline(caseId, "RECEIVED", null, "RECEIVED", actorId, "customer complaint received")
@@ -122,11 +176,164 @@ class ComplaintCaseService(
             payload = mapOf(
                 "businessType" to "COMPLAINT_ENTRY",
                 "category" to category,
+                "sourceReference" to sourceReference?.let {
+                    mapOf(
+                        "sourceType" to it.sourceType,
+                        "sourceId" to it.sourceId,
+                        "accountId" to it.accountId,
+                        "cardId" to it.cardId,
+                        "ledgerTransactionId" to it.ledgerTransactionId,
+                        "amountMinor" to it.amountMinor,
+                        "currency" to it.currency,
+                        "businessDate" to it.businessDate?.toString(),
+                        "syntheticOnly" to true
+                    )
+                },
                 "syntheticOnly" to true
             )
         )
         return CustomerComplaintEntryResponse(item = findForRead(caseId))
     }
+
+    private fun validateSourceReference(
+        customerId: String,
+        category: String,
+        sourceReference: ComplaintSourceReferenceDto?
+    ): ComplaintSourceReferenceDto? {
+        val allowedTypes = when (category) {
+            "TRANSFER_DISPUTE" -> TRANSFER_DISPUTE_SOURCE_TYPES
+            "CARD_DISPUTE" -> CARD_DISPUTE_SOURCE_TYPES
+            else -> null
+        }
+        if (allowedTypes == null) {
+            if (sourceReference != null) {
+                throw WorkflowErrors.validation("sourceReference is supported only for transfer or card disputes")
+            }
+            return null
+        }
+
+        val reference = sourceReference ?: throw WorkflowErrors.validation("sourceReference is required for $category")
+        val sourceType = reference.sourceType.trim().uppercase()
+        val sourceId = reference.sourceId.trim()
+        if (sourceType !in allowedTypes) {
+            throw WorkflowErrors.validation("$category sourceType must be one of ${allowedTypes.joinToString(", ")}")
+        }
+        if (sourceId.isBlank()) {
+            throw WorkflowErrors.validation("sourceReference.sourceId is required")
+        }
+        if (!reference.syntheticOnly) {
+            throw WorkflowErrors.validation("sourceReference must be syntheticOnly")
+        }
+        if (reference.amountMinor != null && reference.amountMinor <= 0) {
+            throw WorkflowErrors.validation("sourceReference.amountMinor must be positive when supplied")
+        }
+
+        val normalized = reference.copy(
+            sourceType = sourceType,
+            sourceId = sourceId,
+            accountId = reference.accountId.trimToNull(),
+            cardId = reference.cardId.trimToNull(),
+            ledgerTransactionId = reference.ledgerTransactionId.trimToNull(),
+            currency = reference.currency?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: "KRW",
+            syntheticOnly = true
+        )
+        when (sourceType) {
+            "CUSTOMER_TRANSFER", "LEDGER_TRANSACTION" -> requireTransferSourceOwned(customerId, normalized)
+            "CARD_AUTHORIZATION", "CARD_CAPTURE" -> requireCardSourceOwned(customerId, normalized)
+        }
+        return normalized
+    }
+
+    private fun requireTransferSourceOwned(customerId: String, sourceReference: ComplaintSourceReferenceDto) {
+        val owned = when (sourceReference.sourceType) {
+            "CUSTOMER_TRANSFER" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM customer_transfer_results
+                    WHERE customer_id = :customerId
+                      AND result_id = :sourceId
+                    """.trimIndent(),
+                    mapOf("customerId" to customerId, "sourceId" to sourceReference.sourceId)
+                )
+            "LEDGER_TRANSACTION" ->
+                countRows(
+                    """
+                    SELECT count(DISTINCT lt.ledger_transaction_id)
+                    FROM ledger_transactions lt
+                    JOIN ledger_postings lp
+                      ON lp.ledger_transaction_id = lt.ledger_transaction_id
+                    JOIN accounts a
+                      ON a.account_id = lp.account_id
+                    WHERE lt.ledger_transaction_id = :sourceId
+                      AND a.customer_id = :customerId
+                      AND (CAST(:accountId AS text) IS NULL OR a.account_id = CAST(:accountId AS text))
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "accountId" to sourceReference.accountId
+                    )
+                )
+            else -> 0
+        }
+        if (owned == 0) {
+            throw WorkflowErrors.authorizationViolation("complaint source reference does not belong to customer")
+        }
+    }
+
+    private fun requireCardSourceOwned(customerId: String, sourceReference: ComplaintSourceReferenceDto) {
+        val owned = when (sourceReference.sourceType) {
+            "CARD_AUTHORIZATION" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM card_authorizations ca
+                    JOIN cards c
+                      ON c.card_id = ca.card_id
+                    WHERE ca.authorization_id = :sourceId
+                      AND c.customer_id = :customerId
+                      AND (CAST(:cardId AS text) IS NULL OR c.card_id = CAST(:cardId AS text))
+                      AND (CAST(:accountId AS text) IS NULL OR ca.account_id = CAST(:accountId AS text))
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "cardId" to sourceReference.cardId,
+                        "accountId" to sourceReference.accountId
+                    )
+                )
+            "CARD_CAPTURE" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM card_captures cc
+                    JOIN cards c
+                      ON c.card_id = cc.card_id
+                    WHERE cc.capture_id = :sourceId
+                      AND c.customer_id = :customerId
+                      AND (CAST(:cardId AS text) IS NULL OR c.card_id = CAST(:cardId AS text))
+                      AND (
+                        CAST(:ledgerTransactionId AS text) IS NULL
+                        OR cc.ledger_transaction_id = CAST(:ledgerTransactionId AS text)
+                      )
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "cardId" to sourceReference.cardId,
+                        "ledgerTransactionId" to sourceReference.ledgerTransactionId
+                    )
+                )
+            else -> 0
+        }
+        if (owned == 0) {
+            throw WorkflowErrors.authorizationViolation("complaint source reference does not belong to customer")
+        }
+    }
+
+    private fun countRows(sql: String, params: Map<String, Any?>): Int =
+        jdbc.queryForObject(sql, params, Int::class.java) ?: 0
 
     private fun confirmCustomerComplaintInTransaction(
         caseId: String,
@@ -174,6 +381,183 @@ class ComplaintCaseService(
             )
         )
         return CustomerComplaintConfirmResponse(item = findForRead(complaint.caseId))
+    }
+
+    private fun submitCustomerComplaintMaterialInTransaction(
+        caseId: String,
+        command: CustomerComplaintMaterialCommand
+    ): CustomerComplaintMaterialResponse {
+        val complaint = findForUpdate(caseId)
+        val customerId = command.customerId?.takeIf { it.isNotBlank() }
+            ?: BankingLabAuthContext.get()?.customerId
+            ?: complaint.customerId
+        BankingLabAuthContext.requireCustomerOwnership(customerId)
+        if (complaint.customerId != customerId) {
+            throw WorkflowErrors.authorizationViolation("complaint does not belong to customer")
+        }
+        if (complaint.status == "CLOSED") {
+            throw WorkflowErrors.stateViolation("closed complaint must be reopened before submitting materials")
+        }
+        if (complaint.status == "WAITING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("complaint is waiting for answer approval")
+        }
+        val materialType = command.materialType?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("materialType is required")
+        val fileName = command.fileName?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("fileName is required")
+        val materialId = "CMM-${UUID.randomUUID().toString().uppercase()}"
+        val syntheticStorageRef = command.syntheticStorageRef?.takeIf { it.isNotBlank() }
+            ?: "synthetic://complaints/$caseId/materials/$materialId"
+        if (!syntheticStorageRef.startsWith("synthetic://")) {
+            throw WorkflowErrors.validation("syntheticStorageRef must use synthetic://")
+        }
+        val actorId = BankingLabAuthContext.get()?.subject ?: customerId
+        jdbc.update(
+            """
+            INSERT INTO complaint_case_materials (
+              complaint_material_id, complaint_case_id, customer_id, material_type,
+              file_name, description, synthetic_storage_ref, submitted_by
+            )
+            VALUES (
+              :materialId, :caseId, :customerId, :materialType,
+              :fileName, :description, :syntheticStorageRef, :submittedBy
+            )
+            """.trimIndent(),
+            mapOf(
+                "materialId" to materialId,
+                "caseId" to complaint.caseId,
+                "customerId" to customerId,
+                "materialType" to materialType,
+                "fileName" to fileName,
+                "description" to command.description,
+                "syntheticStorageRef" to syntheticStorageRef,
+                "submittedBy" to actorId
+            )
+        )
+        val nextStatus = if (complaint.status == "WAITING_CUSTOMER") "IN_REVIEW" else complaint.status
+        if (nextStatus != complaint.status) {
+            jdbc.update(
+                """
+                UPDATE complaint_cases
+                SET status = :status,
+                    updated_at = now()
+                WHERE complaint_case_id = :caseId
+                """.trimIndent(),
+                mapOf(
+                    "caseId" to complaint.caseId,
+                    "status" to nextStatus
+                )
+            )
+        } else {
+            jdbc.update(
+                """
+                UPDATE complaint_cases
+                SET updated_at = now()
+                WHERE complaint_case_id = :caseId
+                """.trimIndent(),
+                mapOf("caseId" to complaint.caseId)
+            )
+        }
+        appendTimeline(
+            complaint.caseId,
+            "MATERIAL_SUBMITTED",
+            complaint.status,
+            nextStatus,
+            actorId,
+            command.reason ?: "customer submitted additional material"
+        )
+        auditEvents.append(
+            eventType = "COMMAND_EXECUTED",
+            actorType = "CUSTOMER",
+            actorId = actorId,
+            actorRole = "CUSTOMER",
+            screenId = "CMP-103",
+            businessReferenceId = complaint.caseId,
+            customerId = customerId,
+            reason = command.reason ?: "Customer submitted complaint material",
+            payload = mapOf(
+                "materialId" to materialId,
+                "materialType" to materialType,
+                "fileName" to fileName,
+                "syntheticStorageRef" to syntheticStorageRef,
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
+        return CustomerComplaintMaterialResponse(
+            item = findForRead(complaint.caseId),
+            material = findMaterial(materialId)
+        )
+    }
+
+    private fun reopenCustomerComplaintInTransaction(
+        caseId: String,
+        command: CustomerComplaintReopenCommand
+    ): CustomerComplaintReopenResponse {
+        val complaint = findForUpdate(caseId)
+        val customerId = command.customerId?.takeIf { it.isNotBlank() }
+            ?: BankingLabAuthContext.get()?.customerId
+            ?: complaint.customerId
+        BankingLabAuthContext.requireCustomerOwnership(customerId)
+        if (complaint.customerId != customerId) {
+            throw WorkflowErrors.authorizationViolation("complaint does not belong to customer")
+        }
+        if (complaint.status != "CLOSED") {
+            throw WorkflowErrors.stateViolation("only closed complaints can be reopened: ${complaint.status}")
+        }
+        val reopenReason = command.reopenReason?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("reopenReason is required")
+        val reopenRequestId = "CMR-${UUID.randomUUID().toString().uppercase()}"
+        val actorId = BankingLabAuthContext.get()?.subject ?: customerId
+        jdbc.update(
+            """
+            INSERT INTO complaint_reopen_requests (
+              complaint_reopen_request_id, complaint_case_id, customer_id, reopen_reason,
+              status, requested_by
+            )
+            VALUES (
+              :reopenRequestId, :caseId, :customerId, :reopenReason,
+              'REOPENED', :requestedBy
+            )
+            """.trimIndent(),
+            mapOf(
+                "reopenRequestId" to reopenRequestId,
+                "caseId" to complaint.caseId,
+                "customerId" to customerId,
+                "reopenReason" to reopenReason,
+                "requestedBy" to actorId
+            )
+        )
+        jdbc.update(
+            """
+            UPDATE complaint_cases
+            SET status = 'REOPENED',
+                updated_at = now()
+            WHERE complaint_case_id = :caseId
+            """.trimIndent(),
+            mapOf("caseId" to complaint.caseId)
+        )
+        appendTimeline(complaint.caseId, "REOPEN_REQUESTED", complaint.status, "REOPENED", actorId, reopenReason)
+        auditEvents.append(
+            eventType = "COMMAND_EXECUTED",
+            actorType = "CUSTOMER",
+            actorId = actorId,
+            actorRole = "CUSTOMER",
+            screenId = "CMP-106",
+            businessReferenceId = complaint.caseId,
+            customerId = customerId,
+            reason = command.reason ?: "Customer requested complaint reopen",
+            payload = mapOf(
+                "reopenRequestId" to reopenRequestId,
+                "status" to "REOPENED",
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
+        return CustomerComplaintReopenResponse(
+            item = findForRead(complaint.caseId),
+            reopenRequest = findReopenRequest(reopenRequestId)
+        )
     }
 
     private fun <T> runSerializableComplaintCommand(operation: () -> T): T {
@@ -377,12 +761,57 @@ class ComplaintCaseService(
             this::mapCase
         ) ?: throw WorkflowErrors.notFound("complaint not found: $caseId")
 
+    private fun findMaterial(materialId: String): ComplaintMaterialDto =
+        jdbc.queryForObject(
+            """
+            SELECT complaint_material_id, complaint_case_id, customer_id, material_type,
+                   file_name, description, synthetic_storage_ref, submitted_by, created_at
+            FROM complaint_case_materials
+            WHERE complaint_material_id = :materialId
+            """.trimIndent(),
+            mapOf("materialId" to materialId)
+        ) { rs, _ ->
+            ComplaintMaterialDto(
+                materialId = rs.getString("complaint_material_id"),
+                caseId = rs.getString("complaint_case_id"),
+                customerId = rs.getString("customer_id"),
+                materialType = rs.getString("material_type"),
+                fileName = rs.getString("file_name"),
+                description = rs.getString("description"),
+                syntheticStorageRef = rs.getString("synthetic_storage_ref"),
+                submittedBy = rs.getString("submitted_by"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
+            )
+        } ?: throw WorkflowErrors.notFound("complaint material not found: $materialId")
+
+    private fun findReopenRequest(reopenRequestId: String): ComplaintReopenRequestDto =
+        jdbc.queryForObject(
+            """
+            SELECT complaint_reopen_request_id, complaint_case_id, customer_id, reopen_reason,
+                   status, requested_by, created_at
+            FROM complaint_reopen_requests
+            WHERE complaint_reopen_request_id = :reopenRequestId
+            """.trimIndent(),
+            mapOf("reopenRequestId" to reopenRequestId)
+        ) { rs, _ ->
+            ComplaintReopenRequestDto(
+                reopenRequestId = rs.getString("complaint_reopen_request_id"),
+                caseId = rs.getString("complaint_case_id"),
+                customerId = rs.getString("customer_id"),
+                reopenReason = rs.getString("reopen_reason"),
+                status = rs.getString("status"),
+                requestedBy = rs.getString("requested_by"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
+            )
+        } ?: throw WorkflowErrors.notFound("complaint reopen request not found: $reopenRequestId")
+
     private fun complaintSql(suffix: String): String =
         """
         SELECT complaint_case_id, customer_id, category, description, status,
                sla_due_at, classification, owner_id, answer_json::text AS answer_json,
                answer_draft_json::text AS answer_draft_json, approval_id,
-               customer_confirmed_at, temporal_workflow_id, temporal_run_id, created_at
+               customer_confirmed_at, source_reference_json::text AS source_reference_json,
+               temporal_workflow_id, temporal_run_id, created_at
         FROM complaint_cases
         $suffix
         """.trimIndent()
@@ -402,6 +831,7 @@ class ComplaintCaseService(
             approvalId = rs.getString("approval_id"),
             customerConfirmedAt = rs.getObject("customer_confirmed_at", OffsetDateTime::class.java),
             timeline = timelineFor(rs.getString("complaint_case_id")),
+            sourceReference = readValue(rs.getString("source_reference_json"), ComplaintSourceReferenceDto::class.java),
             temporalWorkflow = temporalReference(rs)
         )
 
@@ -435,7 +865,12 @@ class ComplaintCaseService(
         )
     }
 
+    private fun String?.trimToNull(): String? =
+        this?.trim()?.takeIf { it.isNotBlank() }
+
     private companion object {
         const val SERIALIZABLE_COMPLAINT_COMMAND_MAX_ATTEMPTS = 5
+        val TRANSFER_DISPUTE_SOURCE_TYPES = setOf("CUSTOMER_TRANSFER", "LEDGER_TRANSACTION")
+        val CARD_DISPUTE_SOURCE_TYPES = setOf("CARD_AUTHORIZATION", "CARD_CAPTURE")
     }
 }

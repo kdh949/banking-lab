@@ -66,6 +66,7 @@ const criticalRoles = new Set([
   "BRANCH_MANAGER",
   "COMPLIANCE_MANAGER",
   "OPS_OPERATOR",
+  "PAYMENT_SERVICE",
   "AUDITOR",
   "PASSKEY_RECOVERY_ADMIN",
   "SYSTEM"
@@ -472,7 +473,7 @@ function roleOwner(role: string): string {
   if (role.includes("AUDITOR") || role.includes("PASSKEY")) {
     return "synthetic-security-owner";
   }
-  if (role.includes("OPS") || role.includes("SYSTEM")) {
+  if (role.includes("OPS") || role.includes("SYSTEM") || role.includes("PAYMENT_SERVICE")) {
     return "synthetic-ops-owner";
   }
   return "synthetic-business-owner";

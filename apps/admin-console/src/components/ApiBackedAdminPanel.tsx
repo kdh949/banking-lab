@@ -1,13 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBankingApiClient, type AdminPlatformSummaryResponse } from "@banking-lab/api-client";
+import {
+  createBankingApiClient,
+  type AdminEvidenceCoverageResponse,
+  type AdminPlatformSummaryResponse,
+  type AdminSystemStatusResponse,
+  type ReportArtifactDto,
+  type ReportArtifactExportResponse,
+  type ReportDefinitionDto,
+  type NotificationPreferenceDto,
+  type NotificationTemplateDto
+} from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
 type ApiState =
   | { readonly status: "offline" }
   | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly summary: AdminPlatformSummaryResponse }
+  | {
+      readonly status: "loaded";
+      readonly summary: AdminPlatformSummaryResponse;
+      readonly evidence: AdminEvidenceCoverageResponse;
+      readonly systemStatus: AdminSystemStatusResponse;
+    }
   | { readonly status: "failed"; readonly message: string };
 
 type KeycloakAdminState =
@@ -18,7 +33,31 @@ type KeycloakAdminState =
   | { readonly status: "loaded"; readonly summary: AdminPlatformSummaryResponse; readonly tokenType: string }
   | { readonly status: "failed"; readonly message: string };
 
+type NotificationAdminState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly templates: readonly NotificationTemplateDto[];
+      readonly preferences: readonly NotificationPreferenceDto[];
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type ReportingAdminState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly definitions: readonly ReportDefinitionDto[];
+      readonly artifact: ReportArtifactDto;
+      readonly exported: ReportArtifactExportResponse;
+      readonly artifacts: readonly ReportArtifactDto[];
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
+const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabAdminOidcState";
 const oidcVerifierKey = "bankingLabAdminOidcVerifier";
@@ -26,6 +65,12 @@ const oidcRedirectKey = "bankingLabAdminOidcRedirectUri";
 
 export function ApiBackedAdminPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+  const [notificationState, setNotificationState] = useState<NotificationAdminState>(() =>
+    notificationApiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [reportingState, setReportingState] = useState<ReportingAdminState>(() =>
+    reportingApiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
   const [keycloakAdminState, setKeycloakAdminState] = useState<KeycloakAdminState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -43,16 +88,116 @@ export function ApiBackedAdminPanel() {
       })
     });
 
-    client
-      .adminPlatformSummary()
-      .then((summary) => {
+    Promise.all([
+      client.adminPlatformSummary(),
+      client.adminEvidenceCoverage("Synthetic admin evidence coverage review"),
+      client.adminSystemStatus("Synthetic admin system status review")
+    ])
+      .then(([summary, evidence, systemStatus]) => {
         if (!cancelled) {
-          setState({ status: "loaded", summary });
+          setState({ status: "loaded", summary, evidence, systemStatus });
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationApiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: notificationApiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "notification-admin01",
+        roles: ["OPS_MANAGER", "COMPLIANCE_MANAGER"]
+      })
+    });
+
+    Promise.all([
+      client.listNotificationTemplates(),
+      client.listNotificationPreferences({
+        requestedBy: "notification-admin01",
+        reason: "API-backed notification preference review"
+      })
+    ])
+      .then(([templates, preferences]) => {
+        if (!cancelled) {
+          setNotificationState({ status: "loaded", templates, preferences });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setNotificationState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown notification API failure"
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!reportingApiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: reportingApiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "reporting-admin01",
+        roles: ["REPORTING_ANALYST"]
+      })
+    });
+
+    void (async () => {
+      const catalog = await client.reportCatalog("API-backed reporting catalog review");
+      const generated = await client.generateReportArtifact({
+        reportType: "EVIDENCE_COVERAGE",
+        requestedBy: "reporting-admin01",
+        requestedByRole: "REPORTING_ANALYST",
+        reason: "API-backed reporting artifact generation",
+        idempotencyKey: "RPT-ADMIN-UI-SMOKE-001"
+      });
+      const exported = await client.exportReportArtifact(
+        generated.item.artifactId,
+        "API-backed reporting artifact export package review"
+      );
+      const artifacts = await client.reportArtifacts({
+        reason: "API-backed reporting artifact list review",
+        reportType: "EVIDENCE_COVERAGE"
+      });
+
+      return { catalog, generated, exported, artifacts };
+    })()
+      .then(({ catalog, generated, exported, artifacts }) => {
+        if (!cancelled) {
+          setReportingState({
+            status: "loaded",
+            definitions: catalog.items,
+            artifact: generated.item,
+            exported,
+            artifacts: artifacts.items
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setReportingState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown reporting API failure"
+          });
         }
       });
 
@@ -200,6 +345,146 @@ export function ApiBackedAdminPanel() {
           </div>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-admin-evidence-coverage">
+        <div>
+          <dt>Evidence Coverage</dt>
+          <dd>{evidenceCoverageStatusLabel(state)}</dd>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Audit</dt>
+              <dd>{state.evidence.auditEventId}</dd>
+            </div>
+            <div>
+              <dt>Evidence Links</dt>
+              <dd>{state.evidence.evidenceLinks.length}</dd>
+            </div>
+            <div>
+              <dt>Feature Screens</dt>
+              <dd>{state.evidence.featureCoverage.map((item) => `${item.screenId}:${item.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Evidence Sample</dt>
+              <dd>
+                {state.evidence.evidenceLinks[2]
+                  ? `${state.evidence.evidenceLinks[2].evidenceId}:${state.evidence.evidenceLinks[2].status}`
+                  : "none"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
+      <dl data-testid="api-backed-admin-system-status">
+        <div>
+          <dt>System Status</dt>
+          <dd>{systemStatusLabel(state)}</dd>
+        </div>
+        {state.status === "loaded" ? (
+          <>
+            <div>
+              <dt>System Audit</dt>
+              <dd>{state.systemStatus.auditEventId}</dd>
+            </div>
+            <div>
+              <dt>Services</dt>
+              <dd>{state.systemStatus.services.map((service) => `${service.serviceId}:${service.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Batches</dt>
+              <dd>{state.systemStatus.batches.map((batch) => `${batch.batchType}:${batch.status}`).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Monitoring</dt>
+              <dd>{state.systemStatus.monitoringLinks.map((link) => `${link.system}:${link.status}`).join(", ")}</dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
+      <dl data-testid="api-backed-notification-admin">
+        <div>
+          <dt>Notification API</dt>
+          <dd>{notificationApiBaseUrl || "not configured"}</dd>
+        </div>
+        <div>
+          <dt>Notification Status</dt>
+          <dd>{notificationAdminStatusLabel(notificationState)}</dd>
+        </div>
+        {notificationState.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Templates</dt>
+              <dd>{notificationState.templates.length}</dd>
+            </div>
+            <div>
+              <dt>Preferences</dt>
+              <dd>{notificationState.preferences.length}</dd>
+            </div>
+            <div>
+              <dt>Template Sample</dt>
+              <dd>
+                {notificationState.templates[0]
+                  ? `${notificationState.templates[0].eventType}:${notificationState.templates[0].channel}:v${notificationState.templates[0].version}`
+                  : "none"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+        {notificationState.status === "failed" ? (
+          <div>
+            <dt>Notification Error</dt>
+            <dd>{notificationState.message}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <dl data-testid="api-backed-reporting-admin">
+        <div>
+          <dt>Reporting API</dt>
+          <dd>{reportingApiBaseUrl || "not configured"}</dd>
+        </div>
+        <div>
+          <dt>Reporting Status</dt>
+          <dd>{reportingAdminStatusLabel(reportingState)}</dd>
+        </div>
+        {reportingState.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Catalog</dt>
+              <dd>{reportingState.definitions.map((definition) => definition.reportType).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Generated Artifact</dt>
+              <dd>{`${reportingState.artifact.artifactId}:${reportingState.artifact.reportType}`}</dd>
+            </div>
+            <div>
+              <dt>Masking</dt>
+              <dd>{reportingState.artifact.maskedByDefault ? "masked by default" : "unsafe"}</dd>
+            </div>
+            <div>
+              <dt>Artifact Checksum</dt>
+              <dd>{`${reportingState.artifact.exportFormat}:${reportingState.artifact.contentSha256.slice(0, 12)}`}</dd>
+            </div>
+            <div>
+              <dt>Export Package</dt>
+              <dd>{`${reportingState.exported.packageName}:${reportingState.exported.contentSha256.slice(0, 12)}`}</dd>
+            </div>
+            <div>
+              <dt>Retention</dt>
+              <dd>{`${reportingState.artifact.retentionPolicy}:${reportingState.artifact.retentionUntil ?? "unscheduled"}`}</dd>
+            </div>
+            <div>
+              <dt>Listed Artifacts</dt>
+              <dd>{reportingState.artifacts.map((artifact) => `${artifact.artifactId}:${artifact.status}`).join(", ") || "none"}</dd>
+            </div>
+          </>
+        ) : null}
+        {reportingState.status === "failed" ? (
+          <div>
+            <dt>Reporting Error</dt>
+            <dd>{reportingState.message}</dd>
+          </div>
+        ) : null}
+      </dl>
       <div className="api-actions" data-testid="api-backed-admin-keycloak-login">
         <button
           type="button"
@@ -255,6 +540,32 @@ function statusLabel(state: ApiState): string {
   }
 }
 
+function evidenceCoverageStatusLabel(state: ApiState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading evidence coverage";
+    case "loaded":
+      return "evidence coverage loaded";
+    case "failed":
+      return "evidence coverage request failed";
+  }
+}
+
+function systemStatusLabel(state: ApiState): string {
+  switch (state.status) {
+    case "offline":
+      return "API base URL not configured";
+    case "loading":
+      return "loading system status";
+    case "loaded":
+      return "system status loaded";
+    case "failed":
+      return "system status request failed";
+  }
+}
+
 function keycloakStatusLabel(state: KeycloakAdminState): string {
   switch (state.status) {
     case "offline":
@@ -269,6 +580,32 @@ function keycloakStatusLabel(state: KeycloakAdminState): string {
       return "Keycloak admin summary loaded";
     case "failed":
       return "Keycloak admin failed";
+  }
+}
+
+function notificationAdminStatusLabel(state: NotificationAdminState): string {
+  switch (state.status) {
+    case "offline":
+      return "Notification API URL not configured";
+    case "loading":
+      return "loading notification controls";
+    case "loaded":
+      return "notification controls loaded";
+    case "failed":
+      return "notification API request failed";
+  }
+}
+
+function reportingAdminStatusLabel(state: ReportingAdminState): string {
+  switch (state.status) {
+    case "offline":
+      return "Reporting API URL not configured";
+    case "loading":
+      return "loading reporting controls";
+    case "loaded":
+      return "reporting controls loaded";
+    case "failed":
+      return "reporting API request failed";
   }
 }
 

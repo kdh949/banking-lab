@@ -1,0 +1,63 @@
+{
+  "screenId": "AUD-401",
+  "transactionCode": "AUD401",
+  "title": "Reporting Artifact History",
+  "app": "audit-console",
+  "type": "INQUIRY",
+  "domain": "reporting-audit",
+  "highRisk": false,
+  "requiredRoles": ["AUDITOR", "COMPLIANCE_MANAGER", "REPORTING_ANALYST"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["REPORT_ARTIFACT_LIST_VIEW"],
+    "piiAccess": false,
+    "maskingPolicy": "MASK_REPORT_METADATA"
+  },
+  "query": {
+    "endpoint": "GET /api/reports/artifacts",
+    "fields": [
+      {
+        "name": "reportType",
+        "label": "Report Type",
+        "type": "select",
+        "required": false
+      },
+      {
+        "name": "reason",
+        "label": "Business Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": [
+      "artifactId",
+      "reportType",
+      "requestedBy",
+      "requestedRole",
+      "status",
+      "artifactPath",
+      "contentSha256",
+      "retentionPolicy",
+      "retentionUntil",
+      "exportFormat",
+      "maskedByDefault",
+      "syntheticOnly",
+      "generatedAt"
+    ]
+  },
+  "actions": [
+    {
+      "id": "review-report-artifacts",
+      "label": "Review Report Artifacts",
+      "type": "inquiry",
+      "target": "GET /api/reports/artifacts"
+    }
+  ]
+}

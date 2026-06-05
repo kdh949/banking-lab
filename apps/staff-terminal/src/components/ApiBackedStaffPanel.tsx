@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type OperationalRetryQueueItemDto,
+  type PaymentCancellationRequestResponse,
+  type PaymentInstructionResponse,
   type StaffApprovalExecutionResponse,
   type StaffCustomerDetailDto,
   type StaffUnmaskResponse
@@ -98,9 +101,42 @@ type KeycloakUnmaskState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type PaymentInquiryState =
+  | { readonly status: "disabled" }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly created: PaymentInstructionResponse;
+      readonly inquiry: PaymentInstructionResponse;
+      readonly reason: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type PaymentCancellationState =
+  | { readonly status: "disabled" }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "approved";
+      readonly created: PaymentInstructionResponse;
+      readonly requested: PaymentCancellationRequestResponse;
+      readonly approved: PaymentCancellationRequestResponse;
+      readonly selfApprovalCode: string;
+      readonly reason: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type OperationalRetryQueueState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly auditEventId: string; readonly items: readonly OperationalRetryQueueItemDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
 type OidcIntent = "staff" | "checker" | "webauthn";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const simulatorTokenSmokesEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED !== "false";
 const reason = "API-backed channel parity smoke";
@@ -132,6 +168,15 @@ export function ApiBackedStaffPanel() {
   );
   const [keycloakCommandState, setKeycloakCommandState] = useState<KeycloakCommandState>({ status: "idle" });
   const [keycloakUnmaskState, setKeycloakUnmaskState] = useState<KeycloakUnmaskState>({ status: "idle" });
+  const [paymentInquiryState, setPaymentInquiryState] = useState<PaymentInquiryState>(() =>
+    simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
+  const [paymentCancellationState, setPaymentCancellationState] = useState<PaymentCancellationState>(() =>
+    simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
+  const [retryQueueState, setRetryQueueState] = useState<OperationalRetryQueueState>(() =>
+    apiBaseUrl && simulatorTokenSmokesEnabled ? { status: "loading" } : { status: "offline" }
+  );
 
   useEffect(() => {
     if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
@@ -172,6 +217,37 @@ export function ApiBackedStaffPanel() {
     if (storedStaffLogin) {
       setKeycloakStaffState(storedStaffLogin);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "ops01",
+        roles: ["OPS_MANAGER"]
+      })
+    });
+
+    client
+      .staffOperationalRetryQueue("API-backed operational retry queue smoke", "FAILED")
+      .then((response) => {
+        if (!cancelled) {
+          setRetryQueueState({ status: "loaded", auditEventId: response.auditEventId, items: response.items });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setRetryQueueState({ status: "failed", message: error instanceof Error ? error.message : "Unknown retry queue failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -466,6 +542,142 @@ export function ApiBackedStaffPanel() {
     }
   };
 
+  const runPaymentInquirySmoke = async () => {
+    if (!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentInquiryState.status === "running") {
+      return;
+    }
+    setPaymentInquiryState({ status: "running" });
+    try {
+      const customerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const staffClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "branch01",
+          roles: ["BRANCH_STAFF"]
+        })
+      });
+      const runId = Date.now();
+      const created = await customerClient.createPaymentInstruction({
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 8_000,
+        currency: "KRW",
+        idempotencyKey: `PAY101-CREATE-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser staff payment inquiry seed payment"
+      });
+      const lookupReason = "Browser PAY-101 payment instruction inquiry smoke";
+      const inquiry = await staffClient.getPaymentInstruction(created.item.paymentInstructionId, lookupReason);
+      if (!inquiry.auditEventId?.startsWith("PAU-") || inquiry.item.paymentInstructionId !== created.item.paymentInstructionId) {
+        setPaymentInquiryState({ status: "failed", message: "payment instruction inquiry did not return audited PAY-101 result" });
+        return;
+      }
+      setPaymentInquiryState({ status: "loaded", created, inquiry, reason: lookupReason });
+    } catch (error: unknown) {
+      setPaymentInquiryState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment inquiry failure" });
+    }
+  };
+
+  const runPaymentCancellationApprovalSmoke = async () => {
+    if (!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentCancellationState.status === "running") {
+      return;
+    }
+    setPaymentCancellationState({ status: "running" });
+    try {
+      const runId = Date.now();
+      const customerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const makerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "ops-maker01",
+          roles: ["OPS_OPERATOR"]
+        })
+      });
+      const selfCheckerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "ops-maker01",
+          roles: ["OPS_MANAGER"]
+        })
+      });
+      const checkerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "ops-manager01",
+          roles: ["OPS_MANAGER"]
+        })
+      });
+      const created = await customerClient.createPaymentInstruction({
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 9_000,
+        currency: "KRW",
+        idempotencyKey: `PAY102-CREATE-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser payment cancellation approval seed payment"
+      });
+      const reasonText = "Browser PAY-102 payment cancellation approval smoke";
+      const requested = await makerClient.requestPaymentCancellationApproval(created.item.paymentInstructionId, {
+        idempotencyKey: `PAY102-REQUEST-${runId}`,
+        requestedBy: "ops-maker01",
+        reason: reasonText
+      });
+
+      let selfApprovalCode = "not-tested";
+      try {
+        await selfCheckerClient.approvePaymentCancellationRequest(requested.item.cancellationRequestId, {
+          idempotencyKey: `PAY102-SELF-APPROVE-${runId}`,
+          requestedBy: "ops-maker01",
+          reason: "Browser PAY-102 self approval rejection smoke"
+        });
+        throw new Error("payment cancellation self approval unexpectedly succeeded");
+      } catch (error: unknown) {
+        selfApprovalCode = extractErrorCode(error);
+        if (selfApprovalCode !== "PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED") {
+          throw error;
+        }
+      }
+
+      const approved = await checkerClient.approvePaymentCancellationRequest(requested.item.cancellationRequestId, {
+        idempotencyKey: `PAY102-APPROVE-${runId}`,
+        requestedBy: "ops-manager01",
+        reason: reasonText
+      });
+      if (approved.item.status !== "APPROVED" || approved.instruction?.status !== "CANCELED") {
+        setPaymentCancellationState({ status: "failed", message: "payment cancellation approval did not cancel the instruction" });
+        return;
+      }
+      setPaymentCancellationState({
+        status: "approved",
+        created,
+        requested,
+        approved,
+        selfApprovalCode,
+        reason: reasonText
+      });
+    } catch (error: unknown) {
+      setPaymentCancellationState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment cancellation failure" });
+    }
+  };
+
   const runKeycloakCustomerChangeSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -668,6 +880,150 @@ export function ApiBackedStaffPanel() {
             <div>
               <dt>Unmask error</dt>
               <dd>{unmaskState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-staff-payment-inquiry">
+        <button
+          type="button"
+          onClick={runPaymentInquirySmoke}
+          disabled={!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentInquiryState.status === "running"}
+        >
+          Run payment inquiry smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment inquiry</dt>
+            <dd>{paymentInquiryLabel(paymentInquiryState)}</dd>
+          </div>
+          {paymentInquiryState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentInquiryState.inquiry.item.paymentInstructionId}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{paymentInquiryState.inquiry.item.status}</dd>
+              </div>
+              <div>
+                <dt>Biller</dt>
+                <dd>{paymentInquiryState.inquiry.item.billerName}</dd>
+              </div>
+              <div>
+                <dt>Debit account</dt>
+                <dd>{paymentInquiryState.inquiry.item.debitAccountId}</dd>
+              </div>
+              <div>
+                <dt>Audit event</dt>
+                <dd>{paymentInquiryState.inquiry.auditEventId}</dd>
+              </div>
+              <div>
+                <dt>Reason</dt>
+                <dd>{paymentInquiryState.reason}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentInquiryState.status === "failed" ? (
+            <div>
+              <dt>Payment inquiry error</dt>
+              <dd>{paymentInquiryState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-staff-payment-cancellation">
+        <button
+          type="button"
+          onClick={runPaymentCancellationApprovalSmoke}
+          disabled={!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentCancellationState.status === "running"}
+        >
+          Run payment cancellation approval smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment cancellation</dt>
+            <dd>{paymentCancellationLabel(paymentCancellationState)}</dd>
+          </div>
+          {paymentCancellationState.status === "approved" ? (
+            <>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentCancellationState.created.item.paymentInstructionId}</dd>
+              </div>
+              <div>
+                <dt>Request</dt>
+                <dd>{paymentCancellationState.requested.item.cancellationRequestId}</dd>
+              </div>
+              <div>
+                <dt>Maker</dt>
+                <dd>{paymentCancellationState.requested.item.makerId}</dd>
+              </div>
+              <div>
+                <dt>Request status</dt>
+                <dd>{paymentCancellationState.requested.item.status}</dd>
+              </div>
+              <div>
+                <dt>Self approval</dt>
+                <dd>{paymentCancellationState.selfApprovalCode}</dd>
+              </div>
+              <div>
+                <dt>Checker</dt>
+                <dd>{paymentCancellationState.approved.item.checkerId}</dd>
+              </div>
+              <div>
+                <dt>Final status</dt>
+                <dd>{paymentCancellationState.approved.instruction?.status}</dd>
+              </div>
+              <div>
+                <dt>Reason</dt>
+                <dd>{paymentCancellationState.reason}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentCancellationState.status === "failed" ? (
+            <div>
+              <dt>Payment cancellation error</dt>
+              <dd>{paymentCancellationState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-operational-retry-queue">
+        <dl>
+          <div>
+            <dt>Retry queue</dt>
+            <dd>{retryQueueLabel(retryQueueState)}</dd>
+          </div>
+          {retryQueueState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Audit event</dt>
+                <dd>{retryQueueState.auditEventId}</dd>
+              </div>
+              <div>
+                <dt>Queue count</dt>
+                <dd>{retryQueueState.items.length}</dd>
+              </div>
+              <div>
+                <dt>First event</dt>
+                <dd>{retryQueueState.items[0]?.outboxEventId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>First status</dt>
+                <dd>{retryQueueState.items[0]?.status ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Retry eligible</dt>
+                <dd>{retryQueueState.items[0]?.retryEligible ? "eligible" : "not eligible"}</dd>
+              </div>
+            </>
+          ) : null}
+          {retryQueueState.status === "failed" ? (
+            <div>
+              <dt>Retry queue error</dt>
+              <dd>{retryQueueState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -933,6 +1289,51 @@ function unmaskLabel(state: UnmaskState): string {
   }
   if (state.status === "unmasked") {
     return "privileged unmask approved";
+  }
+  return "failed";
+}
+
+function paymentInquiryLabel(state: PaymentInquiryState): string {
+  if (state.status === "disabled") {
+    return "simulator token smoke disabled";
+  }
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "payment inquiry audited";
+  }
+  return "failed";
+}
+
+function paymentCancellationLabel(state: PaymentCancellationState): string {
+  if (state.status === "disabled") {
+    return "simulator token smoke disabled";
+  }
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "approved") {
+    return "payment cancellation approved";
+  }
+  return "failed";
+}
+
+function retryQueueLabel(state: OperationalRetryQueueState): string {
+  if (state.status === "offline") {
+    return apiBaseUrl && !simulatorTokenSmokesEnabled ? "simulator token smoke disabled" : "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return "retry queue loaded";
   }
   return "failed";
 }

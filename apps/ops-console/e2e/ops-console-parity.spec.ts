@@ -9,6 +9,7 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "ops-console";
 const baseUrl = "http://localhost:3004";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.BANKING_LAB_E2E_PAYMENT_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -98,6 +99,19 @@ test("ops console shows Spring API-backed reconciliation workflow state failure 
   await expect(panel).toContainText("workflow");
   await expect(panel).toContainText("409");
   await expect(panel).toContainText("/api/ops/reconciliation-items/REC-SYN-FAIL-001/adjustment-requests");
+});
+
+test("ops console executes Payment Service OPS404 outbox dispatch when configured", async ({ page }) => {
+  test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment outbox dispatch smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run payment outbox dispatch smoke" }).click();
+  const panel = page.getByTestId("api-backed-payment-outbox-dispatch");
+  await expect(panel).toContainText("payment outbox dispatch recorded", { timeout: 15_000 });
+  await expect(panel).toContainText(/PUBLISHED|FAILED|DEAD_LETTER|NO_PENDING_EVENT/);
+  await expect(panel).toContainText("Retry count");
+  await expect(panel).toContainText("Browser OPS-404 payment outbox dispatch smoke");
 });
 
 test("ops console propagates interactive Keycloak operator and checker tokens when configured", async ({ page }) => {

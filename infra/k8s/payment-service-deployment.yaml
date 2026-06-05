@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: banking-lab
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: banking-lab/payment-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8088
+              name: http
+          envFrom:
+            - configMapRef:
+                name: banking-lab-config
+            - secretRef:
+                name: banking-lab-secret
+          env:
+            - name: PORT
+              value: "8088"
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: "true"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED
+              value: "true"
+            - name: BANKING_LAB_CORE_BANKING_BASE_URL
+              value: "http://core-banking-service:8081"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL
+              value: "http://keycloak:8080/realms/banking-lab/protocol/openid-connect/token"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID
+              value: "payment-service-api"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: PAYMENT_CORE_BANKING_CLIENT_SECRET
+            - name: BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC
+              value: "banking.lab.core-banking.ledger-commands"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-payment-service"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: "payment-service-api"
+            - name: BANKING_LAB_PAYMENT_DATABASE_URL
+              value: "jdbc:postgresql://postgres:5432/banking_lab"
+            - name: BANKING_LAB_PAYMENT_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_PAYMENT_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "payment_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi

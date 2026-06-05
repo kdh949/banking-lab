@@ -47,6 +47,7 @@ scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrati
 - High-risk customer transfer generates an AML case.
 - AML closure requires approval and records STR simulation output.
 - EOD closing validates ledger totals and creates an owned unmatched item.
+- Reconciliation mismatch taxonomy is durable for `AMOUNT_MISMATCH`, `MISSING_EXTERNAL`, `UNEXPECTED_EXTERNAL`, `DUPLICATE_EXTERNAL`, `STALE_EXTERNAL`, and `STATUS_MISMATCH` synthetic feed outcomes.
 - Closed business day rejects direct mutation.
 - Reconciliation adjustment posts as a balanced `ADJUSTMENT` transaction on the next open day.
 - DuckDB batch analytics generated synthetic-only AML/FDS scoring evidence without real PII, real money, or real bank network data.

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-ledger-posting-settled.schema.json",
+  "title": "PaymentLedgerPostingSettled",
+  "type": "object",
+  "required": ["value", "replayed"],
+  "properties": {
+    "value": {
+      "type": "object",
+      "required": ["id", "transactionType", "businessReferenceId", "idempotencyKey", "businessDate", "requestedChannel", "postings"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^TX-PAY-" },
+        "transactionType": { "const": "BILL_PAYMENT" },
+        "businessReferenceId": { "type": "string", "pattern": "^PAY-" },
+        "idempotencyKey": { "type": "string" },
+        "businessDate": { "type": "string", "format": "date" },
+        "requestedChannel": { "const": "PAYMENT_SERVICE" },
+        "postings": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["accountId", "direction", "amountMinor", "postingType"],
+            "properties": {
+              "accountId": { "type": "string" },
+              "direction": { "enum": ["DEBIT", "CREDIT"] },
+              "amountMinor": { "type": "integer", "minimum": 1 },
+              "postingType": { "const": "PAYMENT" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "replayed": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

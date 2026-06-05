@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "artifactId": "H8-ACCESS-RIGHTS-REVIEW",
-  "generatedAt": "2026-06-04T21:26:00.411Z",
+  "generatedAt": "2026-06-05T17:59:50.687Z",
   "syntheticOnly": true,
   "source": "infra/keycloak/realm-banking-lab.json",
-  "sourceSha256": "6f9e52d358f47296cdb6caaa4573efe9192a0035e2113d14b560946e4516a6d4",
+  "sourceSha256": "10453c2ba9c37d9647ffd2a3aefde926f040b4ad2d9bd9fb486141fc9a1b8e90",
   "reviewPeriod": "2026-Q2",
   "controls": {
     "realMoneyUsed": false,
@@ -62,6 +62,11 @@
       "owner": "synthetic-compliance-owner"
     },
     {
+      "role": "NOTIFICATION_SERVICE",
+      "critical": false,
+      "owner": "synthetic-business-owner"
+    },
+    {
       "role": "OPS_OPERATOR",
       "critical": true,
       "owner": "synthetic-ops-owner"
@@ -70,6 +75,16 @@
       "role": "PASSKEY_RECOVERY_ADMIN",
       "critical": true,
       "owner": "synthetic-security-owner"
+    },
+    {
+      "role": "PAYMENT_SERVICE",
+      "critical": true,
+      "owner": "synthetic-ops-owner"
+    },
+    {
+      "role": "REPORTING_ANALYST",
+      "critical": false,
+      "owner": "synthetic-business-owner"
     },
     {
       "role": "SYSTEM",
@@ -263,11 +278,52 @@
         "passkey-recovery-and-audit-review-combined"
       ],
       "reviewStatus": "review-required"
+    },
+    {
+      "principalId": "service-account-notification-service-api",
+      "subjectType": "STAFF",
+      "roles": [
+        "NOTIFICATION_SERVICE"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "service-account-payment-service-api",
+      "subjectType": "STAFF",
+      "roles": [
+        "PAYMENT_SERVICE"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [
+        "PAYMENT_SERVICE"
+      ],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
+    },
+    {
+      "principalId": "service-account-reporting-service-api",
+      "subjectType": "STAFF",
+      "roles": [
+        "REPORTING_ANALYST"
+      ],
+      "roleCount": 1,
+      "criticalRoles": [],
+      "lastReviewedAt": "2026-06-05T00:00:00Z",
+      "reviewedBy": "synthetic-access-reviewer",
+      "overPrivilegeFlags": [],
+      "reviewStatus": "approved"
     }
   ],
   "summary": {
-    "principalCount": 12,
-    "roleAssignmentCount": 16,
+    "principalCount": 15,
+    "roleAssignmentCount": 19,
     "overPrivilegeFlagCount": 4,
     "status": "pass"
   }

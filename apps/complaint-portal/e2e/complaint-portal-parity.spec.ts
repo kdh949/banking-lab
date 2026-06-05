@@ -99,6 +99,32 @@ test("complaint portal shows Spring API-backed workflow state failure when confi
   await expect(panel).toContainText("/api/staff/complaints/CMP-SYN-FAIL-001/answer-drafts");
 });
 
+test("complaint portal runs Spring API-backed customer self-service complaint extensions when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed customer complaint self-service smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-complaint-self-service");
+  await expect(panel).toContainText("complaint types loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("TRANSFER_DISPUTE:72h");
+
+  await page.getByRole("button", { name: "Run dispute intake smoke" }).click();
+  await expect(panel).toContainText("dispute intake submitted", { timeout: 15_000 });
+  await expect(panel).toContainText("TRR-SYN-CMP-001");
+  await expect(panel).toContainText("CAUTH-SYN-CMP-001");
+
+  await page.getByRole("button", { name: "Run material smoke" }).click();
+  await expect(panel).toContainText("material submitted", { timeout: 15_000 });
+  await expect(panel).toContainText("CMM-");
+  await expect(panel).toContainText("CMP-SYN-001");
+
+  await page.getByRole("button", { name: "Run reopen smoke" }).click();
+  await expect(panel).toContainText("complaint reopened", { timeout: 15_000 });
+  await expect(panel).toContainText("CMR-");
+  await expect(panel).toContainText("CMP-SYN-CLOSED-001");
+  await expect(panel).toContainText("REOPENED");
+});
+
 test("complaint portal propagates interactive Keycloak handler and checker tokens when configured", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live complaint Keycloak browser smoke.");
 

@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-06-04T16:32:45.373Z",
+  "generatedAt": "2026-06-05T18:57:27.359Z",
   "command": "npm run helm:template",
   "renderer": "helm",
   "helmCommand": "helm template banking-lab infra/helm/banking-lab",
   "helmAvailable": true,
   "structuralValidation": "pass",
-  "documentCount": 9,
+  "documentCount": 19,
   "resources": [
     {
       "kind": "Namespace",
@@ -33,12 +33,62 @@
     },
     {
       "kind": "Service",
+      "name": "banking-lab-notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Service",
+      "name": "banking-lab-payment-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Service",
       "name": "banking-lab-postgres",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Service",
+      "name": "banking-lab-reporting-service",
       "namespace": "banking-lab"
     },
     {
       "kind": "Deployment",
       "name": "banking-lab-core-banking",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-notification-event-consumer",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-payment-domain-event-publisher",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-payment-outbox-worker",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-payment-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-reporting-domain-event-publisher",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-reporting-service",
       "namespace": "banking-lab"
     },
     {

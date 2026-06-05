@@ -42,6 +42,18 @@
       "target": "APR-001"
     },
     {
+      "id": "openRetryQueue",
+      "label": "Open Retry Queue",
+      "type": "navigate",
+      "target": "WRK-002"
+    },
+    {
+      "id": "openWorkflowTimeline",
+      "label": "Open Workflow Timeline",
+      "type": "navigate",
+      "target": "WRK-003"
+    },
+    {
       "id": "openAuditLog",
       "label": "Open Audit Log",
       "type": "navigate",

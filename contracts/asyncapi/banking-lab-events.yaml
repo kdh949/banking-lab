@@ -9,8 +9,58 @@ channels:
       LedgerTransactionPosted:
         payload:
           $ref: ../events/ledger-transaction-posted.schema.json
+  payment.ledger.posting.requested:
+    address: payment.ledger.posting.requested
+    messages:
+      PaymentLedgerPostingRequested:
+        payload:
+          $ref: ../events/payment-ledger-posting-requested.schema.json
+  payment.ledger.posting.settled:
+    address: payment.ledger.posting.settled
+    messages:
+      PaymentLedgerPostingSettled:
+        payload:
+          $ref: ../events/payment-ledger-posting-settled.schema.json
+  payment.instruction.canceled:
+    address: payment.instruction.canceled
+    messages:
+      PaymentInstructionCanceled:
+        payload:
+          $ref: ../events/payment-instruction-canceled.schema.json
+  payment.autopay.execution.created:
+    address: payment.autopay.execution.created
+    messages:
+      PaymentAutopayExecutionCreated:
+        payload:
+          $ref: ../events/payment-autopay-execution-created.schema.json
+  notification.delivery.requested:
+    address: notification.delivery.requested
+    messages:
+      NotificationDeliveryRequested:
+        payload:
+          $ref: ../events/notification-delivery-requested.schema.json
 operations:
   publishLedgerTransactionPosted:
     action: send
     channel:
       $ref: '#/channels/ledger.transaction.posted'
+  publishPaymentLedgerPostingRequested:
+    action: send
+    channel:
+      $ref: '#/channels/payment.ledger.posting.requested'
+  publishPaymentLedgerPostingSettled:
+    action: send
+    channel:
+      $ref: '#/channels/payment.ledger.posting.settled'
+  publishPaymentInstructionCanceled:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.canceled'
+  publishPaymentAutopayExecutionCreated:
+    action: send
+    channel:
+      $ref: '#/channels/payment.autopay.execution.created'
+  publishNotificationDeliveryRequested:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.requested'

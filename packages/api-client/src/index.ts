@@ -14,6 +14,33 @@ export interface StaffAccessListResponse<T> {
   readonly items: readonly T[];
 }
 
+export interface OperationalRetryQueueItemDto {
+  readonly outboxEventId: string;
+  readonly aggregateType: string;
+  readonly aggregateId: string;
+  readonly eventType: string;
+  readonly status: string;
+  readonly retryCount: number;
+  readonly nextRetryAt?: string | null;
+  readonly createdAt: string;
+  readonly publishedAt?: string | null;
+  readonly errorMessage?: string | null;
+  readonly retryEligible: boolean;
+}
+
+export interface StaffWorkflowTimelineEntryDto {
+  readonly timelineEntryId: string;
+  readonly sourceType: string;
+  readonly eventType: string;
+  readonly status?: string | null;
+  readonly actorId?: string | null;
+  readonly actorRole?: string | null;
+  readonly screenId?: string | null;
+  readonly businessReferenceId: string;
+  readonly reason?: string | null;
+  readonly occurredAt: string;
+}
+
 export interface StaffCustomerDetailDto {
   readonly customerId: string;
   readonly piiExposure: string;
@@ -159,6 +186,11 @@ export interface BalanceCertificateDto {
   readonly currentLedgerBalanceMinor: number;
   readonly currentAvailableBalanceMinor: number;
   readonly deterministicInputHash: string;
+  readonly sourcePostingCount: number;
+  readonly sourceLastBusinessDate?: string | null;
+  readonly sourceLedgerHash: string;
+  readonly snapshotCreatedAt: string;
+  readonly lastViewedAt: string;
   readonly syntheticOnly: boolean;
 }
 
@@ -219,6 +251,7 @@ export interface ComplaintCaseDto {
   readonly answerDraft?: ComplaintAnswerDraftDto | null;
   readonly customerConfirmedAt?: string | null;
   readonly timeline?: readonly ComplaintTimelineEntryDto[];
+  readonly sourceReference?: ComplaintSourceReferenceDto | null;
 }
 
 export interface ComplaintTimelineEntryDto {
@@ -245,6 +278,7 @@ export interface CustomerComplaintEntryCommand {
   readonly customerId?: string;
   readonly category: string;
   readonly description: string;
+  readonly sourceReference?: ComplaintSourceReferenceDto | null;
   readonly requestedBy?: string;
   readonly reason?: string;
 }
@@ -265,6 +299,77 @@ export interface CustomerComplaintConfirmCommand {
 
 export interface CustomerComplaintConfirmResponse {
   readonly item: ComplaintCaseDto;
+}
+
+export interface CustomerComplaintMaterialCommand {
+  readonly customerId?: string;
+  readonly materialType: string;
+  readonly fileName: string;
+  readonly description?: string | null;
+  readonly syntheticStorageRef?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface ComplaintMaterialDto {
+  readonly materialId: string;
+  readonly caseId: string;
+  readonly customerId: string;
+  readonly materialType: string;
+  readonly fileName: string;
+  readonly description?: string | null;
+  readonly syntheticStorageRef: string;
+  readonly submittedBy: string;
+  readonly createdAt: string;
+}
+
+export interface CustomerComplaintMaterialResponse {
+  readonly item: ComplaintCaseDto;
+  readonly material: ComplaintMaterialDto;
+}
+
+export interface CustomerComplaintReopenCommand {
+  readonly customerId?: string;
+  readonly reopenReason: string;
+  readonly reason?: string | null;
+}
+
+export interface ComplaintReopenRequestDto {
+  readonly reopenRequestId: string;
+  readonly caseId: string;
+  readonly customerId: string;
+  readonly reopenReason: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+}
+
+export interface CustomerComplaintReopenResponse {
+  readonly item: ComplaintCaseDto;
+  readonly reopenRequest: ComplaintReopenRequestDto;
+}
+
+export interface ComplaintTypeGuideDto {
+  readonly category: string;
+  readonly description: string;
+  readonly slaHours: number;
+  readonly requiredMaterials: readonly string[];
+  readonly sourceReferenceTypes?: readonly string[];
+}
+
+export interface ComplaintTypeGuideResponse {
+  readonly items: readonly ComplaintTypeGuideDto[];
+}
+
+export interface ComplaintSourceReferenceDto {
+  readonly sourceType: string;
+  readonly sourceId: string;
+  readonly accountId?: string | null;
+  readonly cardId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+  readonly amountMinor?: number | null;
+  readonly currency?: string | null;
+  readonly businessDate?: string | null;
+  readonly syntheticOnly?: boolean;
 }
 
 export interface ComplaintAnswerDraftCommand {
@@ -1054,6 +1159,402 @@ export interface CardLossReportCommand {
   readonly reason?: string | null;
 }
 
+export type PaymentInstructionStatus = "POSTING_REQUESTED" | "SETTLED" | "CANCELED" | "FAILED";
+export type PaymentAutopayFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
+export type PaymentAutopayStatus = "ACTIVE" | "PAUSED" | "CANCELED";
+export type PaymentOutboxDispatchStatus = "PUBLISHED" | "FAILED" | "DEAD_LETTER" | "NO_PENDING_EVENT";
+export type PaymentCancellationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface CreatePaymentInstructionRequest {
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly amountMinor: number;
+  readonly currency?: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly requestedChannel?: string;
+  readonly reason?: string | null;
+}
+
+export interface RecordPaymentSettlementRequest {
+  readonly ledgerTransactionId: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface CancelPaymentInstructionRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface RequestPaymentCancellationApprovalRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ReviewPaymentCancellationRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface PaymentInstructionDto {
+  readonly paymentInstructionId: string;
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly billerName: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly status: PaymentInstructionStatus;
+  readonly ledgerTransactionId?: string | null;
+  readonly lastOutboxEventId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PaymentInstructionResponse {
+  readonly item: PaymentInstructionDto;
+  readonly replayed: boolean;
+  readonly auditEventId?: string | null;
+}
+
+export interface PaymentCancellationRequestDto {
+  readonly cancellationRequestId: string;
+  readonly paymentInstructionId: string;
+  readonly status: PaymentCancellationRequestStatus;
+  readonly makerId: string;
+  readonly makerRole: string;
+  readonly makerReason: string;
+  readonly checkerId?: string | null;
+  readonly checkerRole?: string | null;
+  readonly checkerReason?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly decidedAt?: string | null;
+}
+
+export interface PaymentCancellationRequestResponse {
+  readonly item: PaymentCancellationRequestDto;
+  readonly instruction?: PaymentInstructionDto | null;
+  readonly replayed: boolean;
+}
+
+export interface DispatchPaymentLedgerPostingRequest {
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly deadLetterThreshold?: number;
+}
+
+export interface PaymentOutboxDispatchResponse {
+  readonly outboxEventId?: string | null;
+  readonly paymentInstructionId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+  readonly status: PaymentOutboxDispatchStatus;
+  readonly retryCount: number;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CreateAutopayAgreementRequest {
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly amountMinor: number;
+  readonly currency?: string;
+  readonly frequency: PaymentAutopayFrequency;
+  readonly nextRunOn: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly requestedChannel?: string;
+  readonly reason: string;
+}
+
+export interface PauseAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ResumeAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly nextRunOn?: string | null;
+}
+
+export interface CancelAutopayAgreementRequest {
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface ExecuteDueAutopayRequest {
+  readonly businessDate: string;
+  readonly idempotencyKey: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly limit?: number;
+}
+
+export interface PaymentAutopayAgreementDto {
+  readonly autopayAgreementId: string;
+  readonly customerId: string;
+  readonly debitAccountId: string;
+  readonly billerId: string;
+  readonly billerName: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly frequency: PaymentAutopayFrequency;
+  readonly status: PaymentAutopayStatus;
+  readonly nextRunOn: string;
+  readonly lastRunOn?: string | null;
+  readonly lastPaymentInstructionId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PaymentAutopayAgreementResponse {
+  readonly item: PaymentAutopayAgreementDto;
+  readonly replayed: boolean;
+}
+
+export interface PaymentAutopayExecutionDto {
+  readonly autopayExecutionId: string;
+  readonly autopayAgreementId: string;
+  readonly scheduledRunOn: string;
+  readonly paymentInstructionId: string;
+  readonly status: "INSTRUCTION_CREATED";
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+}
+
+export interface ExecuteDueAutopayResponse {
+  readonly items: readonly PaymentAutopayExecutionDto[];
+  readonly executedCount: number;
+  readonly replayed: boolean;
+}
+
+export type NotificationDeliveryStatus = "PENDING" | "DELIVERED" | "FAILED" | "DEAD_LETTER";
+export type NotificationChannel = "SMS" | "EMAIL" | "PUSH" | "CHAT";
+export type NotificationProviderKind =
+  | "SYNTHETIC_SMS_SINK"
+  | "SYNTHETIC_EMAIL_SINK"
+  | "SYNTHETIC_PUSH_SINK"
+  | "SYNTHETIC_CHAT_SINK";
+export type NotificationTemplateStatus = "ACTIVE" | "RETIRED";
+export type NotificationTemplateChangeStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface ConsumeNotificationEventRequest {
+  readonly sourceEventId: string;
+  readonly eventType: string;
+  readonly recipientId: string;
+  readonly channel?: NotificationChannel;
+  readonly payload: Record<string, unknown>;
+  readonly requestedBy?: string;
+}
+
+export interface RecordNotificationFailureRequest {
+  readonly errorMessage: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly deadLetterThreshold?: number;
+}
+
+export interface MarkNotificationDeliveredRequest {
+  readonly requestedBy: string;
+  readonly reason: string;
+}
+
+export interface CreateNotificationTemplateChangeRequest {
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly version: number;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly?: boolean;
+}
+
+export interface ApproveNotificationTemplateChangeRequest {
+  readonly approvedBy: string;
+  readonly approvedByRole: string;
+  readonly reason: string;
+}
+
+export interface RejectNotificationTemplateChangeRequest {
+  readonly rejectedBy: string;
+  readonly rejectedByRole: string;
+  readonly reason: string;
+}
+
+export interface UpsertNotificationPreferenceRequest {
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly eventType?: string | null;
+  readonly enabled: boolean;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly?: boolean;
+}
+
+export interface UpsertCustomerNotificationPreferenceRequest {
+  readonly channel: NotificationChannel;
+  readonly eventType?: string | null;
+  readonly enabled: boolean;
+  readonly syntheticOnly?: boolean;
+}
+
+export interface NotificationDeliveryDto {
+  readonly deliveryRequestId: string;
+  readonly sourceEventId: string;
+  readonly eventType: string;
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly providerKind: NotificationProviderKind;
+  readonly status: NotificationDeliveryStatus;
+  readonly maskedMessage: string;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface NotificationDeliveryResponse {
+  readonly items: readonly NotificationDeliveryDto[];
+  readonly replayed: boolean;
+}
+
+export interface NotificationTemplateDto {
+  readonly templateId: string;
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly version: number;
+  readonly status: NotificationTemplateStatus;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+}
+
+export interface NotificationTemplateChangeRequestDto {
+  readonly changeRequestId: string;
+  readonly eventType: string;
+  readonly channel: NotificationChannel;
+  readonly requestedVersion: number;
+  readonly bodyTemplate: string;
+  readonly providerKind: NotificationProviderKind;
+  readonly status: NotificationTemplateChangeStatus;
+  readonly requestedBy: string;
+  readonly requestReason: string;
+  readonly requestedAt: string;
+  readonly reviewedBy?: string | null;
+  readonly reviewedByRole?: string | null;
+  readonly reviewedAt?: string | null;
+  readonly reviewReason?: string | null;
+  readonly approvedTemplateId?: string | null;
+  readonly syntheticOnly: boolean;
+}
+
+export interface NotificationPreferenceDto {
+  readonly preferenceId: string;
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly eventType: string;
+  readonly enabled: boolean;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ReportDefinitionDto {
+  readonly reportType: string;
+  readonly title: string;
+  readonly category: string;
+  readonly defaultMaskingPolicy: string;
+  readonly sensitive: boolean;
+  readonly sourceSystems: readonly string[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface ReportCatalogResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ReportDefinitionDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface GenerateReportArtifactRequest {
+  readonly reportType: string;
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey?: string;
+}
+
+export interface RunReportRetentionSweepRequest {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly sweepDate?: string;
+}
+
+export interface ReportArtifactDto {
+  readonly artifactId: string;
+  readonly reportType: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly status: string;
+  readonly artifactPath: string;
+  readonly artifactContent: Record<string, unknown>;
+  readonly contentSha256: string;
+  readonly retentionPolicy: string;
+  readonly retentionUntil?: string | null;
+  readonly exportFormat: string;
+  readonly sourceReferences: readonly string[];
+  readonly maskedByDefault: boolean;
+  readonly syntheticOnly: boolean;
+  readonly generatedAt?: string | null;
+}
+
+export interface GenerateReportArtifactResponse {
+  readonly item: ReportArtifactDto;
+  readonly replayed: boolean;
+}
+
+export interface ReportArtifactListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly ReportArtifactDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface ReportArtifactExportResponse {
+  readonly auditEventId: string;
+  readonly packageName: string;
+  readonly contentSha256: string;
+  readonly exportFormat: string;
+  readonly item: ReportArtifactDto;
+  readonly packageContent: Record<string, unknown>;
+  readonly syntheticOnly: boolean;
+}
+
+export interface ReportRetentionSweepResponse {
+  readonly auditEventId: string;
+  readonly sweepDate: string;
+  readonly expiredCount: number;
+  readonly expiredArtifactIds: readonly string[];
+  readonly ledgerRowsMutated: boolean;
+  readonly syntheticOnly: boolean;
+}
+
 export interface ParameterVersionDto {
   readonly namespace: string;
   readonly parameterVersionId: string;
@@ -1211,7 +1712,13 @@ export interface ReconciliationItemDto {
   readonly sourceSystem: string;
   readonly internalReferenceId?: string | null;
   readonly externalReferenceId?: string | null;
+  readonly mismatchType: string;
   readonly amountMinor: number;
+  readonly internalAmountMinor?: number | null;
+  readonly externalAmountMinor?: number | null;
+  readonly externalStatus?: string | null;
+  readonly feedFileId?: string | null;
+  readonly detectedReason: string;
   readonly currency: string;
   readonly status: string;
   readonly owner?: string | null;
@@ -1266,6 +1773,65 @@ export interface AdminPlatformSummaryResponse {
   readonly nodeReferenceRuntimeRetained: boolean;
   readonly migrationTarget: string;
   readonly controls: readonly AdminPlatformControlDto[];
+}
+
+export interface AdminEvidenceLinkDto {
+  readonly evidenceId: string;
+  readonly title: string;
+  readonly path: string;
+  readonly status: string;
+  readonly controlArea: string;
+}
+
+export interface AdminFeatureCoverageDto {
+  readonly featureId: string;
+  readonly title: string;
+  readonly screenId: string;
+  readonly apiContract: string;
+  readonly evidencePath: string;
+  readonly status: string;
+}
+
+export interface AdminEvidenceCoverageResponse {
+  readonly auditEventId: string;
+  readonly generatedAt: string;
+  readonly syntheticOnly: boolean;
+  readonly evidenceLinks: readonly AdminEvidenceLinkDto[];
+  readonly featureCoverage: readonly AdminFeatureCoverageDto[];
+}
+
+export interface AdminServiceStatusDto {
+  readonly serviceId: string;
+  readonly displayName: string;
+  readonly status: string;
+  readonly evidence: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AdminBatchStatusDto {
+  readonly batchType: string;
+  readonly latestReferenceId?: string | null;
+  readonly businessDate?: string | null;
+  readonly status: string;
+  readonly itemCount: number;
+  readonly lastUpdatedAt?: string | null;
+  readonly evidence: string;
+}
+
+export interface AdminMonitoringLinkDto {
+  readonly system: string;
+  readonly url: string;
+  readonly status: string;
+  readonly evidence: string;
+}
+
+export interface AdminSystemStatusResponse {
+  readonly auditEventId: string;
+  readonly generatedAt: string;
+  readonly syntheticOnly: boolean;
+  readonly services: readonly AdminServiceStatusDto[];
+  readonly batches: readonly AdminBatchStatusDto[];
+  readonly monitoringLinks: readonly AdminMonitoringLinkDto[];
 }
 
 export interface FdsCaseDto {
@@ -1440,6 +2006,26 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/customers/${encodeURIComponent(customerId)}/transfer-limits`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    staffOperationalRetryQueue(reason: string, status?: string) {
+      return request<StaffAccessListResponse<OperationalRetryQueueItemDto>>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/operations/retry-queue",
+        status ? { reason, status } : { reason },
+        options.bearerToken
+      );
+    },
+
+    staffWorkflowTimeline(businessReferenceId: string, reason: string) {
+      return request<StaffAccessListResponse<StaffWorkflowTimelineEntryDto>>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/workflows/${encodeURIComponent(businessReferenceId)}/timeline`,
         { reason },
         options.bearerToken
       );
@@ -1770,6 +2356,422 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    createPaymentInstruction(command: CreatePaymentInstructionRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/instructions",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getPaymentInstruction(instructionId: string, reason?: string) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}`,
+        reason ? { reason } : {},
+        options.bearerToken
+      );
+    },
+
+    recordPaymentSettlement(instructionId: string, command: RecordPaymentSettlementRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/settlements`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelPaymentInstruction(instructionId: string, command: CancelPaymentInstructionRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestPaymentCancellationApproval(instructionId: string, command: RequestPaymentCancellationApprovalRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/cancellation-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    approvePaymentCancellationRequest(requestId: string, command: ReviewPaymentCancellationRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/cancellation-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectPaymentCancellationRequest(requestId: string, command: ReviewPaymentCancellationRequest) {
+      return request<PaymentCancellationRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/cancellation-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    dispatchNextPaymentLedgerPosting(command: DispatchPaymentLedgerPostingRequest) {
+      return request<PaymentOutboxDispatchResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/outbox/ledger-postings/dispatch-next",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    createAutopayAgreement(command: CreateAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/autopay/agreements",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getAutopayAgreement(agreementId: string) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    pauseAutopayAgreement(agreementId: string, command: PauseAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/pause`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    resumeAutopayAgreement(agreementId: string, command: ResumeAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/resume`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    cancelAutopayAgreement(agreementId: string, command: CancelAutopayAgreementRequest) {
+      return request<PaymentAutopayAgreementResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/autopay/agreements/${encodeURIComponent(agreementId)}/cancel`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeDueAutopay(command: ExecuteDueAutopayRequest) {
+      return request<ExecuteDueAutopayResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/payments/autopay/executions/due",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    consumeNotificationEvent(command: ConsumeNotificationEventRequest) {
+      return request<NotificationDeliveryResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/events",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getNotificationDelivery(deliveryRequestId: string) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    listNotificationDeliveries(filters: {
+      readonly requestedBy: string;
+      readonly reason: string;
+      readonly recipientId?: string;
+      readonly sourceEventId?: string;
+      readonly eventType?: string;
+      readonly channel?: NotificationChannel;
+      readonly status?: NotificationDeliveryStatus;
+      readonly limit?: number;
+    }) {
+      return request<readonly NotificationDeliveryDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/deliveries",
+        {
+          requestedBy: filters.requestedBy,
+          reason: filters.reason,
+          ...(filters.recipientId ? { recipientId: filters.recipientId } : {}),
+          ...(filters.sourceEventId ? { sourceEventId: filters.sourceEventId } : {}),
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.limit ? { limit: String(filters.limit) } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    recordNotificationFailure(deliveryRequestId: string, command: RecordNotificationFailureRequest) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}/failures`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    markNotificationDelivered(deliveryRequestId: string, command: MarkNotificationDeliveredRequest) {
+      return request<NotificationDeliveryDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/deliveries/${encodeURIComponent(deliveryRequestId)}/delivered`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    listNotificationTemplates(filters: { readonly eventType?: string; readonly channel?: NotificationChannel } = {}) {
+      return request<readonly NotificationTemplateDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/templates",
+        {
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    listNotificationPreferences(filters: {
+      readonly requestedBy: string;
+      readonly reason: string;
+      readonly recipientId?: string;
+      readonly channel?: NotificationChannel;
+    }) {
+      return request<readonly NotificationPreferenceDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/preferences",
+        {
+          requestedBy: filters.requestedBy,
+          reason: filters.reason,
+          ...(filters.recipientId ? { recipientId: filters.recipientId } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    upsertNotificationPreference(command: UpsertNotificationPreferenceRequest) {
+      return request<NotificationPreferenceDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/preferences",
+        {},
+        options.bearerToken,
+        { method: "PUT", body: command }
+      );
+    },
+
+    listCustomerNotificationPreferences(customerId: string, filters: { readonly channel?: NotificationChannel } = {}) {
+      return request<readonly NotificationPreferenceDto[]>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/preferences`,
+        {
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    listCustomerNotificationDeliveries(customerId: string, filters: {
+      readonly sourceEventId?: string;
+      readonly eventType?: string;
+      readonly channel?: NotificationChannel;
+      readonly status?: NotificationDeliveryStatus;
+      readonly limit?: number;
+    } = {}) {
+      return request<readonly NotificationDeliveryDto[]>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/deliveries`,
+        {
+          ...(filters.sourceEventId ? { sourceEventId: filters.sourceEventId } : {}),
+          ...(filters.eventType ? { eventType: filters.eventType } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.limit ? { limit: String(filters.limit) } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    upsertCustomerNotificationPreference(customerId: string, command: UpsertCustomerNotificationPreferenceRequest) {
+      return request<NotificationPreferenceDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/customers/${encodeURIComponent(customerId)}/preferences`,
+        {},
+        options.bearerToken,
+        { method: "PUT", body: command }
+      );
+    },
+
+    createNotificationTemplateChangeRequest(command: CreateNotificationTemplateChangeRequest) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/templates/change-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    getNotificationTemplateChangeRequest(changeRequestId: string) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveNotificationTemplateChangeRequest(
+      changeRequestId: string,
+      command: ApproveNotificationTemplateChangeRequest
+    ) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectNotificationTemplateChangeRequest(
+      changeRequestId: string,
+      command: RejectNotificationTemplateChangeRequest
+    ) {
+      return request<NotificationTemplateChangeRequestDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/notifications/templates/change-requests/${encodeURIComponent(changeRequestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reportCatalog(reason: string) {
+      return request<ReportCatalogResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/catalog",
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    generateReportArtifact(command: GenerateReportArtifactRequest) {
+      return request<GenerateReportArtifactResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/artifacts",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reportArtifacts(filters: { readonly reason: string; readonly reportType?: string }) {
+      return request<ReportArtifactListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/artifacts",
+        {
+          reason: filters.reason,
+          ...(filters.reportType ? { reportType: filters.reportType } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    exportReportArtifact(artifactId: string, reason: string) {
+      return request<ReportArtifactExportResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/reports/artifacts/${encodeURIComponent(artifactId)}/export`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    runReportRetentionSweep(command: RunReportRetentionSweepRequest) {
+      return request<ReportRetentionSweepResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/reports/retention/sweeps",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
     reconciliationParameters(reason: string, asOf?: string) {
       return getParameters("/api/ops/parameters/reconciliation", reason, asOf);
     },
@@ -1964,6 +2966,38 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    submitCustomerComplaintMaterial(caseId: string, command: CustomerComplaintMaterialCommand) {
+      return request<CustomerComplaintMaterialResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/complaints/${encodeURIComponent(caseId)}/materials`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reopenCustomerComplaint(caseId: string, command: CustomerComplaintReopenCommand) {
+      return request<CustomerComplaintReopenResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/complaints/${encodeURIComponent(caseId)}/reopen-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    complaintTypeGuide() {
+      return request<ComplaintTypeGuideResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/complaint-types",
+        {},
+        options.bearerToken
+      );
+    },
+
     complaintCases() {
       return request<ComplaintCaseDto[]>(
         fetchImpl,
@@ -2068,6 +3102,26 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    adminEvidenceCoverage(reason: string) {
+      return request<AdminEvidenceCoverageResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/admin/platform/evidence-coverage",
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    adminSystemStatus(reason: string) {
+      return request<AdminSystemStatusResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/admin/platform/system-status",
+        { reason },
+        options.bearerToken
+      );
+    },
+
     fdsCases() {
       return request<FdsCaseDto[]>(
         fetchImpl,
@@ -2140,7 +3194,7 @@ async function request<T>(
   path: string,
   searchParams: Record<string, string>,
   bearerToken: string | undefined,
-  options: { readonly method?: "GET" | "POST"; readonly body?: unknown } = {}
+  options: { readonly method?: "GET" | "POST" | "PUT"; readonly body?: unknown } = {}
 ): Promise<T> {
   const url = new URL(path, baseUrl);
   for (const [key, value] of Object.entries(searchParams)) {

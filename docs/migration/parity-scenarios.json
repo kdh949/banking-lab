@@ -5,7 +5,7 @@
     "/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-eng-review-test-plan-20260602-114300.md",
     "/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-devex-review-plan-20260602-115809.md"
   ],
-  "nodeReferenceTestCount": 42,
+  "nodeReferenceTestCount": 43,
   "requiredControls": [
     "ledger",
     "idempotency",
@@ -136,7 +136,7 @@
     },
     {
       "nodeSuite": "tests/fdsAmlReconciliation.test.mjs",
-      "scenarioCount": 4,
+      "scenarioCount": 5,
       "targetSuite": "services/core-banking/src/test/kotlin/lab/banking/core/fds/FdsAmlReconciliationWorkflowParityTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/fds/FdsCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/aml/AmlCaseApiParityIntegrationTest.kt; services/core-banking/src/integrationTest/kotlin/lab/banking/core/reconciliation/ReconciliationOpsApiParityIntegrationTest.kt",
       "targetStatus": "pass",
       "controls": [

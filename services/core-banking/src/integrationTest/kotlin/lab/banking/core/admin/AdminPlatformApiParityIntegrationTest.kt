@@ -1,10 +1,12 @@
 package lab.banking.core.admin
 
 import java.nio.file.Paths
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
@@ -21,6 +23,9 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class AdminPlatformApiParityIntegrationTest {
     @Autowired
     lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var jdbc: NamedParameterJdbcTemplate
 
     @Test
     fun `admin platform summary is synthetic only and compliance-gated`() {
@@ -48,6 +53,87 @@ class AdminPlatformApiParityIntegrationTest {
             .andExpect(jsonPath("$.controls[2].controlId").value("NODE_REFERENCE_BOUNDARY"))
             .andExpect(jsonPath("$.controls[2].status").value("BLOCKED"))
     }
+
+    @Test
+    fun `admin evidence coverage is reason required role gated and audited`() {
+        val token = bearer("security-admin01", listOf("COMPLIANCE_MANAGER", "AUDITOR", "PASSKEY_RECOVERY_ADMIN"))
+        val beforeAuditCount = auditCount("ADMIN_EVIDENCE_COVERAGE_VIEW", "ADM-501")
+
+        mockMvc.perform(
+            get("/api/admin/platform/evidence-coverage")
+                .header("Authorization", token)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/admin/platform/evidence-coverage")
+                .header("Authorization", bearer("branch01", listOf("BRANCH_STAFF")))
+                .param("reason", "Synthetic admin evidence review")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+
+        mockMvc.perform(
+            get("/api/admin/platform/evidence-coverage")
+                .header("Authorization", token)
+                .param("reason", "Synthetic admin evidence review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.evidenceLinks[0].evidenceId").value("IMPLEMENTATION_COVERAGE_MATRIX"))
+            .andExpect(jsonPath("$.evidenceLinks[2].evidenceId").value("PARAMETER_ADMIN_APIS"))
+            .andExpect(jsonPath("$.evidenceLinks[4].status").value("BLOCKED"))
+            .andExpect(jsonPath("$.featureCoverage[0].screenId").value("ADM-101"))
+            .andExpect(jsonPath("$.featureCoverage[5].screenId").value("ADM-501"))
+            .andExpect(jsonPath("$.featureCoverage[5].apiContract").value("GET /api/admin/platform/evidence-coverage"))
+
+        assertTrue(auditCount("ADMIN_EVIDENCE_COVERAGE_VIEW", "ADM-501") > beforeAuditCount)
+    }
+
+    @Test
+    fun `admin system status is reason required and summarizes platform batches`() {
+        val token = bearer("security-admin01", listOf("COMPLIANCE_MANAGER", "AUDITOR", "PASSKEY_RECOVERY_ADMIN"))
+        val beforeAuditCount = auditCount("ADMIN_SYSTEM_STATUS_VIEW", "ADM-601")
+
+        mockMvc.perform(
+            get("/api/admin/platform/system-status")
+                .header("Authorization", token)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/admin/platform/system-status")
+                .header("Authorization", token)
+                .param("reason", "Synthetic admin system status review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.services[0].serviceId").value("CORE_BANKING"))
+            .andExpect(jsonPath("$.services[0].status").value("AVAILABLE"))
+            .andExpect(jsonPath("$.batches[0].batchType").value("EOD_CLOSING"))
+            .andExpect(jsonPath("$.batches[2].batchType").value("INTEREST_POSTING"))
+            .andExpect(jsonPath("$.batches[4].batchType").value("OUTBOX_DELIVERY"))
+            .andExpect(jsonPath("$.monitoringLinks[0].system").value("PROMETHEUS"))
+            .andExpect(jsonPath("$.monitoringLinks[1].system").value("GRAFANA"))
+
+        assertTrue(auditCount("ADMIN_SYSTEM_STATUS_VIEW", "ADM-601") > beforeAuditCount)
+    }
+
+    private fun auditCount(eventType: String, screenId: String): Long =
+        jdbc.queryForObject(
+            """
+            SELECT COUNT(*)
+            FROM audit_events
+            WHERE event_type = :eventType
+              AND screen_id = :screenId
+            """.trimIndent(),
+            mapOf("eventType" to eventType, "screenId" to screenId),
+            Long::class.java
+        ) ?: 0L
 
     private fun bearer(subject: String, roles: List<String>): String {
         val payload = linkedMapOf<String, Any?>(

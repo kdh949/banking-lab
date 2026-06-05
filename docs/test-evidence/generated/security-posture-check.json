@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T18:33:28.257Z",
+  "generatedAt": "2026-06-05T18:57:27.148Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -15,6 +15,118 @@
     {
       "file": "docker-compose.yml",
       "description": "Docker Compose platform uses secure auth defaults.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "services/reporting-service/src/main/resources/application.yml",
+      "description": "Reporting service defaults security on and simulator fallback off.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "services/payment-service/src/main/resources/application.yml",
+      "description": "Payment service defaults to synthetic-only payment network and secure auth.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/reporting-service-deployment.yaml",
+      "description": "Reporting Kubernetes deployment uses secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/reporting-domain-event-publisher-deployment.yaml",
+      "description": "Reporting Kubernetes domain event publisher emits synthetic reporting events to Redpanda only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
+      "description": "Reporting Helm deployment renders secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/reporting-domain-event-publisher-deployment.yaml",
+      "description": "Reporting Helm domain event publisher renders synthetic Redpanda publisher controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/payment-service-deployment.yaml",
+      "description": "Payment Kubernetes API deployment keeps service audience, disabled worker mode, and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/payment-outbox-worker-deployment.yaml",
+      "description": "Payment Kubernetes worker deployment enables only the synthetic outbox dispatch path.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/payment-domain-event-publisher-deployment.yaml",
+      "description": "Payment Kubernetes domain event publisher emits synthetic payment events to Redpanda only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-service-deployment.yaml",
+      "description": "Payment Helm API deployment renders service audience, disabled worker mode, and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-outbox-worker-deployment.yaml",
+      "description": "Payment Helm worker deployment renders synthetic outbox dispatch controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/payment-domain-event-publisher-deployment.yaml",
+      "description": "Payment Helm domain event publisher renders synthetic Redpanda publisher controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/notification-service-deployment.yaml",
+      "description": "Notification Kubernetes API deployment keeps synthetic provider and service audience controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/k8s/notification-event-consumer-deployment.yaml",
+      "description": "Notification Kubernetes worker deployment consumes synthetic Redpanda events only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/notification-service-deployment.yaml",
+      "description": "Notification Helm API deployment renders synthetic provider and service audience controls.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/notification-event-consumer-deployment.yaml",
+      "description": "Notification Helm worker deployment renders synthetic Redpanda consumer controls.",
       "status": "pass",
       "missing": [],
       "forbidden": []

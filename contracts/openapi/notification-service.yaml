@@ -1,0 +1,633 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Notification Service API
+  version: 0.1.0
+  description: Synthetic-only notification event consumption and delivery status API with durable retry and dead-letter state.
+paths:
+  /api/notifications/templates:
+    get:
+      summary: List synthetic notification templates
+      operationId: listNotificationTemplates
+      parameters:
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+        - name: requestedBy
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationTemplate'
+  /api/notifications/templates/change-requests:
+    post:
+      summary: Request a notification template change for maker-checker approval
+      operationId: createNotificationTemplateChangeRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationTemplateChangeRequest'
+      responses:
+        '200':
+          description: Pending template change request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateChangeRequest'
+  /api/notifications/templates/change-requests/{changeRequestId}:
+    get:
+      summary: Read a notification template change request
+      operationId: getNotificationTemplateChangeRequest
+      parameters:
+        - $ref: '#/components/parameters/TemplateChangeRequestId'
+      responses:
+        '200':
+          description: Template change request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateChangeRequest'
+  /api/notifications/templates/change-requests/{changeRequestId}/approve:
+    post:
+      summary: Approve and activate a notification template change
+      operationId: approveNotificationTemplateChangeRequest
+      parameters:
+        - $ref: '#/components/parameters/TemplateChangeRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveNotificationTemplateChangeRequest'
+      responses:
+        '200':
+          description: Approved template change request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateChangeRequest'
+  /api/notifications/templates/change-requests/{changeRequestId}/reject:
+    post:
+      summary: Reject a notification template change request
+      operationId: rejectNotificationTemplateChangeRequest
+      parameters:
+        - $ref: '#/components/parameters/TemplateChangeRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectNotificationTemplateChangeRequest'
+      responses:
+        '200':
+          description: Rejected template change request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateChangeRequest'
+  /api/notifications/preferences:
+    get:
+      summary: List synthetic recipient notification preferences
+      operationId: listNotificationPreferences
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+    put:
+      summary: Create or update a synthetic recipient notification preference
+      operationId: upsertNotificationPreference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertNotificationPreferenceRequest'
+      responses:
+        '200':
+          description: Updated notification preference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+  /api/notifications/customers/{customerId}/preferences:
+    get:
+      summary: List owned customer notification preferences
+      operationId: listCustomerNotificationPreferences
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+      responses:
+        '200':
+          description: Owned customer notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+    put:
+      summary: Create or update an owned customer notification preference
+      operationId: upsertCustomerNotificationPreference
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCustomerNotificationPreferenceRequest'
+      responses:
+        '200':
+          description: Updated owned customer notification preference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+  /api/notifications/customers/{customerId}/deliveries:
+    get:
+      summary: List owned customer masked notification delivery history
+      operationId: listCustomerNotificationDeliveries
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+        - name: sourceEventId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationDeliveryStatus'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Owned customer masked delivery history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/events:
+    post:
+      summary: Consume a domain event and create masked synthetic delivery requests
+      operationId: consumeNotificationEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeNotificationEventRequest'
+      responses:
+        '200':
+          description: Delivery requests created or idempotently replayed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDeliveryResponse'
+  /api/notifications/deliveries:
+    get:
+      summary: List masked notification delivery history
+      operationId: listNotificationDeliveries
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sourceEventId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationDeliveryStatus'
+        - name: requestedBy
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Masked delivery history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/deliveries/{deliveryRequestId}:
+    get:
+      summary: Read notification delivery state
+      operationId: getNotificationDelivery
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      responses:
+        '200':
+          description: Delivery request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/deliveries/{deliveryRequestId}/failures:
+    post:
+      summary: Record a synthetic provider failure and possibly dead-letter
+      operationId: recordNotificationFailure
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordNotificationFailureRequest'
+      responses:
+        '200':
+          description: Failure recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+  /api/notifications/deliveries/{deliveryRequestId}/delivered:
+    post:
+      summary: Mark synthetic delivery as accepted by the local sink
+      operationId: markNotificationDelivered
+      parameters:
+        - $ref: '#/components/parameters/DeliveryRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkNotificationDeliveredRequest'
+      responses:
+        '200':
+          description: Delivery marked delivered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDelivery'
+components:
+  parameters:
+    DeliveryRequestId:
+      name: deliveryRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^NDL-'
+    TemplateChangeRequestId:
+      name: changeRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^NTCR-'
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    NotificationChannel:
+      type: string
+      enum: [SMS, EMAIL, PUSH, CHAT]
+    NotificationProviderKind:
+      type: string
+      enum: [SYNTHETIC_SMS_SINK, SYNTHETIC_EMAIL_SINK, SYNTHETIC_PUSH_SINK, SYNTHETIC_CHAT_SINK]
+    NotificationDeliveryStatus:
+      type: string
+      enum: [PENDING, DELIVERED, FAILED, DEAD_LETTER]
+    ConsumeNotificationEventRequest:
+      type: object
+      required: [sourceEventId, eventType, recipientId, channel, payload]
+      properties:
+        sourceEventId:
+          type: string
+        eventType:
+          type: string
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        payload:
+          type: object
+          additionalProperties: true
+        requestedBy:
+          type: string
+    RecordNotificationFailureRequest:
+      type: object
+      required: [errorMessage, requestedBy, reason]
+      properties:
+        errorMessage:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        deadLetterThreshold:
+          type: integer
+          default: 3
+    MarkNotificationDeliveredRequest:
+      type: object
+      required: [requestedBy, reason]
+      properties:
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    CreateNotificationTemplateChangeRequest:
+      type: object
+      required: [eventType, channel, version, bodyTemplate, providerKind, requestedBy, reason]
+      properties:
+        eventType:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        version:
+          type: integer
+          minimum: 1
+        bodyTemplate:
+          type: string
+        providerKind:
+          $ref: '#/components/schemas/NotificationProviderKind'
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        syntheticOnly:
+          const: true
+          default: true
+    ApproveNotificationTemplateChangeRequest:
+      type: object
+      required: [approvedBy, approvedByRole, reason]
+      properties:
+        approvedBy:
+          type: string
+        approvedByRole:
+          type: string
+        reason:
+          type: string
+    RejectNotificationTemplateChangeRequest:
+      type: object
+      required: [rejectedBy, rejectedByRole, reason]
+      properties:
+        rejectedBy:
+          type: string
+        rejectedByRole:
+          type: string
+        reason:
+          type: string
+    UpsertNotificationPreferenceRequest:
+      type: object
+      required: [recipientId, channel, enabled, requestedBy, reason]
+      properties:
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+          nullable: true
+          description: Optional event type; omitted or blank values are stored as the wildcard preference.
+        enabled:
+          type: boolean
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        syntheticOnly:
+          const: true
+          default: true
+    UpsertCustomerNotificationPreferenceRequest:
+      type: object
+      required: [channel, enabled]
+      properties:
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+          nullable: true
+          description: Optional event type; omitted or blank values are stored as the wildcard preference.
+        enabled:
+          type: boolean
+        syntheticOnly:
+          const: true
+          default: true
+    NotificationDeliveryResponse:
+      type: object
+      required: [items, replayed]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDelivery'
+        replayed:
+          type: boolean
+    NotificationDelivery:
+      type: object
+      required: [deliveryRequestId, sourceEventId, eventType, recipientId, channel, providerKind, status, maskedMessage, syntheticOnly, createdAt, updatedAt]
+      properties:
+        deliveryRequestId:
+          type: string
+        sourceEventId:
+          type: string
+        eventType:
+          type: string
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        providerKind:
+          $ref: '#/components/schemas/NotificationProviderKind'
+        status:
+          $ref: '#/components/schemas/NotificationDeliveryStatus'
+        maskedMessage:
+          type: string
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    NotificationTemplate:
+      type: object
+      required: [templateId, eventType, channel, version, status, bodyTemplate, providerKind, syntheticOnly, createdAt]
+      properties:
+        templateId:
+          type: string
+          pattern: '^NTPL-'
+        eventType:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        version:
+          type: integer
+        status:
+          enum: [ACTIVE, RETIRED]
+        bodyTemplate:
+          type: string
+        providerKind:
+          $ref: '#/components/schemas/NotificationProviderKind'
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    NotificationTemplateChangeRequest:
+      type: object
+      required: [changeRequestId, eventType, channel, requestedVersion, bodyTemplate, providerKind, status, requestedBy, requestReason, requestedAt, syntheticOnly]
+      properties:
+        changeRequestId:
+          type: string
+          pattern: '^NTCR-'
+        eventType:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        requestedVersion:
+          type: integer
+        bodyTemplate:
+          type: string
+        providerKind:
+          $ref: '#/components/schemas/NotificationProviderKind'
+        status:
+          enum: [PENDING, APPROVED, REJECTED]
+        requestedBy:
+          type: string
+        requestReason:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        reviewedBy:
+          type: string
+          nullable: true
+        reviewedByRole:
+          type: string
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewReason:
+          type: string
+          nullable: true
+        approvedTemplateId:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+    NotificationPreference:
+      type: object
+      required: [preferenceId, recipientId, channel, eventType, enabled, requestedBy, reason, syntheticOnly, createdAt, updatedAt]
+      properties:
+        preferenceId:
+          type: string
+          pattern: '^NPF-'
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+        enabled:
+          type: boolean
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

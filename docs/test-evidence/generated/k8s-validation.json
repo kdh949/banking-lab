@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T17:02:15.793Z",
+  "generatedAt": "2026-06-05T18:57:27.381Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {
@@ -14,6 +14,16 @@
     "secret.example.yaml",
     "core-banking-deployment.yaml",
     "core-banking-service.yaml",
+    "reporting-service-deployment.yaml",
+    "reporting-service.yaml",
+    "reporting-domain-event-publisher-deployment.yaml",
+    "payment-service-deployment.yaml",
+    "payment-service.yaml",
+    "payment-outbox-worker-deployment.yaml",
+    "payment-domain-event-publisher-deployment.yaml",
+    "notification-service-deployment.yaml",
+    "notification-service.yaml",
+    "notification-event-consumer-deployment.yaml",
     "core-banking-temporal-worker-deployment.yaml",
     "postgres-statefulset.yaml",
     "keycloak-deployment.yaml",
@@ -21,7 +31,7 @@
     "temporal-deployment.yaml",
     "network-policy.yaml"
   ],
-  "documentCount": 15,
+  "documentCount": 25,
   "resources": [
     {
       "file": "infra/k8s/configmap.yaml",
@@ -79,6 +89,55 @@
       "namespace": "banking-lab"
     },
     {
+      "file": "infra/k8s/notification-event-consumer-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "notification-event-consumer",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/notification-service-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/notification-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "notification-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/payment-domain-event-publisher-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "payment-domain-event-publisher",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/payment-outbox-worker-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "payment-outbox-worker",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/payment-service-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "payment-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/payment-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "payment-service",
+      "namespace": "banking-lab"
+    },
+    {
       "file": "infra/k8s/postgres-statefulset.yaml",
       "apiVersion": "v1",
       "kind": "Service",
@@ -104,6 +163,27 @@
       "apiVersion": "v1",
       "kind": "Service",
       "name": "redpanda",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/reporting-domain-event-publisher-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "reporting-domain-event-publisher",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/reporting-service-deployment.yaml",
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "reporting-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/reporting-service.yaml",
+      "apiVersion": "v1",
+      "kind": "Service",
+      "name": "reporting-service",
       "namespace": "banking-lab"
     },
     {

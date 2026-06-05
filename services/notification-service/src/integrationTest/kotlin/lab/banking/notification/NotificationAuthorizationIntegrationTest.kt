@@ -1,0 +1,413 @@
+package lab.banking.notification
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import java.util.Base64
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.MediaType
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+
+@SpringBootTest(
+    properties = [
+        "banking-lab.security.enabled=true",
+        "banking-lab.security.simulator-tokens-enabled=true",
+        "banking-lab.security.dev-simulator-token-enabled=true"
+    ]
+)
+@AutoConfigureMockMvc
+@Testcontainers
+class NotificationAuthorizationIntegrationTest {
+    @Autowired
+    lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    lateinit var jdbc: NamedParameterJdbcTemplate
+
+    @BeforeEach
+    fun resetDatabase() {
+        jdbc.jdbcTemplate.execute(
+            """
+            TRUNCATE TABLE
+              notification_access_audit_events,
+              notification_suppressed_events,
+              notification_recipient_preferences,
+              notification_dead_letters,
+              notification_delivery_attempts,
+              notification_delivery_requests,
+              notification_inbox_events,
+              notification_template_change_requests
+            RESTART IDENTITY CASCADE
+            """.trimIndent()
+        )
+        jdbc.update(
+            """
+            DELETE FROM notification_templates
+            WHERE event_type LIKE 'TemplateAuth%'
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    @Test
+    fun `notification routes enforce service operator and auditor roles`() {
+        val eventBody = """
+            {
+              "sourceEventId": "OBX-NOTIF-AUTH-001",
+              "eventType": "PaymentLedgerPostingRequested",
+              "recipientId": "CUS-NOTIF-AUTH-001",
+              "channel": "SMS",
+              "payload": {
+                "paymentInstructionId": "PAY-NOTIF-AUTH-001",
+                "amountMinor": 45000,
+                "currency": "KRW",
+                "accountNo": "LAB-123-0001",
+                "phone": "010-1234-5678"
+              },
+              "requestedBy": "notification-event-consumer"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(eventBody)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_AUTHORIZATION_POLICY_VIOLATION"))
+
+        mockMvc.perform(
+            post("/api/notifications/events")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-AUTH-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(eventBody)
+        )
+            .andExpect(status().isForbidden)
+
+        val consumed = mockMvc.perform(
+            post("/api/notifications/events")
+                .header("Authorization", bearer("notification-service", listOf("NOTIFICATION_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(eventBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[0].status").value("PENDING"))
+            .andReturn()
+        val deliveryRequestId = objectMapper.readTree(consumed.response.contentAsString)
+            .at("/items/0/deliveryRequestId")
+            .asText()
+        assertEquals(1, countRows("notification_delivery_requests"))
+
+        mockMvc.perform(
+            get("/api/notifications/deliveries/$deliveryRequestId")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
+
+        mockMvc.perform(
+            get("/api/notifications/deliveries?recipientId=CUS-NOTIF-AUTH-001&requestedBy=customer01&reason=Synthetic%20delivery%20history")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-AUTH-001"))
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            get("/api/notifications/deliveries?recipientId=CUS-NOTIF-AUTH-001&requestedBy=audit01&reason=Synthetic%20delivery%20history")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
+
+        val deliveredBody = """
+            {
+              "requestedBy": "notification-worker",
+              "reason": "Synthetic sink accepted delivery"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/deliveries/$deliveryRequestId/delivered")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-AUTH-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(deliveredBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            post("/api/notifications/deliveries/$deliveryRequestId/delivered")
+                .header("Authorization", bearer("notification-service", listOf("NOTIFICATION_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(deliveredBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("DELIVERED"))
+
+        assertEquals(1, countRows("notification_delivery_attempts WHERE status = 'DELIVERED'"))
+    }
+
+    @Test
+    fun `notification template routes enforce maker checker roles`() {
+        val createBody = """
+            {
+              "eventType": "TemplateAuthApproved",
+              "channel": "CHAT",
+              "version": 1,
+              "bodyTemplate": "Synthetic chat notice {accountNo}.",
+              "providerKind": "SYNTHETIC_CHAT_SINK",
+              "requestedBy": "ops-maker-auth",
+              "reason": "Synthetic template authorization test"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody)
+        )
+            .andExpect(status().isForbidden)
+
+        val created = mockMvc.perform(
+            post("/api/notifications/templates/change-requests")
+                .header("Authorization", bearer("ops-maker-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andReturn()
+        val changeRequestId = objectMapper.readTree(created.response.contentAsString)
+            .at("/changeRequestId")
+            .asText()
+
+        val approveBody = """
+            {
+              "approvedBy": "ops-checker-auth",
+              "approvedByRole": "OPS_MANAGER",
+              "reason": "Synthetic checker approval"
+            }
+        """.trimIndent()
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests/$changeRequestId/approve")
+                .header("Authorization", bearer("ops-maker-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            post("/api/notifications/templates/change-requests/$changeRequestId/approve")
+                .header("Authorization", bearer("ops-checker-auth", listOf("OPS_MANAGER")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(approveBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.approvedTemplateId").value(org.hamcrest.Matchers.startsWith("NTPL-CHAT-")))
+
+        mockMvc.perform(
+            get("/api/notifications/templates?eventType=TemplateAuthApproved&channel=CHAT")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].providerKind").value("SYNTHETIC_CHAT_SINK"))
+    }
+
+    @Test
+    fun `notification preference routes enforce ops and auditor roles`() {
+        val preferenceBody = """
+            {
+              "recipientId": "CUS-NOTIF-PREF-AUTH",
+              "channel": "SMS",
+              "eventType": "PaymentLedgerPostingRequested",
+              "enabled": false,
+              "requestedBy": "ops-preference-auth",
+              "reason": "Synthetic preference authorization test"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-PREF-AUTH"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("ops-preference-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.eventType").value("PaymentLedgerPostingRequested"))
+            .andExpect(jsonPath("$.enabled").value(false))
+
+        mockMvc.perform(
+            get("/api/notifications/preferences?recipientId=CUS-NOTIF-PREF-AUTH&channel=SMS&requestedBy=audit01&reason=Synthetic%20preference%20audit")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-PREF-AUTH"))
+    }
+
+    @Test
+    fun `customer notification preference routes enforce owned self service scope`() {
+        val customerBody = """
+            {
+              "channel": "PUSH",
+              "eventType": "PaymentLedgerPostingRequested",
+              "enabled": false
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            put("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(customerBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.recipientId").value("CUS-NOTIF-SELF-001"))
+            .andExpect(jsonPath("$.channel").value("PUSH"))
+            .andExpect(jsonPath("$.enabled").value(false))
+            .andExpect(jsonPath("$.requestedBy").value("customer01"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences?channel=PUSH")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-001"))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-SELF-001"))
+            .andExpect(jsonPath("$[0].eventType").value("PaymentLedgerPostingRequested"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences?channel=PUSH")
+                .header("Authorization", bearer("customer02", listOf("CUSTOMER"), customerId = "CUS-NOTIF-SELF-002"))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_CUSTOMER_SCOPE_VIOLATION"))
+
+        mockMvc.perform(
+            put("/api/notifications/customers/CUS-NOTIF-SELF-001/preferences")
+                .header("Authorization", bearer("ops01", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(customerBody)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_AUTHORIZATION_POLICY_VIOLATION"))
+
+        assertEquals(1, countRows("notification_access_audit_events WHERE action = 'NOTIFICATION_CUSTOMER_PREFERENCE_VIEW'"))
+        assertEquals(1, countRows("notification_recipient_preferences WHERE requested_by = 'customer01'"))
+    }
+
+    @Test
+    fun `customer notification delivery history routes enforce owned self service scope`() {
+        val eventBody = """
+            {
+              "sourceEventId": "OBX-NOTIF-SELF-HISTORY-001",
+              "eventType": "PaymentLedgerPostingRequested",
+              "recipientId": "CUS-NOTIF-HISTORY-001",
+              "channel": "SMS",
+              "payload": {
+                "paymentInstructionId": "PAY-NOTIF-HISTORY-001",
+                "amountMinor": 15000,
+                "currency": "KRW",
+                "accountNo": "LAB-HISTORY-0001",
+                "phone": "010-1111-2222"
+              },
+              "requestedBy": "notification-event-consumer"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            post("/api/notifications/events")
+                .header("Authorization", bearer("notification-service", listOf("NOTIFICATION_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(eventBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[0].recipientId").value("CUS-NOTIF-HISTORY-001"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS&status=PENDING")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-HISTORY-001"))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-HISTORY-001"))
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.containsString("LAB-***0001")))
+            .andExpect(jsonPath("$[0].maskedMessage").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("010-1111-2222"))))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS")
+                .header("Authorization", bearer("customer02", listOf("CUSTOMER"), customerId = "CUS-NOTIF-HISTORY-002"))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_CUSTOMER_SCOPE_VIOLATION"))
+
+        mockMvc.perform(
+            get("/api/notifications/customers/CUS-NOTIF-HISTORY-001/deliveries?channel=SMS")
+                .header("Authorization", bearer("ops01", listOf("OPS_OPERATOR")))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("NOTIFICATION_AUTHORIZATION_POLICY_VIOLATION"))
+
+        assertEquals(1, countRows("notification_access_audit_events WHERE action = 'NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW'"))
+    }
+
+    private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {
+        val payload = mutableMapOf<String, Any>(
+            "sub" to subject,
+            "roles" to roles,
+            "active" to true
+        )
+        if (customerId != null) {
+            payload["customerId"] = customerId
+        }
+        val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsBytes(payload))
+        return "Bearer lab.$encoded.sig"
+    }
+
+    private fun countRows(tableExpression: String): Int =
+        jdbc.queryForObject("SELECT count(*) FROM $tableExpression", emptyMap<String, Any?>(), Int::class.java) ?: 0
+
+    companion object {
+        @Container
+        @JvmStatic
+        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun postgresProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url", postgres::getJdbcUrl)
+            registry.add("spring.datasource.username", postgres::getUsername)
+            registry.add("spring.datasource.password", postgres::getPassword)
+        }
+    }
+}

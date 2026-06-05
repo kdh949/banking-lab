@@ -9,6 +9,7 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "admin-console";
 const baseUrl = "http://localhost:3007";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const reportingApiBaseUrl = process.env.BANKING_LAB_E2E_REPORTING_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -67,6 +68,31 @@ test("admin console loads a Spring API-backed platform summary when configured",
   await expect(panel).toContainText("synthetic only");
   await expect(panel).toContainText("kotlin-spring-boot");
   await expect(panel).toContainText("NODE_REFERENCE_BOUNDARY:BLOCKED");
+
+  const evidencePanel = page.getByTestId("api-backed-admin-evidence-coverage");
+  await expect(evidencePanel).toContainText("evidence coverage loaded", { timeout: 15_000 });
+  await expect(evidencePanel).toContainText("ADM-501:API_BACKED");
+  await expect(evidencePanel).toContainText("PARAMETER_ADMIN_APIS:TRACKED");
+
+  const systemPanel = page.getByTestId("api-backed-admin-system-status");
+  await expect(systemPanel).toContainText("system status loaded", { timeout: 15_000 });
+  await expect(systemPanel).toContainText("CORE_BANKING:AVAILABLE");
+  await expect(systemPanel).toContainText("EOD_CLOSING");
+  await expect(systemPanel).toContainText("PROMETHEUS:LOCAL_PROFILE");
+});
+
+test("admin console loads reporting catalog and artifact controls when configured", async ({ page }) => {
+  test.skip(!reportingApiBaseUrl, "Set BANKING_LAB_E2E_REPORTING_API_BASE_URL to run API-backed reporting admin smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-reporting-admin");
+  await expect(panel).toContainText("reporting controls loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("EVIDENCE_COVERAGE");
+  await expect(panel).toContainText("masked by default");
+  await expect(panel).toContainText("Export Package");
+  await expect(panel).toContainText(".json");
+  await expect(panel).toContainText("RPT-");
 });
 
 test("admin console propagates interactive Keycloak security admin token when configured", async ({ page }) => {

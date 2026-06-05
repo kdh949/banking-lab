@@ -52,7 +52,7 @@ npm run parity
 Expected result before Kotlin/Next parity exists:
 
 ```text
-Parity scenario map covers 42 Node reference scenarios.
+Parity scenario map covers 43 Node reference scenarios.
 Validated screen manifests.
 Node reference tests passed.
 Evidence pack generated.

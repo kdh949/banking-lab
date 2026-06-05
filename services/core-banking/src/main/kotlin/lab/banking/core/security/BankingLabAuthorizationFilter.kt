@@ -85,6 +85,8 @@ class BankingLabAuthorizationFilter(
             path == "/api/fds/analytics" -> setOf("FDS_REVIEWER", "AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path.startsWith("/api/aml/governance") -> setOf("AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path.startsWith("/api/staff/operations/retry-queue") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.matches(Regex("^/api/staff/approvals/[^/]+/reject$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
@@ -95,6 +97,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/auth/session") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path == "/api/ledger/payment-postings" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
             else -> emptySet()
         }
@@ -247,6 +250,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/cards/authorizations") -> "CWB-602"
             path.startsWith("/api/cards/") && path.contains("loss-report") -> "CWB-606"
             path.startsWith("/api/cards") -> "CWB-601"
+            path.startsWith("/api/ledger/payment-postings") -> "PAY-201"
             path.startsWith("/api/staff/fee-policies") -> "FEE-103"
             path.startsWith("/api/ops/interest-accruals") -> "OPS-401"
             path.startsWith("/api/ops/interest-posting-batches") -> "OPS-402"
@@ -260,11 +264,20 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/ops/security") -> "OPS-SEC-101"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
+            path.startsWith("/api/admin/platform/evidence-coverage") -> "ADM-501"
+            path.startsWith("/api/admin/platform/system-status") -> "ADM-601"
+            path.startsWith("/api/customer/complaint-types") -> "CMP-107"
+            path.startsWith("/api/customer/complaints/") && path.contains("/materials") -> "CMP-103"
+            path.startsWith("/api/customer/complaints/") && path.contains("/reopen-requests") -> "CMP-106"
+            path.startsWith("/api/customer/complaints/") && path.contains("/confirm") -> "CMP-104"
+            path == "/api/customer/complaints" -> "CMP-101"
             path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
             path.startsWith("/api/customers/") && path.contains("statements") -> "CWB-103"
             path.startsWith("/api/transactions/") && path.contains("confirmation") -> "LED-102"
             path.startsWith("/api/accounts/") && path.contains("balance-certificate") -> "ACC-102"
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
+            path.startsWith("/api/staff/operations/retry-queue") -> "WRK-002"
+            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> "WRK-003"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"

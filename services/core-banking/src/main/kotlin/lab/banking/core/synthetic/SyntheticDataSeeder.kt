@@ -26,6 +26,9 @@ class SyntheticDataSeeder(
         seedDepositProducts()
         seedFeePolicies()
         seedLedgerCorrectionTransactions()
+        seedComplaintSourceReferences()
+        seedOperationalRetryQueue()
+        seedStaffWorkflowTimeline()
         seedWorkflowCases()
         seedAuditEvent()
     }
@@ -174,6 +177,128 @@ class SyntheticDataSeeder(
                 emptyMap<String, Any?>()
             )
         }
+    }
+
+    private fun seedComplaintSourceReferences() {
+        jdbc.update(
+            """
+            INSERT INTO customer_transfer_results (
+              result_id, idempotency_key, command_hash, customer_id,
+              from_account_id, to_account_id, amount_minor, currency, status,
+              ledger_transaction_id, fds_case_id, failure_code, message,
+              requested_by, requested_channel, business_reference_id, business_date
+            )
+            VALUES (
+              'TRR-SYN-CMP-001', 'SEED-CMP-TRANSFER-DISPUTE-001',
+              'synthetic-complaint-transfer-dispute-source', 'SYN-CUS-001',
+              'ACC-SYN-CORR-FROM', 'ACC-SYN-CORR-TO', 9000, 'KRW', 'POSTED',
+              'TX-SYN-CORR-001', NULL, NULL, 'Synthetic posted transfer source for complaint dispute smoke',
+              'customer01', 'CUSTOMER_WEB', 'CMP-SYN-TRANSFER-DISPUTE-001', CURRENT_DATE
+            )
+            ON CONFLICT (result_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO cards (
+              card_id, customer_id, account_id, pan_token, pan_last4,
+              status, issued_by, reason, idempotency_key, metadata_json
+            )
+            VALUES (
+              'CARD-SYN-CMP-001', 'SYN-CUS-001', 'ACC-SYN-001-001',
+              'tok_synthetic_card_cmp_001', '4242', 'ACTIVE',
+              'synthetic-seeder', 'Synthetic card source for complaint dispute smoke',
+              'SEED-CMP-CARD-001', '{"syntheticOnly":true,"rawPanStored":false}'::jsonb
+            )
+            ON CONFLICT (card_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_limits (card_id, daily_limit_minor, monthly_limit_minor, single_limit_minor)
+            VALUES ('CARD-SYN-CMP-001', 1000000, 5000000, 500000)
+            ON CONFLICT (card_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_authorizations (
+              authorization_id, card_id, account_id, amount_minor, currency, merchant_name,
+              business_date, status, hold_id, three_ds_authentication_id,
+              requested_by, requested_channel, reason, idempotency_key
+            )
+            VALUES (
+              'CAUTH-SYN-CMP-001', 'CARD-SYN-CMP-001', 'ACC-SYN-001-001',
+              12500, 'KRW', 'Synthetic Merchant', CURRENT_DATE, 'HELD',
+              NULL, NULL, 'customer01', 'CARD_AUTH',
+              'Synthetic card authorization source for complaint dispute smoke',
+              'SEED-CMP-CARD-AUTH-001'
+            )
+            ON CONFLICT (authorization_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedOperationalRetryQueue() {
+        jdbc.update(
+            """
+            INSERT INTO outbox_events (
+              outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+              payload_json, headers_json, status, retry_count, next_retry_at, error_message
+            )
+            VALUES (
+              'OBX-SYN-RETRY-001', 'ledger_transaction', 'TX-SYN-CORR-001',
+              'LedgerTransactionPosted', 'SEED-OBX-SYN-RETRY-001',
+              '{"ledgerTransactionId":"TX-SYN-CORR-001","syntheticOnly":true}'::jsonb,
+              '{"syntheticOnly":true,"source":"synthetic-seeder"}'::jsonb,
+              'FAILED', 2, now() - interval '1 minute',
+              'Synthetic broker delay for staff retry queue smoke'
+            )
+            ON CONFLICT (outbox_event_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedStaffWorkflowTimeline() {
+        jdbc.update(
+            """
+            INSERT INTO workflow_instances (
+              workflow_instance_id, workflow_type, business_reference_id,
+              temporal_workflow_id, temporal_run_id, status, started_by
+            )
+            VALUES (
+              'WFI-SYN-TX-CORR-001', 'TRANSACTION_CORRECTION', 'TX-SYN-CORR-001',
+              NULL, NULL, 'WAITING_APPROVAL', 'ops01'
+            )
+            ON CONFLICT (workflow_instance_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO workflow_events (
+              workflow_event_id, workflow_instance_id, event_type, actor_id, payload_json
+            )
+            VALUES
+              (
+                'WFE-SYN-TX-CORR-001-STARTED', 'WFI-SYN-TX-CORR-001',
+                'WORKFLOW_STARTED', 'ops01',
+                '{"syntheticOnly":true,"businessReferenceId":"TX-SYN-CORR-001"}'::jsonb
+              ),
+              (
+                'WFE-SYN-TX-CORR-001-WAITING', 'WFI-SYN-TX-CORR-001',
+                'WAITING_APPROVAL', 'ops01',
+                '{"syntheticOnly":true,"approvalRequired":true}'::jsonb
+              )
+            ON CONFLICT (workflow_event_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
     }
 
     private fun seedDepositProducts() {
@@ -327,6 +452,23 @@ class SyntheticDataSeeder(
         )
         jdbc.update(
             """
+            INSERT INTO complaint_cases (
+              complaint_case_id, customer_id, category, description, status,
+              sla_due_at, classification, owner_id, answer_json, customer_confirmed_at
+            )
+            VALUES (
+              'CMP-SYN-CLOSED-001', 'SYN-CUS-001', 'ACCOUNT_ACCESS',
+              'Synthetic closed complaint for browser reopen smoke',
+              'CLOSED', now() + INTERVAL '72 hours', 'ACCOUNT_ACCESS', 'complaint01',
+              '{"body":"Synthetic closed complaint answer.","answeredBy":"manager01","answeredAt":"2026-06-03T00:00:00Z"}'::jsonb,
+              now()
+            )
+            ON CONFLICT (complaint_case_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
             INSERT INTO complaint_case_timeline (
               complaint_timeline_id, complaint_case_id, event_type, from_status,
               to_status, actor_id, note, payload_json
@@ -334,6 +476,20 @@ class SyntheticDataSeeder(
             VALUES (
               'CMT-SYN-001', 'CMP-SYN-001', 'ASSIGNED', 'RECEIVED',
               'IN_REVIEW', 'complaint01', 'Synthetic complaint assigned', '{}'::jsonb
+            )
+            ON CONFLICT (complaint_timeline_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO complaint_case_timeline (
+              complaint_timeline_id, complaint_case_id, event_type, from_status,
+              to_status, actor_id, note, payload_json
+            )
+            VALUES (
+              'CMT-SYN-CLOSED-001', 'CMP-SYN-CLOSED-001', 'CLOSED', 'ANSWERED',
+              'CLOSED', 'customer01', 'Synthetic complaint closed for reopen smoke', '{}'::jsonb
             )
             ON CONFLICT (complaint_timeline_id) DO NOTHING
             """.trimIndent(),

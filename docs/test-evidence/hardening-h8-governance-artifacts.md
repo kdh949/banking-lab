@@ -31,7 +31,7 @@ This is governance automation for a synthetic core-banking lab only. It uses no 
 
 | Control | Evidence |
 | --- | --- |
-| Access-rights review | 12 synthetic principals, 16 role assignments, critical-role owners, and review-required over-privilege flags generated from `infra/keycloak/realm-banking-lab.json` |
+| Access-rights review | 13 synthetic principals, 17 role assignments, critical-role owners, and review-required over-privilege flags generated from `infra/keycloak/realm-banking-lab.json` |
 | Deployment approval | `REL-HARDENING-H1-H8-2026-06-05` has separated maker/checker approval and links required pre-release commands |
 | Incident response | H4 HA/DR drill and live PostgreSQL backup/restore evidence are linked with status `pass` |
 | Vulnerability remediation | 5 security evidence checks are tracked as `closed-verified`, with 0 failed checks and 0 open remediation items |

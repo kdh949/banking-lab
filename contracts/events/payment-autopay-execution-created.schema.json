@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-autopay-execution-created.schema.json",
+  "title": "PaymentAutopayExecutionCreated",
+  "type": "object",
+  "required": [
+    "contractVersion",
+    "autopayAgreementId",
+    "autopayExecutionId",
+    "paymentInstructionId",
+    "scheduledRunOn",
+    "syntheticOnly",
+    "directLedgerWrite",
+    "realPaymentNetworkUsed"
+  ],
+  "properties": {
+    "contractVersion": { "const": "2026-06-05" },
+    "autopayAgreementId": { "type": "string", "pattern": "^APAY-" },
+    "autopayExecutionId": { "type": "string", "pattern": "^APEX-" },
+    "paymentInstructionId": { "type": "string", "pattern": "^PAY-" },
+    "scheduledRunOn": { "type": "string", "format": "date" },
+    "nextRunOn": { "type": "string", "format": "date" },
+    "frequency": { "enum": ["DAILY", "WEEKLY", "MONTHLY"] },
+    "syntheticOnly": { "const": true },
+    "directLedgerWrite": { "const": false },
+    "realPaymentNetworkUsed": { "const": false }
+  },
+  "additionalProperties": true
+}

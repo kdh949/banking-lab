@@ -41,6 +41,7 @@ class SecurityAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              outbox_events,
               transaction_correction_requests,
               fee_waiver_requests,
               account_hold_requests,
@@ -157,6 +158,34 @@ class SecurityAuthorizationIntegrationTest {
 
         assertEquals("010-0000-1999", customerPhone())
         assertEquals(4, countRows("audit_events WHERE event_type = 'AUTHORIZATION_DENIED'"))
+    }
+
+    @Test
+    fun `operational retry queue is limited to operations compliance and audit roles`() {
+        mockMvc.perform(
+            get("/api/staff/operations/retry-queue")
+                .header("Authorization", bearer("branch01", listOf("BRANCH_STAFF")))
+                .header("x-request-id", "REQ-WRK002-DENY")
+                .queryParam("status", "FAILED")
+                .queryParam("reason", "Branch staff should not read retry exceptions")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.route").value("/api/staff/operations/retry-queue"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-WRK002-DENY"))
+
+        mockMvc.perform(
+            get("/api/staff/operations/retry-queue")
+                .header("Authorization", bearer("ops01", listOf("OPS_MANAGER")))
+                .queryParam("status", "FAILED")
+                .queryParam("reason", "Operations retry queue review")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.items").isArray)
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'AUTHORIZATION_DENIED' AND screen_id = 'WRK-002'"))
+        assertEquals(1, countRows("audit_events WHERE event_type = 'OPERATIONAL_RETRY_QUEUE_VIEW' AND screen_id = 'WRK-002'"))
     }
 
     @Test

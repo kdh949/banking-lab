@@ -50,4 +50,28 @@ class CustomerComplaintController(
         @RequestBody command: CustomerComplaintConfirmCommand
     ): CustomerComplaintConfirmResponse =
         complaintCaseService.confirmCustomerComplaint(caseId, command)
+
+    @PostMapping("/{caseId}/materials")
+    fun submitMaterial(
+        @PathVariable caseId: String,
+        @RequestBody command: CustomerComplaintMaterialCommand
+    ): CustomerComplaintMaterialResponse =
+        complaintCaseService.submitCustomerComplaintMaterial(caseId, command)
+
+    @PostMapping("/{caseId}/reopen-requests")
+    fun reopen(
+        @PathVariable caseId: String,
+        @RequestBody command: CustomerComplaintReopenCommand
+    ): CustomerComplaintReopenResponse =
+        complaintCaseService.reopenCustomerComplaint(caseId, command)
+}
+
+@RestController
+@RequestMapping("/api/customer/complaint-types")
+class CustomerComplaintTypeGuideController(
+    private val complaintCaseService: ComplaintCaseService
+) {
+    @GetMapping
+    fun list(): ComplaintTypeGuideResponse =
+        complaintCaseService.complaintTypeGuide()
 }

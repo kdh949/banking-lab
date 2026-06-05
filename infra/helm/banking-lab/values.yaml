@@ -13,6 +13,87 @@ coreBanking:
       cpu: "1"
       memory: 1Gi
 
+reportingService:
+  replicas: 1
+  domainEventPublisherReplicas: 1
+  image: banking-lab/reporting-service:local
+  port: 8090
+  securityAudience: reporting-service-api
+  domainEventPublisherBootstrapServers: redpanda:9092
+  domainEventPublisherTopic: banking.lab.reporting-events
+  domainEventPublisherClientId: reporting-helm-domain-event-publisher
+  domainEventPublisherDeadLetterThreshold: 3
+  domainEventPublisherRetryDelaySeconds: 60
+  domainEventPublisherEventTypes: ReportArtifactGenerated,ReportArtifactExported,ReportRetentionSweepCompleted
+  resources:
+    requests:
+      cpu: 150m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  workerResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+paymentService:
+  replicas: 1
+  outboxWorkerReplicas: 1
+  domainEventPublisherReplicas: 1
+  image: banking-lab/payment-service:local
+  port: 8088
+  securityAudience: payment-service-api
+  coreBankingTokenUrl: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/token
+  coreBankingClientId: payment-service-api
+  ledgerCommandTopic: banking.lab.core-banking.ledger-commands
+  domainEventPublisherBootstrapServers: redpanda:9092
+  domainEventPublisherTopic: banking.lab.payment-events
+  domainEventPublisherClientId: payment-helm-domain-event-publisher
+  domainEventPublisherEventTypes: PaymentInstructionSettled,PaymentInstructionCanceled,PaymentAutopayExecutionCreated
+  resources:
+    requests:
+      cpu: 150m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  workerResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+notificationService:
+  replicas: 1
+  eventConsumerReplicas: 1
+  image: banking-lab/notification-service:local
+  port: 8089
+  securityAudience: notification-service-api
+  eventConsumerBootstrapServers: redpanda:9092
+  eventConsumerTopic: banking.lab.domain-events
+  eventConsumerClientId: notification-service-event-consumer
+  eventConsumerGroupId: notification-service
+  resources:
+    requests:
+      cpu: 150m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  workerResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
 temporalWorker:
   replicas: 1
   image: banking-lab/core-banking-service:local

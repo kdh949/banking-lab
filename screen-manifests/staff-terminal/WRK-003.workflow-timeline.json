@@ -1,0 +1,63 @@
+{
+  "screenId": "WRK-003",
+  "transactionCode": "WRK003",
+  "title": "Workflow Timeline",
+  "app": "staff-terminal",
+  "type": "INQUIRY",
+  "domain": "staff-workstation",
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false,
+    "tabbed": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE",
+    "eventTypes": ["WORKFLOW_TIMELINE_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/staff/workflows/{businessReferenceId}/timeline",
+    "fields": [
+      {
+        "name": "businessReferenceId",
+        "label": "Business Reference ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Lookup Reason",
+        "type": "text",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": [
+      "timelineEntryId",
+      "sourceType",
+      "eventType",
+      "status",
+      "actorId",
+      "screenId",
+      "occurredAt"
+    ]
+  },
+  "actions": [
+    {
+      "id": "openApprovalInbox",
+      "label": "Open Approval Inbox",
+      "type": "navigate",
+      "target": "APR-001"
+    },
+    {
+      "id": "openAuditLog",
+      "label": "Open Audit Log",
+      "type": "navigate",
+      "target": "AUD-001"
+    }
+  ]
+}

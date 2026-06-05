@@ -21,6 +21,10 @@ import {
   type LoanExecutionResponse,
   type LoanPaymentResponse,
   type LoanDto,
+  type NotificationDeliveryDto,
+  type NotificationPreferenceDto,
+  type PaymentAutopayAgreementResponse,
+  type PaymentInstructionResponse,
   type ThreeDsSimulationDto,
   type TransactionConfirmationDto
 } from "@banking-lab/api-client";
@@ -116,6 +120,38 @@ type CardDomainState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type PaymentDomainState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly instruction: PaymentInstructionResponse;
+      readonly replay: PaymentInstructionResponse;
+      readonly read: PaymentInstructionResponse;
+      readonly autopay: PaymentAutopayAgreementResponse;
+      readonly paused: PaymentAutopayAgreementResponse;
+      readonly resumed: PaymentAutopayAgreementResponse;
+      readonly canceled: PaymentAutopayAgreementResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type NotificationPreferenceState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly before: readonly NotificationPreferenceDto[];
+      readonly preference: NotificationPreferenceDto;
+      readonly after: readonly NotificationPreferenceDto[];
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type NotificationDeliveryHistoryState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | { readonly status: "loaded"; readonly deliveries: readonly NotificationDeliveryDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
 type HeldFailedStatusState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
@@ -149,6 +185,8 @@ interface StructuredErrorSummary {
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL || apiBaseUrl;
+const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabCustomerOidcState";
 const oidcVerifierKey = "bankingLabCustomerOidcVerifier";
@@ -171,6 +209,9 @@ export function ApiBackedCustomerPanel() {
   const [statementReadModelState, setStatementReadModelState] = useState<StatementReadModelState>({ status: "idle" });
   const [loanDomainState, setLoanDomainState] = useState<LoanDomainState>({ status: "idle" });
   const [cardDomainState, setCardDomainState] = useState<CardDomainState>({ status: "idle" });
+  const [paymentDomainState, setPaymentDomainState] = useState<PaymentDomainState>({ status: "idle" });
+  const [notificationPreferenceState, setNotificationPreferenceState] = useState<NotificationPreferenceState>({ status: "idle" });
+  const [notificationDeliveryHistoryState, setNotificationDeliveryHistoryState] = useState<NotificationDeliveryHistoryState>({ status: "idle" });
   const [heldFailedStatusState, setHeldFailedStatusState] = useState<HeldFailedStatusState>({ status: "idle" });
   const [complaintEntryState, setComplaintEntryState] = useState<ComplaintEntryState>({ status: "idle" });
   const [complaintConfirmState, setComplaintConfirmState] = useState<ComplaintConfirmState>({ status: "idle" });
@@ -786,6 +827,167 @@ export function ApiBackedCustomerPanel() {
       setCardDomainState({ status: "loaded", issue, threeDs, authorization, capture, lostCard });
     } catch (error: unknown) {
       setCardDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown card domain failure" });
+    }
+  };
+
+  const runPaymentDomainSmoke = async () => {
+    if (!paymentApiBaseUrl || paymentDomainState.status === "running") {
+      return;
+    }
+    setPaymentDomainState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const runId = Date.now();
+      const paymentCommand = {
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 5_000,
+        currency: "KRW",
+        idempotencyKey: `CWB-PAY-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic bill payment smoke"
+      };
+      const instruction = await client.createPaymentInstruction(paymentCommand);
+      const replay = await client.createPaymentInstruction(paymentCommand);
+      const read = await client.getPaymentInstruction(instruction.item.paymentInstructionId);
+      if (
+        !instruction.item.syntheticOnly ||
+        !replay.replayed ||
+        replay.item.paymentInstructionId !== instruction.item.paymentInstructionId ||
+        read.item.lastOutboxEventId === null ||
+        read.item.lastOutboxEventId === undefined
+      ) {
+        setPaymentDomainState({ status: "failed", message: "payment instruction did not persist idempotent synthetic outbox state" });
+        return;
+      }
+
+      const autopay = await client.createAutopayAgreement({
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 7_000,
+        currency: "KRW",
+        frequency: "MONTHLY",
+        nextRunOn: "2026-03-31",
+        idempotencyKey: `CWB-APAY-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser synthetic autopay agreement smoke"
+      });
+      const paused = await client.pauseAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-PAUSE-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay pause smoke"
+      });
+      const resumed = await client.resumeAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-RESUME-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay resume smoke",
+        nextRunOn: "2026-04-30"
+      });
+      const canceled = await client.cancelAutopayAgreement(autopay.item.autopayAgreementId, {
+        idempotencyKey: `CWB-APAY-CANCEL-${runId}`,
+        requestedBy: "customer01",
+        reason: "Browser synthetic autopay cancel smoke"
+      });
+      if (
+        !autopay.item.syntheticOnly ||
+        autopay.item.status !== "ACTIVE" ||
+        paused.item.status !== "PAUSED" ||
+        resumed.item.status !== "ACTIVE" ||
+        canceled.item.status !== "CANCELED"
+      ) {
+        setPaymentDomainState({ status: "failed", message: "autopay state transitions did not complete" });
+        return;
+      }
+      setPaymentDomainState({ status: "loaded", instruction, replay, read, autopay, paused, resumed, canceled });
+    } catch (error: unknown) {
+      setPaymentDomainState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment domain failure" });
+    }
+  };
+
+  const runNotificationPreferenceSmoke = async () => {
+    if (!notificationApiBaseUrl || notificationPreferenceState.status === "running") {
+      return;
+    }
+    setNotificationPreferenceState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: notificationApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const customerId = "SYN-CUS-001";
+      const before = await client.listCustomerNotificationPreferences(customerId, { channel: "PUSH" });
+      const preference = await client.upsertCustomerNotificationPreference(customerId, {
+        channel: "PUSH",
+        eventType: "PaymentLedgerPostingRequested",
+        enabled: false
+      });
+      const after = await client.listCustomerNotificationPreferences(customerId, { channel: "PUSH" });
+      const saved = after.find(
+        (item) =>
+          item.recipientId === customerId &&
+          item.channel === "PUSH" &&
+          item.eventType === "PaymentLedgerPostingRequested" &&
+          item.enabled === false
+      );
+      if (!saved || preference.recipientId !== customerId || preference.requestedBy !== "customer01") {
+        setNotificationPreferenceState({ status: "failed", message: "owned customer notification preference was not persisted" });
+        return;
+      }
+      setNotificationPreferenceState({ status: "loaded", before, preference, after });
+    } catch (error: unknown) {
+      setNotificationPreferenceState({
+        status: "failed",
+        message: error instanceof Error ? error.message : "Unknown notification preference failure"
+      });
+    }
+  };
+
+  const runNotificationDeliveryHistorySmoke = async () => {
+    if (!notificationApiBaseUrl || notificationDeliveryHistoryState.status === "running") {
+      return;
+    }
+    setNotificationDeliveryHistoryState({ status: "running" });
+    try {
+      const customerId = "SYN-CUS-001";
+      const client = createBankingApiClient({
+        baseUrl: notificationApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId
+        })
+      });
+      const deliveries = await client.listCustomerNotificationDeliveries(customerId, {
+        eventType: "PaymentLedgerPostingRequested",
+        limit: 10
+      });
+      const crossCustomerLeak = deliveries.find((delivery) => delivery.recipientId !== customerId);
+      const rawContactLeak = deliveries.find((delivery) => /010-\d{4}-\d{4}|@/.test(delivery.maskedMessage));
+      if (crossCustomerLeak || rawContactLeak) {
+        setNotificationDeliveryHistoryState({ status: "failed", message: "notification delivery history returned out-of-scope or unmasked data" });
+        return;
+      }
+      setNotificationDeliveryHistoryState({ status: "loaded", deliveries });
+    } catch (error: unknown) {
+      setNotificationDeliveryHistoryState({
+        status: "failed",
+        message: error instanceof Error ? error.message : "Unknown notification delivery history failure"
+      });
     }
   };
 
@@ -1520,6 +1722,170 @@ export function ApiBackedCustomerPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-customer-payment-domain">
+        <button type="button" onClick={runPaymentDomainSmoke} disabled={!paymentApiBaseUrl || paymentDomainState.status === "running"}>
+          Run payment domain smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment</dt>
+            <dd>{paymentDomainLabel(paymentDomainState)}</dd>
+          </div>
+          {paymentDomainState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentDomainState.instruction.item.paymentInstructionId}</dd>
+              </div>
+              <div>
+                <dt>Replay</dt>
+                <dd>{paymentDomainState.replay.replayed ? "same instruction" : "not replayed"}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{paymentDomainState.read.item.status}</dd>
+              </div>
+              <div>
+                <dt>Biller</dt>
+                <dd>{paymentDomainState.read.item.billerName}</dd>
+              </div>
+              <div>
+                <dt>Outbox</dt>
+                <dd>{paymentDomainState.read.item.lastOutboxEventId}</dd>
+              </div>
+              <div>
+                <dt>Autopay</dt>
+                <dd>{paymentDomainState.autopay.item.autopayAgreementId}</dd>
+              </div>
+              <div>
+                <dt>Autopay states</dt>
+                <dd>
+                  {paymentDomainState.paused.item.status} / {paymentDomainState.resumed.item.status} /{" "}
+                  {paymentDomainState.canceled.item.status}
+                </dd>
+              </div>
+              <div>
+                <dt>Next run</dt>
+                <dd>{paymentDomainState.resumed.item.nextRunOn}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentDomainState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{paymentDomainState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-customer-notification-preferences">
+        <button
+          type="button"
+          onClick={runNotificationPreferenceSmoke}
+          disabled={!notificationApiBaseUrl || notificationPreferenceState.status === "running"}
+        >
+          Run notification preference smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Notification API</dt>
+            <dd>{notificationApiBaseUrl || "not configured"}</dd>
+          </div>
+          <div>
+            <dt>Preference</dt>
+            <dd>{notificationPreferenceLabel(notificationPreferenceState)}</dd>
+          </div>
+          {notificationPreferenceState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Preference ID</dt>
+                <dd>{notificationPreferenceState.preference.preferenceId}</dd>
+              </div>
+              <div>
+                <dt>Recipient</dt>
+                <dd>{notificationPreferenceState.preference.recipientId}</dd>
+              </div>
+              <div>
+                <dt>Channel</dt>
+                <dd>{notificationPreferenceState.preference.channel}</dd>
+              </div>
+              <div>
+                <dt>Event</dt>
+                <dd>{notificationPreferenceState.preference.eventType}</dd>
+              </div>
+              <div>
+                <dt>Enabled</dt>
+                <dd>{notificationPreferenceState.preference.enabled ? "enabled" : "disabled"}</dd>
+              </div>
+              <div>
+                <dt>Actor</dt>
+                <dd>{notificationPreferenceState.preference.requestedBy}</dd>
+              </div>
+              <div>
+                <dt>Rows</dt>
+                <dd>
+                  {notificationPreferenceState.before.length} / {notificationPreferenceState.after.length}
+                </dd>
+              </div>
+            </>
+          ) : null}
+          {notificationPreferenceState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{notificationPreferenceState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-customer-notification-delivery-history">
+        <button
+          type="button"
+          onClick={runNotificationDeliveryHistorySmoke}
+          disabled={!notificationApiBaseUrl || notificationDeliveryHistoryState.status === "running"}
+        >
+          Run notification history smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Notification API</dt>
+            <dd>{notificationApiBaseUrl || "not configured"}</dd>
+          </div>
+          <div>
+            <dt>History</dt>
+            <dd>{notificationDeliveryHistoryLabel(notificationDeliveryHistoryState)}</dd>
+          </div>
+          {notificationDeliveryHistoryState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Customer</dt>
+                <dd>SYN-CUS-001</dd>
+              </div>
+              <div>
+                <dt>Rows</dt>
+                <dd>{notificationDeliveryHistoryState.deliveries.length}</dd>
+              </div>
+              <div>
+                <dt>Latest</dt>
+                <dd>
+                  {notificationDeliveryHistoryState.deliveries[0]
+                    ? `${notificationDeliveryHistoryState.deliveries[0].eventType}:${notificationDeliveryHistoryState.deliveries[0].channel}:${notificationDeliveryHistoryState.deliveries[0].status}`
+                    : "none"}
+                </dd>
+              </div>
+              <div>
+                <dt>Message</dt>
+                <dd>{notificationDeliveryHistoryState.deliveries[0]?.maskedMessage ?? "none"}</dd>
+              </div>
+            </>
+          ) : null}
+          {notificationDeliveryHistoryState.status === "failed" ? (
+            <div>
+              <dt>Error</dt>
+              <dd>{notificationDeliveryHistoryState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-customer-held-failed-status">
         <button type="button" onClick={runHeldFailedStatusSmoke} disabled={!apiBaseUrl || heldFailedStatusState.status === "running"}>
           Run held failed status smoke
@@ -1843,6 +2209,45 @@ function cardDomainLabel(state: CardDomainState): string {
   }
   if (state.status === "loaded") {
     return "card captured and lost";
+  }
+  return "failed";
+}
+
+function paymentDomainLabel(state: PaymentDomainState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "payment and autopay recorded";
+  }
+  return "failed";
+}
+
+function notificationPreferenceLabel(state: NotificationPreferenceState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "notification preferences saved";
+  }
+  return "failed";
+}
+
+function notificationDeliveryHistoryLabel(state: NotificationDeliveryHistoryState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "notification history loaded";
   }
   return "failed";
 }

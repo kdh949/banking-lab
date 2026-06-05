@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-event-consumer
+  namespace: banking-lab
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: notification-event-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-event-consumer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: notification-event-consumer
+    spec:
+      containers:
+        - name: notification-event-consumer
+          image: banking-lab/notification-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8089
+              name: http
+          envFrom:
+            - configMapRef:
+                name: banking-lab-config
+            - secretRef:
+                name: banking-lab-secret
+          env:
+            - name: PORT
+              value: "8089"
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: "true"
+            - name: BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS
+              value: "redpanda:9092"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC
+              value: "banking.lab.domain-events"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED
+              value: "true"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_CLIENT_ID
+              value: "notification-service-event-consumer"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_GROUP_ID
+              value: "notification-service"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BATCH_SIZE
+              value: "100"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_POLL_INTERVAL_MILLIS
+              value: "1000"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_POLL_TIMEOUT_MILLIS
+              value: "5000"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_DEFAULT_CHANNEL
+              value: "SMS"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_REQUESTED_BY
+              value: "notification-k8s-event-consumer"
+            - name: BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_SUPPORTED_EVENT_TYPES
+              value: "LedgerTransactionPosted,PaymentLedgerPostingRequested,ComplaintAnswered"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-notification-event-consumer"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: "notification-service-api"
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_URL
+              value: "jdbc:postgresql://postgres:5432/banking_lab"
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_NOTIFICATION_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "notification_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

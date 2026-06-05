@@ -330,8 +330,8 @@ if (missingEvidence.length > 0) {
 
 const mappedScenarioCount = parity.suites.reduce((sum, suite) => sum + suite.scenarioCount, 0);
 const nonPassingParitySuites = parity.suites.filter((suite) => suite.targetStatus !== "pass");
-if (parity.nodeReferenceTestCount !== 42) {
-  errors.push(`Expected 42 Node reference scenarios, found ${parity.nodeReferenceTestCount}.`);
+if (parity.nodeReferenceTestCount !== 43) {
+  errors.push(`Expected 43 Node reference scenarios, found ${parity.nodeReferenceTestCount}.`);
 }
 if (mappedScenarioCount !== parity.nodeReferenceTestCount) {
   errors.push(`Mapped parity scenario count ${mappedScenarioCount} does not match ${parity.nodeReferenceTestCount}.`);

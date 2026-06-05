@@ -1,10 +1,10 @@
 # Keycloak Live Realm Smoke Evidence
 
-Date: 2026-06-03
+Date: 2026-06-06
 
 ## Scope
 
-This evidence records the live Keycloak realm import, Spring JWKS authorization smoke, browser-based customer-web Authorization Code + PKCE propagation, staff-terminal branch/checker Authorization Code + PKCE propagation including privileged unmask, complaint-portal handler/checker Authorization Code + PKCE propagation, ops-console operator/checker Authorization Code + PKCE propagation, audit-console auditor Authorization Code + PKCE propagation, FDS/AML-console risk reviewer/checker Authorization Code + PKCE propagation, staff-terminal WebAuthn required-action completion with a Chromium virtual authenticator, and synthetic passkey policy/recovery segregation for the target stack. It does not mark Node retirement ready.
+This evidence records the live Keycloak realm import, Spring JWKS authorization smoke, payment-service, notification-service, and reporting-service client-credentials service-token smokes, browser-based customer-web Authorization Code + PKCE propagation, staff-terminal branch/checker Authorization Code + PKCE propagation including privileged unmask, complaint-portal handler/checker Authorization Code + PKCE propagation, ops-console operator/checker Authorization Code + PKCE propagation, audit-console auditor Authorization Code + PKCE propagation, FDS/AML-console risk reviewer/checker Authorization Code + PKCE propagation, staff-terminal WebAuthn required-action completion with a Chromium virtual authenticator, and synthetic passkey policy/recovery segregation for the target stack. It does not mark Node retirement ready.
 
 ## Changes Proven
 
@@ -12,6 +12,33 @@ This evidence records the live Keycloak realm import, Spring JWKS authorization 
 - `infra/keycloak/realm-banking-lab.json` imports the `banking-lab` synthetic realm with staff, complaint handler, ops operator, auditor, risk reviewer, compliance manager, manager, customer, TOTP MFA-required, and WebAuthn-required synthetic users.
 - Public channel clients issue direct-grant test tokens for local synthetic smoke only.
 - Channel clients add the `core-banking-api` audience to access tokens.
+- Payment-facing channel clients (`customer-web`, `staff-terminal`, and
+  `ops-console`) also add the `payment-service-api` audience so local
+  payment-service smokes can use live Keycloak tokens instead of simulator
+  tokens.
+- The realm declares a confidential `payment-service-api` client with
+  service-account client credentials, a synthetic `PAYMENT_SERVICE` realm role,
+  and a `service-account-payment-service-api` principal mapped only to that role.
+- The `payment-service-api` service token carries both `payment-service-api` and
+  `core-banking-api` audiences so it can authorize payment-service dispatch
+  routes and the core-banking posting bridge without simulator fallback.
+- Notification-facing channel clients (`customer-web`, `audit-console`, and
+  `admin-console`) also add the `notification-service-api` audience for local
+  notification API smokes.
+- The realm declares a confidential `notification-service-api` client with
+  service-account client credentials, a synthetic `NOTIFICATION_SERVICE` realm
+  role, and a `service-account-notification-service-api` principal mapped only
+  to that role.
+- The `notification-service-api` service token carries the
+  `notification-service-api` audience so it can authorize notification event
+  consumption routes without simulator fallback.
+- The realm declares a confidential `reporting-service-api` client with
+  service-account client credentials, a synthetic `REPORTING_ANALYST` realm
+  role, and a `service-account-reporting-service-api` principal mapped only to
+  that role.
+- The `reporting-service-api` service token carries the
+  `reporting-service-api` audience so it can authorize reporting catalog,
+  artifact generation, and artifact list routes without simulator fallback.
 - Customer tokens carry `banking_lab_customer_id` so Spring can enforce customer ownership.
 - Spring fetches the live Keycloak JWKS and validates signed RS256 access tokens with simulator fallback disabled.
 - Staff token access to masked staff customer detail succeeds.
@@ -41,6 +68,10 @@ This evidence records the live Keycloak realm import, Spring JWKS authorization 
 - `fds-aml-console` redirects to live Keycloak, exchanges risk reviewer and checker authorization codes through the Next BFF route `POST /api/auth/keycloak-token`, and uses the resulting signed Bearer tokens against Spring with simulator fallback disabled.
 - The FDS/AML browser smoke renders `FDS-SYN-001` and `AML-SYN-001` with the `risk01` token, requests FDS release, FDS block, and AML closure as `risk01`, approves them as `compliance01`, and renders duplicate FDS/AML `WORKFLOW_STATE_VIOLATION` evidence.
 - Docker Compose passes JWKS URI, issuer, and audience settings into `core-banking` so the container can run with simulator token fallback disabled.
+- The payment outbox worker Compose smoke passes an explicit local
+  split-horizon issuer allow-list into Spring so host-side direct-grant tokens
+  and container-side client-credentials tokens are both accepted only by exact
+  configured issuer match.
 
 ## Commands
 
@@ -107,6 +138,13 @@ curl -fsS http://127.0.0.1:18126/health
 env COMPOSE_PROJECT_NAME=banking-lab-webauthn-smoke docker compose --profile platform down -v
 node -e "const fs=require('fs'); JSON.parse(fs.readFileSync('infra/keycloak/realm-banking-lab.json','utf8')); console.log('realm ok')"
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:test --tests lab.banking.core.security.KeycloakRealmPolicyTest
+npm run test:payment-service:keycloak-service-token
+npm run test:payment-service:unit -- --tests lab.banking.payment.core.CoreBankingServiceTokenProviderTest --rerun-tasks
+npm run test:core-banking:integration -- --tests lab.banking.core.security.JwksAuthorizationIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest --rerun-tasks
+npm run test:payment-service:outbox-worker-compose
+npm run test:notification-service:keycloak-service-token
+npm run test:reporting-service:keycloak-service-token
 env COMPOSE_PROJECT_NAME=banking-lab-passkey-policy-smoke BANKING_LAB_POSTGRES_PORT=15478 BANKING_LAB_CORE_BANKING_PORT=18128 BANKING_LAB_KEYCLOAK_PORT=18129 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18129/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres keycloak core-banking
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18129/realms/banking-lab/.well-known/openid-configuration
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18128/health
@@ -128,6 +166,38 @@ env COMPOSE_PROJECT_NAME=banking-lab-staff-unmask-smoke docker compose --profile
 ## Result
 
 Passed. Keycloak imported the `banking-lab` realm, exposed OIDC discovery over the dev HTTP endpoint, issued signed access tokens for staff/customer clients, and blocked the TOTP MFA-required synthetic manager with `invalid_grant`.
+
+The payment-service client-credentials slice also passed. A disposable Compose
+stack started PostgreSQL, Keycloak, `core-banking`, and `payment-service` with
+simulator tokens disabled. `payment-service-api` received a signed
+client-credentials token containing the `PAYMENT_SERVICE` realm role and both
+`payment-service-api` and `core-banking-api` audiences, and payment-service
+accepted that token on `POST /api/payments/outbox/ledger-postings/dispatch-next`
+with a safe `NO_PENDING_EVENT` response.
+
+The payment outbox worker client-credentials slice also passed. A disposable
+Compose stack started PostgreSQL, Keycloak, `core-banking`, `payment-service`,
+and `payment-outbox-worker` with simulator tokens disabled. The test obtained
+live Keycloak ops/customer tokens for host-side funding and payment creation,
+then restarted the worker and proved it fetched its own
+`payment-service-api` client-credentials token before settling the payment as a
+balanced core-banking `BILL_PAYMENT` ledger transaction.
+
+The notification-service client-credentials slice also passed. A disposable
+Compose stack started PostgreSQL, Redpanda, Keycloak, and
+`notification-service` with simulator tokens disabled. `notification-service-api`
+received a signed client-credentials token containing the
+`NOTIFICATION_SERVICE` realm role and `notification-service-api` audience, and
+notification-service accepted that token on `POST /api/notifications/events` to
+create one masked `PENDING` synthetic delivery item.
+
+The reporting-service client-credentials slice also passed. A disposable
+Compose stack started PostgreSQL, Keycloak, and `reporting-service` with
+simulator tokens disabled. `reporting-service-api` received a signed
+client-credentials token containing the `REPORTING_ANALYST` realm role and
+`reporting-service-api` audience, and reporting-service accepted that token on
+catalog, artifact generation, and artifact list routes while preserving
+reason-required audit and `maskedByDefault=true` metadata.
 
 The customer-web browser propagation slice also passed. Baseline `npm run test:e2e` passed 12 manifest-shell tests with 23 API-backed tests skipped when no API or Keycloak URL was configured. The targeted live browser smoke passed 1 Playwright test against `http://127.0.0.1:18107` Keycloak and `http://127.0.0.1:18106` Spring, with simulator tokens disabled in Spring. The page rendered `Keycloak account loaded`, `Bearer`, `SYN-CUS-001`, `LAB-***-0001`, `100000000 KRW`, `Keycloak transfer replayed`, `CWB-OIDC-TRF-...`, `TX-...`, `POSTED`, `same transaction id`, `Keycloak transfer rejected`, `LEDGER_INSUFFICIENT_AVAILABLE_BALANCE`, `Keycloak history and held status loaded`, `CWB-OIDC-HIST-...`, `FDS-SYN-001`, `HELD`, `Keycloak held and failed statuses loaded`, `CWB-OIDC-HELD-...`, `CWB-OIDC-FAILED-...`, `FAILED`, `REQUEST_VALIDATION_FAILED`, `Keycloak complaint received`, `ACCOUNT_ACCESS`, `RECEIVED`, `Keycloak complaint closed`, `CMP-SYN-CONFIRM-001`, and `CLOSED`.
 

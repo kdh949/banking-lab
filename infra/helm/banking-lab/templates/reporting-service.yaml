@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-reporting-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: {{ .Release.Name }}-reporting-service
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ .Release.Name }}-reporting-service
+  ports:
+    - name: http
+      port: {{ .Values.reportingService.port }}
+      targetPort: http

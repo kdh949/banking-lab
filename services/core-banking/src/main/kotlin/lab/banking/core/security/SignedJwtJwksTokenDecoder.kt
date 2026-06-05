@@ -26,6 +26,11 @@ class SignedJwtJwksTokenDecoder(
 ) {
     private val base64Url = Base64.getUrlDecoder()
     private val clockSkewSeconds = 30L
+    private val allowedIssuers = expectedIssuer
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .toSet()
 
     fun decodeToken(token: String): BankingLabPrincipal? {
         if (jwksUri.isBlank()) {
@@ -94,7 +99,7 @@ class SignedJwtJwksTokenDecoder(
         if (claims["active"] == false) {
             return false
         }
-        if (expectedIssuer.isNotBlank() && claims["iss"]?.toString() != expectedIssuer) {
+        if (allowedIssuers.isNotEmpty() && claims["iss"]?.toString() !in allowedIssuers) {
             return false
         }
         if (expectedAudience.isNotBlank() && !audiences(claims).contains(expectedAudience)) {

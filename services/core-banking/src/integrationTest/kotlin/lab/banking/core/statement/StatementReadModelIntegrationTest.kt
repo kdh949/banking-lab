@@ -118,19 +118,37 @@ class StatementReadModelIntegrationTest {
             .andExpect(jsonPath("$.customerId").value("SYN-CUS-STMT-001"))
             .andExpect(jsonPath("$.balanceAsOfMinor").value(96500))
             .andExpect(jsonPath("$.currentLedgerBalanceMinor").value(96500))
+            .andExpect(jsonPath("$.currentAvailableBalanceMinor").value(96500))
+            .andExpect(jsonPath("$.sourcePostingCount").value(3))
+            .andExpect(jsonPath("$.sourceLastBusinessDate").value("2026-02-04"))
+            .andExpect(jsonPath("$.sourceLedgerHash").isString)
+            .andExpect(jsonPath("$.snapshotCreatedAt").isString)
             .andReturn()
 
         val firstCertificateId = objectMapper.readTree(firstCertificate.response.contentAsString)
             .path("certificateId")
             .asText()
+        assertEquals(1, countRows("balance_certificate_snapshots WHERE certificate_id = '$firstCertificateId' AND synthetic_only = true"))
+        assertEquals(3, countRows("ledger_postings lp JOIN ledger_transactions lt ON lt.ledger_transaction_id = lp.ledger_transaction_id WHERE lp.account_id = 'ACC-STMT-001' AND lt.business_date <= DATE '2026-02-04'"))
+        jdbc.update(
+            """
+            UPDATE account_balance_projections
+            SET available_balance_minor = 94000,
+                hold_amount_minor = 2500
+            WHERE account_id = 'ACC-STMT-001'
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
         val secondCertificate = mockMvc.perform(
             get("/api/accounts/ACC-STMT-001/balance-certificate")
                 .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-STMT-001"))
                 .queryParam("date", "2026-02-04")
         )
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.currentAvailableBalanceMinor").value(96500))
             .andReturn()
         assertEquals(firstCertificateId, objectMapper.readTree(secondCertificate.response.contentAsString).path("certificateId").asText())
+        assertEquals(1, countRows("balance_certificate_snapshots WHERE certificate_id = '$firstCertificateId'"))
 
         val accessHistory = mockMvc.perform(
             get("/api/customers/SYN-CUS-STMT-001/access-history")

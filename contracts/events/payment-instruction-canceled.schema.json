@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-canceled.schema.json",
+  "title": "PaymentInstructionCanceled",
+  "type": "object",
+  "required": ["contractVersion", "paymentInstructionId", "syntheticOnly", "directLedgerWrite"],
+  "properties": {
+    "contractVersion": { "const": "2026-06-05" },
+    "paymentInstructionId": { "type": "string", "pattern": "^PAY-" },
+    "cancellationRequestId": { "type": "string", "pattern": "^PCR-" },
+    "syntheticOnly": { "const": true },
+    "directLedgerWrite": { "const": false },
+    "makerCheckerApproved": { "type": "boolean" },
+    "realPaymentNetworkUsed": { "const": false },
+    "realFinancialInstitutionApiUsed": { "const": false }
+  },
+  "additionalProperties": true
+}

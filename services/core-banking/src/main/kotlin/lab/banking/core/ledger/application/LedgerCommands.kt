@@ -137,6 +137,19 @@ data class CardCaptureCommand(
     val currency: String = "KRW"
 )
 
+data class BillPaymentCommand(
+    val paymentInstructionId: String,
+    val debitAccountId: String,
+    val syntheticBillerId: String,
+    val amountMinor: Long,
+    val idempotencyKey: String,
+    val requestedBy: String,
+    val requestedChannel: String = "PAYMENT_SERVICE",
+    val businessDate: LocalDate? = null,
+    val reason: String,
+    val currency: String = "KRW"
+)
+
 data class DailyClosingCommand(
     val businessDate: LocalDate,
     val idempotencyKey: String,

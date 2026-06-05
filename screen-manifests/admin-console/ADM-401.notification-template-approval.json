@@ -1,0 +1,107 @@
+{
+  "screenId": "ADM-401",
+  "transactionCode": "ADM401",
+  "title": "Notification Template Approval",
+  "app": "admin-console",
+  "type": "COMMAND",
+  "domain": "notification-admin",
+  "highRisk": true,
+  "requiredRoles": ["OPS_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "COMPLIANCE_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["NOTIFICATION_TEMPLATE_CHANGE"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "MASK_NOTIFICATION_TEMPLATE"
+  },
+  "fields": [
+    {
+      "name": "eventType",
+      "label": "Event Type",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "channel",
+      "label": "Channel",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "version",
+      "label": "Template Version",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "bodyTemplate",
+      "label": "Body Template",
+      "type": "textarea",
+      "required": true,
+      "mask": "template-placeholders"
+    },
+    {
+      "name": "providerKind",
+      "label": "Provider Kind",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "requestedBy",
+      "label": "Requested By",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Business Reason",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "approvedBy",
+      "label": "Approved By",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "reviewReason",
+      "label": "Review Reason",
+      "type": "textarea",
+      "required": false
+    }
+  ],
+  "api": {
+    "command": "POST /api/notifications/templates/change-requests; POST /api/notifications/templates/change-requests/{changeRequestId}/approve"
+  },
+  "actions": [
+    {
+      "id": "create-template-change",
+      "label": "Create Template Change",
+      "type": "command",
+      "target": "POST /api/notifications/templates/change-requests"
+    },
+    {
+      "id": "approve-template-change",
+      "label": "Approve Template Change",
+      "type": "approval",
+      "target": "POST /api/notifications/templates/change-requests/{changeRequestId}/approve"
+    },
+    {
+      "id": "reject-template-change",
+      "label": "Reject Template Change",
+      "type": "approval",
+      "target": "POST /api/notifications/templates/change-requests/{changeRequestId}/reject"
+    }
+  ],
+  "postActions": ["createApprovalRequest", "createAuditEvent", "activateTemplateAfterApproval"]
+}

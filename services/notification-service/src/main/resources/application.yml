@@ -1,0 +1,63 @@
+server:
+  port: ${PORT:8089}
+
+banking-lab:
+  synthetic-only: true
+  migration-target: kotlin-spring-boot
+  notification-service:
+    real-provider-enabled: false
+    event-consumer:
+      bootstrap-servers: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+      topic: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC:banking.lab.domain-events}
+      worker:
+        enabled: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED:false}
+        client-id: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_CLIENT_ID:notification-service-event-consumer}
+        group-id: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_GROUP_ID:notification-service}
+        batch-size: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_BATCH_SIZE:100}
+        poll-interval-millis: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_POLL_INTERVAL_MILLIS:1000}
+        poll-timeout-millis: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_POLL_TIMEOUT_MILLIS:5000}
+      routing:
+        default-channel: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_DEFAULT_CHANNEL:SMS}
+        requested-by: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_REQUESTED_BY:notification-kafka-consumer}
+        supported-event-types: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_SUPPORTED_EVENT_TYPES:LedgerTransactionPosted,PaymentLedgerPostingRequested,ComplaintAnswered}
+  security:
+    enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
+    simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}
+    dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}
+    jwt:
+      jwks-uri: ${BANKING_LAB_SECURITY_JWKS_URI:}
+      issuer: ${BANKING_LAB_SECURITY_ISSUER:}
+      audience: ${BANKING_LAB_SECURITY_AUDIENCE:}
+
+spring:
+  application:
+    name: banking-lab-notification-service
+  datasource:
+    url: ${BANKING_LAB_NOTIFICATION_DATABASE_URL:jdbc:postgresql://localhost:5432/banking_lab_notification}
+    username: ${BANKING_LAB_NOTIFICATION_DATABASE_USER:banking_lab}
+    password: ${BANKING_LAB_NOTIFICATION_DATABASE_PASSWORD:banking_lab}
+  flyway:
+    enabled: true
+    baseline-on-migrate: ${BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${BANKING_LAB_NOTIFICATION_FLYWAY_BASELINE_VERSION:0}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    enabled: ${BANKING_LAB_TRACING_ENABLED:false}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${BANKING_LAB_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      export:
+        enabled: ${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:false}
+      endpoint: ${BANKING_LAB_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${BANKING_LAB_OTEL_SERVICE_NAME:banking-lab-notification-service}
+      synthetic.only: "true"

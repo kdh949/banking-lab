@@ -1,0 +1,77 @@
+{
+  "screenId": "ADM-402",
+  "transactionCode": "ADM402",
+  "title": "Notification Preference Management",
+  "app": "admin-console",
+  "type": "COMMAND",
+  "domain": "notification-admin",
+  "highRisk": false,
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "MASK_NOTIFICATION_RECIPIENT"
+  },
+  "fields": [
+    {
+      "name": "recipientId",
+      "label": "Recipient ID",
+      "type": "text",
+      "required": true,
+      "mask": "synthetic-recipient-id"
+    },
+    {
+      "name": "channel",
+      "label": "Channel",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "eventType",
+      "label": "Event Type",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "enabled",
+      "label": "Enabled",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "requestedBy",
+      "label": "Requested By",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Business Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "PUT /api/notifications/preferences"
+  },
+  "actions": [
+    {
+      "id": "list-preferences",
+      "label": "List Preferences",
+      "type": "inquiry",
+      "target": "GET /api/notifications/preferences"
+    },
+    {
+      "id": "upsert-preference",
+      "label": "Save Preference",
+      "type": "command",
+      "target": "PUT /api/notifications/preferences"
+    }
+  ],
+  "postActions": ["createAuditEvent", "applyPreferenceFilter"]
+}

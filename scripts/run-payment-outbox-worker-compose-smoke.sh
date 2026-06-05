@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT_DIR}"
+
+export COMPOSE_PROJECT_NAME="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_COMPOSE_PROJECT:-banking-lab-payment-outbox-worker-smoke}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME}"
+export BANKING_LAB_POSTGRES_PORT="${BANKING_LAB_POSTGRES_PORT:-15511}"
+export BANKING_LAB_CORE_BANKING_PORT="${BANKING_LAB_CORE_BANKING_PORT:-18111}"
+export BANKING_LAB_KEYCLOAK_PORT="${BANKING_LAB_KEYCLOAK_PORT:-18112}"
+export BANKING_LAB_PAYMENT_SERVICE_PORT="${BANKING_LAB_PAYMENT_SERVICE_PORT:-18118}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_DATABASE_URL="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_DATABASE_URL:-jdbc:postgresql://127.0.0.1:${BANKING_LAB_POSTGRES_PORT}/banking_lab}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_CORE_URL="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_CORE_URL:-http://127.0.0.1:${BANKING_LAB_CORE_BANKING_PORT}}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_PAYMENT_URL="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_PAYMENT_URL:-http://127.0.0.1:${BANKING_LAB_PAYMENT_SERVICE_PORT}}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_URL="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_URL:-http://127.0.0.1:${BANKING_LAB_KEYCLOAK_PORT}}"
+export BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_HOST_HEADER="${BANKING_LAB_LIVE_PAYMENT_OUTBOX_WORKER_KEYCLOAK_HOST_HEADER:-}"
+export BANKING_LAB_SECURITY_ENABLED=true
+export BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false
+export BANKING_LAB_DEV_SIMULATOR_TOKEN=false
+DEFAULT_KEYCLOAK_HOST_ISSUER="http://127.0.0.1:${BANKING_LAB_KEYCLOAK_PORT}/realms/banking-lab"
+DEFAULT_KEYCLOAK_CONTAINER_ISSUER="http://keycloak:8080/realms/banking-lab"
+export BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs
+export BANKING_LAB_SECURITY_ISSUER="${BANKING_LAB_SECURITY_ISSUER:-${DEFAULT_KEYCLOAK_HOST_ISSUER},${DEFAULT_KEYCLOAK_CONTAINER_ISSUER}}"
+export BANKING_LAB_SECURITY_AUDIENCE=core-banking-api
+export BANKING_LAB_PAYMENT_SECURITY_AUDIENCE=payment-service-api
+export BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN="${BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN:-}"
+export BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL="${BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL:-http://keycloak:8080/realms/banking-lab/protocol/openid-connect/token}"
+export BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID="${BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID:-payment-service-api}"
+export BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET="${BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET:-payment-service-api-secret}"
+export BANKING_LAB_TRACING_ENABLED="${BANKING_LAB_TRACING_ENABLED:-false}"
+export BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED="${BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED:-false}"
+
+cleanup() {
+  docker compose --profile platform down -v --remove-orphans >/dev/null 2>&1 || true
+}
+
+cleanup
+trap cleanup EXIT
+
+scripts/run-core-banking-tests.sh :services:core-banking:bootJar :services:payment-service:bootJar
+docker compose --profile platform up -d --build postgres keycloak core-banking payment-service payment-outbox-worker
+scripts/run-core-banking-tests.sh \
+  :services:payment-service:integrationTest \
+  --tests 'lab.banking.payment.LivePaymentOutboxWorkerComposeSmokeIntegrationTest.live payment outbox worker posts ledger settlement through Compose core banking' \
+  --rerun-tasks

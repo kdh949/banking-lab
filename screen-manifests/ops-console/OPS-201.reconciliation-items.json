@@ -25,7 +25,7 @@
     "piiAccess": false,
     "maskingPolicy": "NONE"
   },
-  "sections": ["itemSummary", "internalLedger", "externalFile", "owner", "adjustmentRequest", "approvalTimeline", "timeline"],
+  "sections": ["itemSummary", "mismatchTaxonomy", "internalLedger", "externalFile", "owner", "adjustmentRequest", "approvalTimeline", "timeline"],
   "actions": [
     {
       "id": "requestAdjustment",

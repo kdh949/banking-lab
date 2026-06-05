@@ -39,7 +39,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
     properties = [
         "banking-lab.security.enabled=true",
         "banking-lab.security.simulator-tokens-enabled=false",
-        "banking-lab.security.jwt.issuer=http://keycloak.local/realms/banking-lab",
+        "banking-lab.security.jwt.issuer=http://wrong-issuer.local/realms/banking-lab,http://keycloak.local/realms/banking-lab",
         "banking-lab.security.jwt.audience=banking-lab-api",
         "banking-lab.security.trusted-device-enforcement-enabled=true",
         "banking-lab.security.step-up.enforcement-enabled=true",

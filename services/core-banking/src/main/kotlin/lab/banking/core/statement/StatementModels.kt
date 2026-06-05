@@ -73,6 +73,11 @@ data class BalanceCertificateDto(
     val currentLedgerBalanceMinor: Long,
     val currentAvailableBalanceMinor: Long,
     val deterministicInputHash: String,
+    val sourcePostingCount: Int,
+    val sourceLastBusinessDate: LocalDate?,
+    val sourceLedgerHash: String,
+    val snapshotCreatedAt: OffsetDateTime,
+    val lastViewedAt: OffsetDateTime,
     val syntheticOnly: Boolean = true
 )
 

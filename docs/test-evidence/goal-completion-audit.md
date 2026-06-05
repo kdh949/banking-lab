@@ -32,7 +32,7 @@ Passing items:
 - Generated artifact boundary audit is passing.
 - Node retirement ready-state simulation is passing with temporary fixture artifacts, proving the ready path independently of the committed gate.
 - Passkey preflight is passing with the recorded manual-live-passkey artifact and strict verifier.
-- The parity scenario map covers 42 mapped Node reference scenarios with target `pass` status.
+- The parity scenario map covers 43 mapped Node reference scenarios with target `pass` status.
 - Current target-stack evidence gates for Spring health, structured errors, Next manifest rendering, API-backed channel parity, evidence refresh, non-synthetic passkey operations, and retirement review are passing.
 - The Node retirement gate requires strict passkey and final-review artifact verification and now reports `ready`.
 

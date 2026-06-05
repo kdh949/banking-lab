@@ -6,6 +6,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.common.BankingLabDomainException
+import lab.banking.core.ledger.domain.BANK_SETTLEMENT_ACCOUNT_ID
 import lab.banking.core.ledger.domain.PostingDirection
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -264,6 +265,73 @@ class LedgerCommandServiceIntegrationTest {
     }
 
     @Test
+    fun `bill payment posts balanced payment entries to settlement and replays idempotently`() {
+        seedAccount("CUS-PAY-A", "ACC-PAY-A", "LAB-400-000001")
+        seedTransferLimits("ACC-PAY-A", daily = 100_000, monthly = 1_000_000, single = 50_000, channel = "CUSTOMER_WEB")
+        ledgerCommandService.deposit(deposit("ACC-PAY-A", 100_000, "IT-PAY-SEED-A"))
+
+        val first = ledgerCommandService.billPayment(payment("ACC-PAY-A", 30_000, "IT-PAY-001", "PAY-IT-001"))
+        val second = ledgerCommandService.billPayment(payment("ACC-PAY-A", 30_000, "IT-PAY-001", "PAY-IT-001"))
+
+        assertEquals(false, first.replayed)
+        assertEquals(true, second.replayed)
+        assertEquals(first.value.id, second.value.id)
+        assertEquals("BILL_PAYMENT", first.value.transactionType)
+        assertEquals("PAY-IT-001", first.value.businessReferenceId)
+        assertEquals("PAYMENT_SERVICE", first.value.requestedChannel)
+        assertEquals(2, countPostings(first.value.id, "PAYMENT"))
+        assertEquals(1, ledgerCommandService.countTransactionsByIdempotencyKey("IT-PAY-001"))
+        assertEquals(1, countOutboxEvents(first.value.id, "PaymentLedgerPostingSettled"))
+        assertEquals(70_000, ledgerCommandService.balance("ACC-PAY-A").availableBalanceMinor)
+        assertEquals(30_000, ledgerCommandService.balance(BANK_SETTLEMENT_ACCOUNT_ID).availableBalanceMinor)
+    }
+
+    @Test
+    fun `bill payment with insufficient funds leaves no idempotency row transaction or settlement movement`() {
+        seedAccount("CUS-PAY-B", "ACC-PAY-B", "LAB-400-000002")
+        ledgerCommandService.deposit(deposit("ACC-PAY-B", 5_000, "IT-PAY-SEED-B"))
+        val beforeTransactionCount = countTransactions()
+        val beforeBalance = ledgerCommandService.balance("ACC-PAY-B").availableBalanceMinor
+
+        val error = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.billPayment(payment("ACC-PAY-B", 10_000, "IT-PAY-INSUFFICIENT", "PAY-IT-002"))
+        }
+
+        assertEquals("LEDGER_INSUFFICIENT_AVAILABLE_BALANCE", error.code)
+        assertEquals(beforeTransactionCount, countTransactions())
+        assertEquals(0, ledgerCommandService.countTransactionsByIdempotencyKey("IT-PAY-INSUFFICIENT"))
+        assertEquals(beforeBalance, ledgerCommandService.balance("ACC-PAY-B").availableBalanceMinor)
+        assertEquals(0, countTransactionsByType("BILL_PAYMENT"))
+    }
+
+    @Test
+    fun `reversal releases counted bill payment limit usage`() {
+        seedAccount("CUS-PAY-C", "ACC-PAY-C", "LAB-400-000003")
+        seedTransferLimits("ACC-PAY-C", daily = 30_000, monthly = 100_000, single = 30_000)
+        ledgerCommandService.deposit(deposit("ACC-PAY-C", 100_000, "IT-PAY-SEED-C"))
+        val payment = ledgerCommandService.billPayment(payment("ACC-PAY-C", 25_000, "IT-PAY-REV-001", "PAY-IT-003"))
+        val beforeReversalError = assertThrows(BankingLabDomainException::class.java) {
+            ledgerCommandService.billPayment(payment("ACC-PAY-C", 6_000, "IT-PAY-REV-OVER", "PAY-IT-004"))
+        }
+
+        ledgerCommandService.reverseTransaction(
+            ReversalCommand(
+                originalTransactionId = payment.value.id,
+                idempotencyKey = "IT-PAY-REV-002",
+                requestedBy = "payment-service",
+                requestedChannel = "PAYMENT_SERVICE",
+                reason = "Synthetic bill payment reversal releases limit usage"
+            )
+        )
+        ledgerCommandService.billPayment(payment("ACC-PAY-C", 6_000, "IT-PAY-REV-AFTER", "PAY-IT-005"))
+
+        assertEquals("LIMIT_EXCEEDED", beforeReversalError.code)
+        assertEquals(6_000, limitUsed("ACC-PAY-C", "PAYMENT_SERVICE", "DAILY", LocalDate.now()))
+        assertEquals(6_000, ledgerCommandService.balance(BANK_SETTLEMENT_ACCOUNT_ID).availableBalanceMinor)
+        assertEquals(94_000, ledgerCommandService.balance("ACC-PAY-C").availableBalanceMinor)
+    }
+
+    @Test
     fun `idempotency key conflict is rejected`() {
         seedAccount("CUS-A", "ACC-A", "LAB-100-000001")
 
@@ -507,6 +575,24 @@ class LedgerCommandServiceIntegrationTest {
             businessDate = businessDate
         )
 
+    private fun payment(
+        debitAccountId: String,
+        amountMinor: Long,
+        key: String,
+        paymentInstructionId: String,
+        businessDate: LocalDate? = null
+    ): BillPaymentCommand =
+        BillPaymentCommand(
+            paymentInstructionId = paymentInstructionId,
+            debitAccountId = debitAccountId,
+            syntheticBillerId = "BILLER-SYN-UTIL-001",
+            amountMinor = amountMinor,
+            idempotencyKey = key,
+            requestedBy = "payment-service",
+            businessDate = businessDate,
+            reason = "Synthetic bill payment ledger posting"
+        )
+
     private fun adjustment(
         accountId: String,
         amountMinor: Long,
@@ -562,6 +648,18 @@ class LedgerCommandServiceIntegrationTest {
         jdbc.queryForObject(
             "SELECT count(*) FROM outbox_events WHERE aggregate_id = :aggregateId AND event_type = :eventType",
             mapOf("aggregateId" to aggregateId, "eventType" to eventType),
+            Int::class.java
+        ) ?: 0
+
+    private fun countPostings(transactionId: String, postingType: String): Int =
+        jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM ledger_postings
+            WHERE ledger_transaction_id = :transactionId
+              AND posting_type = :postingType
+            """.trimIndent(),
+            mapOf("transactionId" to transactionId, "postingType" to postingType),
             Int::class.java
         ) ?: 0
 

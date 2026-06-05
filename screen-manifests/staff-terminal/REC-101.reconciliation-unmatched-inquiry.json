@@ -35,7 +35,7 @@
     ]
   },
   "resultTable": {
-    "columns": ["itemId", "businessDate", "sourceSystem", "amountMinor", "status", "owner"]
+    "columns": ["itemId", "businessDate", "sourceSystem", "mismatchType", "amountMinor", "status", "owner"]
   },
   "actions": [
     {

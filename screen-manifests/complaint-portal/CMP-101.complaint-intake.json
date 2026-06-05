@@ -44,7 +44,7 @@
       "id": "submitComplaint",
       "label": "Submit Complaint",
       "type": "command",
-      "target": "POST /api/complaints"
+      "target": "POST /api/customer/complaints"
     }
   ]
 }

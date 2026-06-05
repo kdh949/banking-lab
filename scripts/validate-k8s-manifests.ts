@@ -16,6 +16,16 @@ const requiredFiles = [
   "secret.example.yaml",
   "core-banking-deployment.yaml",
   "core-banking-service.yaml",
+  "reporting-service-deployment.yaml",
+  "reporting-service.yaml",
+  "reporting-domain-event-publisher-deployment.yaml",
+  "payment-service-deployment.yaml",
+  "payment-service.yaml",
+  "payment-outbox-worker-deployment.yaml",
+  "payment-domain-event-publisher-deployment.yaml",
+  "notification-service-deployment.yaml",
+  "notification-service.yaml",
+  "notification-event-consumer-deployment.yaml",
   "core-banking-temporal-worker-deployment.yaml",
   "postgres-statefulset.yaml",
   "keycloak-deployment.yaml",
@@ -43,6 +53,16 @@ requireDocument(documents, "ConfigMap", "banking-lab-config", errors);
 const secret = requireDocument(documents, "Secret", "banking-lab-secret", errors);
 const coreDeployment = requireDocument(documents, "Deployment", "core-banking-service", errors);
 requireDocument(documents, "Service", "core-banking-service", errors);
+const reportingDeployment = requireDocument(documents, "Deployment", "reporting-service", errors);
+requireDocument(documents, "Service", "reporting-service", errors);
+const reportingDomainEventPublisherDeployment = requireDocument(documents, "Deployment", "reporting-domain-event-publisher", errors);
+const paymentDeployment = requireDocument(documents, "Deployment", "payment-service", errors);
+requireDocument(documents, "Service", "payment-service", errors);
+const paymentWorkerDeployment = requireDocument(documents, "Deployment", "payment-outbox-worker", errors);
+const paymentDomainEventPublisherDeployment = requireDocument(documents, "Deployment", "payment-domain-event-publisher", errors);
+const notificationDeployment = requireDocument(documents, "Deployment", "notification-service", errors);
+requireDocument(documents, "Service", "notification-service", errors);
+const notificationConsumerDeployment = requireDocument(documents, "Deployment", "notification-event-consumer", errors);
 const workerDeployment = requireDocument(documents, "Deployment", "core-banking-temporal-worker", errors);
 const postgres = requireDocument(documents, "StatefulSet", "postgres", errors);
 const keycloak = requireDocument(documents, "Deployment", "keycloak", errors);
@@ -50,13 +70,86 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, reportingDomainEventPublisherDeployment, paymentDeployment, paymentWorkerDeployment, paymentDomainEventPublisherDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
 }
 if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasText(workerDeployment, "value: \"true\"")) {
   errors.push("Temporal worker deployment must explicitly enable BANKING_LAB_TEMPORAL_WORKER_ENABLED=true.");
+}
+if (
+  !hasText(reportingDeployment, "reporting_flyway_schema_history") ||
+  !hasText(reportingDeployment, "reporting-service-api") ||
+  !hasText(reportingDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(reportingDeployment, "value: \"false\"")
+) {
+  errors.push("Reporting service deployment must use its own Flyway table, reporting-service audience, and disabled domain publisher mode.");
+}
+if (
+  !hasText(reportingDomainEventPublisherDeployment, "reporting_flyway_schema_history") ||
+  !hasText(reportingDomainEventPublisherDeployment, "reporting-service-api") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(reportingDomainEventPublisherDeployment, "value: \"true\"") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS") ||
+  !hasText(reportingDomainEventPublisherDeployment, "redpanda:9092") ||
+  !hasText(reportingDomainEventPublisherDeployment, "ReportRetentionSweepCompleted")
+) {
+  errors.push("Reporting domain event publisher deployment must enable Redpanda-backed reporting outbox publication.");
+}
+if (
+  !hasText(paymentDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentDeployment, "payment-service-api") ||
+  !hasText(paymentDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(paymentDeployment, "value: \"false\"") ||
+  !hasText(paymentDeployment, "http://core-banking-service:8081")
+) {
+  errors.push("Payment service deployment must use its own Flyway table, payment-service audience, disabled worker/publisher modes, and core-banking service endpoint.");
+}
+if (
+  !hasText(paymentWorkerDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentWorkerDeployment, "payment-service-api") ||
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentWorkerDeployment, "value: \"true\"") ||
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(paymentWorkerDeployment, "value: \"false\"") ||
+  !hasText(paymentWorkerDeployment, "BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL") ||
+  !hasText(paymentWorkerDeployment, "PAYMENT_CORE_BANKING_CLIENT_SECRET")
+) {
+  errors.push("Payment outbox worker deployment must enable ledger dispatch, disable domain publishing, and use Keycloak client credentials for the core-banking posting bridge.");
+}
+if (
+  !hasText(paymentDomainEventPublisherDeployment, "payment_flyway_schema_history") ||
+  !hasText(paymentDomainEventPublisherDeployment, "payment-service-api") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED") ||
+  !hasText(paymentDomainEventPublisherDeployment, "value: \"false\"") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(paymentDomainEventPublisherDeployment, "value: \"true\"") ||
+  !hasText(paymentDomainEventPublisherDeployment, "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !hasText(paymentDomainEventPublisherDeployment, "redpanda:9092") ||
+  !hasText(paymentDomainEventPublisherDeployment, "PaymentInstructionCanceled")
+) {
+  errors.push("Payment domain event publisher deployment must disable ledger dispatch and enable Redpanda-backed payment domain event publishing.");
+}
+if (
+  !hasText(notificationDeployment, "notification_flyway_schema_history") ||
+  !hasText(notificationDeployment, "notification-service-api") ||
+  !hasText(notificationDeployment, "BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED") ||
+  !hasText(notificationDeployment, "value: \"false\"")
+) {
+  errors.push("Notification service deployment must use its own Flyway table, notification-service audience, and synthetic provider boundary.");
+}
+if (
+  !hasText(notificationConsumerDeployment, "notification_flyway_schema_history") ||
+  !hasText(notificationConsumerDeployment, "notification-service-api") ||
+  !hasText(notificationConsumerDeployment, "BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED") ||
+  !hasText(notificationConsumerDeployment, "value: \"true\"") ||
+  !hasText(notificationConsumerDeployment, "redpanda:9092")
+) {
+  errors.push("Notification event consumer deployment must enable the worker against the Redpanda domain-events stream.");
 }
 if (!hasText(secret, "replace-with-local-synthetic-password")) {
   errors.push("secret.example.yaml must use replace-with-local-synthetic-password placeholders only.");

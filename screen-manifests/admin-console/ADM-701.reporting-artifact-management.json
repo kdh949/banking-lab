@@ -1,0 +1,89 @@
+{
+  "screenId": "ADM-701",
+  "transactionCode": "ADM701",
+  "title": "Reporting Artifact Management",
+  "app": "admin-console",
+  "type": "COMMAND",
+  "domain": "reporting-admin",
+  "highRisk": false,
+  "requiredRoles": ["REPORTING_ANALYST", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_GENERATE_REPLAYED", "REPORT_ARTIFACT_LIST_VIEW", "REPORT_ARTIFACT_EXPORTED", "REPORT_RETENTION_SWEEP_RUN"],
+    "piiAccess": false,
+    "maskingPolicy": "MASK_REPORT_METADATA"
+  },
+  "fields": [
+    {
+      "name": "reportType",
+      "label": "Report Type",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "requestedBy",
+      "label": "Requested By",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "requestedByRole",
+      "label": "Requested Role",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Business Reason",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/reports/artifacts"
+  },
+  "actions": [
+    {
+      "id": "list-report-catalog",
+      "label": "List Report Catalog",
+      "type": "inquiry",
+      "target": "GET /api/reports/catalog"
+    },
+    {
+      "id": "generate-report-artifact",
+      "label": "Generate Report Artifact",
+      "type": "command",
+      "target": "POST /api/reports/artifacts"
+    },
+    {
+      "id": "list-report-artifacts",
+      "label": "List Report Artifacts",
+      "type": "inquiry",
+      "target": "GET /api/reports/artifacts"
+    },
+    {
+      "id": "export-report-artifact",
+      "label": "Export Report Artifact",
+      "type": "inquiry",
+      "target": "GET /api/reports/artifacts/{artifactId}/export"
+    },
+    {
+      "id": "run-report-retention-sweep",
+      "label": "Run Report Retention Sweep",
+      "type": "command",
+      "target": "POST /api/reports/retention/sweeps"
+    }
+  ],
+  "postActions": ["createAuditEvent", "persistRenderedSyntheticArtifact", "preserveMaskedByDefault", "storeContentSha256", "applySyntheticRetentionPolicy", "packageSyntheticJsonExport", "expirePastRetentionArtifacts"]
+}

@@ -1,0 +1,675 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Payment Service API
+  version: 0.1.0
+  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly.
+paths:
+  /api/payments/instructions:
+    post:
+      summary: Create a synthetic bill payment instruction
+      operationId: createPaymentInstruction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentInstructionRequest'
+      responses:
+        '201':
+          description: Created and ledger posting requested through durable Outbox
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+        '200':
+          description: Idempotent replay of the same payment instruction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+        '409':
+          description: Idempotency or state conflict
+  /api/payments/instructions/{instructionId}:
+    get:
+      summary: Read a synthetic payment instruction
+      operationId: getPaymentInstruction
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+        - name: reason
+          in: query
+          required: false
+          description: Required for staff, ops, audit, and compliance payment lookups so PAY-101 access can be audited.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment instruction, with auditEventId when a staff/ops/audit lookup reason is supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+        '400':
+          description: Staff payment lookup reason missing
+  /api/payments/instructions/{instructionId}/settlements:
+    post:
+      summary: Record core-banking ledger settlement reference
+      operationId: recordPaymentSettlement
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentSettlementRequest'
+      responses:
+        '200':
+          description: Settlement recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+  /api/payments/instructions/{instructionId}/cancel:
+    post:
+      summary: Cancel before ledger settlement
+      operationId: cancelPaymentInstruction
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelPaymentInstructionRequest'
+      responses:
+        '200':
+          description: Cancellation recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
+  /api/payments/instructions/{instructionId}/cancellation-requests:
+    post:
+      summary: Request staff maker-checker approval for pre-settlement payment cancellation
+      operationId: requestPaymentCancellationApproval
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPaymentCancellationApprovalRequest'
+      responses:
+        '201':
+          description: Cancellation request created and pending independent checker approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '200':
+          description: Idempotent replay of the same cancellation request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '409':
+          description: Existing pending request or non-cancelable payment state
+  /api/payments/cancellation-requests/{requestId}/approve:
+    post:
+      summary: Approve staff payment cancellation request as an independent checker
+      operationId: approvePaymentCancellationRequest
+      parameters:
+        - $ref: '#/components/parameters/CancellationRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
+      responses:
+        '200':
+          description: Cancellation request approved and the payment instruction canceled if still pre-settlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '403':
+          description: Maker/checker separation failed
+  /api/payments/cancellation-requests/{requestId}/reject:
+    post:
+      summary: Reject staff payment cancellation request as an independent checker
+      operationId: rejectPaymentCancellationRequest
+      parameters:
+        - $ref: '#/components/parameters/CancellationRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
+      responses:
+        '200':
+          description: Cancellation request rejected without payment instruction mutation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCancellationRequestResponse'
+        '403':
+          description: Maker/checker separation failed
+  /api/payments/outbox/ledger-postings/dispatch-next:
+    post:
+      summary: Dispatch the next durable payment ledger posting request to core-banking
+      operationId: dispatchNextPaymentLedgerPosting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchPaymentLedgerPostingRequest'
+      responses:
+        '200':
+          description: Dispatch result, retry failure, dead letter, or no pending event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentOutboxDispatchResponse'
+  /api/payments/autopay/agreements:
+    post:
+      summary: Create a synthetic autopay agreement
+      operationId: createAutopayAgreement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutopayAgreementRequest'
+      responses:
+        '201':
+          description: Autopay agreement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+        '200':
+          description: Idempotent replay of the same autopay agreement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}:
+    get:
+      summary: Read a synthetic autopay agreement
+      operationId: getAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      responses:
+        '200':
+          description: Autopay agreement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/pause:
+    post:
+      summary: Pause an active synthetic autopay agreement
+      operationId: pauseAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/resume:
+    post:
+      summary: Resume a paused synthetic autopay agreement
+      operationId: resumeAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/agreements/{agreementId}/cancel:
+    post:
+      summary: Cancel a synthetic autopay agreement
+      operationId: cancelAutopayAgreement
+      parameters:
+        - $ref: '#/components/parameters/AutopayAgreementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAutopayAgreementRequest'
+      responses:
+        '200':
+          description: Autopay agreement canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAutopayAgreementResponse'
+  /api/payments/autopay/executions/due:
+    post:
+      summary: Execute due synthetic autopay agreements by creating payment instructions
+      operationId: executeDueAutopay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteDueAutopayRequest'
+      responses:
+        '200':
+          description: Due autopay execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteDueAutopayResponse'
+components:
+  parameters:
+    InstructionId:
+      name: instructionId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^PAY-'
+    AutopayAgreementId:
+      name: agreementId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^APAY-'
+    CancellationRequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^PCR-'
+  schemas:
+    CreatePaymentInstructionRequest:
+      type: object
+      required: [customerId, debitAccountId, billerId, amountMinor, currency, idempotencyKey, requestedBy, requestedChannel]
+      properties:
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          default: KRW
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        requestedChannel:
+          type: string
+        reason:
+          type: string
+    RecordPaymentSettlementRequest:
+      type: object
+      required: [ledgerTransactionId, idempotencyKey, requestedBy, reason]
+      properties:
+        ledgerTransactionId:
+          type: string
+          pattern: '^TX-'
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    CancelPaymentInstructionRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    RequestPaymentCancellationApprovalRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated maker subject.
+        reason:
+          type: string
+    ReviewPaymentCancellationRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated checker subject and differ from the maker.
+        reason:
+          type: string
+    DispatchPaymentLedgerPostingRequest:
+      type: object
+      required: [requestedBy, reason]
+      properties:
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        deadLetterThreshold:
+          type: integer
+          minimum: 1
+          default: 3
+    PaymentOutboxDispatchResponse:
+      type: object
+      required: [status, retryCount, syntheticOnly]
+      properties:
+        outboxEventId:
+          type: string
+          nullable: true
+        paymentInstructionId:
+          type: string
+          nullable: true
+        ledgerTransactionId:
+          type: string
+          nullable: true
+        status:
+          enum: [PUBLISHED, FAILED, DEAD_LETTER, NO_PENDING_EVENT]
+        retryCount:
+          type: integer
+          minimum: 0
+        syntheticOnly:
+          const: true
+    CreateAutopayAgreementRequest:
+      type: object
+      required: [customerId, debitAccountId, billerId, amountMinor, currency, frequency, nextRunOn, idempotencyKey, requestedBy, requestedChannel, reason]
+      properties:
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          default: KRW
+        frequency:
+          enum: [DAILY, WEEKLY, MONTHLY]
+        nextRunOn:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        requestedChannel:
+          type: string
+        reason:
+          type: string
+    PauseAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    ResumeAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        nextRunOn:
+          type: string
+          format: date
+          nullable: true
+    CancelAutopayAgreementRequest:
+      type: object
+      required: [idempotencyKey, requestedBy, reason]
+      properties:
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+    ExecuteDueAutopayRequest:
+      type: object
+      required: [businessDate, idempotencyKey, requestedBy, reason]
+      properties:
+        businessDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          default: 50
+    PaymentAutopayAgreementResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentAutopayAgreement'
+        replayed:
+          type: boolean
+    ExecuteDueAutopayResponse:
+      type: object
+      required: [items, executedCount, replayed]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAutopayExecution'
+        executedCount:
+          type: integer
+          minimum: 0
+        replayed:
+          type: boolean
+    PaymentAutopayAgreement:
+      type: object
+      required: [autopayAgreementId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, frequency, status, nextRunOn, syntheticOnly, createdAt, updatedAt]
+      properties:
+        autopayAgreementId:
+          type: string
+          pattern: '^APAY-'
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+        billerName:
+          type: string
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        frequency:
+          enum: [DAILY, WEEKLY, MONTHLY]
+        status:
+          enum: [ACTIVE, PAUSED, CANCELED]
+        nextRunOn:
+          type: string
+          format: date
+        lastRunOn:
+          type: string
+          format: date
+          nullable: true
+        lastPaymentInstructionId:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaymentAutopayExecution:
+      type: object
+      required: [autopayExecutionId, autopayAgreementId, scheduledRunOn, paymentInstructionId, status, syntheticOnly, createdAt]
+      properties:
+        autopayExecutionId:
+          type: string
+          pattern: '^APEX-'
+        autopayAgreementId:
+          type: string
+          pattern: '^APAY-'
+        scheduledRunOn:
+          type: string
+          format: date
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        status:
+          const: INSTRUCTION_CREATED
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    PaymentInstructionResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentInstruction'
+        replayed:
+          type: boolean
+        auditEventId:
+          type: string
+          nullable: true
+          pattern: '^PAU-'
+    PaymentCancellationRequestResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/PaymentCancellationRequest'
+        instruction:
+          anyOf:
+            - $ref: '#/components/schemas/PaymentInstruction'
+            - type: 'null'
+        replayed:
+          type: boolean
+    PaymentCancellationRequest:
+      type: object
+      required: [cancellationRequestId, paymentInstructionId, status, makerId, makerRole, makerReason, syntheticOnly, createdAt, updatedAt]
+      properties:
+        cancellationRequestId:
+          type: string
+          pattern: '^PCR-'
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        status:
+          enum: [PENDING, APPROVED, REJECTED]
+        makerId:
+          type: string
+        makerRole:
+          type: string
+        makerReason:
+          type: string
+        checkerId:
+          type: string
+          nullable: true
+        checkerRole:
+          type: string
+          nullable: true
+        checkerReason:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
+    PaymentInstruction:
+      type: object
+      required: [paymentInstructionId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, status, syntheticOnly, createdAt, updatedAt]
+      properties:
+        paymentInstructionId:
+          type: string
+        customerId:
+          type: string
+        debitAccountId:
+          type: string
+        billerId:
+          type: string
+        billerName:
+          type: string
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        status:
+          enum: [POSTING_REQUESTED, SETTLED, CANCELED, FAILED]
+        ledgerTransactionId:
+          type: string
+          nullable: true
+        lastOutboxEventId:
+          type: string
+          nullable: true
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

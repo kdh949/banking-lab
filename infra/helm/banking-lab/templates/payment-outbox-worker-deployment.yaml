@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-payment-outbox-worker
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: {{ .Release.Name }}-payment-outbox-worker
+spec:
+  replicas: {{ .Values.paymentService.outboxWorkerReplicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Release.Name }}-payment-outbox-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-lab
+        app.kubernetes.io/name: {{ .Release.Name }}-payment-outbox-worker
+    spec:
+      containers:
+        - name: payment-outbox-worker
+          image: {{ .Values.paymentService.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.paymentService.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+          env:
+            - name: PORT
+              value: {{ .Values.paymentService.port | quote }}
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: {{ .Values.syntheticOnly | quote }}
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED
+              value: "true"
+            - name: BANKING_LAB_CORE_BANKING_BASE_URL
+              value: "http://{{ .Release.Name }}-core-banking:{{ .Values.coreBanking.port }}"
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_TOKEN_URL
+              value: {{ .Values.paymentService.coreBankingTokenUrl | quote }}
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_ID
+              value: {{ .Values.paymentService.coreBankingClientId | quote }}
+            - name: BANKING_LAB_PAYMENT_CORE_BANKING_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: PAYMENT_CORE_BANKING_CLIENT_SECRET
+            - name: BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC
+              value: {{ .Values.paymentService.ledgerCommandTopic | quote }}
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED
+              value: "true"
+            - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REQUESTED_BY
+              value: "payment-helm-outbox-worker"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_REASON
+              value: "Synthetic payment outbox worker dispatch"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_MAX_BATCH_SIZE
+              value: "10"
+            - name: BANKING_LAB_PAYMENT_OUTBOX_WORKER_DEAD_LETTER_THRESHOLD
+              value: "3"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-payment-outbox-worker"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: {{ .Values.paymentService.securityAudience | quote }}
+            - name: BANKING_LAB_PAYMENT_DATABASE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: BANKING_LAB_PAYMENT_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_PAYMENT_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "payment_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: {{ .Values.paymentService.workerResources.requests.cpu | quote }}
+              memory: {{ .Values.paymentService.workerResources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.paymentService.workerResources.limits.cpu | quote }}
+              memory: {{ .Values.paymentService.workerResources.limits.memory | quote }}

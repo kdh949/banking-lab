@@ -66,6 +66,8 @@ test("target admin manifests cover privileged platform controls without one-off 
   const manifests = await loadExpandedManifests(manifestRoot);
   const adminManifests = manifests.filter((manifest) => manifest.app === "admin-console");
   const parameter = adminManifests.find((manifest) => manifest.screenId === "ADM-201");
+  const evidenceCoverage = adminManifests.find((manifest) => manifest.screenId === "ADM-501");
+  const systemStatus = adminManifests.find((manifest) => manifest.screenId === "ADM-601");
 
   assert.equal(adminManifests.length >= 2, true);
   assert.equal(parameter?.type, "PARAMETER");
@@ -75,6 +77,12 @@ test("target admin manifests cover privileged platform controls without one-off 
   assert.equal(parameter?.controlMetadata.approval.required, true);
   assert.equal(parameter?.controlMetadata.approval.makerChecker, true);
   assert.equal(parameter?.requiredRoles.includes("PASSKEY_RECOVERY_ADMIN"), true);
+  assert.equal(evidenceCoverage?.type, "DASHBOARD");
+  assert.equal(evidenceCoverage?.audit.reasonRequired, true);
+  assert.equal(evidenceCoverage?.controlMetadata.audit.eventTypes.includes("ADMIN_EVIDENCE_COVERAGE_VIEW"), true);
+  assert.equal(systemStatus?.type, "DASHBOARD");
+  assert.equal(systemStatus?.audit.reasonRequired, true);
+  assert.equal(systemStatus?.controlMetadata.audit.eventTypes.includes("ADMIN_SYSTEM_STATUS_VIEW"), true);
 });
 
 test("target staff high-risk commands require maker-checker approval metadata", async () => {

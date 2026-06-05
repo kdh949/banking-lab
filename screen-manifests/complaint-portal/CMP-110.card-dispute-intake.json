@@ -1,0 +1,63 @@
+{
+  "screenId": "CMP-110",
+  "transactionCode": "CMP110",
+  "title": "Card Dispute Intake",
+  "app": "complaint-portal",
+  "type": "CASE",
+  "domain": "complaint",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "complaintWorkflow",
+    "states": [
+      "DRAFT",
+      "SUBMITTED",
+      "RECEIVED",
+      "CLASSIFIED",
+      "ASSIGNED",
+      "IN_REVIEW",
+      "WAITING_CUSTOMER",
+      "WAITING_APPROVAL",
+      "ANSWERED",
+      "CLOSED",
+      "REOPENED",
+      "TRANSFERRED_TO_AUTHORITY_SIM"
+    ]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 72
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": true,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["COMMAND_REQUESTED"]
+  },
+  "sourceReference": {
+    "category": "CARD_DISPUTE",
+    "allowedTypes": ["CARD_AUTHORIZATION", "CARD_CAPTURE"],
+    "ownership": "CUSTOMER_OWNED_SOURCE",
+    "syntheticOnly": true
+  },
+  "sections": ["sourceCardActivity", "complaintSummary", "attachments", "timeline"],
+  "actions": [
+    {
+      "id": "submitCardDispute",
+      "label": "Submit Card Dispute",
+      "type": "command",
+      "target": "POST /api/customer/complaints"
+    },
+    {
+      "id": "addMaterials",
+      "label": "Add Materials",
+      "type": "navigate",
+      "target": "CMP-103"
+    }
+  ]
+}

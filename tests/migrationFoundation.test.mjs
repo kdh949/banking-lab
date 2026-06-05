@@ -48,7 +48,7 @@ test("migration parity map covers every current Node reference test scenario", a
   }
   const mappedCount = parityMap.suites.reduce((sum, suite) => sum + suite.scenarioCount, 0);
 
-  assert.equal(parityMap.nodeReferenceTestCount, 42);
+  assert.equal(parityMap.nodeReferenceTestCount, 43);
   assert.equal(currentReferenceCount, parityMap.nodeReferenceTestCount);
   assert.equal(mappedCount, parityMap.nodeReferenceTestCount);
 

@@ -5,6 +5,7 @@ import {
   BankingApiError,
   createBankingApiClient,
   type EodClosingMonitorDto,
+  type PaymentOutboxDispatchResponse,
   type ReconciliationItemDto,
   type StaffApprovalExecutionResponse
 } from "@banking-lab/api-client";
@@ -32,6 +33,12 @@ type WorkflowFailureState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | { readonly status: "rejected"; readonly error: StructuredErrorSummary }
+  | { readonly status: "failed"; readonly message: string };
+
+type PaymentOutboxDispatchState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | { readonly status: "loaded"; readonly result: PaymentOutboxDispatchResponse; readonly reason: string }
   | { readonly status: "failed"; readonly message: string };
 
 type OperatorKeycloakLoginState =
@@ -73,6 +80,7 @@ interface StructuredErrorSummary {
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabOpsOidcState";
 const oidcVerifierKey = "bankingLabOpsOidcVerifier";
@@ -88,6 +96,7 @@ export function ApiBackedOpsPanel() {
   const [eodState, setEodState] = useState<EodMonitorState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
   const [commandState, setCommandState] = useState<CommandState>({ status: "idle" });
   const [workflowFailureState, setWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
+  const [paymentDispatchState, setPaymentDispatchState] = useState<PaymentOutboxDispatchState>({ status: "idle" });
   const [keycloakOperatorState, setKeycloakOperatorState] = useState<OperatorKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -389,6 +398,35 @@ export function ApiBackedOpsPanel() {
     }
   };
 
+  const runPaymentOutboxDispatchSmoke = async () => {
+    if (!paymentApiBaseUrl || paymentDispatchState.status === "running") {
+      return;
+    }
+    setPaymentDispatchState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "ops01",
+          roles: ["OPS_OPERATOR"]
+        })
+      });
+      const reason = "Browser OPS-404 payment outbox dispatch smoke";
+      const result = await client.dispatchNextPaymentLedgerPosting({
+        requestedBy: "ops01",
+        reason,
+        deadLetterThreshold: 3
+      });
+      if (!result.syntheticOnly) {
+        setPaymentDispatchState({ status: "failed", message: "payment outbox dispatch returned a non-synthetic result" });
+        return;
+      }
+      setPaymentDispatchState({ status: "loaded", result, reason });
+    } catch (error: unknown) {
+      setPaymentDispatchState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment outbox dispatch failure" });
+    }
+  };
+
   const runKeycloakReconciliationAdjustmentSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -494,8 +532,16 @@ export function ApiBackedOpsPanel() {
             <div>
               <dt>Mismatch</dt>
               <dd>
-                {state.item.amountMinor} {state.item.currency}
+                {state.item.mismatchType}: {state.item.amountMinor} {state.item.currency}
               </dd>
+            </div>
+            <div>
+              <dt>Feed</dt>
+              <dd>{state.item.feedFileId ?? "synthetic feed pending"}</dd>
+            </div>
+            <div>
+              <dt>Reason</dt>
+              <dd>{state.item.detectedReason}</dd>
             </div>
           </>
         ) : null}
@@ -615,6 +661,51 @@ export function ApiBackedOpsPanel() {
             <div>
               <dt>Error</dt>
               <dd>{workflowFailureState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-payment-outbox-dispatch">
+        <button type="button" onClick={runPaymentOutboxDispatchSmoke} disabled={!paymentApiBaseUrl || paymentDispatchState.status === "running"}>
+          Run payment outbox dispatch smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment dispatch</dt>
+            <dd>{paymentDispatchLabel(paymentDispatchState)}</dd>
+          </div>
+          {paymentDispatchState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Result</dt>
+                <dd>{paymentDispatchState.result.status}</dd>
+              </div>
+              <div>
+                <dt>Outbox event</dt>
+                <dd>{paymentDispatchState.result.outboxEventId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentDispatchState.result.paymentInstructionId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Ledger</dt>
+                <dd>{paymentDispatchState.result.ledgerTransactionId ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Retry count</dt>
+                <dd>{paymentDispatchState.result.retryCount}</dd>
+              </div>
+              <div>
+                <dt>Reason</dt>
+                <dd>{paymentDispatchState.reason}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentDispatchState.status === "failed" ? (
+            <div>
+              <dt>Payment dispatch error</dt>
+              <dd>{paymentDispatchState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -851,6 +942,19 @@ function workflowFailureLabel(state: WorkflowFailureState): string {
   }
   if (state.status === "rejected") {
     return "workflow state rejected";
+  }
+  return "failed";
+}
+
+function paymentDispatchLabel(state: PaymentOutboxDispatchState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "payment outbox dispatch recorded";
   }
   return "failed";
 }

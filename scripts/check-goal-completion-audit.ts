@@ -135,15 +135,15 @@ requirements.push(runCheck(
 ));
 
 const mappedScenarioCount = paritySuites.reduce((sum, suite) => sum + numberValue(suite.scenarioCount), 0);
-const parityPass = parity?.nodeReferenceTestCount === 42
-  && mappedScenarioCount === 42
+const parityPass = parity?.nodeReferenceTestCount === 43
+  && mappedScenarioCount === 43
   && paritySuites.length > 0
   && paritySuites.every((suite) => suite.targetStatus === "pass");
 requirements.push({
   id: "mapped-parity",
   status: parityPass ? "pass" : "failed",
   detail: parityPass
-    ? "42 mapped Node reference scenarios have targetStatus=pass"
+    ? "43 mapped Node reference scenarios have targetStatus=pass"
     : "Parity scenario map is incomplete or not all targetStatus values are pass"
 });
 

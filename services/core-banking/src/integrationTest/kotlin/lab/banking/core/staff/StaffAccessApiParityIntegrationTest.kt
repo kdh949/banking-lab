@@ -3,6 +3,7 @@ package lab.banking.core.staff
 import java.nio.file.Paths
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -44,6 +45,9 @@ class StaffAccessApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              workflow_events,
+              workflow_instances,
+              outbox_events,
               transaction_correction_requests,
               fee_waiver_requests,
               customer_kyc_review_requests,
@@ -248,6 +252,77 @@ class StaffAccessApiParityIntegrationTest {
 
         assertEquals(1, countRows("audit_events WHERE event_type = 'ACCOUNT_VIEW'"))
         assertEquals(1, countRows("audit_events WHERE event_type = 'TRANSACTION_VIEW'"))
+    }
+
+    @Test
+    fun `staff operational retry queue requires reason and returns failed outbox events`() {
+        seedOperationalRetryEvents()
+
+        mockMvc.perform(
+            get("/api/staff/operations/retry-queue")
+                .header("x-request-id", "REQ-WRK-RETRY-REASON")
+                .queryParam("status", "FAILED")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-WRK-RETRY-REASON"))
+
+        mockMvc.perform(
+            get("/api/staff/operations/retry-queue")
+                .queryParam("status", "FAILED")
+                .queryParam("reason", "Investigate failed synthetic outbox delivery")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andExpect(jsonPath("$.items[0].outboxEventId").value("OBX-FAILED-001"))
+            .andExpect(jsonPath("$.items[0].status").value("FAILED"))
+            .andExpect(jsonPath("$.items[0].retryCount").value(2))
+            .andExpect(jsonPath("$.items[0].retryEligible").value(true))
+            .andExpect(jsonPath("$.items[0].errorMessage").value("Synthetic broker delay"))
+
+        mockMvc.perform(
+            get("/api/staff/operations/retry-queue")
+                .header("x-request-id", "REQ-WRK-RETRY-STATUS")
+                .queryParam("status", "PUBLISHED")
+                .queryParam("reason", "Attempt unsupported queue filter")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-WRK-RETRY-STATUS"))
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'OPERATIONAL_RETRY_QUEUE_VIEW' AND screen_id = 'WRK-002'"))
+        assertEquals(0, countRows("audit_events WHERE payload_json::text LIKE '%Synthetic broker delay%'"))
+    }
+
+    @Test
+    fun `staff workflow timeline requires reason and combines workflow approval and audit events`() {
+        seedStaffWorkflowTimeline()
+
+        mockMvc.perform(
+            get("/api/staff/workflows/TX-TIMELINE-001/timeline")
+                .header("x-request-id", "REQ-WRK-TIMELINE-REASON")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-WRK-TIMELINE-REASON"))
+
+        val response = mockMvc.perform(
+            get("/api/staff/workflows/TX-TIMELINE-001/timeline")
+                .queryParam("reason", "Review workflow state before checker action")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.auditEventId").exists())
+            .andReturn()
+
+        val root = objectMapper.readTree(response.response.contentAsString)
+        val items = root.path("items")
+        val sources = items.map { it.path("sourceType").asText() }.toSet()
+        assertEquals(setOf("APPROVAL", "AUDIT", "WORKFLOW"), sources)
+        assertTrue(items.any { it.path("eventType").asText() == "WAITING_APPROVAL" })
+        assertTrue(items.all { it.path("businessReferenceId").asText() == "TX-TIMELINE-001" })
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'WORKFLOW_TIMELINE_VIEW' AND screen_id = 'WRK-003'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'WORKFLOW_TIMELINE_VIEW' AND payload_json::text LIKE '%Timeline audit reason%'"))
     }
 
     @Test
@@ -1350,6 +1425,95 @@ class StaffAccessApiParityIntegrationTest {
             emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
+
+    private fun seedOperationalRetryEvents() {
+        jdbc.update(
+            """
+            INSERT INTO outbox_events (
+              outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
+              payload_json, headers_json, status, retry_count, next_retry_at, error_message
+            )
+            VALUES
+              (
+                'OBX-FAILED-001', 'ledger_transaction', 'TX-OPEN-001',
+                'LedgerTransactionPosted', 'OBX-FAILED-001',
+                '{"syntheticOnly":true}'::jsonb, '{"syntheticOnly":true}'::jsonb,
+                'FAILED', 2, now() - interval '5 minutes', 'Synthetic broker delay'
+              ),
+              (
+                'OBX-DEAD-001', 'ledger_transaction', 'TX-OPEN-001',
+                'LedgerTransactionDeadLettered', 'OBX-DEAD-001',
+                '{"syntheticOnly":true}'::jsonb, '{"syntheticOnly":true}'::jsonb,
+                'DEAD_LETTER', 4, NULL, 'Synthetic retry exhausted'
+              ),
+              (
+                'OBX-PUBLISHED-001', 'ledger_transaction', 'TX-OPEN-001',
+                'LedgerTransactionPublished', 'OBX-PUBLISHED-001',
+                '{"syntheticOnly":true}'::jsonb, '{"syntheticOnly":true}'::jsonb,
+                'PUBLISHED', 0, NULL, NULL
+              )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
+
+    private fun seedStaffWorkflowTimeline() {
+        jdbc.update(
+            """
+            INSERT INTO audit_events (
+              audit_event_id, event_type, actor_type, actor_id, actor_role,
+              screen_id, business_reference_id, reason, payload_hash, payload_json
+            )
+            VALUES (
+              'AUD-TIMELINE-001', 'COMMAND_REQUESTED', 'OPERATOR', 'ops01', 'OPS_MANAGER',
+              'LED-103', 'TX-TIMELINE-001', 'Timeline audit reason',
+              'timeline-audit-hash', '{"syntheticOnly":true}'::jsonb
+            )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO operator_approvals (
+              approval_id, business_type, business_reference_id, requested_by,
+              request_reason, after_snapshot_json, status, audit_event_id
+            )
+            VALUES (
+              'APR-TIMELINE-001', 'TRANSACTION_CORRECTION', 'TX-TIMELINE-001', 'ops01',
+              'Timeline approval reason', '{"syntheticOnly":true}'::jsonb, 'PENDING', 'AUD-TIMELINE-001'
+            )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO workflow_instances (
+              workflow_instance_id, workflow_type, business_reference_id, status, started_by
+            )
+            VALUES (
+              'WFI-TIMELINE-001', 'TRANSACTION_CORRECTION', 'TX-TIMELINE-001', 'WAITING_APPROVAL', 'ops01'
+            )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO workflow_events (
+              workflow_event_id, workflow_instance_id, event_type, actor_id, payload_json
+            )
+            VALUES
+              (
+                'WFE-TIMELINE-001-STARTED', 'WFI-TIMELINE-001', 'WORKFLOW_STARTED', 'ops01',
+                '{"syntheticOnly":true}'::jsonb
+              ),
+              (
+                'WFE-TIMELINE-001-WAITING', 'WFI-TIMELINE-001', 'WAITING_APPROVAL', 'ops01',
+                '{"syntheticOnly":true}'::jsonb
+              )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+    }
 
     private fun accountStatus(): String? =
         jdbc.queryForObject(

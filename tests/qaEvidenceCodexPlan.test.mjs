@@ -17,9 +17,9 @@ test("QA parity matrix matches the mapped Node reference scenario count", async 
   const matrix = await readFile("docs/test-evidence/parity-coverage-matrix.md", "utf8");
   const mappedScenarioCount = parity.suites.reduce((sum, suite) => sum + suite.scenarioCount, 0);
 
-  assert.equal(parity.nodeReferenceTestCount, 42);
-  assert.equal(mappedScenarioCount, 42);
-  assert.match(matrix, /Total mapped reference scenarios: 42/);
+  assert.equal(parity.nodeReferenceTestCount, 43);
+  assert.equal(mappedScenarioCount, 43);
+  assert.match(matrix, /Total mapped reference scenarios: 43/);
 });
 
 test("QA structured error gap report covers every required error family", async () => {

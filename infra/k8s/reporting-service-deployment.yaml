@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: banking-lab
+  labels:
+    app.kubernetes.io/part-of: banking-lab
+    app.kubernetes.io/name: reporting-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reporting-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reporting-service
+    spec:
+      containers:
+        - name: reporting-service
+          image: banking-lab/reporting-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8090
+              name: http
+          envFrom:
+            - configMapRef:
+                name: banking-lab-config
+            - secretRef:
+                name: banking-lab-secret
+          env:
+            - name: PORT
+              value: "8090"
+            - name: BANKING_LAB_SYNTHETIC_ONLY
+              value: "true"
+            - name: BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED
+              value: "false"
+            - name: BANKING_LAB_OTEL_SERVICE_NAME
+              value: "banking-lab-reporting-service"
+            - name: BANKING_LAB_SECURITY_AUDIENCE
+              value: "reporting-service-api"
+            - name: BANKING_LAB_REPORTING_DATABASE_URL
+              value: "jdbc:postgresql://postgres:5432/banking_lab"
+            - name: BANKING_LAB_REPORTING_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: BANKING_LAB_REPORTING_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: banking-lab-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: SPRING_FLYWAY_TABLE
+              value: "reporting_flyway_schema_history"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
