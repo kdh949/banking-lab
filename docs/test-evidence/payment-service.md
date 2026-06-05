@@ -25,6 +25,9 @@ This evidence covers the first synthetic Payment Service slice:
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
   and ops payment outbox dispatch manifests, plus TypeScript API client methods
   for the payment-service OpenAPI operations.
+- Payment-service route-level authorization filter, signed JWKS JWT decoder,
+  dev-only simulator token decoder, and route role policies for instruction,
+  autopay, settlement, due-execution, and Outbox dispatch APIs.
 
 The slice does not claim full Payment Service completion. Runtime publication to
 Kafka/Redpanda, a scheduled/background worker runner around the dispatcher,
@@ -63,7 +66,8 @@ need local file-lock socket and Docker access.
   with no unit test sources.
 - `npm run test:payment-service:integration`: pass; PostgreSQL Testcontainers
   ran `PaymentInstructionIntegrationTest`, `PaymentAutopayIntegrationTest`, and
-  `PaymentOutboxDispatcherIntegrationTest`.
+  `PaymentOutboxDispatcherIntegrationTest`, and
+  `PaymentAuthorizationIntegrationTest`.
 - `npm run test:core-banking:integration -- --tests ...LedgerCommandServiceIntegrationTest --tests ...LedgerRuntimeApiParityIntegrationTest --rerun-tasks`:
   pass; PostgreSQL Testcontainers verified bill-payment settlement postings,
   idempotent replay, structured API access, and service-role denial.
@@ -151,6 +155,20 @@ Manifest and API client coverage verifies:
   outbox dispatch, and autopay methods matching the payment-service OpenAPI
   operation set.
 
+`PaymentAuthorizationIntegrationTest` verifies:
+
+- missing bearer tokens are rejected with
+  `PAYMENT_AUTHORIZATION_POLICY_VIOLATION`;
+- branch staff cannot create customer payment instructions, while `CUSTOMER`
+  tokens can create and staff roles can read payment instructions;
+- customer tokens cannot record settlement callbacks or run operational
+  dispatch/due-execution APIs;
+- `PAYMENT_SERVICE` tokens can record payment settlement, execute due autopay,
+  and dispatch the durable payment Outbox route;
+- customer autopay pause/resume/cancel paths stay customer-role scoped;
+- authorization tests use only dev-enabled simulator tokens, while the runtime
+  also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
+
 ## Synthetic Boundary
 
 The migration seeds only `SYN-BILLER-*` billers with
@@ -164,5 +182,5 @@ This is still a partial slice. A successful bill payment can now be dispatched
 from durable payment-service outbox state to a core-banking posting port,
 settled idempotently, and created from durable autopay schedules, but
 Kafka/Redpanda runtime publication, a scheduled worker runner, dedicated Next.js
-payment panels, route-level Keycloak policy, and staff correction maker-checker
-flows are still pending.
+payment panels, live payment-service Keycloak realm smoke evidence, and staff
+correction maker-checker flows are still pending.
