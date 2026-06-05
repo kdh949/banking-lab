@@ -136,6 +136,18 @@ test("staff-terminal exposes PAY101 audited payment inquiry through the payment 
   assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
 });
 
+test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
+  const panel = await readFile("apps/ops-console/src/components/ApiBackedOpsPanel.tsx", "utf8");
+  const manifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-404.payment-outbox-dispatch.json", "utf8"));
+
+  assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
+  assert.match(panel, /data-testid="api-backed-payment-outbox-dispatch"/);
+  assert.match(panel, /dispatchNextPaymentLedgerPosting/);
+  assert.match(panel, /Browser OPS-404 payment outbox dispatch smoke/);
+  assert.equal(manifest.api.command, "POST /api/payments/outbox/ledger-postings/dispatch-next");
+  assert.equal(manifest.audit.reasonRequired, true);
+});
+
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {
   const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");

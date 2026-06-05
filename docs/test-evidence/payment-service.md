@@ -30,6 +30,9 @@ This evidence covers the first synthetic Payment Service slice:
   and customer autopay create/pause/resume/cancel smoke coverage.
 - Staff Terminal API-backed PAY-101 payment instruction inquiry that requires a
   business reason and returns a durable `PAU-*` payment access audit id.
+- Ops Console API-backed OPS-404 payment Outbox dispatch panel that calls the
+  durable dispatch route and displays published, retry, dead-letter, or
+  no-pending-event outcomes.
 - Payment-service route-level authorization filter, signed JWKS JWT decoder,
   dev-only simulator token decoder, and route role policies for instruction,
   autopay, settlement, due-execution, and Outbox dispatch APIs.
@@ -37,8 +40,8 @@ This evidence covers the first synthetic Payment Service slice:
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 
 The slice does not claim full Payment Service completion. Runtime publication to
-Kafka/Redpanda, the ops payment Outbox dispatch panel, and staff payment
-correction maker-checker flows remain future work.
+Kafka/Redpanda and staff payment correction maker-checker flows remain future
+work.
 
 ## Commands Run
 
@@ -55,8 +58,10 @@ npm run validate:manifests
 npm run packages:typecheck
 npm run next:customer-web:typecheck
 npm run next:staff-terminal:typecheck
+npm run next:ops-console:typecheck
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
 npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts
+npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts
 ```
 
 The Gradle-backed commands were first attempted inside the managed sandbox and
@@ -83,7 +88,7 @@ need local file-lock socket and Docker access.
   idempotent replay, structured API access, and service-role denial.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass; Kotlin unit suite
   compiled and ran after sandbox escalation.
-- `npm test`: pass; 155 Node oracle and evidence tests passed.
+- `npm test`: pass; 156 Node oracle and evidence tests passed.
 - `npm run node:retirement-gate`: pass; gate remains ready from existing
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
@@ -96,6 +101,8 @@ need local file-lock socket and Docker access.
   payment-service panel and environment variable fallback.
 - `npm run next:staff-terminal:typecheck`: pass; Staff Terminal compiled with
   the PAY-101 reason-required payment inquiry panel.
+- `npm run next:ops-console:typecheck`: pass; Ops Console compiled with the
+  OPS-404 payment Outbox dispatch panel.
 - `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts`: pass;
   local shell and API-gated customer E2E coverage ran, with payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
@@ -103,6 +110,9 @@ need local file-lock socket and Docker access.
   pass; local shell and API-gated staff E2E coverage ran, with PAY-101
   payment-service smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL`
   is configured.
+- `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts`: pass;
+  local shell and API-gated ops E2E coverage ran, with OPS-404 payment-service
+  smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
 
 ## Integration Coverage
 
@@ -182,6 +192,9 @@ Manifest and API client coverage verifies:
 - Staff Terminal renders `data-testid="api-backed-staff-payment-inquiry"` and
   uses the same payment-service URL convention to exercise PAY-101 lookup with a
   business reason, `PAYMENT_INSTRUCTION_VIEW` audit, and `PAU-*` audit id.
+- Ops Console renders `data-testid="api-backed-payment-outbox-dispatch"` and
+  uses the same payment-service URL convention to exercise OPS-404 durable
+  Outbox dispatch with an operator reason and retry/dead-letter status display.
 
 `PaymentAuthorizationIntegrationTest` verifies:
 
@@ -225,8 +238,8 @@ institution API, or real money path is configured.
 
 This is still a partial slice. A successful bill payment can now be created
 from Customer Web, queried from Staff Terminal with reason-required audit,
-dispatched from durable payment-service outbox state to a core-banking posting
-port, settled idempotently, and created from durable autopay schedules, but
-Kafka/Redpanda runtime publication, OPS-404 dedicated Outbox dispatch UI, live
-payment-service Keycloak realm smoke evidence, and staff correction
-maker-checker flows are still pending.
+dispatched from Ops Console through durable payment-service outbox state to a
+core-banking posting port, settled idempotently, and created from durable
+autopay schedules, but Kafka/Redpanda runtime publication, live payment-service
+Keycloak realm smoke evidence, and staff correction maker-checker flows are
+still pending.
