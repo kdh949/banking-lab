@@ -5,6 +5,8 @@ import {
   createBankingApiClient,
   type AuditEventDto,
   type NotificationDeliveryDto,
+  type ParameterChangeRequestResponse,
+  type ParameterListResponse,
   type ReportArtifactDto
 } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
@@ -35,6 +37,33 @@ type ReportingArtifactState =
   | { readonly status: "loaded"; readonly auditEventId: string; readonly artifacts: readonly ReportArtifactDto[] }
   | { readonly status: "failed"; readonly message: string };
 
+type AuditParameterState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly auditEventId: string;
+      readonly parameterKey: string;
+      readonly currentValue: string;
+      readonly currentVersionId: string;
+      readonly scheduledCount: number;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
+type AuditParameterCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "requested";
+      readonly requestId: string;
+      readonly approvalId: string;
+      readonly parameterKey: string;
+      readonly requestedValue: string;
+      readonly effectiveFrom: string;
+      readonly requestStatus: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
@@ -51,6 +80,10 @@ export function ApiBackedAuditPanel() {
   const [reportingArtifactState, setReportingArtifactState] = useState<ReportingArtifactState>(() =>
     reportingApiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
+  const [auditParameterState, setAuditParameterState] = useState<AuditParameterState>(() =>
+    apiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
+  const [auditParameterCommandState, setAuditParameterCommandState] = useState<AuditParameterCommandState>({ status: "idle" });
   const [keycloakAuditState, setKeycloakAuditState] = useState<KeycloakAuditState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -166,6 +199,29 @@ export function ApiBackedAuditPanel() {
   }, []);
 
   useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    auditParameterClient()
+      .auditParameters("Browser AUD-201 parameter read smoke")
+      .then((response) => {
+        if (!cancelled) {
+          setAuditParameterState(toAuditParameterState(response));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setAuditParameterState({ status: "failed", message: error instanceof Error ? error.message : "Unknown audit parameter API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!apiBaseUrl || !keycloakBaseUrl) {
       return;
     }
@@ -269,6 +325,37 @@ export function ApiBackedAuditPanel() {
       setKeycloakAuditState({ status: "failed", message: error instanceof Error ? error.message : "Unknown Keycloak redirect failure" });
     }
   }
+
+  const runAuditParameterChangeSmoke = async () => {
+    if (!apiBaseUrl || auditParameterCommandState.status === "running") {
+      return;
+    }
+    setAuditParameterCommandState({ status: "running" });
+    try {
+      const current = auditParameterState.status === "loaded"
+        ? auditParameterState
+        : toAuditParameterState(await auditParameterClient().auditParameters("Browser AUD-201 parameter command read"));
+      if (current.status !== "loaded") {
+        setAuditParameterCommandState({ status: "failed", message: "AUD retentionYears parameter was not loaded" });
+        return;
+      }
+      const requestedValue = nextNumericParameterValue(current.currentValue, 1);
+      const effectiveFrom = tomorrowIsoDate();
+      const response = await auditParameterClient(true).requestAuditParameterChange({
+        parameterKey: "retentionYears",
+        scheduledValue: requestedValue,
+        effectiveFrom,
+        rollbackPlan: "Create a future synthetic rollback version from the prior audit retention period",
+        requestedBy: "auditor01",
+        requestedByRole: "AUDITOR",
+        reason: "Browser AUD-201 parameter change smoke",
+        idempotencyKey: `AUD-PARAM-${globalThis.crypto.randomUUID()}`
+      });
+      setAuditParameterCommandState(toAuditParameterCommandState(response));
+    } catch (error: unknown) {
+      setAuditParameterCommandState({ status: "failed", message: error instanceof Error ? error.message : "Unknown audit parameter failure" });
+    }
+  };
 
   return (
     <section className="api-panel" aria-label="API-backed audit hash chain">
@@ -401,6 +488,85 @@ export function ApiBackedAuditPanel() {
           </div>
         ) : null}
       </dl>
+      <div className="api-actions" data-testid="api-backed-audit-parameters">
+        <button
+          type="button"
+          onClick={runAuditParameterChangeSmoke}
+          disabled={!apiBaseUrl || auditParameterCommandState.status === "running"}
+        >
+          Run audit parameter change smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Parameters</dt>
+            <dd>{auditParameterLabel(auditParameterState)}</dd>
+          </div>
+          {auditParameterState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Parameter</dt>
+                <dd>{auditParameterState.parameterKey}</dd>
+              </div>
+              <div>
+                <dt>Current</dt>
+                <dd>{auditParameterState.currentValue}</dd>
+              </div>
+              <div>
+                <dt>Current version</dt>
+                <dd>{auditParameterState.currentVersionId}</dd>
+              </div>
+              <div>
+                <dt>Scheduled</dt>
+                <dd>{auditParameterState.scheduledCount}</dd>
+              </div>
+              <div>
+                <dt>Audit</dt>
+                <dd>{auditParameterState.auditEventId}</dd>
+              </div>
+            </>
+          ) : null}
+          {auditParameterState.status === "failed" ? (
+            <div>
+              <dt>Parameter error</dt>
+              <dd>{auditParameterState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Command</dt>
+            <dd>{auditParameterCommandLabel(auditParameterCommandState)}</dd>
+          </div>
+          {auditParameterCommandState.status === "requested" ? (
+            <>
+              <div>
+                <dt>Request</dt>
+                <dd>{auditParameterCommandState.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{auditParameterCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Requested value</dt>
+                <dd>{auditParameterCommandState.requestedValue}</dd>
+              </div>
+              <div>
+                <dt>Effective from</dt>
+                <dd>{auditParameterCommandState.effectiveFrom}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{auditParameterCommandState.requestStatus}</dd>
+              </div>
+            </>
+          ) : null}
+          {auditParameterCommandState.status === "failed" ? (
+            <div>
+              <dt>Command error</dt>
+              <dd>{auditParameterCommandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-audit-keycloak-login">
         <button
           type="button"
@@ -507,6 +673,92 @@ function reportingArtifactStatusLabel(state: ReportingArtifactState): string {
     return "reporting artifacts loaded";
   }
   return "reporting API request failed";
+}
+
+function auditParameterLabel(state: AuditParameterState): string {
+  if (state.status === "offline") {
+    return "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading";
+  }
+  if (state.status === "loaded") {
+    return "audit parameters loaded";
+  }
+  return "failed";
+}
+
+function auditParameterCommandLabel(state: AuditParameterCommandState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "requested") {
+    return "audit parameter change requested";
+  }
+  return "failed";
+}
+
+function toAuditParameterState(response: ParameterListResponse): AuditParameterState {
+  const parameter = response.items.find((item) => item.parameterKey === "retentionYears");
+  if (!parameter) {
+    return { status: "failed", message: "retentionYears parameter missing" };
+  }
+  return {
+    status: "loaded",
+    auditEventId: response.auditEventId,
+    parameterKey: parameter.parameterKey,
+    currentValue: parameter.currentValue,
+    currentVersionId: parameter.currentVersionId,
+    scheduledCount: parameter.scheduled.length
+  };
+}
+
+function toAuditParameterCommandState(response: ParameterChangeRequestResponse): AuditParameterCommandState {
+  return {
+    status: "requested",
+    requestId: response.item.requestId,
+    approvalId: response.approval?.approvalId ?? "approval-missing",
+    parameterKey: response.item.parameterKey,
+    requestedValue: response.item.requestedValue,
+    effectiveFrom: response.item.effectiveFrom,
+    requestStatus: response.item.status
+  };
+}
+
+function nextNumericParameterValue(currentValue: string, increment: number): number {
+  const parsed = Number.parseInt(currentValue, 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("AUD retentionYears parameter is not numeric");
+  }
+  return parsed + increment;
+}
+
+function tomorrowIsoDate(): string {
+  const value = new Date();
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function auditParameterClient(stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: "auditor01",
+      roles: ["AUDITOR"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
 }
 
 function clearOidcSession(): void {

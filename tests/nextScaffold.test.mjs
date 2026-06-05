@@ -170,6 +170,10 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.match(panel, /Artifact Workflow/);
   assert.match(panel, /workflowTimeline/);
   assert.match(panel, /data-testid="api-backed-reporting-artifact-history"/);
+  assert.match(panel, /data-testid="api-backed-audit-parameters"/);
+  assert.match(panel, /auditParameters/);
+  assert.match(panel, /requestAuditParameterChange/);
+  assert.match(panel, /Browser AUD-201 parameter change smoke/);
   assert.match(client, /ReportArtifactListResponse/);
   assert.match(loader, /audit-console/);
   assert.equal(deliveryManifest.type, "INQUIRY");
