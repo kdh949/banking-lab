@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/notification-delivery-failed.schema.json",
+  "title": "NotificationDeliveryFailed",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "deliveryRequestId",
+    "deliveryAttemptId",
+    "attemptNo",
+    "eventType",
+    "recipientId",
+    "channel",
+    "providerKind",
+    "status",
+    "requestedBy",
+    "reason",
+    "errorMessage",
+    "retryable",
+    "deadLetterThreshold",
+    "syntheticOnly",
+    "realProviderUsed",
+    "realPiiExposed"
+  ],
+  "properties": {
+    "contractVersion": { "const": "2026-06-05" },
+    "deliveryRequestId": { "type": "string", "pattern": "^NDL-" },
+    "deliveryAttemptId": { "type": "string", "pattern": "^NAT-" },
+    "attemptNo": { "type": "integer", "minimum": 1 },
+    "eventType": { "type": "string" },
+    "recipientId": { "type": "string" },
+    "channel": { "enum": ["SMS", "EMAIL", "PUSH", "CHAT"] },
+    "providerKind": {
+      "enum": ["SYNTHETIC_SMS_SINK", "SYNTHETIC_EMAIL_SINK", "SYNTHETIC_PUSH_SINK", "SYNTHETIC_CHAT_SINK"]
+    },
+    "status": { "const": "FAILED" },
+    "requestedBy": { "type": "string" },
+    "reason": { "type": "string" },
+    "errorMessage": { "type": "string", "maxLength": 500 },
+    "retryable": { "const": true },
+    "deadLetterThreshold": { "type": "integer", "minimum": 1 },
+    "syntheticOnly": { "const": true },
+    "realProviderUsed": { "const": false },
+    "realPiiExposed": { "const": false }
+  }
+}

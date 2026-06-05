@@ -1,33 +1,41 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://banking-lab.synthetic/contracts/events/notification-delivery-requested.schema.json",
-  "title": "NotificationDeliveryRequested",
+  "$id": "https://banking-lab.synthetic/contracts/events/notification-delivery-delivered.schema.json",
+  "title": "NotificationDeliveryDelivered",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "contractVersion",
     "deliveryRequestId",
-    "sourceEventId",
+    "deliveryAttemptId",
     "eventType",
     "recipientId",
     "channel",
     "providerKind",
-    "maskedMessage",
+    "status",
+    "requestedBy",
+    "reason",
+    "deliveredAt",
     "syntheticOnly",
-    "realProviderUsed"
+    "realProviderUsed",
+    "realPiiExposed"
   ],
   "properties": {
     "contractVersion": { "const": "2026-06-05" },
     "deliveryRequestId": { "type": "string", "pattern": "^NDL-" },
-    "sourceEventId": { "type": "string" },
+    "deliveryAttemptId": { "type": "string", "pattern": "^NAT-" },
     "eventType": { "type": "string" },
     "recipientId": { "type": "string" },
     "channel": { "enum": ["SMS", "EMAIL", "PUSH", "CHAT"] },
     "providerKind": {
       "enum": ["SYNTHETIC_SMS_SINK", "SYNTHETIC_EMAIL_SINK", "SYNTHETIC_PUSH_SINK", "SYNTHETIC_CHAT_SINK"]
     },
-    "maskedMessage": { "type": "string" },
+    "status": { "const": "DELIVERED" },
+    "requestedBy": { "type": "string" },
+    "reason": { "type": "string" },
+    "deliveredAt": { "type": "string", "format": "date-time" },
     "syntheticOnly": { "const": true },
-    "realProviderUsed": { "const": false }
+    "realProviderUsed": { "const": false },
+    "realPiiExposed": { "const": false }
   }
 }

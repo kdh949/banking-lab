@@ -39,6 +39,30 @@ channels:
       NotificationDeliveryRequested:
         payload:
           $ref: ../events/notification-delivery-requested.schema.json
+  notification.delivery.attempted:
+    address: notification.delivery.attempted
+    messages:
+      NotificationDeliveryAttempted:
+        payload:
+          $ref: ../events/notification-delivery-attempted.schema.json
+  notification.delivery.delivered:
+    address: notification.delivery.delivered
+    messages:
+      NotificationDeliveryDelivered:
+        payload:
+          $ref: ../events/notification-delivery-delivered.schema.json
+  notification.delivery.failed:
+    address: notification.delivery.failed
+    messages:
+      NotificationDeliveryFailed:
+        payload:
+          $ref: ../events/notification-delivery-failed.schema.json
+  notification.delivery.dead-lettered:
+    address: notification.delivery.dead-lettered
+    messages:
+      NotificationDeliveryDeadLettered:
+        payload:
+          $ref: ../events/notification-delivery-dead-lettered.schema.json
 operations:
   publishLedgerTransactionPosted:
     action: send
@@ -64,3 +88,19 @@ operations:
     action: send
     channel:
       $ref: '#/channels/notification.delivery.requested'
+  publishNotificationDeliveryAttempted:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.attempted'
+  publishNotificationDeliveryDelivered:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.delivered'
+  publishNotificationDeliveryFailed:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.failed'
+  publishNotificationDeliveryDeadLettered:
+    action: send
+    channel:
+      $ref: '#/channels/notification.delivery.dead-lettered'
