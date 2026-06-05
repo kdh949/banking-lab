@@ -13,6 +13,9 @@ This evidence covers the first synthetic Notification Service slice:
   delivery requests, delivery attempts, and dead-letter records.
 - Event-consumption service logic that creates masked synthetic delivery
   requests from domain events.
+- Kafka/Redpanda outbox envelope consumption through
+  `NotificationKafkaConsumer`, plus a disabled-by-default runtime worker and
+  Micrometer counters.
 - Retry/failure and dead-letter state transitions.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
@@ -21,10 +24,10 @@ This evidence covers the first synthetic Notification Service slice:
   decoder, dev-only simulator token decoder, and route role policies for event
   consumption, delivery reads, failure recording, and delivered-state marking.
 
-The slice does not claim full Notification Service completion. Runtime
-Kafka/Redpanda consumption, customer preference screens, admin template
-approval, live notification-service Keycloak smoke evidence, and live provider
-integrations are not in scope. Live providers remain prohibited.
+The slice does not claim full Notification Service completion. Customer
+preference screens, admin template approval, live Compose notification-consumer
+smoke evidence, live notification-service Keycloak smoke evidence, and live
+provider integrations are not in scope. Live providers remain prohibited.
 
 ## Commands Run
 
@@ -49,10 +52,11 @@ were rerun sequentially with `--rerun-tasks`.
 ## Passing Tests
 
 - `npm run test:notification-service:integration -- --rerun-tasks`: pass;
-  PostgreSQL Testcontainers ran `NotificationDeliveryIntegrationTest` and
-  `NotificationAuthorizationIntegrationTest`.
+  PostgreSQL and Redpanda Testcontainers ran
+  `NotificationDeliveryIntegrationTest`, `NotificationAuthorizationIntegrationTest`,
+  and `NotificationKafkaConsumerIntegrationTest`.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
-  notification-service Kotlin compiled with no unit test sources.
+  notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
   service API client methods compile.
 
@@ -80,6 +84,28 @@ were rerun sequentially with `--rerun-tasks`.
 - authorization tests use only dev-enabled simulator tokens, while the runtime
   also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
 
+`NotificationKafkaConsumerIntegrationTest` verifies:
+
+- Redpanda-backed outbox envelopes are consumed through Kafka clients and routed
+  into the same durable notification inbox path as the REST event API;
+- duplicate broker records with the same `outboxEventId` create one inbox row,
+  one delivery request, and one pending attempt;
+- payment account aliases such as `debitAccountId` are normalized into the
+  template payload and masked in the rendered delivery message and stored
+  masked payload JSON;
+- raw phone numbers are removed from stored masked payload JSON;
+- unsupported synthetic event types are committed as skipped records without
+  creating notification delivery side effects.
+
+`NotificationEventConsumerWorkerTest` verifies:
+
+- worker configuration is converted into `NotificationKafkaConsumerConfig`;
+- batch size, group id, topic, client id, requested actor, default channel, and
+  supported event types are passed to the consumer;
+- Micrometer counters record polled, processed, duplicate, and created-delivery
+  counts;
+- disabled workers do not auto-start.
+
 API client typecheck verifies:
 
 - `consumeNotificationEvent`, `getNotificationDelivery`,
@@ -91,9 +117,12 @@ API client typecheck verifies:
 The migration constrains provider kinds to `SYNTHETIC_SMS_SINK`,
 `SYNTHETIC_EMAIL_SINK`, and `SYNTHETIC_PUSH_SINK`. It does not contain real SMS,
 email, push, chat, telecom, or external notification provider configuration.
+The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=true`
+in payload or headers before creating delivery side effects.
 
 ## Remaining Risk
 
-This is a foundation slice. Runtime Kafka consumption from core-banking Outbox,
-template maker-checker approval, customer preference APIs, admin screens, and
-live notification-service Keycloak smoke evidence remain future work.
+This is still a partial feature slice. Live Compose evidence for the
+notification-service Kafka worker, template maker-checker approval, customer
+preference APIs, admin screens, and live notification-service Keycloak smoke
+evidence remain future work.

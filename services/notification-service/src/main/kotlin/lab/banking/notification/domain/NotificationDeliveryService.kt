@@ -202,7 +202,12 @@ class NotificationDeliveryService(
             val normalizedKey = key.lowercase()
             when {
                 value == null -> null
-                "accountno" in normalizedKey || "account_no" in normalizedKey -> maskAccount(value.toString())
+                "accountno" in normalizedKey ||
+                    "account_no" in normalizedKey ||
+                    "accountid" in normalizedKey ||
+                    "account_id" in normalizedKey ||
+                    "accountnumber" in normalizedKey ||
+                    "account_number" in normalizedKey -> maskAccount(value.toString())
                 "phone" in normalizedKey || "email" in normalizedKey || "name" in normalizedKey -> "[MASKED]"
                 "raw" in normalizedKey || "pii" in normalizedKey -> "[MASKED]"
                 else -> value
