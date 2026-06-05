@@ -33,7 +33,9 @@ This evidence covers the first synthetic Payment Service slice:
   integration.
 - Payment-service Kafka outbox publisher that publishes non-ledger payment
   domain events to Redpanda/Kafka after durable persistence while leaving
-  `PaymentLedgerPostingRequested` rows on the core-ledger dispatch path.
+  `PaymentLedgerPostingRequested` rows on the core-ledger dispatch path, with
+  Redpanda Testcontainers coverage for cancellation plus dispatcher-created
+  failure, retry-scheduled, and dead-letter lifecycle envelopes.
 - Configurable payment domain-event publisher worker with bounded batch polling,
   Micrometer metrics, retry/dead-letter settings, and synthetic-only
   observability logs for durable non-ledger payment events, including payment
@@ -160,7 +162,8 @@ need local file-lock socket and Docker access.
   cancellation maker-checker route policy and separation controls.
 - `npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks`:
   pass after sandbox escalation; PostgreSQL and Redpanda Testcontainers proved
-  payment-domain event publication without publishing ledger command events.
+  cancellation, failure, retry-scheduled, and dead-letter payment-domain event
+  publication without publishing ledger command events.
 - `npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks`:
   pass after sandbox escalation; the live smoke test compiled and skipped the
   runtime path because `BANKING_LAB_LIVE_PAYMENT_DOMAIN_PUBLISHER_COMPOSE_PROJECT`
@@ -457,11 +460,15 @@ Manifest and API client coverage verifies:
 - `PaymentInstructionCanceled` is published as a Kafka envelope containing the
   persisted outbox id, aggregate id, idempotency key, payload, and
   `sourceService=payment-service`;
-- `PaymentLedgerPostingRequested` remains `PENDING` and is not published by the
-  domain-event publisher, preserving the existing core-banking ledger dispatch
-  boundary;
-- successful broker acknowledgement marks only the published payment domain
-  event `PUBLISHED`.
+- dispatcher-created `PaymentInstructionFailed`,
+  `PaymentInstructionRetryScheduled`, and `PaymentInstructionDeadLettered`
+  lifecycle rows are published as Kafka envelopes and retain synthetic-only,
+  no-real-network, and no-direct-ledger-write payload controls;
+- `PaymentLedgerPostingRequested` rows remain on the core-ledger dispatch path
+  in `PENDING`, retry `FAILED`, or terminal `DEAD_LETTER` state and are not
+  published by the domain-event publisher;
+- successful broker acknowledgement marks only the published non-ledger payment
+  domain events `PUBLISHED`.
 
 `LivePaymentDomainEventPublisherComposeSmokeIntegrationTest` verifies:
 
