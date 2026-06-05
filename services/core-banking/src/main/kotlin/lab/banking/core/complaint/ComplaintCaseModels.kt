@@ -78,3 +78,61 @@ data class CustomerComplaintConfirmCommand(
 data class CustomerComplaintConfirmResponse(
     val item: ComplaintCaseDto
 )
+
+data class CustomerComplaintMaterialCommand(
+    val customerId: String? = null,
+    val materialType: String? = null,
+    val fileName: String? = null,
+    val description: String? = null,
+    val syntheticStorageRef: String? = null,
+    val reason: String? = null
+)
+
+data class ComplaintMaterialDto(
+    val materialId: String,
+    val caseId: String,
+    val customerId: String,
+    val materialType: String,
+    val fileName: String,
+    val description: String?,
+    val syntheticStorageRef: String,
+    val submittedBy: String,
+    val createdAt: OffsetDateTime
+)
+
+data class CustomerComplaintMaterialResponse(
+    val item: ComplaintCaseDto,
+    val material: ComplaintMaterialDto
+)
+
+data class CustomerComplaintReopenCommand(
+    val customerId: String? = null,
+    val reopenReason: String? = null,
+    val reason: String? = null
+)
+
+data class ComplaintReopenRequestDto(
+    val reopenRequestId: String,
+    val caseId: String,
+    val customerId: String,
+    val reopenReason: String,
+    val status: String,
+    val requestedBy: String,
+    val createdAt: OffsetDateTime
+)
+
+data class CustomerComplaintReopenResponse(
+    val item: ComplaintCaseDto,
+    val reopenRequest: ComplaintReopenRequestDto
+)
+
+data class ComplaintTypeGuideDto(
+    val category: String,
+    val description: String,
+    val slaHours: Int,
+    val requiredMaterials: List<String>
+)
+
+data class ComplaintTypeGuideResponse(
+    val items: List<ComplaintTypeGuideDto>
+)

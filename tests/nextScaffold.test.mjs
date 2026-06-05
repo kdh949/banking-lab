@@ -92,6 +92,25 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.equal(deliveryManifest.audit.piiAccess, true);
 });
 
+test("complaint-portal exposes self-service complaint extensions through manifests and API client", async () => {
+  const panel = await readFile("apps/complaint-portal/src/components/ApiBackedComplaintPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const materialManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-103.additional-materials.json", "utf8"));
+  const reopenManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-106.reopen-request.json", "utf8"));
+  const typeGuideManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-107.complaint-type-guide.json", "utf8"));
+
+  assert.match(panel, /data-testid="api-backed-complaint-self-service"/);
+  assert.match(panel, /complaintTypeGuide/);
+  assert.match(panel, /submitCustomerComplaintMaterial/);
+  assert.match(panel, /reopenCustomerComplaint/);
+  assert.match(client, /submitCustomerComplaintMaterial/);
+  assert.match(client, /reopenCustomerComplaint/);
+  assert.match(client, /complaintTypeGuide/);
+  assert.equal(materialManifest.actions[0].target, "POST /api/customer/complaints/{caseId}/materials");
+  assert.equal(reopenManifest.actions[0].target, "POST /api/customer/complaints/{caseId}/reopen-requests");
+  assert.equal(typeGuideManifest.query.endpoint, "GET /api/customer/complaint-types");
+});
+
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {
   const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BankingApiError, createBankingApiClient, type ComplaintCaseDto } from "@banking-lab/api-client";
+import { BankingApiError, createBankingApiClient, type ComplaintCaseDto, type ComplaintTypeGuideDto } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
 type ApiState =
@@ -20,6 +20,24 @@ type WorkflowFailureState =
   | { readonly status: "idle" }
   | { readonly status: "running" }
   | { readonly status: "rejected"; readonly error: StructuredErrorSummary }
+  | { readonly status: "failed"; readonly message: string };
+
+type TypeGuideState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly items: readonly ComplaintTypeGuideDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
+type MaterialSmokeState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | { readonly status: "submitted"; readonly materialId: string; readonly caseId: string; readonly workflow: string }
+  | { readonly status: "failed"; readonly message: string };
+
+type ReopenSmokeState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | { readonly status: "reopened"; readonly reopenRequestId: string; readonly caseId: string; readonly workflow: string }
   | { readonly status: "failed"; readonly message: string };
 
 type HandlerKeycloakLoginState =
@@ -72,6 +90,9 @@ export function ApiBackedComplaintPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
   const [commandState, setCommandState] = useState<CommandState>({ status: "idle" });
   const [workflowFailureState, setWorkflowFailureState] = useState<WorkflowFailureState>({ status: "idle" });
+  const [typeGuideState, setTypeGuideState] = useState<TypeGuideState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+  const [materialSmokeState, setMaterialSmokeState] = useState<MaterialSmokeState>({ status: "idle" });
+  const [reopenSmokeState, setReopenSmokeState] = useState<ReopenSmokeState>({ status: "idle" });
   const [keycloakHandlerState, setKeycloakHandlerState] = useState<HandlerKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -105,6 +126,38 @@ export function ApiBackedComplaintPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: apiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "customer01",
+        roles: ["CUSTOMER"],
+        customerId: "SYN-CUS-001"
+      })
+    });
+
+    client
+      .complaintTypeGuide()
+      .then((response) => {
+        if (!cancelled) {
+          setTypeGuideState({ status: "loaded", items: response.items });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setTypeGuideState({ status: "failed", message: error instanceof Error ? error.message : "Unknown complaint type guide failure" });
         }
       });
 
@@ -344,6 +397,68 @@ export function ApiBackedComplaintPanel() {
     }
   }
 
+  async function runMaterialSmoke() {
+    if (!apiBaseUrl || materialSmokeState.status === "running" || materialSmokeState.status === "submitted") {
+      return;
+    }
+    setMaterialSmokeState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const response = await client.submitCustomerComplaintMaterial("CMP-SYN-001", {
+        customerId: "SYN-CUS-001",
+        materialType: "CUSTOMER_STATEMENT",
+        fileName: "synthetic-statement.pdf",
+        description: "Synthetic metadata only; no real attachment bytes.",
+        reason: "Browser complaint material smoke"
+      });
+      setMaterialSmokeState({
+        status: "submitted",
+        materialId: response.material.materialId,
+        caseId: response.item.caseId,
+        workflow: response.item.status
+      });
+    } catch (error: unknown) {
+      setMaterialSmokeState({ status: "failed", message: error instanceof Error ? error.message : "Unknown material smoke failure" });
+    }
+  }
+
+  async function runReopenSmoke() {
+    if (!apiBaseUrl || reopenSmokeState.status === "running" || reopenSmokeState.status === "reopened") {
+      return;
+    }
+    setReopenSmokeState({ status: "running" });
+    try {
+      const client = createBankingApiClient({
+        baseUrl: apiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const response = await client.reopenCustomerComplaint("CMP-SYN-CLOSED-001", {
+        customerId: "SYN-CUS-001",
+        reopenReason: "Synthetic customer disagrees with the closure outcome.",
+        reason: "Browser complaint reopen smoke"
+      });
+      setReopenSmokeState({
+        status: "reopened",
+        reopenRequestId: response.reopenRequest.reopenRequestId,
+        caseId: response.item.caseId,
+        workflow: response.item.status
+      });
+    } catch (error: unknown) {
+      setReopenSmokeState({ status: "failed", message: error instanceof Error ? error.message : "Unknown reopen smoke failure" });
+    }
+  }
+
   async function runKeycloakCommandSmoke() {
     if (
       !apiBaseUrl ||
@@ -523,6 +638,90 @@ export function ApiBackedComplaintPanel() {
             <div>
               <dt>Error</dt>
               <dd>{workflowFailureState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-complaint-self-service">
+        <button type="button" onClick={runMaterialSmoke} disabled={!apiBaseUrl || materialSmokeState.status === "running" || materialSmokeState.status === "submitted"}>
+          Run material smoke
+        </button>
+        <button type="button" onClick={runReopenSmoke} disabled={!apiBaseUrl || reopenSmokeState.status === "running" || reopenSmokeState.status === "reopened"}>
+          Run reopen smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Type Guide</dt>
+            <dd>{typeGuideLabel(typeGuideState)}</dd>
+          </div>
+          {typeGuideState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Types</dt>
+                <dd>{typeGuideState.items.map((item) => `${item.category}:${item.slaHours}h`).join(", ")}</dd>
+              </div>
+              <div>
+                <dt>Required Materials</dt>
+                <dd>{typeGuideState.items[0]?.requiredMaterials.join(", ") ?? "none"}</dd>
+              </div>
+            </>
+          ) : null}
+          {typeGuideState.status === "failed" ? (
+            <div>
+              <dt>Type Guide Error</dt>
+              <dd>{typeGuideState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Material</dt>
+            <dd>{materialSmokeLabel(materialSmokeState)}</dd>
+          </div>
+          {materialSmokeState.status === "submitted" ? (
+            <>
+              <div>
+                <dt>Material ID</dt>
+                <dd>{materialSmokeState.materialId}</dd>
+              </div>
+              <div>
+                <dt>Material Case</dt>
+                <dd>{materialSmokeState.caseId}</dd>
+              </div>
+              <div>
+                <dt>Material Workflow</dt>
+                <dd>{materialSmokeState.workflow}</dd>
+              </div>
+            </>
+          ) : null}
+          {materialSmokeState.status === "failed" ? (
+            <div>
+              <dt>Material Error</dt>
+              <dd>{materialSmokeState.message}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Reopen</dt>
+            <dd>{reopenSmokeLabel(reopenSmokeState)}</dd>
+          </div>
+          {reopenSmokeState.status === "reopened" ? (
+            <>
+              <div>
+                <dt>Reopen Request</dt>
+                <dd>{reopenSmokeState.reopenRequestId}</dd>
+              </div>
+              <div>
+                <dt>Reopen Case</dt>
+                <dd>{reopenSmokeState.caseId}</dd>
+              </div>
+              <div>
+                <dt>Reopen Workflow</dt>
+                <dd>{reopenSmokeState.workflow}</dd>
+              </div>
+            </>
+          ) : null}
+          {reopenSmokeState.status === "failed" ? (
+            <div>
+              <dt>Reopen Error</dt>
+              <dd>{reopenSmokeState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -723,6 +922,45 @@ function workflowFailureLabel(state: WorkflowFailureState): string {
   }
   if (state.status === "rejected") {
     return "workflow state rejected";
+  }
+  return "failed";
+}
+
+function typeGuideLabel(state: TypeGuideState): string {
+  if (state.status === "offline") {
+    return "API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading complaint types";
+  }
+  if (state.status === "loaded") {
+    return "complaint types loaded";
+  }
+  return "failed";
+}
+
+function materialSmokeLabel(state: MaterialSmokeState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "submitted") {
+    return "material submitted";
+  }
+  return "failed";
+}
+
+function reopenSmokeLabel(state: ReopenSmokeState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "reopened") {
+    return "complaint reopened";
   }
   return "failed";
 }

@@ -77,6 +77,54 @@ class ComplaintCaseService(
         }
     }
 
+    fun submitCustomerComplaintMaterial(
+        caseId: String,
+        command: CustomerComplaintMaterialCommand
+    ): CustomerComplaintMaterialResponse {
+        return runSerializableComplaintCommand {
+            submitCustomerComplaintMaterialInTransaction(caseId, command)
+        }
+    }
+
+    fun reopenCustomerComplaint(
+        caseId: String,
+        command: CustomerComplaintReopenCommand
+    ): CustomerComplaintReopenResponse {
+        return runSerializableComplaintCommand {
+            reopenCustomerComplaintInTransaction(caseId, command)
+        }
+    }
+
+    fun complaintTypeGuide(): ComplaintTypeGuideResponse =
+        ComplaintTypeGuideResponse(
+            items = listOf(
+                ComplaintTypeGuideDto(
+                    category = "TRANSFER_DISPUTE",
+                    description = "Synthetic transfer dispute or wrong-transfer investigation.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("transactionId", "customerStatement")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "ACCOUNT_ACCESS",
+                    description = "Synthetic account access, statement, or login-support complaint.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("screenId", "observedAt")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "FEE_INQUIRY",
+                    description = "Synthetic fee explanation, waiver follow-up, or refund review.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("accountId", "feeTransactionId")
+                ),
+                ComplaintTypeGuideDto(
+                    category = "CARD_DISPUTE",
+                    description = "Synthetic card authorization, capture, or lost-card dispute.",
+                    slaHours = 72,
+                    requiredMaterials = listOf("cardId", "authorizationId")
+                )
+            )
+        )
+
     private fun createCustomerComplaintInTransaction(command: CustomerComplaintEntryCommand): CustomerComplaintEntryResponse {
         val customerId = command.customerId?.takeIf { it.isNotBlank() }
             ?: BankingLabAuthContext.get()?.customerId
@@ -174,6 +222,183 @@ class ComplaintCaseService(
             )
         )
         return CustomerComplaintConfirmResponse(item = findForRead(complaint.caseId))
+    }
+
+    private fun submitCustomerComplaintMaterialInTransaction(
+        caseId: String,
+        command: CustomerComplaintMaterialCommand
+    ): CustomerComplaintMaterialResponse {
+        val complaint = findForUpdate(caseId)
+        val customerId = command.customerId?.takeIf { it.isNotBlank() }
+            ?: BankingLabAuthContext.get()?.customerId
+            ?: complaint.customerId
+        BankingLabAuthContext.requireCustomerOwnership(customerId)
+        if (complaint.customerId != customerId) {
+            throw WorkflowErrors.authorizationViolation("complaint does not belong to customer")
+        }
+        if (complaint.status == "CLOSED") {
+            throw WorkflowErrors.stateViolation("closed complaint must be reopened before submitting materials")
+        }
+        if (complaint.status == "WAITING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("complaint is waiting for answer approval")
+        }
+        val materialType = command.materialType?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("materialType is required")
+        val fileName = command.fileName?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("fileName is required")
+        val materialId = "CMM-${UUID.randomUUID().toString().uppercase()}"
+        val syntheticStorageRef = command.syntheticStorageRef?.takeIf { it.isNotBlank() }
+            ?: "synthetic://complaints/$caseId/materials/$materialId"
+        if (!syntheticStorageRef.startsWith("synthetic://")) {
+            throw WorkflowErrors.validation("syntheticStorageRef must use synthetic://")
+        }
+        val actorId = BankingLabAuthContext.get()?.subject ?: customerId
+        jdbc.update(
+            """
+            INSERT INTO complaint_case_materials (
+              complaint_material_id, complaint_case_id, customer_id, material_type,
+              file_name, description, synthetic_storage_ref, submitted_by
+            )
+            VALUES (
+              :materialId, :caseId, :customerId, :materialType,
+              :fileName, :description, :syntheticStorageRef, :submittedBy
+            )
+            """.trimIndent(),
+            mapOf(
+                "materialId" to materialId,
+                "caseId" to complaint.caseId,
+                "customerId" to customerId,
+                "materialType" to materialType,
+                "fileName" to fileName,
+                "description" to command.description,
+                "syntheticStorageRef" to syntheticStorageRef,
+                "submittedBy" to actorId
+            )
+        )
+        val nextStatus = if (complaint.status == "WAITING_CUSTOMER") "IN_REVIEW" else complaint.status
+        if (nextStatus != complaint.status) {
+            jdbc.update(
+                """
+                UPDATE complaint_cases
+                SET status = :status,
+                    updated_at = now()
+                WHERE complaint_case_id = :caseId
+                """.trimIndent(),
+                mapOf(
+                    "caseId" to complaint.caseId,
+                    "status" to nextStatus
+                )
+            )
+        } else {
+            jdbc.update(
+                """
+                UPDATE complaint_cases
+                SET updated_at = now()
+                WHERE complaint_case_id = :caseId
+                """.trimIndent(),
+                mapOf("caseId" to complaint.caseId)
+            )
+        }
+        appendTimeline(
+            complaint.caseId,
+            "MATERIAL_SUBMITTED",
+            complaint.status,
+            nextStatus,
+            actorId,
+            command.reason ?: "customer submitted additional material"
+        )
+        auditEvents.append(
+            eventType = "COMMAND_EXECUTED",
+            actorType = "CUSTOMER",
+            actorId = actorId,
+            actorRole = "CUSTOMER",
+            screenId = "CMP-103",
+            businessReferenceId = complaint.caseId,
+            customerId = customerId,
+            reason = command.reason ?: "Customer submitted complaint material",
+            payload = mapOf(
+                "materialId" to materialId,
+                "materialType" to materialType,
+                "fileName" to fileName,
+                "syntheticStorageRef" to syntheticStorageRef,
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
+        return CustomerComplaintMaterialResponse(
+            item = findForRead(complaint.caseId),
+            material = findMaterial(materialId)
+        )
+    }
+
+    private fun reopenCustomerComplaintInTransaction(
+        caseId: String,
+        command: CustomerComplaintReopenCommand
+    ): CustomerComplaintReopenResponse {
+        val complaint = findForUpdate(caseId)
+        val customerId = command.customerId?.takeIf { it.isNotBlank() }
+            ?: BankingLabAuthContext.get()?.customerId
+            ?: complaint.customerId
+        BankingLabAuthContext.requireCustomerOwnership(customerId)
+        if (complaint.customerId != customerId) {
+            throw WorkflowErrors.authorizationViolation("complaint does not belong to customer")
+        }
+        if (complaint.status != "CLOSED") {
+            throw WorkflowErrors.stateViolation("only closed complaints can be reopened: ${complaint.status}")
+        }
+        val reopenReason = command.reopenReason?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.validation("reopenReason is required")
+        val reopenRequestId = "CMR-${UUID.randomUUID().toString().uppercase()}"
+        val actorId = BankingLabAuthContext.get()?.subject ?: customerId
+        jdbc.update(
+            """
+            INSERT INTO complaint_reopen_requests (
+              complaint_reopen_request_id, complaint_case_id, customer_id, reopen_reason,
+              status, requested_by
+            )
+            VALUES (
+              :reopenRequestId, :caseId, :customerId, :reopenReason,
+              'REOPENED', :requestedBy
+            )
+            """.trimIndent(),
+            mapOf(
+                "reopenRequestId" to reopenRequestId,
+                "caseId" to complaint.caseId,
+                "customerId" to customerId,
+                "reopenReason" to reopenReason,
+                "requestedBy" to actorId
+            )
+        )
+        jdbc.update(
+            """
+            UPDATE complaint_cases
+            SET status = 'REOPENED',
+                updated_at = now()
+            WHERE complaint_case_id = :caseId
+            """.trimIndent(),
+            mapOf("caseId" to complaint.caseId)
+        )
+        appendTimeline(complaint.caseId, "REOPEN_REQUESTED", complaint.status, "REOPENED", actorId, reopenReason)
+        auditEvents.append(
+            eventType = "COMMAND_EXECUTED",
+            actorType = "CUSTOMER",
+            actorId = actorId,
+            actorRole = "CUSTOMER",
+            screenId = "CMP-106",
+            businessReferenceId = complaint.caseId,
+            customerId = customerId,
+            reason = command.reason ?: "Customer requested complaint reopen",
+            payload = mapOf(
+                "reopenRequestId" to reopenRequestId,
+                "status" to "REOPENED",
+                "maskingPolicy" to "CUSTOMER_SELF",
+                "syntheticOnly" to true
+            )
+        )
+        return CustomerComplaintReopenResponse(
+            item = findForRead(complaint.caseId),
+            reopenRequest = findReopenRequest(reopenRequestId)
+        )
     }
 
     private fun <T> runSerializableComplaintCommand(operation: () -> T): T {
@@ -376,6 +601,50 @@ class ComplaintCaseService(
             mapOf("caseId" to caseId),
             this::mapCase
         ) ?: throw WorkflowErrors.notFound("complaint not found: $caseId")
+
+    private fun findMaterial(materialId: String): ComplaintMaterialDto =
+        jdbc.queryForObject(
+            """
+            SELECT complaint_material_id, complaint_case_id, customer_id, material_type,
+                   file_name, description, synthetic_storage_ref, submitted_by, created_at
+            FROM complaint_case_materials
+            WHERE complaint_material_id = :materialId
+            """.trimIndent(),
+            mapOf("materialId" to materialId)
+        ) { rs, _ ->
+            ComplaintMaterialDto(
+                materialId = rs.getString("complaint_material_id"),
+                caseId = rs.getString("complaint_case_id"),
+                customerId = rs.getString("customer_id"),
+                materialType = rs.getString("material_type"),
+                fileName = rs.getString("file_name"),
+                description = rs.getString("description"),
+                syntheticStorageRef = rs.getString("synthetic_storage_ref"),
+                submittedBy = rs.getString("submitted_by"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
+            )
+        } ?: throw WorkflowErrors.notFound("complaint material not found: $materialId")
+
+    private fun findReopenRequest(reopenRequestId: String): ComplaintReopenRequestDto =
+        jdbc.queryForObject(
+            """
+            SELECT complaint_reopen_request_id, complaint_case_id, customer_id, reopen_reason,
+                   status, requested_by, created_at
+            FROM complaint_reopen_requests
+            WHERE complaint_reopen_request_id = :reopenRequestId
+            """.trimIndent(),
+            mapOf("reopenRequestId" to reopenRequestId)
+        ) { rs, _ ->
+            ComplaintReopenRequestDto(
+                reopenRequestId = rs.getString("complaint_reopen_request_id"),
+                caseId = rs.getString("complaint_case_id"),
+                customerId = rs.getString("customer_id"),
+                reopenReason = rs.getString("reopen_reason"),
+                status = rs.getString("status"),
+                requestedBy = rs.getString("requested_by"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
+            )
+        } ?: throw WorkflowErrors.notFound("complaint reopen request not found: $reopenRequestId")
 
     private fun complaintSql(suffix: String): String =
         """

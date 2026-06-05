@@ -267,6 +267,64 @@ export interface CustomerComplaintConfirmResponse {
   readonly item: ComplaintCaseDto;
 }
 
+export interface CustomerComplaintMaterialCommand {
+  readonly customerId?: string;
+  readonly materialType: string;
+  readonly fileName: string;
+  readonly description?: string | null;
+  readonly syntheticStorageRef?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface ComplaintMaterialDto {
+  readonly materialId: string;
+  readonly caseId: string;
+  readonly customerId: string;
+  readonly materialType: string;
+  readonly fileName: string;
+  readonly description?: string | null;
+  readonly syntheticStorageRef: string;
+  readonly submittedBy: string;
+  readonly createdAt: string;
+}
+
+export interface CustomerComplaintMaterialResponse {
+  readonly item: ComplaintCaseDto;
+  readonly material: ComplaintMaterialDto;
+}
+
+export interface CustomerComplaintReopenCommand {
+  readonly customerId?: string;
+  readonly reopenReason: string;
+  readonly reason?: string | null;
+}
+
+export interface ComplaintReopenRequestDto {
+  readonly reopenRequestId: string;
+  readonly caseId: string;
+  readonly customerId: string;
+  readonly reopenReason: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+}
+
+export interface CustomerComplaintReopenResponse {
+  readonly item: ComplaintCaseDto;
+  readonly reopenRequest: ComplaintReopenRequestDto;
+}
+
+export interface ComplaintTypeGuideDto {
+  readonly category: string;
+  readonly description: string;
+  readonly slaHours: number;
+  readonly requiredMaterials: readonly string[];
+}
+
+export interface ComplaintTypeGuideResponse {
+  readonly items: readonly ComplaintTypeGuideDto[];
+}
+
 export interface ComplaintAnswerDraftCommand {
   readonly actorId?: string;
   readonly requestedByRole?: string;
@@ -2517,6 +2575,38 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    submitCustomerComplaintMaterial(caseId: string, command: CustomerComplaintMaterialCommand) {
+      return request<CustomerComplaintMaterialResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/complaints/${encodeURIComponent(caseId)}/materials`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    reopenCustomerComplaint(caseId: string, command: CustomerComplaintReopenCommand) {
+      return request<CustomerComplaintReopenResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/complaints/${encodeURIComponent(caseId)}/reopen-requests`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    complaintTypeGuide() {
+      return request<ComplaintTypeGuideResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/complaint-types",
+        {},
+        options.bearerToken
       );
     },
 

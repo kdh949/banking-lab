@@ -327,6 +327,23 @@ class SyntheticDataSeeder(
         )
         jdbc.update(
             """
+            INSERT INTO complaint_cases (
+              complaint_case_id, customer_id, category, description, status,
+              sla_due_at, classification, owner_id, answer_json, customer_confirmed_at
+            )
+            VALUES (
+              'CMP-SYN-CLOSED-001', 'SYN-CUS-001', 'ACCOUNT_ACCESS',
+              'Synthetic closed complaint for browser reopen smoke',
+              'CLOSED', now() + INTERVAL '72 hours', 'ACCOUNT_ACCESS', 'complaint01',
+              '{"body":"Synthetic closed complaint answer.","answeredBy":"manager01","answeredAt":"2026-06-03T00:00:00Z"}'::jsonb,
+              now()
+            )
+            ON CONFLICT (complaint_case_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
             INSERT INTO complaint_case_timeline (
               complaint_timeline_id, complaint_case_id, event_type, from_status,
               to_status, actor_id, note, payload_json
@@ -334,6 +351,20 @@ class SyntheticDataSeeder(
             VALUES (
               'CMT-SYN-001', 'CMP-SYN-001', 'ASSIGNED', 'RECEIVED',
               'IN_REVIEW', 'complaint01', 'Synthetic complaint assigned', '{}'::jsonb
+            )
+            ON CONFLICT (complaint_timeline_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO complaint_case_timeline (
+              complaint_timeline_id, complaint_case_id, event_type, from_status,
+              to_status, actor_id, note, payload_json
+            )
+            VALUES (
+              'CMT-SYN-CLOSED-001', 'CMP-SYN-CLOSED-001', 'CLOSED', 'ANSWERED',
+              'CLOSED', 'customer01', 'Synthetic complaint closed for reopen smoke', '{}'::jsonb
             )
             ON CONFLICT (complaint_timeline_id) DO NOTHING
             """.trimIndent(),

@@ -20,6 +20,9 @@ Customer portal intake
 - `POST /api/customer/complaints`
 - `GET /api/customer/complaints`
 - `POST /api/customer/complaints/{caseId}/confirm`
+- `POST /api/customer/complaints/{caseId}/materials`
+- `POST /api/customer/complaints/{caseId}/reopen-requests`
+- `GET /api/customer/complaint-types`
 - `GET /api/staff/complaints`
 - `GET /api/staff/complaints/{caseId}`
 - `POST /api/staff/complaints/{caseId}/classify`
@@ -36,6 +39,13 @@ Customer portal intake
 - `COMPLAINT_ANSWER_SEND` approval is required before answer send.
 - Customer and staff views read the same `complaints` case collection.
 - Customer complaint list appends self-service `COMPLAINT_VIEW` audit without storing complaint descriptions in audit payload.
+- Customer additional-material submission stores synthetic attachment metadata only,
+  appends `MATERIAL_SUBMITTED` timeline, and never stores real attachment bytes.
+- Customer reopen requests are allowed only for closed complaints, create durable
+  reopen-request metadata, append `REOPEN_REQUESTED` timeline, and move the case
+  to `REOPENED`.
+- Complaint type guide is a synthetic static catalog used by CMP-107 and does not
+  call an external complaint intake or regulatory system.
 
 ## Legacy Reference Boundary
 
