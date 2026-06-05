@@ -18,6 +18,7 @@ const requiredFiles = [
   "core-banking-service.yaml",
   "reporting-service-deployment.yaml",
   "reporting-service.yaml",
+  "reporting-domain-event-publisher-deployment.yaml",
   "payment-service-deployment.yaml",
   "payment-service.yaml",
   "payment-outbox-worker-deployment.yaml",
@@ -54,6 +55,7 @@ const coreDeployment = requireDocument(documents, "Deployment", "core-banking-se
 requireDocument(documents, "Service", "core-banking-service", errors);
 const reportingDeployment = requireDocument(documents, "Deployment", "reporting-service", errors);
 requireDocument(documents, "Service", "reporting-service", errors);
+const reportingDomainEventPublisherDeployment = requireDocument(documents, "Deployment", "reporting-domain-event-publisher", errors);
 const paymentDeployment = requireDocument(documents, "Deployment", "payment-service", errors);
 requireDocument(documents, "Service", "payment-service", errors);
 const paymentWorkerDeployment = requireDocument(documents, "Deployment", "payment-outbox-worker", errors);
@@ -68,7 +70,7 @@ const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
-for (const deployment of [coreDeployment, reportingDeployment, paymentDeployment, paymentWorkerDeployment, paymentDomainEventPublisherDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
+for (const deployment of [coreDeployment, reportingDeployment, reportingDomainEventPublisherDeployment, paymentDeployment, paymentWorkerDeployment, paymentDomainEventPublisherDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
   if (!hasText(deployment, "readinessProbe:") || !hasText(deployment, "livenessProbe:")) {
     errors.push(`${deployment?.kind}/${deployment?.name} must define readinessProbe and livenessProbe.`);
   }
@@ -76,8 +78,24 @@ for (const deployment of [coreDeployment, reportingDeployment, paymentDeployment
 if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasText(workerDeployment, "value: \"true\"")) {
   errors.push("Temporal worker deployment must explicitly enable BANKING_LAB_TEMPORAL_WORKER_ENABLED=true.");
 }
-if (!hasText(reportingDeployment, "reporting_flyway_schema_history") || !hasText(reportingDeployment, "reporting-service-api")) {
-  errors.push("Reporting service deployment must use its own Flyway table and reporting-service audience.");
+if (
+  !hasText(reportingDeployment, "reporting_flyway_schema_history") ||
+  !hasText(reportingDeployment, "reporting-service-api") ||
+  !hasText(reportingDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(reportingDeployment, "value: \"false\"")
+) {
+  errors.push("Reporting service deployment must use its own Flyway table, reporting-service audience, and disabled domain publisher mode.");
+}
+if (
+  !hasText(reportingDomainEventPublisherDeployment, "reporting_flyway_schema_history") ||
+  !hasText(reportingDomainEventPublisherDeployment, "reporting-service-api") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !hasText(reportingDomainEventPublisherDeployment, "value: \"true\"") ||
+  !hasText(reportingDomainEventPublisherDeployment, "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !hasText(reportingDomainEventPublisherDeployment, "redpanda:9092") ||
+  !hasText(reportingDomainEventPublisherDeployment, "ReportRetentionSweepCompleted")
+) {
+  errors.push("Reporting domain event publisher deployment must enable Redpanda-backed reporting outbox publication.");
 }
 if (
   !hasText(paymentDeployment, "payment_flyway_schema_history") ||

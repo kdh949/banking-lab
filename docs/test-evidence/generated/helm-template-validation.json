@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-06-05T16:05:46.366Z",
+  "generatedAt": "2026-06-05T18:57:27.359Z",
   "command": "npm run helm:template",
   "renderer": "helm",
   "helmCommand": "helm template banking-lab infra/helm/banking-lab",
   "helmAvailable": true,
   "structuralValidation": "pass",
-  "documentCount": 18,
+  "documentCount": 19,
   "resources": [
     {
       "kind": "Namespace",
@@ -79,6 +79,11 @@
     {
       "kind": "Deployment",
       "name": "banking-lab-payment-service",
+      "namespace": "banking-lab"
+    },
+    {
+      "kind": "Deployment",
+      "name": "banking-lab-reporting-domain-event-publisher",
       "namespace": "banking-lab"
     },
     {

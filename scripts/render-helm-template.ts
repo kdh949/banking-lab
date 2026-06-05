@@ -42,6 +42,7 @@ for (const expected of [
   "Service/banking-lab-core-banking",
   "Deployment/banking-lab-reporting-service",
   "Service/banking-lab-reporting-service",
+  "Deployment/banking-lab-reporting-domain-event-publisher",
   "Deployment/banking-lab-payment-service",
   "Service/banking-lab-payment-service",
   "Deployment/banking-lab-payment-outbox-worker",
@@ -65,8 +66,15 @@ if (!rendered.includes("replace-with-local-synthetic-password")) {
 if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
   errors.push("Rendered Helm output must include the Temporal worker enablement flag.");
 }
-if (!rendered.includes("reporting_flyway_schema_history") || !rendered.includes("reporting-service-api")) {
-  errors.push("Rendered Helm output must include reporting-service Flyway and audience settings.");
+if (
+  !rendered.includes("reporting_flyway_schema_history") ||
+  !rendered.includes("reporting-service-api") ||
+  !rendered.includes("BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED") ||
+  !rendered.includes("BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS") ||
+  !rendered.includes("banking.lab.reporting-events") ||
+  !rendered.includes("ReportRetentionSweepCompleted")
+) {
+  errors.push("Rendered Helm output must include reporting-service Flyway, audience, and reporting domain publisher settings.");
 }
 if (
   !rendered.includes("payment_flyway_schema_history") ||
@@ -162,13 +170,22 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.coreBanking.resources.limits.cpu": scalarFromSection(source, "coreBanking", ["resources", "limits", "cpu"]),
     ".Values.coreBanking.resources.limits.memory": scalarFromSection(source, "coreBanking", ["resources", "limits", "memory"]),
     ".Values.reportingService.replicas": scalarFromSection(source, "reportingService", ["replicas"]),
+    ".Values.reportingService.domainEventPublisherReplicas": scalarFromSection(source, "reportingService", ["domainEventPublisherReplicas"]),
     ".Values.reportingService.image": scalarFromSection(source, "reportingService", ["image"]),
     ".Values.reportingService.port": scalarFromSection(source, "reportingService", ["port"]),
     ".Values.reportingService.securityAudience": scalarFromSection(source, "reportingService", ["securityAudience"]),
+    ".Values.reportingService.domainEventPublisherBootstrapServers": scalarFromSection(source, "reportingService", ["domainEventPublisherBootstrapServers"]),
+    ".Values.reportingService.domainEventPublisherTopic": scalarFromSection(source, "reportingService", ["domainEventPublisherTopic"]),
+    ".Values.reportingService.domainEventPublisherClientId": scalarFromSection(source, "reportingService", ["domainEventPublisherClientId"]),
+    ".Values.reportingService.domainEventPublisherEventTypes": scalarFromSection(source, "reportingService", ["domainEventPublisherEventTypes"]),
     ".Values.reportingService.resources.requests.cpu": scalarFromSection(source, "reportingService", ["resources", "requests", "cpu"]),
     ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),
     ".Values.reportingService.resources.limits.cpu": scalarFromSection(source, "reportingService", ["resources", "limits", "cpu"]),
     ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
+    ".Values.reportingService.workerResources.requests.cpu": scalarFromSection(source, "reportingService", ["workerResources", "requests", "cpu"]),
+    ".Values.reportingService.workerResources.requests.memory": scalarFromSection(source, "reportingService", ["workerResources", "requests", "memory"]),
+    ".Values.reportingService.workerResources.limits.cpu": scalarFromSection(source, "reportingService", ["workerResources", "limits", "cpu"]),
+    ".Values.reportingService.workerResources.limits.memory": scalarFromSection(source, "reportingService", ["workerResources", "limits", "memory"]),
     ".Values.paymentService.replicas": scalarFromSection(source, "paymentService", ["replicas"]),
     ".Values.paymentService.outboxWorkerReplicas": scalarFromSection(source, "paymentService", ["outboxWorkerReplicas"]),
     ".Values.paymentService.domainEventPublisherReplicas": scalarFromSection(source, "paymentService", ["domainEventPublisherReplicas"]),

@@ -27,6 +27,7 @@ scrape_configs:
     static_configs:
       - targets:
           - reporting-service:8090
+          - reporting-domain-event-publisher:8090
   - job_name: redpanda
     static_configs:
       - targets:

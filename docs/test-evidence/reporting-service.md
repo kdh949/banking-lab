@@ -18,8 +18,10 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - `V004__reporting_outbox_events.sql` adds a durable `PENDING` outbox table with idempotency-key uniqueness for report-generated events.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
+- Docker Compose platform profile also exposes `reporting-domain-event-publisher`, which uses the same Spring image with the reporting publisher enabled and the API container publisher mode disabled.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
-- Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service with the reporting audience and dedicated Flyway table.
+- Prometheus also scrapes `reporting-domain-event-publisher:8090` for worker observability.
+- Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service plus a dedicated reporting-domain-event-publisher Deployment with the reporting audience, Redpanda bootstrap settings, and dedicated Flyway table.
 - Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.
 - Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
@@ -77,7 +79,7 @@ Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-com
 ## Remaining Risk
 
 - Synthetic JSON report rendering, checksum persistence, retention/export metadata, reason-required package export simulation, retention lifecycle expiration, and Redpanda-backed domain event publication are implemented.
-- Broker publication is proven with Redpanda Testcontainers, while live Compose/Kubernetes dedicated worker rollout and retry/dead-letter hardening remain future work.
+- Broker publication is proven with Redpanda Testcontainers, and Compose/Kubernetes/Helm worker runtime wiring is structurally validated; live worker smoke and retry/dead-letter hardening remain future work.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright
   reporting smokes are present but skipped locally when the reporting E2E URL is

@@ -15,9 +15,14 @@ coreBanking:
 
 reportingService:
   replicas: 1
+  domainEventPublisherReplicas: 1
   image: banking-lab/reporting-service:local
   port: 8090
   securityAudience: reporting-service-api
+  domainEventPublisherBootstrapServers: redpanda:9092
+  domainEventPublisherTopic: banking.lab.reporting-events
+  domainEventPublisherClientId: reporting-helm-domain-event-publisher
+  domainEventPublisherEventTypes: ReportArtifactGenerated,ReportArtifactExported,ReportRetentionSweepCompleted
   resources:
     requests:
       cpu: 150m
@@ -25,6 +30,13 @@ reportingService:
     limits:
       cpu: "1"
       memory: 768Mi
+  workerResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 paymentService:
   replicas: 1

@@ -39,6 +39,9 @@ const checks: Check[] = [
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_NOTIFICATION_SECURITY_AUDIENCE:-notification-service-api}\"",
       "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_PAYMENT_SECURITY_AUDIENCE:-payment-service-api}\"",
       "SPRING_FLYWAY_TABLE: reporting_flyway_schema_history",
+      "reporting-domain-event-publisher:",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED: \"true\"",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092",
       "SPRING_FLYWAY_TABLE: notification_flyway_schema_history",
       "SPRING_FLYWAY_TABLE: payment_flyway_schema_history"
     ],
@@ -83,7 +86,25 @@ const checks: Check[] = [
     mustContain: [
       "value: \"reporting-service-api\"",
       "value: \"reporting_flyway_schema_history\"",
-      "BANKING_LAB_REPORTING_DATABASE_URL"
+      "BANKING_LAB_REPORTING_DATABASE_URL",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"false\""
+    ],
+    mustNotContain: [
+      "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
+    ]
+  },
+  {
+    file: "infra/k8s/reporting-domain-event-publisher-deployment.yaml",
+    description: "Reporting Kubernetes domain event publisher emits synthetic reporting events to Redpanda only.",
+    mustContain: [
+      "value: \"reporting-service-api\"",
+      "value: \"reporting_flyway_schema_history\"",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"true\"",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS",
+      "value: \"redpanda:9092\"",
+      "ReportRetentionSweepCompleted"
     ],
     mustNotContain: [
       "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"true\""
@@ -95,7 +116,22 @@ const checks: Check[] = [
     mustContain: [
       "value: {{ .Values.reportingService.securityAudience | quote }}",
       "value: \"reporting_flyway_schema_history\"",
-      "BANKING_LAB_REPORTING_DATABASE_URL"
+      "BANKING_LAB_REPORTING_DATABASE_URL",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"false\""
+    ]
+  },
+  {
+    file: "infra/helm/banking-lab/templates/reporting-domain-event-publisher-deployment.yaml",
+    description: "Reporting Helm domain event publisher renders synthetic Redpanda publisher controls.",
+    mustContain: [
+      "value: {{ .Values.reportingService.securityAudience | quote }}",
+      "value: \"reporting_flyway_schema_history\"",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_ENABLED",
+      "value: \"true\"",
+      "value: {{ .Values.reportingService.domainEventPublisherBootstrapServers | quote }}",
+      "BANKING_LAB_REPORTING_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES",
+      "value: {{ .Values.reportingService.domainEventPublisherEventTypes | quote }}"
     ]
   },
   {
@@ -286,7 +322,8 @@ const checks: Check[] = [
       "simulatorTokensEnabled: \"false\"",
       "devSimulatorToken: \"false\"",
       "jwksUri: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs",
-      "audience: core-banking-api"
+      "audience: core-banking-api",
+      "domainEventPublisherClientId: reporting-helm-domain-event-publisher"
     ]
   },
   {

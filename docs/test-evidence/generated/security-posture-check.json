@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T16:06:01.478Z",
+  "generatedAt": "2026-06-05T18:57:27.148Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -41,8 +41,22 @@
       "forbidden": []
     },
     {
+      "file": "infra/k8s/reporting-domain-event-publisher-deployment.yaml",
+      "description": "Reporting Kubernetes domain event publisher emits synthetic reporting events to Redpanda only.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
       "file": "infra/helm/banking-lab/templates/reporting-service-deployment.yaml",
       "description": "Reporting Helm deployment renders secure route audience and separate Flyway state.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "infra/helm/banking-lab/templates/reporting-domain-event-publisher-deployment.yaml",
+      "description": "Reporting Helm domain event publisher renders synthetic Redpanda publisher controls.",
       "status": "pass",
       "missing": [],
       "forbidden": []
