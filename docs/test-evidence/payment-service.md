@@ -2,7 +2,7 @@
 
 Status: partial target-stack progress.
 
-Review date: 2026-06-05.
+Review date: 2026-06-06.
 
 ## Scope
 
@@ -32,6 +32,8 @@ This evidence covers the first synthetic Payment Service slice:
 - Configurable payment domain-event publisher worker with bounded batch polling,
   Micrometer metrics, retry/dead-letter settings, and synthetic-only
   observability logs for durable non-ledger payment events.
+- Live Docker Compose smoke coverage for the enabled payment domain-event
+  publisher worker against disposable PostgreSQL and Redpanda services.
 - Autopay agreement schema, APIs, status history, idempotent pause/resume/cancel
   commands, due execution, and `PaymentAutopayExecutionCreated` event contract.
 - Channel contracts for customer bill payment/autopay, staff payment inquiry,
@@ -65,9 +67,8 @@ This evidence covers the first synthetic Payment Service slice:
   `BANKING_LAB_PAYMENT_OUTBOX_WORKER_ENABLED` /
   `BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_ENABLED` mode splits.
 
-The slice does not claim full Payment Service completion. A deployed
-payment-domain event publisher live-runtime smoke and live payment-service
-Keycloak smoke evidence remain future work.
+The slice does not claim full Payment Service completion. Live payment-service
+Keycloak smoke evidence remains future work.
 
 ## Commands Run
 
@@ -76,6 +77,8 @@ npm run test:payment-service:unit
 npm run test:payment-service:integration
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentAuthorizationIntegrationTest --rerun-tasks
 npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks
+npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks
+npm run test:payment-service:domain-publisher-compose
 npm run test:payment-service:integration -- --rerun-tasks
 npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerCommandServiceIntegrationTest --tests lab.banking.core.ledger.api.LedgerRuntimeApiParityIntegrationTest --rerun-tasks
 npm run test:core-banking:unit -- --rerun-tasks
@@ -127,6 +130,14 @@ need local file-lock socket and Docker access.
 - `npm run test:payment-service:integration -- --tests lab.banking.payment.PaymentKafkaOutboxPublisherIntegrationTest --rerun-tasks`:
   pass after sandbox escalation; PostgreSQL and Redpanda Testcontainers proved
   payment-domain event publication without publishing ledger command events.
+- `npm run test:payment-service:integration -- --tests lab.banking.payment.LivePaymentDomainEventPublisherComposeSmokeIntegrationTest --rerun-tasks`:
+  pass after sandbox escalation; the live smoke test compiled and skipped the
+  runtime path because `BANKING_LAB_LIVE_PAYMENT_DOMAIN_PUBLISHER_COMPOSE_PROJECT`
+  was not set for the compile/skip check.
+- `npm run test:payment-service:domain-publisher-compose`: pass after sandbox
+  escalation; the wrapper built the payment-service boot jar, started
+  disposable PostgreSQL, Redpanda, and `payment-domain-event-publisher` Compose
+  services, and ran the gated live smoke.
 - `npm run test:payment-service:integration -- --rerun-tasks`: pass after
   sandbox escalation; the full payment-service integration suite passed with
   the cancellation approval migration and payment Kafka publisher included.
@@ -338,6 +349,19 @@ Manifest and API client coverage verifies:
 - successful broker acknowledgement marks only the published payment domain
   event `PUBLISHED`.
 
+`LivePaymentDomainEventPublisherComposeSmokeIntegrationTest` verifies:
+
+- the live Compose `payment-domain-event-publisher` process can be killed,
+  restarted, and used to drain a durable pending `PaymentInstructionCanceled`
+  outbox row from the shared synthetic PostgreSQL database;
+- the publisher emits the payment-domain event to Redpanda with a
+  `PaymentOutboxKafkaEnvelope`, `syntheticOnly` header, `sourceService=payment-service`,
+  and `directLedgerWrite=false` payload;
+- a colocated pending `PaymentLedgerPostingRequested` row remains `PENDING`,
+  preserving the separate core-ledger dispatch boundary;
+- the worker writes a synthetic-only batch observability log with attempted,
+  published, failed, and dead-letter counters for the configured topic.
+
 `PaymentDomainEventPublisherWorkerTest` verifies:
 
 - worker configuration maps the configured Redpanda bootstrap servers, topic,
@@ -368,9 +392,9 @@ dispatched from Ops Console through durable payment-service outbox state to a
 core-banking posting port, settled idempotently, and created from durable
 autopay schedules. Staff payment cancellation now has an API-backed
 maker-checker correction path, PAY-102 staff-terminal smoke panel, and
-structurally deployed payment domain-event publisher worker. Live
+live Compose payment domain-event publisher smoke evidence. Live
 payment-service Keycloak realm smoke evidence is still pending.
-The new Compose/Kubernetes/Helm surface is structurally validated only; it does
-not yet prove a live payment-service rollout, live ledger worker dispatch
-against core-banking, live domain-event publisher polling against Redpanda, or a
-live Keycloak-issued `PAYMENT_SERVICE` service token.
+The new Compose/Kubernetes/Helm surface is structurally validated, and the
+domain-event publisher now has live Compose proof. It does not yet prove a live
+payment-service API rollout, live ledger worker dispatch against core-banking,
+or a live Keycloak-issued `PAYMENT_SERVICE` service token.

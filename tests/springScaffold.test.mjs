@@ -108,7 +108,9 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   const application = await readFile("services/payment-service/src/main/resources/application.yml", "utf8");
   const dockerfile = await readFile("infra/docker-compose/payment-service.Dockerfile", "utf8");
   const compose = await readFile("docker-compose.yml", "utf8");
+  const packageJson = await readFile("package.json", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
+  const liveSmoke = await readFile("services/payment-service/src/integrationTest/kotlin/lab/banking/payment/LivePaymentDomainEventPublisherComposeSmokeIntegrationTest.kt", "utf8");
 
   assert.match(settings, /include\(":services:payment-service"\)/);
   assert.match(application, /real-payment-network-enabled: false/);
@@ -146,6 +148,10 @@ test("payment-service platform profile includes API, outbox worker, and domain e
   );
   assert.match(compose, /BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_BOOTSTRAP_SERVERS: redpanda:9092/);
   assert.match(compose, /BANKING_LAB_PAYMENT_CORE_BANKING_SERVICE_TOKEN/);
+  assert.match(packageJson, /test:payment-service:domain-publisher-compose/);
+  assert.match(liveSmoke, /BANKING_LAB_LIVE_PAYMENT_DOMAIN_PUBLISHER_COMPOSE_PROJECT/);
+  assert.match(liveSmoke, /PaymentLedgerPostingRequested/);
+  assert.match(liveSmoke, /PaymentInstructionCanceled/);
   assert.match(prometheus, /job_name: payment-service/);
   assert.match(prometheus, /payment-service:8088/);
   assert.match(prometheus, /payment-outbox-worker:8088/);
