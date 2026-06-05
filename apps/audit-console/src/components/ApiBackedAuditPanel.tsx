@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBankingApiClient, type AuditEventDto } from "@banking-lab/api-client";
+import { createBankingApiClient, type AuditEventDto, type NotificationDeliveryDto } from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
 type ApiState =
@@ -18,7 +18,14 @@ type KeycloakAuditState =
   | { readonly status: "loaded"; readonly hashChainValid: boolean; readonly event: AuditEventDto; readonly tokenType: string }
   | { readonly status: "failed"; readonly message: string };
 
+type NotificationDeliveryState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly deliveries: readonly NotificationDeliveryDto[] }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabAuditOidcState";
 const oidcVerifierKey = "bankingLabAuditOidcVerifier";
@@ -26,6 +33,9 @@ const oidcRedirectKey = "bankingLabAuditOidcRedirectUri";
 
 export function ApiBackedAuditPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+  const [notificationDeliveryState, setNotificationDeliveryState] = useState<NotificationDeliveryState>(() =>
+    notificationApiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
   const [keycloakAuditState, setKeycloakAuditState] = useState<KeycloakAuditState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -54,6 +64,44 @@ export function ApiBackedAuditPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationApiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: notificationApiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "auditor01",
+        roles: ["AUDITOR"]
+      })
+    });
+
+    client
+      .listNotificationDeliveries({
+        requestedBy: "auditor01",
+        reason: "API-backed notification delivery history review",
+        limit: 5
+      })
+      .then((deliveries) => {
+        if (!cancelled) {
+          setNotificationDeliveryState({ status: "loaded", deliveries });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setNotificationDeliveryState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown notification delivery API failure"
+          });
         }
       });
 
@@ -202,6 +250,38 @@ export function ApiBackedAuditPanel() {
           </div>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-notification-delivery-history">
+        <div>
+          <dt>Notification API</dt>
+          <dd>{notificationApiBaseUrl || "not configured"}</dd>
+        </div>
+        <div>
+          <dt>Delivery Status</dt>
+          <dd>{notificationDeliveryStatusLabel(notificationDeliveryState)}</dd>
+        </div>
+        {notificationDeliveryState.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Deliveries</dt>
+              <dd>{notificationDeliveryState.deliveries.length}</dd>
+            </div>
+            <div>
+              <dt>Delivery Sample</dt>
+              <dd>
+                {notificationDeliveryState.deliveries[0]
+                  ? `${notificationDeliveryState.deliveries[0].eventType}:${notificationDeliveryState.deliveries[0].channel}:${notificationDeliveryState.deliveries[0].status}`
+                  : "none"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+        {notificationDeliveryState.status === "failed" ? (
+          <div>
+            <dt>Notification Error</dt>
+            <dd>{notificationDeliveryState.message}</dd>
+          </div>
+        ) : null}
+      </dl>
       <div className="api-actions" data-testid="api-backed-audit-keycloak-login">
         <button
           type="button"
@@ -282,6 +362,19 @@ function keycloakAuditLabel(state: KeycloakAuditState): string {
     return "Keycloak audit loaded";
   }
   return "failed";
+}
+
+function notificationDeliveryStatusLabel(state: NotificationDeliveryState): string {
+  if (state.status === "offline") {
+    return "Notification API URL not configured";
+  }
+  if (state.status === "loading") {
+    return "loading delivery history";
+  }
+  if (state.status === "loaded") {
+    return "delivery history loaded";
+  }
+  return "notification API request failed";
 }
 
 function clearOidcSession(): void {

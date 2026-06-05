@@ -27,6 +27,10 @@ This evidence covers the first synthetic Notification Service slice:
   suppression audit rows, and idempotent suppressed replays.
 - Reason-required masked delivery history listing with status/channel/event
   filters and `NOTIFICATION_DELIVERY_HISTORY_VIEW` audit rows.
+- Admin-console screen manifests and API-backed smoke panel wiring for
+  notification template approval and recipient preference management.
+- Audit-console screen manifest and API-backed smoke panel wiring for masked
+  notification delivery history review.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
   reads/history, provider failure recording, delivered-state marking, template
@@ -37,9 +41,9 @@ This evidence covers the first synthetic Notification Service slice:
   template/preference administration.
 
 The slice does not claim full Notification Service completion. Customer
-preference screens, admin screens, live notification-service Keycloak smoke
-evidence, and live provider integrations are not in scope. Live providers remain
-prohibited.
+preference screens, browser E2E for the new notification admin/audit panels,
+live notification-service Keycloak smoke evidence, and live provider
+integrations are not in scope. Live providers remain prohibited.
 
 ## Commands Run
 
@@ -49,7 +53,11 @@ npm run test:notification-service:integration
 npm run test:notification-service:integration -- --rerun-tasks
 npm run test:notification-service:unit -- --rerun-tasks
 npm --workspace @banking-lab/api-client run typecheck
+npm run validate:manifests
+npm run next:admin-console:typecheck
+npm run next:audit-console:typecheck
 npm run packages:typecheck
+npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
 docker compose --profile platform config
 env COMPOSE_PROJECT_NAME=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false docker compose --profile platform up -d --build postgres redpanda notification-event-consumer
 env BANKING_LAB_LIVE_NOTIFICATION_COMPOSE_PROJECT=banking-lab-notification-consumer-smoke BANKING_LAB_POSTGRES_PORT=15508 BANKING_LAB_REDPANDA_PORT=19108 BANKING_LAB_REDPANDA_ADMIN_PORT=19608 BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_TOPIC=banking.lab.notification-consumer-smoke BANKING_LAB_TRACING_ENABLED=false BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false scripts/run-core-banking-tests.sh :services:notification-service:integrationTest --tests 'lab.banking.notification.LiveNotificationConsumerComposeSmokeIntegrationTest.live notification event consumer writes masked delivery from Compose Redpanda record' --rerun-tasks
@@ -80,8 +88,17 @@ were rerun sequentially with `--rerun-tasks`.
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
   service API client methods compile.
+- `npm run validate:manifests`: pass; notification admin/audit manifests satisfy
+  the shared screen-engine template contract.
+- `npm run next:admin-console:typecheck`: pass; admin-console compiles with the
+  notification template/preference API-backed panel wiring.
+- `npm run next:audit-console:typecheck`: pass; audit-console compiles with the
+  notification delivery-history API-backed panel wiring.
 - `npm run packages:typecheck`: pass; shared screen/form/auth/api packages compile
   after notification client contract expansion.
+- `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`:
+  pass; 4 manifest-rendering tests passed and 4 API/Keycloak live smokes skipped
+  because API/Keycloak E2E base URLs were not configured.
 - `docker compose --profile platform config`: pass; platform profile renders
   `notification-service` and `notification-event-consumer` with Redpanda
   bootstrap configuration, synthetic provider disablement, and
@@ -220,6 +237,18 @@ API client typecheck verifies:
   `upsertNotificationPreference` methods are available with typed
   request/response contracts.
 
+`nextScaffold.test.mjs` verifies:
+
+- admin-console keeps notification template approval and preference management
+  manifests under the shared screen-manifest renderer path;
+- the admin API-backed panel uses `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL`
+  and the typed `listNotificationTemplates`/`listNotificationPreferences`
+  client methods;
+- audit-console keeps the `AUD-301` masked notification delivery-history inquiry
+  manifest under the shared renderer path;
+- the audit API-backed panel uses `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL`
+  and the typed `listNotificationDeliveries` client method.
+
 ## Synthetic Boundary
 
 The migration constrains provider kinds to `SYNTHETIC_SMS_SINK`,
@@ -239,6 +268,7 @@ The Docker Compose services explicitly set
 
 ## Remaining Risk
 
-This is still a partial feature slice. Customer preference screens, admin
-screens, retry/dead-letter behavior in a live Compose provider-sink loop, and
-live notification-service Keycloak smoke evidence remain future work.
+This is still a partial feature slice. Customer preference screens, browser E2E
+for the notification admin/audit panels, retry/dead-letter behavior in a live
+Compose provider-sink loop, and live notification-service Keycloak smoke
+evidence remain future work.

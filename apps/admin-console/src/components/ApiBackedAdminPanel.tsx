@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBankingApiClient, type AdminPlatformSummaryResponse } from "@banking-lab/api-client";
+import {
+  createBankingApiClient,
+  type AdminPlatformSummaryResponse,
+  type NotificationPreferenceDto,
+  type NotificationTemplateDto
+} from "@banking-lab/api-client";
 import { createOidcAuthorizationUrl, createPkcePair, createSimulatorBearerToken } from "@banking-lab/auth-client";
 
 type ApiState =
@@ -18,7 +23,18 @@ type KeycloakAdminState =
   | { readonly status: "loaded"; readonly summary: AdminPlatformSummaryResponse; readonly tokenType: string }
   | { readonly status: "failed"; readonly message: string };
 
+type NotificationAdminState =
+  | { readonly status: "offline" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "loaded";
+      readonly templates: readonly NotificationTemplateDto[];
+      readonly preferences: readonly NotificationPreferenceDto[];
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const oidcStateKey = "bankingLabAdminOidcState";
 const oidcVerifierKey = "bankingLabAdminOidcVerifier";
@@ -26,6 +42,9 @@ const oidcRedirectKey = "bankingLabAdminOidcRedirectUri";
 
 export function ApiBackedAdminPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
+  const [notificationState, setNotificationState] = useState<NotificationAdminState>(() =>
+    notificationApiBaseUrl ? { status: "loading" } : { status: "offline" }
+  );
   const [keycloakAdminState, setKeycloakAdminState] = useState<KeycloakAdminState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -53,6 +72,45 @@ export function ApiBackedAdminPanel() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({ status: "failed", message: error instanceof Error ? error.message : "Unknown API failure" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationApiBaseUrl) {
+      return;
+    }
+    let cancelled = false;
+    const client = createBankingApiClient({
+      baseUrl: notificationApiBaseUrl,
+      bearerToken: createSimulatorBearerToken({
+        subject: "notification-admin01",
+        roles: ["OPS_MANAGER", "COMPLIANCE_MANAGER"]
+      })
+    });
+
+    Promise.all([
+      client.listNotificationTemplates(),
+      client.listNotificationPreferences({
+        requestedBy: "notification-admin01",
+        reason: "API-backed notification preference review"
+      })
+    ])
+      .then(([templates, preferences]) => {
+        if (!cancelled) {
+          setNotificationState({ status: "loaded", templates, preferences });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setNotificationState({
+            status: "failed",
+            message: error instanceof Error ? error.message : "Unknown notification API failure"
+          });
         }
       });
 
@@ -200,6 +258,42 @@ export function ApiBackedAdminPanel() {
           </div>
         ) : null}
       </dl>
+      <dl data-testid="api-backed-notification-admin">
+        <div>
+          <dt>Notification API</dt>
+          <dd>{notificationApiBaseUrl || "not configured"}</dd>
+        </div>
+        <div>
+          <dt>Notification Status</dt>
+          <dd>{notificationAdminStatusLabel(notificationState)}</dd>
+        </div>
+        {notificationState.status === "loaded" ? (
+          <>
+            <div>
+              <dt>Templates</dt>
+              <dd>{notificationState.templates.length}</dd>
+            </div>
+            <div>
+              <dt>Preferences</dt>
+              <dd>{notificationState.preferences.length}</dd>
+            </div>
+            <div>
+              <dt>Template Sample</dt>
+              <dd>
+                {notificationState.templates[0]
+                  ? `${notificationState.templates[0].eventType}:${notificationState.templates[0].channel}:v${notificationState.templates[0].version}`
+                  : "none"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+        {notificationState.status === "failed" ? (
+          <div>
+            <dt>Notification Error</dt>
+            <dd>{notificationState.message}</dd>
+          </div>
+        ) : null}
+      </dl>
       <div className="api-actions" data-testid="api-backed-admin-keycloak-login">
         <button
           type="button"
@@ -269,6 +363,19 @@ function keycloakStatusLabel(state: KeycloakAdminState): string {
       return "Keycloak admin summary loaded";
     case "failed":
       return "Keycloak admin failed";
+  }
+}
+
+function notificationAdminStatusLabel(state: NotificationAdminState): string {
+  switch (state.status) {
+    case "offline":
+      return "Notification API URL not configured";
+    case "loading":
+      return "loading notification controls";
+    case "loaded":
+      return "notification controls loaded";
+    case "failed":
+      return "notification API request failed";
   }
 }
 

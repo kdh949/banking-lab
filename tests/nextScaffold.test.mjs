@@ -47,19 +47,49 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const appPackage = JSON.parse(await readFile("apps/admin-console/package.json", "utf8"));
   const page = await readFile("apps/admin-console/src/app/page.tsx", "utf8");
+  const panel = await readFile("apps/admin-console/src/components/ApiBackedAdminPanel.tsx", "utf8");
   const loader = await readFile("apps/admin-console/src/lib/manifestLoader.ts", "utf8");
   const securityManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-201.security-policy-parameters.json", "utf8"));
+  const notificationTemplateManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-401.notification-template-approval.json", "utf8"));
+  const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-402.notification-preference-management.json", "utf8"));
 
   assert.equal(appPackage.name, "@banking-lab/admin-console");
   assert.match(appPackage.scripts.dev, /3007/);
   assert.equal(rootPackage.scripts["next:admin-console:typecheck"], "npm --workspace @banking-lab/admin-console run typecheck");
   assert.match(page, /loadChannelManifests/);
   assert.match(page, /ApiBackedAdminPanel/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
+  assert.match(panel, /listNotificationTemplates/);
+  assert.match(panel, /listNotificationPreferences/);
+  assert.match(panel, /data-testid="api-backed-notification-admin"/);
   assert.match(loader, /admin-console/);
   assert.equal(securityManifest.type, "PARAMETER");
   assert.equal(securityManifest.approval.makerChecker, true);
+  assert.equal(notificationTemplateManifest.approval.makerChecker, true);
+  assert.equal(notificationPreferenceManifest.audit.reasonRequired, true);
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
+});
+
+test("audit-console exposes notification delivery history through manifests and API client", async () => {
+  const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+  const appPackage = JSON.parse(await readFile("apps/audit-console/package.json", "utf8"));
+  const page = await readFile("apps/audit-console/src/app/page.tsx", "utf8");
+  const panel = await readFile("apps/audit-console/src/components/ApiBackedAuditPanel.tsx", "utf8");
+  const loader = await readFile("apps/audit-console/src/lib/manifestLoader.ts", "utf8");
+  const deliveryManifest = JSON.parse(await readFile("screen-manifests/audit-console/AUD-301.notification-delivery-history.json", "utf8"));
+
+  assert.equal(appPackage.name, "@banking-lab/audit-console");
+  assert.equal(rootPackage.scripts["next:audit-console:typecheck"], "npm --workspace @banking-lab/audit-console run typecheck");
+  assert.match(page, /loadChannelManifests/);
+  assert.match(page, /ApiBackedAuditPanel/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/);
+  assert.match(panel, /listNotificationDeliveries/);
+  assert.match(panel, /data-testid="api-backed-notification-delivery-history"/);
+  assert.match(loader, /audit-console/);
+  assert.equal(deliveryManifest.type, "INQUIRY");
+  assert.equal(deliveryManifest.audit.reasonRequired, true);
+  assert.equal(deliveryManifest.audit.piiAccess, true);
 });
 
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {

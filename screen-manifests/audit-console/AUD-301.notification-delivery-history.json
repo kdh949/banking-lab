@@ -1,0 +1,90 @@
+{
+  "screenId": "AUD-301",
+  "transactionCode": "AUD301",
+  "title": "Notification Delivery History",
+  "app": "audit-console",
+  "type": "INQUIRY",
+  "domain": "notification-audit",
+  "highRisk": false,
+  "requiredRoles": ["AUDITOR", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "MASK_NOTIFICATION_DELIVERY_HISTORY",
+    "eventTypes": ["NOTIFICATION_DELIVERY_HISTORY_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/notifications/deliveries",
+    "fields": [
+      {
+        "name": "recipientId",
+        "label": "Recipient ID",
+        "type": "text",
+        "required": false,
+        "mask": "synthetic-recipient-id"
+      },
+      {
+        "name": "sourceEventId",
+        "label": "Source Event ID",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "eventType",
+        "label": "Event Type",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "channel",
+        "label": "Channel",
+        "type": "select",
+        "required": false
+      },
+      {
+        "name": "status",
+        "label": "Delivery Status",
+        "type": "select",
+        "required": false
+      },
+      {
+        "name": "requestedBy",
+        "label": "Requested By",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "reason",
+        "label": "Business Reason",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": [
+      "deliveryRequestId",
+      "sourceEventId",
+      "eventType",
+      "recipientId",
+      "channel",
+      "providerKind",
+      "status",
+      "maskedMessage",
+      "createdAt"
+    ]
+  },
+  "actions": [
+    {
+      "id": "review-delivery-history",
+      "label": "Review Delivery History",
+      "type": "inquiry",
+      "target": "GET /api/notifications/deliveries"
+    }
+  ]
+}
