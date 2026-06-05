@@ -34,11 +34,27 @@ const checks: Check[] = [
       "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:-false}\"",
       "BANKING_LAB_DEV_SIMULATOR_TOKEN: \"${BANKING_LAB_DEV_SIMULATOR_TOKEN:-false}\"",
       "BANKING_LAB_SECURITY_JWKS_URI: \"${BANKING_LAB_SECURITY_JWKS_URI:-http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs}\"",
-      "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_SECURITY_AUDIENCE:-core-banking-api}\""
+      "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_SECURITY_AUDIENCE:-core-banking-api}\"",
+      "BANKING_LAB_SECURITY_AUDIENCE: \"${BANKING_LAB_REPORTING_SECURITY_AUDIENCE:-reporting-service-api}\"",
+      "SPRING_FLYWAY_TABLE: reporting_flyway_schema_history"
     ],
     mustNotContain: [
       "BANKING_LAB_SECURITY_ENABLED: \"${BANKING_LAB_SECURITY_ENABLED:-false}\"",
       "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED: \"${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:-true}\""
+    ]
+  },
+  {
+    file: "services/reporting-service/src/main/resources/application.yml",
+    description: "Reporting service defaults security on and simulator fallback off.",
+    mustContain: [
+      "enabled: ${BANKING_LAB_SECURITY_ENABLED:true}",
+      "simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}",
+      "dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}",
+      "audience: ${BANKING_LAB_SECURITY_AUDIENCE:}"
+    ],
+    mustNotContain: [
+      "enabled: ${BANKING_LAB_SECURITY_ENABLED:false}",
+      "simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:true}"
     ]
   },
   {

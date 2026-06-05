@@ -6,6 +6,9 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const settings = await readFile("settings.gradle.kts", "utf8");
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const build = await readFile("services/reporting-service/build.gradle.kts", "utf8");
+  const dockerfile = await readFile("infra/docker-compose/reporting-service.Dockerfile", "utf8");
+  const compose = await readFile("docker-compose.yml", "utf8");
+  const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const migration = await readFile("services/reporting-service/src/main/resources/db/migration/V001__reporting_service_foundation.sql", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
@@ -14,6 +17,13 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(build, /org\.springframework\.boot/);
   assert.match(build, /flyway-database-postgresql/);
   assert.match(build, /org\.testcontainers:postgresql/);
+  assert.match(dockerfile, /reporting-service-\*-migration\.jar/);
+  assert.match(compose, /reporting-service:/);
+  assert.match(compose, /SPRING_FLYWAY_TABLE: reporting_flyway_schema_history/);
+  assert.match(compose, /BANKING_LAB_REPORTING_DATABASE_URL: jdbc:postgresql:\/\/postgres:5432\/banking_lab/);
+  assert.match(compose, /BANKING_LAB_SECURITY_AUDIENCE: "\$\{BANKING_LAB_REPORTING_SECURITY_AUDIENCE:-reporting-service-api\}"/);
+  assert.match(prometheus, /job_name: reporting-service/);
+  assert.match(prometheus, /reporting-service:8090/);
   assert.match(migration, /CREATE TABLE report_definitions/);
   assert.match(migration, /CREATE TABLE report_artifacts/);
   assert.match(migration, /CREATE TABLE reporting_access_audit_events/);

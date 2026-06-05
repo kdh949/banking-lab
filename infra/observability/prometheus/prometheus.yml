@@ -15,6 +15,11 @@ scrape_configs:
       - targets:
           - notification-service:8089
           - notification-event-consumer:8089
+  - job_name: reporting-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - reporting-service:8090
   - job_name: redpanda
     static_configs:
       - targets:

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T18:33:28.257Z",
+  "generatedAt": "2026-06-05T15:01:00.824Z",
   "command": "npm run security:posture-check",
   "status": "pass",
   "syntheticOnly": true,
@@ -15,6 +15,13 @@
     {
       "file": "docker-compose.yml",
       "description": "Docker Compose platform uses secure auth defaults.",
+      "status": "pass",
+      "missing": [],
+      "forbidden": []
+    },
+    {
+      "file": "services/reporting-service/src/main/resources/application.yml",
+      "description": "Reporting service defaults security on and simulator fallback off.",
       "status": "pass",
       "missing": [],
       "forbidden": []

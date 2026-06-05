@@ -11,6 +11,8 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - `POST /api/reports/artifacts` creates metadata-only report artifacts with idempotency by `(requested_by, idempotency_key)`.
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
 - `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway.
+- Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table on the shared synthetic PostgreSQL database.
+- Prometheus scrapes `reporting-service:8090` through the platform observability profile.
 - Reporting routes are role-gated for `AUDITOR`, `COMPLIANCE_MANAGER`, `OPS_MANAGER`, and `REPORTING_ANALYST`.
 - Signed JWKS JWTs are the default path; simulator tokens are only accepted when explicitly enabled for local tests.
 - Structured errors include the reporting docs pointer and `syntheticOnly=true`.
@@ -26,6 +28,8 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 ## Verification
 
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
+- `docker compose --profile platform config`
+- `npm run security:posture-check`
 - `npm test`
 - `npm run evidence:refresh-check`
 - `npm run node:retirement-gate`
