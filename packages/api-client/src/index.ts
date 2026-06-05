@@ -219,6 +219,7 @@ export interface ComplaintCaseDto {
   readonly answerDraft?: ComplaintAnswerDraftDto | null;
   readonly customerConfirmedAt?: string | null;
   readonly timeline?: readonly ComplaintTimelineEntryDto[];
+  readonly sourceReference?: ComplaintSourceReferenceDto | null;
 }
 
 export interface ComplaintTimelineEntryDto {
@@ -245,6 +246,7 @@ export interface CustomerComplaintEntryCommand {
   readonly customerId?: string;
   readonly category: string;
   readonly description: string;
+  readonly sourceReference?: ComplaintSourceReferenceDto | null;
   readonly requestedBy?: string;
   readonly reason?: string;
 }
@@ -319,10 +321,23 @@ export interface ComplaintTypeGuideDto {
   readonly description: string;
   readonly slaHours: number;
   readonly requiredMaterials: readonly string[];
+  readonly sourceReferenceTypes?: readonly string[];
 }
 
 export interface ComplaintTypeGuideResponse {
   readonly items: readonly ComplaintTypeGuideDto[];
+}
+
+export interface ComplaintSourceReferenceDto {
+  readonly sourceType: string;
+  readonly sourceId: string;
+  readonly accountId?: string | null;
+  readonly cardId?: string | null;
+  readonly ledgerTransactionId?: string | null;
+  readonly amountMinor?: number | null;
+  readonly currency?: string | null;
+  readonly businessDate?: string | null;
+  readonly syntheticOnly?: boolean;
 }
 
 export interface ComplaintAnswerDraftCommand {

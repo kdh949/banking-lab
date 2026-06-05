@@ -102,7 +102,8 @@ class ComplaintCaseService(
                     category = "TRANSFER_DISPUTE",
                     description = "Synthetic transfer dispute or wrong-transfer investigation.",
                     slaHours = 72,
-                    requiredMaterials = listOf("transactionId", "customerStatement")
+                    requiredMaterials = listOf("transactionId", "customerStatement"),
+                    sourceReferenceTypes = listOf("CUSTOMER_TRANSFER", "LEDGER_TRANSACTION")
                 ),
                 ComplaintTypeGuideDto(
                     category = "ACCOUNT_ACCESS",
@@ -120,7 +121,8 @@ class ComplaintCaseService(
                     category = "CARD_DISPUTE",
                     description = "Synthetic card authorization, capture, or lost-card dispute.",
                     slaHours = 72,
-                    requiredMaterials = listOf("cardId", "authorizationId")
+                    requiredMaterials = listOf("cardId", "authorizationId"),
+                    sourceReferenceTypes = listOf("CARD_AUTHORIZATION", "CARD_CAPTURE")
                 )
             )
         )
@@ -131,9 +133,12 @@ class ComplaintCaseService(
             ?: throw WorkflowErrors.validation("customerId is required for complaint entry")
         BankingLabAuthContext.requireCustomerOwnership(customerId)
         val category = command.category?.takeIf { it.isNotBlank() }
+            ?.trim()
+            ?.uppercase()
             ?: throw WorkflowErrors.validation("complaint category is required")
         val description = command.description?.takeIf { it.isNotBlank() }
             ?: throw WorkflowErrors.validation("complaint description is required")
+        val sourceReference = validateSourceReference(customerId, category, command.sourceReference)
         val actorId = BankingLabAuthContext.get()?.subject
             ?: command.requestedBy?.takeIf { it.isNotBlank() }
             ?: customerId
@@ -143,18 +148,19 @@ class ComplaintCaseService(
             """
             INSERT INTO complaint_cases (
               complaint_case_id, customer_id, category, description, status,
-              sla_due_at, classification, owner_id
+              sla_due_at, classification, owner_id, source_reference_json
             )
             VALUES (
               :caseId, :customerId, :category, :description, 'RECEIVED',
-              now() + interval '7 days', NULL, NULL
+              now() + interval '7 days', NULL, NULL, CAST(:sourceReferenceJson AS jsonb)
             )
             """.trimIndent(),
             mapOf(
                 "caseId" to caseId,
                 "customerId" to customerId,
                 "category" to category,
-                "description" to description
+                "description" to description,
+                "sourceReferenceJson" to sourceReference?.let { objectMapper.writeValueAsString(it) }
             )
         )
         appendTimeline(caseId, "RECEIVED", null, "RECEIVED", actorId, "customer complaint received")
@@ -170,11 +176,164 @@ class ComplaintCaseService(
             payload = mapOf(
                 "businessType" to "COMPLAINT_ENTRY",
                 "category" to category,
+                "sourceReference" to sourceReference?.let {
+                    mapOf(
+                        "sourceType" to it.sourceType,
+                        "sourceId" to it.sourceId,
+                        "accountId" to it.accountId,
+                        "cardId" to it.cardId,
+                        "ledgerTransactionId" to it.ledgerTransactionId,
+                        "amountMinor" to it.amountMinor,
+                        "currency" to it.currency,
+                        "businessDate" to it.businessDate?.toString(),
+                        "syntheticOnly" to true
+                    )
+                },
                 "syntheticOnly" to true
             )
         )
         return CustomerComplaintEntryResponse(item = findForRead(caseId))
     }
+
+    private fun validateSourceReference(
+        customerId: String,
+        category: String,
+        sourceReference: ComplaintSourceReferenceDto?
+    ): ComplaintSourceReferenceDto? {
+        val allowedTypes = when (category) {
+            "TRANSFER_DISPUTE" -> TRANSFER_DISPUTE_SOURCE_TYPES
+            "CARD_DISPUTE" -> CARD_DISPUTE_SOURCE_TYPES
+            else -> null
+        }
+        if (allowedTypes == null) {
+            if (sourceReference != null) {
+                throw WorkflowErrors.validation("sourceReference is supported only for transfer or card disputes")
+            }
+            return null
+        }
+
+        val reference = sourceReference ?: throw WorkflowErrors.validation("sourceReference is required for $category")
+        val sourceType = reference.sourceType.trim().uppercase()
+        val sourceId = reference.sourceId.trim()
+        if (sourceType !in allowedTypes) {
+            throw WorkflowErrors.validation("$category sourceType must be one of ${allowedTypes.joinToString(", ")}")
+        }
+        if (sourceId.isBlank()) {
+            throw WorkflowErrors.validation("sourceReference.sourceId is required")
+        }
+        if (!reference.syntheticOnly) {
+            throw WorkflowErrors.validation("sourceReference must be syntheticOnly")
+        }
+        if (reference.amountMinor != null && reference.amountMinor <= 0) {
+            throw WorkflowErrors.validation("sourceReference.amountMinor must be positive when supplied")
+        }
+
+        val normalized = reference.copy(
+            sourceType = sourceType,
+            sourceId = sourceId,
+            accountId = reference.accountId.trimToNull(),
+            cardId = reference.cardId.trimToNull(),
+            ledgerTransactionId = reference.ledgerTransactionId.trimToNull(),
+            currency = reference.currency?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: "KRW",
+            syntheticOnly = true
+        )
+        when (sourceType) {
+            "CUSTOMER_TRANSFER", "LEDGER_TRANSACTION" -> requireTransferSourceOwned(customerId, normalized)
+            "CARD_AUTHORIZATION", "CARD_CAPTURE" -> requireCardSourceOwned(customerId, normalized)
+        }
+        return normalized
+    }
+
+    private fun requireTransferSourceOwned(customerId: String, sourceReference: ComplaintSourceReferenceDto) {
+        val owned = when (sourceReference.sourceType) {
+            "CUSTOMER_TRANSFER" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM customer_transfer_results
+                    WHERE customer_id = :customerId
+                      AND result_id = :sourceId
+                    """.trimIndent(),
+                    mapOf("customerId" to customerId, "sourceId" to sourceReference.sourceId)
+                )
+            "LEDGER_TRANSACTION" ->
+                countRows(
+                    """
+                    SELECT count(DISTINCT lt.ledger_transaction_id)
+                    FROM ledger_transactions lt
+                    JOIN ledger_postings lp
+                      ON lp.ledger_transaction_id = lt.ledger_transaction_id
+                    JOIN accounts a
+                      ON a.account_id = lp.account_id
+                    WHERE lt.ledger_transaction_id = :sourceId
+                      AND a.customer_id = :customerId
+                      AND (CAST(:accountId AS text) IS NULL OR a.account_id = CAST(:accountId AS text))
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "accountId" to sourceReference.accountId
+                    )
+                )
+            else -> 0
+        }
+        if (owned == 0) {
+            throw WorkflowErrors.authorizationViolation("complaint source reference does not belong to customer")
+        }
+    }
+
+    private fun requireCardSourceOwned(customerId: String, sourceReference: ComplaintSourceReferenceDto) {
+        val owned = when (sourceReference.sourceType) {
+            "CARD_AUTHORIZATION" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM card_authorizations ca
+                    JOIN cards c
+                      ON c.card_id = ca.card_id
+                    WHERE ca.authorization_id = :sourceId
+                      AND c.customer_id = :customerId
+                      AND (CAST(:cardId AS text) IS NULL OR c.card_id = CAST(:cardId AS text))
+                      AND (CAST(:accountId AS text) IS NULL OR ca.account_id = CAST(:accountId AS text))
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "cardId" to sourceReference.cardId,
+                        "accountId" to sourceReference.accountId
+                    )
+                )
+            "CARD_CAPTURE" ->
+                countRows(
+                    """
+                    SELECT count(*)
+                    FROM card_captures cc
+                    JOIN cards c
+                      ON c.card_id = cc.card_id
+                    WHERE cc.capture_id = :sourceId
+                      AND c.customer_id = :customerId
+                      AND (CAST(:cardId AS text) IS NULL OR c.card_id = CAST(:cardId AS text))
+                      AND (
+                        CAST(:ledgerTransactionId AS text) IS NULL
+                        OR cc.ledger_transaction_id = CAST(:ledgerTransactionId AS text)
+                      )
+                    """.trimIndent(),
+                    mapOf(
+                        "customerId" to customerId,
+                        "sourceId" to sourceReference.sourceId,
+                        "cardId" to sourceReference.cardId,
+                        "ledgerTransactionId" to sourceReference.ledgerTransactionId
+                    )
+                )
+            else -> 0
+        }
+        if (owned == 0) {
+            throw WorkflowErrors.authorizationViolation("complaint source reference does not belong to customer")
+        }
+    }
+
+    private fun countRows(sql: String, params: Map<String, Any?>): Int =
+        jdbc.queryForObject(sql, params, Int::class.java) ?: 0
 
     private fun confirmCustomerComplaintInTransaction(
         caseId: String,
@@ -651,7 +810,8 @@ class ComplaintCaseService(
         SELECT complaint_case_id, customer_id, category, description, status,
                sla_due_at, classification, owner_id, answer_json::text AS answer_json,
                answer_draft_json::text AS answer_draft_json, approval_id,
-               customer_confirmed_at, temporal_workflow_id, temporal_run_id, created_at
+               customer_confirmed_at, source_reference_json::text AS source_reference_json,
+               temporal_workflow_id, temporal_run_id, created_at
         FROM complaint_cases
         $suffix
         """.trimIndent()
@@ -671,6 +831,7 @@ class ComplaintCaseService(
             approvalId = rs.getString("approval_id"),
             customerConfirmedAt = rs.getObject("customer_confirmed_at", OffsetDateTime::class.java),
             timeline = timelineFor(rs.getString("complaint_case_id")),
+            sourceReference = readValue(rs.getString("source_reference_json"), ComplaintSourceReferenceDto::class.java),
             temporalWorkflow = temporalReference(rs)
         )
 
@@ -704,7 +865,12 @@ class ComplaintCaseService(
         )
     }
 
+    private fun String?.trimToNull(): String? =
+        this?.trim()?.takeIf { it.isNotBlank() }
+
     private companion object {
         const val SERIALIZABLE_COMPLAINT_COMMAND_MAX_ATTEMPTS = 5
+        val TRANSFER_DISPUTE_SOURCE_TYPES = setOf("CUSTOMER_TRANSFER", "LEDGER_TRANSACTION")
+        val CARD_DISPUTE_SOURCE_TYPES = setOf("CARD_AUTHORIZATION", "CARD_CAPTURE")
     }
 }

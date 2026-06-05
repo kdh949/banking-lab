@@ -40,9 +40,14 @@ class CustomerComplaintEntryApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              card_authorizations,
+              card_limits,
+              cards,
+              customer_transfer_results,
               complaint_case_timeline,
               complaint_cases,
               audit_events,
+              accounts,
               customers
             RESTART IDENTITY CASCADE
             """.trimIndent()
@@ -52,13 +57,19 @@ class CustomerComplaintEntryApiParityIntegrationTest {
             INSERT INTO customers (
               customer_id, customer_name, customer_phone, customer_address, customer_grade, risk_grade
             )
-            VALUES (
-              'SYN-CUS-001', 'Lab Customer Alpha', '010-0000-1001',
-              'Seoul Synthetic District', 'STANDARD', 'LOW'
-            )
+            VALUES
+              (
+                'SYN-CUS-001', 'Lab Customer Alpha', '010-0000-1001',
+                'Seoul Synthetic District', 'STANDARD', 'LOW'
+              ),
+              (
+                'SYN-CUS-002', 'Lab Customer Beta', '010-0000-1002',
+                'Busan Synthetic District', 'STANDARD', 'LOW'
+              )
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
+        seedDisputeSources()
     }
 
     @Test
@@ -71,7 +82,7 @@ class CustomerComplaintEntryApiParityIntegrationTest {
                     """
                     {
                       "customerId": "SYN-CUS-001",
-                      "category": "TRANSFER_DISPUTE",
+                      "category": "ACCOUNT_ACCESS",
                       "description": "Synthetic complaint workflow test",
                       "reason": "Customer submitted complaint workflow parity"
                     }
@@ -146,6 +157,90 @@ class CustomerComplaintEntryApiParityIntegrationTest {
     }
 
     @Test
+    fun `customer complaint entry links owned transfer and card dispute sources`() {
+        val transferResponse = mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "TRANSFER_DISPUTE",
+                      "description": "Synthetic wrong-transfer dispute",
+                      "sourceReference": {
+                        "sourceType": "CUSTOMER_TRANSFER",
+                        "sourceId": "TRR-DISP-001",
+                        "accountId": "ACC-DISP-001",
+                        "amountMinor": 72000,
+                        "currency": "KRW",
+                        "businessDate": "2026-06-05",
+                        "syntheticOnly": true
+                      },
+                      "reason": "Customer disputes synthetic transfer source"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.category").value("TRANSFER_DISPUTE"))
+            .andExpect(jsonPath("$.item.sourceReference.sourceType").value("CUSTOMER_TRANSFER"))
+            .andExpect(jsonPath("$.item.sourceReference.sourceId").value("TRR-DISP-001"))
+            .andExpect(jsonPath("$.item.sourceReference.accountId").value("ACC-DISP-001"))
+            .andExpect(jsonPath("$.item.sourceReference.amountMinor").value(72000))
+            .andExpect(jsonPath("$.item.sourceReference.syntheticOnly").value(true))
+            .andReturn()
+
+        val transferCaseId = objectMapper.readTree(transferResponse.response.contentAsString)
+            .path("item")
+            .path("caseId")
+            .asText()
+
+        mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "CARD_DISPUTE",
+                      "description": "Synthetic card authorization dispute",
+                      "sourceReference": {
+                        "sourceType": "CARD_AUTHORIZATION",
+                        "sourceId": "CAUTH-DISP-001",
+                        "accountId": "ACC-DISP-001",
+                        "cardId": "CARD-DISP-001",
+                        "amountMinor": 31000,
+                        "currency": "KRW",
+                        "businessDate": "2026-06-05",
+                        "syntheticOnly": true
+                      },
+                      "reason": "Customer disputes synthetic card authorization"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.category").value("CARD_DISPUTE"))
+            .andExpect(jsonPath("$.item.sourceReference.sourceType").value("CARD_AUTHORIZATION"))
+            .andExpect(jsonPath("$.item.sourceReference.sourceId").value("CAUTH-DISP-001"))
+            .andExpect(jsonPath("$.item.sourceReference.cardId").value("CARD-DISP-001"))
+
+        mockMvc.perform(
+            get("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .queryParam("customerId", "SYN-CUS-001")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items[?(@.caseId == '$transferCaseId')].sourceReference.sourceId").value("TRR-DISP-001"))
+
+        assertEquals(1, countRows("complaint_cases WHERE complaint_case_id = '$transferCaseId' AND source_reference_json->>'sourceId' = 'TRR-DISP-001'"))
+        assertEquals(1, countRows("audit_events WHERE business_reference_id = '$transferCaseId' AND payload_json->'sourceReference'->>'sourceId' = 'TRR-DISP-001'"))
+        assertEquals(0, countRows("audit_events WHERE payload_json::text LIKE '%Synthetic wrong-transfer dispute%'"))
+    }
+
+    @Test
     fun `customer complaint entry rejects invalid body and customer ownership mismatch`() {
         mockMvc.perform(
             post("/api/customer/complaints")
@@ -186,6 +281,152 @@ class CustomerComplaintEntryApiParityIntegrationTest {
             .andExpect(jsonPath("$.error.requestId").value("REQ-CWB-COMPLAINT-OWNERSHIP"))
 
         assertEquals(0, countRows("complaint_cases"))
+    }
+
+    @Test
+    fun `customer complaint entry rejects missing or unauthorized dispute source references`() {
+        mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .header("x-request-id", "REQ-CWB-DISPUTE-SOURCE-MISSING")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "TRANSFER_DISPUTE",
+                      "description": "Missing source reference"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-CWB-DISPUTE-SOURCE-MISSING"))
+
+        mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .header("x-request-id", "REQ-CWB-DISPUTE-SOURCE-OWNER")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "TRANSFER_DISPUTE",
+                      "description": "Attempt to dispute another customer source",
+                      "sourceReference": {
+                        "sourceType": "CUSTOMER_TRANSFER",
+                        "sourceId": "TRR-DISP-002",
+                        "syntheticOnly": true
+                      }
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-CWB-DISPUTE-SOURCE-OWNER"))
+
+        mockMvc.perform(
+            post("/api/customer/complaints")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .header("x-request-id", "REQ-CWB-DISPUTE-SOURCE-CATEGORY")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "category": "ACCOUNT_ACCESS",
+                      "description": "Attempt to attach a dispute source to access complaint",
+                      "sourceReference": {
+                        "sourceType": "CUSTOMER_TRANSFER",
+                        "sourceId": "TRR-DISP-001",
+                        "syntheticOnly": true
+                      }
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-CWB-DISPUTE-SOURCE-CATEGORY"))
+
+        assertEquals(0, countRows("complaint_cases"))
+    }
+
+    private fun seedDisputeSources() {
+        jdbc.update(
+            """
+            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
+            VALUES
+              ('ACC-DISP-001', 'SYN-CUS-001', 'LAB-DISP-001', 'KRW', 'ACTIVE'),
+              ('ACC-DISP-002', 'SYN-CUS-002', 'LAB-DISP-002', 'KRW', 'ACTIVE')
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO customer_transfer_results (
+              result_id, idempotency_key, command_hash, customer_id,
+              from_account_id, to_account_id, amount_minor, currency, status,
+              ledger_transaction_id, fds_case_id, failure_code, message,
+              requested_by, requested_channel, business_reference_id, business_date
+            )
+            VALUES
+              (
+                'TRR-DISP-001', 'IT-DISP-001', 'hash-disp-001', 'SYN-CUS-001',
+                'ACC-DISP-001', 'ACC-DISP-002', 72000, 'KRW', 'FAILED',
+                NULL, NULL, 'SYNTHETIC_DISPUTE_SOURCE', 'Synthetic dispute source for customer 001',
+                'customer01', 'CUSTOMER_WEB', 'BR-DISP-001', DATE '2026-06-05'
+              ),
+              (
+                'TRR-DISP-002', 'IT-DISP-002', 'hash-disp-002', 'SYN-CUS-002',
+                'ACC-DISP-002', 'ACC-DISP-001', 83000, 'KRW', 'FAILED',
+                NULL, NULL, 'SYNTHETIC_DISPUTE_SOURCE', 'Synthetic dispute source for customer 002',
+                'customer02', 'CUSTOMER_WEB', 'BR-DISP-002', DATE '2026-06-05'
+              )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO cards (
+              card_id, customer_id, account_id, pan_token, pan_last4,
+              status, issued_by, reason, idempotency_key, metadata_json
+            )
+            VALUES (
+              'CARD-DISP-001', 'SYN-CUS-001', 'ACC-DISP-001',
+              'tok_synthetic_dispute_001', '4242', 'ACTIVE',
+              'customer01', 'Synthetic card dispute test fixture',
+              'CARD-DISP-ISSUE-001', '{"syntheticOnly":true,"rawPanStored":false}'::jsonb
+            )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_limits (card_id, daily_limit_minor, monthly_limit_minor, single_limit_minor)
+            VALUES ('CARD-DISP-001', 1000000, 5000000, 500000)
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_authorizations (
+              authorization_id, card_id, account_id, amount_minor, currency, merchant_name,
+              business_date, status, hold_id, three_ds_authentication_id,
+              requested_by, requested_channel, reason, idempotency_key
+            )
+            VALUES (
+              'CAUTH-DISP-001', 'CARD-DISP-001', 'ACC-DISP-001',
+              31000, 'KRW', 'Synthetic Merchant', DATE '2026-06-05',
+              'HELD', NULL, NULL, 'customer01', 'CARD_AUTH',
+              'Synthetic authorization dispute source', 'CAUTH-DISP-001'
+            )
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
     }
 
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {

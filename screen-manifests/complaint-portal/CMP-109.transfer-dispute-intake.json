@@ -1,7 +1,7 @@
 {
-  "screenId": "CMP-101",
-  "transactionCode": "CMP101",
-  "title": "Complaint Intake",
+  "screenId": "CMP-109",
+  "transactionCode": "CMP109",
+  "title": "Transfer Dispute Intake",
   "app": "complaint-portal",
   "type": "CASE",
   "domain": "complaint",
@@ -36,15 +36,28 @@
     "reasonRequired": false,
     "piiAccess": true,
     "selfService": true,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["COMMAND_REQUESTED"]
   },
-  "sections": ["complaintSummary", "relatedTransactions", "attachments", "timeline"],
+  "sourceReference": {
+    "category": "TRANSFER_DISPUTE",
+    "allowedTypes": ["CUSTOMER_TRANSFER", "LEDGER_TRANSACTION"],
+    "ownership": "CUSTOMER_OWNED_SOURCE",
+    "syntheticOnly": true
+  },
+  "sections": ["sourceTransaction", "complaintSummary", "attachments", "timeline"],
   "actions": [
     {
-      "id": "submitComplaint",
-      "label": "Submit Complaint",
+      "id": "submitTransferDispute",
+      "label": "Submit Transfer Dispute",
       "type": "command",
       "target": "POST /api/customer/complaints"
+    },
+    {
+      "id": "addMaterials",
+      "label": "Add Materials",
+      "type": "navigate",
+      "target": "CMP-103"
     }
   ]
 }

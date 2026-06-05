@@ -2162,6 +2162,40 @@ Remaining blockers:
 - Non-synthetic passkey operations still require the real platform-authenticator or hardware-security-key run and generated artifact.
 - Final retirement review remains pending until passkey evidence exists, verifies, and no critical behavior depends on Node-only code.
 
+## 2026-06-05: Complaint Dispute Source References
+
+Changes completed:
+
+- Added `complaint_cases.source_reference_json` for synthetic transfer/card
+  dispute source metadata.
+- Extended Spring complaint entry DTOs so `TRANSFER_DISPUTE` and
+  `CARD_DISPUTE` can carry bounded `sourceReference` data.
+- Enforced customer-owned source validation for `CUSTOMER_TRANSFER`,
+  `LEDGER_TRANSACTION`, `CARD_AUTHORIZATION`, and `CARD_CAPTURE` references.
+- Added complaint portal manifests `CMP-109` and `CMP-110` for transfer and
+  card dispute intake.
+- Added complaint portal API-backed smoke wiring that creates transfer and card
+  disputes from synthetic seeded source rows.
+- Updated evidence and coverage docs to keep refund/reversal/adjustment
+  execution separate from intake source linkage.
+
+Verification:
+
+- `npm run packages:typecheck` passed.
+- `npm run next:complaint-portal:typecheck` passed.
+- `npm run validate:manifests` validated 99 manifests.
+- `npm test` passed 156 tests.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.complaint.CustomerComplaintEntryApiParityIntegrationTest --rerun-tasks` passed after the first run exposed an old source-less `TRANSFER_DISPUTE` fixture.
+- `npm run test:core-banking:integration -- --tests 'lab.banking.core.complaint.*' --rerun-tasks` passed.
+- `npm run test:e2e -- apps/complaint-portal/e2e/complaint-portal-parity.spec.ts` passed with 2 local manifest/shell tests and 5 API/Keycloak live smokes skipped because live URLs were not configured.
+
+Result:
+
+- Dispute cases now preserve a durable synthetic source link without mutating
+  transfer, card, or ledger source rows.
+- Cross-customer and unsupported source references are rejected before complaint
+  persistence.
+
 ## 2026-06-03: Passkey Evidence Template Preparation Guard
 
 Changes completed:

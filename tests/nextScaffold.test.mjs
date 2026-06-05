@@ -126,14 +126,24 @@ test("complaint-portal exposes self-service complaint extensions through manifes
   const materialManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-103.additional-materials.json", "utf8"));
   const reopenManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-106.reopen-request.json", "utf8"));
   const typeGuideManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-107.complaint-type-guide.json", "utf8"));
+  const transferDisputeManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-109.transfer-dispute-intake.json", "utf8"));
+  const cardDisputeManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-110.card-dispute-intake.json", "utf8"));
 
   assert.match(panel, /data-testid="api-backed-complaint-self-service"/);
   assert.match(panel, /complaintTypeGuide/);
+  assert.match(panel, /Run dispute intake smoke/);
+  assert.match(panel, /TRR-SYN-CMP-001/);
+  assert.match(panel, /CAUTH-SYN-CMP-001/);
+  assert.match(client, /ComplaintSourceReferenceDto/);
   assert.match(panel, /submitCustomerComplaintMaterial/);
   assert.match(panel, /reopenCustomerComplaint/);
   assert.match(client, /submitCustomerComplaintMaterial/);
   assert.match(client, /reopenCustomerComplaint/);
   assert.match(client, /complaintTypeGuide/);
+  assert.equal(transferDisputeManifest.sourceReference.allowedTypes[0], "CUSTOMER_TRANSFER");
+  assert.equal(transferDisputeManifest.actions[0].target, "POST /api/customer/complaints");
+  assert.equal(cardDisputeManifest.sourceReference.allowedTypes[0], "CARD_AUTHORIZATION");
+  assert.equal(cardDisputeManifest.actions[0].target, "POST /api/customer/complaints");
   assert.equal(materialManifest.actions[0].target, "POST /api/customer/complaints/{caseId}/materials");
   assert.equal(reopenManifest.actions[0].target, "POST /api/customer/complaints/{caseId}/reopen-requests");
   assert.equal(typeGuideManifest.query.endpoint, "GET /api/customer/complaint-types");

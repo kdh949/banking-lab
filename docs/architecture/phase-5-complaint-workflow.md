@@ -31,6 +31,15 @@ Customer portal intake
 - `POST /api/staff/complaints/{caseId}/answer-drafts`
 - `POST /api/staff/approvals/{approvalId}/approve`
 
+`POST /api/customer/complaints` supports optional `sourceReference` metadata for
+`TRANSFER_DISPUTE` and `CARD_DISPUTE`. Transfer disputes may reference a
+customer-owned `CUSTOMER_TRANSFER` result or `LEDGER_TRANSACTION`; card disputes
+may reference a customer-owned `CARD_AUTHORIZATION` or `CARD_CAPTURE`. The
+reference is persisted in `complaint_cases.source_reference_json` with
+`syntheticOnly=true`; it does not mutate the source transfer, card, or ledger
+rows. Any refund, reversal, or adjustment still goes through the existing
+balanced ledger correction and maker-checker approval paths.
+
 ## Control Points
 
 - SLA is set at intake.

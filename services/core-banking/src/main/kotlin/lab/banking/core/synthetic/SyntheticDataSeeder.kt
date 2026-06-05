@@ -26,6 +26,7 @@ class SyntheticDataSeeder(
         seedDepositProducts()
         seedFeePolicies()
         seedLedgerCorrectionTransactions()
+        seedComplaintSourceReferences()
         seedWorkflowCases()
         seedAuditEvent()
     }
@@ -174,6 +175,70 @@ class SyntheticDataSeeder(
                 emptyMap<String, Any?>()
             )
         }
+    }
+
+    private fun seedComplaintSourceReferences() {
+        jdbc.update(
+            """
+            INSERT INTO customer_transfer_results (
+              result_id, idempotency_key, command_hash, customer_id,
+              from_account_id, to_account_id, amount_minor, currency, status,
+              ledger_transaction_id, fds_case_id, failure_code, message,
+              requested_by, requested_channel, business_reference_id, business_date
+            )
+            VALUES (
+              'TRR-SYN-CMP-001', 'SEED-CMP-TRANSFER-DISPUTE-001',
+              'synthetic-complaint-transfer-dispute-source', 'SYN-CUS-001',
+              'ACC-SYN-CORR-FROM', 'ACC-SYN-CORR-TO', 9000, 'KRW', 'POSTED',
+              'TX-SYN-CORR-001', NULL, NULL, 'Synthetic posted transfer source for complaint dispute smoke',
+              'customer01', 'CUSTOMER_WEB', 'CMP-SYN-TRANSFER-DISPUTE-001', CURRENT_DATE
+            )
+            ON CONFLICT (result_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO cards (
+              card_id, customer_id, account_id, pan_token, pan_last4,
+              status, issued_by, reason, idempotency_key, metadata_json
+            )
+            VALUES (
+              'CARD-SYN-CMP-001', 'SYN-CUS-001', 'ACC-SYN-001-001',
+              'tok_synthetic_card_cmp_001', '4242', 'ACTIVE',
+              'synthetic-seeder', 'Synthetic card source for complaint dispute smoke',
+              'SEED-CMP-CARD-001', '{"syntheticOnly":true,"rawPanStored":false}'::jsonb
+            )
+            ON CONFLICT (card_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_limits (card_id, daily_limit_minor, monthly_limit_minor, single_limit_minor)
+            VALUES ('CARD-SYN-CMP-001', 1000000, 5000000, 500000)
+            ON CONFLICT (card_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
+        jdbc.update(
+            """
+            INSERT INTO card_authorizations (
+              authorization_id, card_id, account_id, amount_minor, currency, merchant_name,
+              business_date, status, hold_id, three_ds_authentication_id,
+              requested_by, requested_channel, reason, idempotency_key
+            )
+            VALUES (
+              'CAUTH-SYN-CMP-001', 'CARD-SYN-CMP-001', 'ACC-SYN-001-001',
+              12500, 'KRW', 'Synthetic Merchant', CURRENT_DATE, 'HELD',
+              NULL, NULL, 'customer01', 'CARD_AUTH',
+              'Synthetic card authorization source for complaint dispute smoke',
+              'SEED-CMP-CARD-AUTH-001'
+            )
+            ON CONFLICT (authorization_id) DO NOTHING
+            """.trimIndent(),
+            emptyMap<String, Any?>()
+        )
     }
 
     private fun seedDepositProducts() {

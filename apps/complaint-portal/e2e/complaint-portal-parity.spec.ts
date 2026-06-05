@@ -108,6 +108,11 @@ test("complaint portal runs Spring API-backed customer self-service complaint ex
   await expect(panel).toContainText("complaint types loaded", { timeout: 15_000 });
   await expect(panel).toContainText("TRANSFER_DISPUTE:72h");
 
+  await page.getByRole("button", { name: "Run dispute intake smoke" }).click();
+  await expect(panel).toContainText("dispute intake submitted", { timeout: 15_000 });
+  await expect(panel).toContainText("TRR-SYN-CMP-001");
+  await expect(panel).toContainText("CAUTH-SYN-CMP-001");
+
   await page.getByRole("button", { name: "Run material smoke" }).click();
   await expect(panel).toContainText("material submitted", { timeout: 15_000 });
   await expect(panel).toContainText("CMM-");

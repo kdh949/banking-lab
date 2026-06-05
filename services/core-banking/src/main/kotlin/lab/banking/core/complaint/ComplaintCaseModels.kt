@@ -1,5 +1,6 @@
 package lab.banking.core.complaint
 
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.temporal.TemporalWorkflowReference
@@ -18,6 +19,7 @@ data class ComplaintCaseDto(
     val approvalId: String?,
     val customerConfirmedAt: OffsetDateTime?,
     val timeline: List<ComplaintTimelineEntryDto>,
+    val sourceReference: ComplaintSourceReferenceDto?,
     val temporalWorkflow: TemporalWorkflowReference?
 )
 
@@ -57,6 +59,7 @@ data class CustomerComplaintEntryCommand(
     val customerId: String? = null,
     val category: String? = null,
     val description: String? = null,
+    val sourceReference: ComplaintSourceReferenceDto? = null,
     val requestedBy: String? = null,
     val reason: String? = null
 )
@@ -130,9 +133,22 @@ data class ComplaintTypeGuideDto(
     val category: String,
     val description: String,
     val slaHours: Int,
-    val requiredMaterials: List<String>
+    val requiredMaterials: List<String>,
+    val sourceReferenceTypes: List<String> = emptyList()
 )
 
 data class ComplaintTypeGuideResponse(
     val items: List<ComplaintTypeGuideDto>
+)
+
+data class ComplaintSourceReferenceDto(
+    val sourceType: String,
+    val sourceId: String,
+    val accountId: String? = null,
+    val cardId: String? = null,
+    val ledgerTransactionId: String? = null,
+    val amountMinor: Long? = null,
+    val currency: String? = "KRW",
+    val businessDate: LocalDate? = null,
+    val syntheticOnly: Boolean = true
 )

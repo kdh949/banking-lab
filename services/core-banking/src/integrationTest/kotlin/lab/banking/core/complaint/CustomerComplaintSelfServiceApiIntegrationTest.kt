@@ -108,6 +108,7 @@ class CustomerComplaintSelfServiceApiIntegrationTest {
             .andExpect(jsonPath("$.items[0].category").value("TRANSFER_DISPUTE"))
             .andExpect(jsonPath("$.items[0].slaHours").value(72))
             .andExpect(jsonPath("$.items[0].requiredMaterials[0]").value("transactionId"))
+            .andExpect(jsonPath("$.items[0].sourceReferenceTypes[0]").value("CUSTOMER_TRANSFER"))
             .andExpect(jsonPath("$.items[?(@.category == 'CARD_DISPUTE')]").exists())
     }
 
