@@ -95,6 +95,21 @@ test("admin console loads reporting catalog and artifact controls when configure
   await expect(panel).toContainText("RPT-");
 });
 
+test("admin console requests Spring API-backed security parameter change when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed ADM-201 parameter command smoke.");
+
+  await page.goto(baseUrl);
+
+  const panel = page.getByTestId("api-backed-security-parameters");
+  await expect(panel).toContainText("security parameters loaded", { timeout: 15_000 });
+  await expect(panel).toContainText("staffSessionTtlSeconds");
+  await page.getByRole("button", { name: "Run security parameter change smoke" }).click();
+  await expect(panel).toContainText("security parameter change requested", { timeout: 15_000 });
+  await expect(panel).toContainText("PENDING_APPROVAL");
+  await expect(panel).toContainText("APR-");
+  await expect(panel).toContainText("SPC-");
+});
+
 test("admin console propagates interactive Keycloak security admin token when configured", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live admin Keycloak browser smoke.");
 
