@@ -1,6 +1,7 @@
 package lab.banking.reporting.domain
 
 import java.time.OffsetDateTime
+import java.time.LocalDate
 import org.springframework.http.HttpStatus
 
 data class ReportDefinitionDto(
@@ -35,6 +36,11 @@ data class ReportArtifactDto(
     val reason: String,
     val status: String,
     val artifactPath: String,
+    val artifactContent: Map<String, Any?>,
+    val contentSha256: String,
+    val retentionPolicy: String,
+    val retentionUntil: LocalDate?,
+    val exportFormat: String,
     val sourceReferences: List<String>,
     val maskedByDefault: Boolean,
     val syntheticOnly: Boolean,

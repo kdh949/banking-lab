@@ -14,7 +14,7 @@
   "audit": {
     "enabled": true,
     "reasonRequired": true,
-    "eventTypes": ["REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_GENERATE_REPLAYED"],
+    "eventTypes": ["REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_GENERATE_REPLAYED", "REPORT_ARTIFACT_LIST_VIEW"],
     "piiAccess": false,
     "maskingPolicy": "MASK_REPORT_METADATA"
   },
@@ -73,5 +73,5 @@
       "target": "GET /api/reports/artifacts"
     }
   ],
-  "postActions": ["createAuditEvent", "enforceMetadataOnlyArtifact", "preserveMaskedByDefault"]
+  "postActions": ["createAuditEvent", "persistRenderedSyntheticArtifact", "preserveMaskedByDefault", "storeContentSha256", "applySyntheticRetentionPolicy"]
 }

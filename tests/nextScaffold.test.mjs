@@ -102,8 +102,12 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.match(panel, /reportCatalog/);
   assert.match(panel, /generateReportArtifact/);
   assert.match(panel, /reportArtifacts/);
+  assert.match(panel, /contentSha256/);
+  assert.match(panel, /retentionPolicy/);
   assert.match(panel, /data-testid="api-backed-reporting-admin"/);
   assert.match(client, /ReportCatalogResponse/);
+  assert.match(client, /artifactContent/);
+  assert.match(client, /contentSha256/);
   assert.match(client, /generateReportArtifact/);
   assert.match(client, /reportArtifacts/);
   assert.match(loader, /admin-console/);
@@ -120,6 +124,7 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(reportingManifest.type, "COMMAND");
   assert.equal(reportingManifest.api.command, "POST /api/reports/artifacts");
   assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_CATALOG_VIEW");
+  assert.ok(reportingManifest.postActions.includes("storeContentSha256"));
   assert.equal(reportingManifest.actions[0].target, "GET /api/reports/catalog");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
   assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
@@ -144,6 +149,8 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.match(panel, /data-testid="api-backed-notification-delivery-history"/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL/);
   assert.match(panel, /reportArtifacts/);
+  assert.match(panel, /contentSha256/);
+  assert.match(panel, /retentionPolicy/);
   assert.match(panel, /data-testid="api-backed-reporting-artifact-history"/);
   assert.match(client, /ReportArtifactListResponse/);
   assert.match(loader, /audit-console/);
@@ -154,6 +161,8 @@ test("audit-console exposes notification delivery history through manifests and 
   assert.equal(reportingManifest.query.endpoint, "GET /api/reports/artifacts");
   assert.equal(reportingManifest.audit.reasonRequired, true);
   assert.equal(reportingManifest.audit.eventTypes[0], "REPORT_ARTIFACT_LIST_VIEW");
+  assert.ok(reportingManifest.resultTable.columns.includes("contentSha256"));
+  assert.ok(reportingManifest.resultTable.columns.includes("retentionPolicy"));
 });
 
 test("complaint-portal exposes self-service complaint extensions through manifests and API client", async () => {

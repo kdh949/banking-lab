@@ -1,5 +1,5 @@
 -- Synthetic reporting-service foundation.
--- Report artifacts are metadata only; no real documents, PII, or regulatory filing data.
+-- Report artifacts start from a synthetic metadata foundation; later migrations add rendered payload controls.
 
 CREATE TABLE report_definitions (
   report_type TEXT PRIMARY KEY,

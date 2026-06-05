@@ -1,7 +1,9 @@
 package lab.banking.reporting.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.type.TypeReference
 import java.sql.ResultSet
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import lab.banking.reporting.domain.ReportArtifactDto
 import lab.banking.reporting.domain.ReportDefinitionDto
@@ -50,6 +52,11 @@ class ReportingRepository(
         reason: String,
         idempotencyKey: String,
         artifactPath: String,
+        artifactContent: Map<String, Any?>,
+        contentSha256: String,
+        retentionPolicy: String,
+        retentionUntil: LocalDate,
+        exportFormat: String,
         sourceReferences: List<String>
     ): ReportArtifactDto {
         jdbc.update(
@@ -57,11 +64,13 @@ class ReportingRepository(
             INSERT INTO report_artifacts (
               artifact_id, report_type, requested_by, requested_role, reason,
               idempotency_key, status, artifact_path, source_references,
-              masked_by_default, synthetic_only
+              artifact_content, content_sha256, retention_policy, retention_until,
+              export_format, masked_by_default, synthetic_only
             ) VALUES (
               :artifactId, :reportType, :requestedBy, :requestedRole, :reason,
               :idempotencyKey, 'GENERATED', :artifactPath, CAST(:sourceReferences AS jsonb),
-              true, true
+              CAST(:artifactContent AS jsonb), :contentSha256, :retentionPolicy, :retentionUntil,
+              :exportFormat, true, true
             )
             """.trimIndent(),
             mapOf(
@@ -72,6 +81,11 @@ class ReportingRepository(
                 "reason" to reason,
                 "idempotencyKey" to idempotencyKey,
                 "artifactPath" to artifactPath,
+                "artifactContent" to objectMapper.writeValueAsString(artifactContent),
+                "contentSha256" to contentSha256,
+                "retentionPolicy" to retentionPolicy,
+                "retentionUntil" to retentionUntil,
+                "exportFormat" to exportFormat,
                 "sourceReferences" to objectMapper.writeValueAsString(sourceReferences)
             )
         )
@@ -117,7 +131,9 @@ class ReportingRepository(
     private fun artifactSql(whereClause: String): String =
         """
         SELECT artifact_id, report_type, requested_by, requested_role, reason,
-               status, artifact_path, source_references, masked_by_default,
+               status, artifact_path, artifact_content, content_sha256,
+               retention_policy, retention_until, export_format,
+               source_references, masked_by_default,
                synthetic_only, generated_at
         FROM report_artifacts
         $whereClause
@@ -143,6 +159,11 @@ class ReportingRepository(
             reason = rs.getString("reason"),
             status = rs.getString("status"),
             artifactPath = rs.getString("artifact_path"),
+            artifactContent = readMap(rs.getString("artifact_content")),
+            contentSha256 = rs.getString("content_sha256"),
+            retentionPolicy = rs.getString("retention_policy"),
+            retentionUntil = rs.getObject("retention_until", LocalDate::class.java),
+            exportFormat = rs.getString("export_format"),
             sourceReferences = readStringList(rs.getString("source_references")),
             maskedByDefault = rs.getBoolean("masked_by_default"),
             syntheticOnly = rs.getBoolean("synthetic_only"),
@@ -151,4 +172,7 @@ class ReportingRepository(
 
     private fun readStringList(value: String): List<String> =
         objectMapper.readValue(value, Array<String>::class.java).toList()
+
+    private fun readMap(value: String): Map<String, Any?> =
+        objectMapper.readValue(value, object : TypeReference<Map<String, Any?>>() {})
 }

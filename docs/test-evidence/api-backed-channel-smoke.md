@@ -53,14 +53,16 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - `audit-console` renders an API-backed audit panel that calls `GET /api/audit/events` and displays hash-chain validity.
 - `audit-console` renders an API-backed reporting artifact panel that calls
   reason-required `GET /api/reports/artifacts` when a reporting-service URL is
-  configured.
+  configured and displays masked artifact status, export format, retention
+  policy, and content checksum metadata.
 - `audit-console` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange an auditor code through the Next BFF route `POST /api/auth/keycloak-token`, and render hash-chain validity plus `AUD-SYN-SEED-001` while Spring simulator tokens are disabled.
 - `fds-aml-console` renders an API-backed risk panel that calls `GET /api/staff/fds-cases` and `GET /api/staff/aml-cases`.
 - `admin-console` renders an API-backed platform-control panel that calls `GET /api/admin/platform/summary`, keeps synthetic-only and Node reference boundary controls visible, calls reason-required `GET /api/admin/platform/evidence-coverage` for curated feature/evidence metadata, calls reason-required `GET /api/admin/platform/system-status` for system, batch, and monitoring metadata, and can execute a live Keycloak Authorization Code + PKCE browser smoke for `security-admin01`.
 - `admin-console` renders an API-backed reporting panel that calls
   reason-required `GET /api/reports/catalog`, idempotent
   `POST /api/reports/artifacts`, and reason-required `GET /api/reports/artifacts`
-  when a reporting-service URL is configured.
+  when a reporting-service URL is configured, then displays rendered artifact
+  checksum and synthetic retention metadata without exposing unmasked payloads.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting release for `FDS-SYN-CMD-001`, approving the generated maker-checker approval, and observing a posted ledger transaction.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting block for `FDS-SYN-BLOCK-CMD-001`, approving the generated maker-checker approval, and observing `BLOCKED` with no ledger posting.
 - `fds-aml-console` can execute a Spring API-backed browser command smoke by requesting AML closure for `AML-SYN-CMD-001`, approving the generated maker-checker approval, and observing the workflow status move to `CLOSED` with `STR_SIMULATED`.
@@ -94,7 +96,8 @@ Commands run:
 - `npm run next:admin-console:typecheck` passed.
 - `npm run next:audit-console:typecheck` passed.
 - `npm run validate:manifests` passed with 106 manifests.
-- `node --test tests/nextScaffold.test.mjs` passed with 14 tests.
+- `node --test tests/reportingServiceScaffold.test.mjs tests/nextScaffold.test.mjs` passed with 16 tests.
+- `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks` passed after sandbox escalation; the sandboxed run failed before tests with Gradle `FileLockContentionHandler` socket permission denial.
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts` passed with 4 manifest-rendering/shell tests and 6 skipped because API, Keycloak, and reporting E2E URLs were not configured.
 
 Not proven locally:

@@ -360,9 +360,21 @@ export function ApiBackedAuditPanel() {
               <dt>Artifact Sample</dt>
               <dd>
                 {reportingArtifactState.artifacts[0]
-                  ? `${reportingArtifactState.artifacts[0].reportType}:${reportingArtifactState.artifacts[0].status}:${reportingArtifactState.artifacts[0].maskedByDefault ? "masked" : "unsafe"}`
+                  ? `${reportingArtifactState.artifacts[0].reportType}:${reportingArtifactState.artifacts[0].status}:${reportingArtifactState.artifacts[0].maskedByDefault ? "masked" : "unsafe"}:${reportingArtifactState.artifacts[0].exportFormat}`
                   : "none"}
               </dd>
+            </div>
+            <div>
+              <dt>Artifact Retention</dt>
+              <dd>
+                {reportingArtifactState.artifacts[0]
+                  ? `${reportingArtifactState.artifacts[0].retentionPolicy}:${reportingArtifactState.artifacts[0].retentionUntil ?? "unscheduled"}`
+                  : "none"}
+              </dd>
+            </div>
+            <div>
+              <dt>Artifact Checksum</dt>
+              <dd>{reportingArtifactState.artifacts[0]?.contentSha256.slice(0, 12) ?? "none"}</dd>
             </div>
           </>
         ) : null}

@@ -454,6 +454,14 @@ export function ApiBackedAdminPanel() {
               <dd>{reportingState.artifact.maskedByDefault ? "masked by default" : "unsafe"}</dd>
             </div>
             <div>
+              <dt>Artifact Checksum</dt>
+              <dd>{`${reportingState.artifact.exportFormat}:${reportingState.artifact.contentSha256.slice(0, 12)}`}</dd>
+            </div>
+            <div>
+              <dt>Retention</dt>
+              <dd>{`${reportingState.artifact.retentionPolicy}:${reportingState.artifact.retentionUntil ?? "unscheduled"}`}</dd>
+            </div>
+            <div>
               <dt>Listed Artifacts</dt>
               <dd>{reportingState.artifacts.map((artifact) => `${artifact.artifactId}:${artifact.status}`).join(", ") || "none"}</dd>
             </div>

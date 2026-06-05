@@ -1,5 +1,10 @@
 package lab.banking.reporting.domain
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import java.security.MessageDigest
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import lab.banking.reporting.persistence.ReportingRepository
 import lab.banking.reporting.security.ReportingPrincipal
@@ -11,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class ReportingService(
     private val repository: ReportingRepository,
+    private val objectMapper: ObjectMapper,
     @param:Value("\${banking-lab.reporting-service.artifact-root:reports/synthetic}")
     private val artifactRoot: String
 ) {
@@ -62,6 +68,14 @@ class ReportingService(
         }
 
         val artifactId = "RPT-${UUID.randomUUID().toString().uppercase()}"
+        val artifactPath = "${artifactRoot.trimEnd('/')}/${definition.reportType.lowercase()}-$artifactId.json"
+        val artifactContent = renderArtifactContent(
+            definition = definition,
+            artifactId = artifactId,
+            artifactPath = artifactPath,
+            requestedBy = requestedBy,
+            requestedRole = requestedRole
+        )
         val artifact = repository.insertArtifact(
             artifactId = artifactId,
             reportType = definition.reportType,
@@ -69,7 +83,12 @@ class ReportingService(
             requestedRole = requestedRole,
             reason = reason,
             idempotencyKey = idempotencyKey,
-            artifactPath = "${artifactRoot.trimEnd('/')}/${definition.reportType.lowercase()}-$artifactId.json",
+            artifactPath = artifactPath,
+            artifactContent = artifactContent,
+            contentSha256 = sha256(artifactContent),
+            retentionPolicy = RETENTION_POLICY,
+            retentionUntil = LocalDate.now(ZoneOffset.UTC).plusYears(RETENTION_YEARS),
+            exportFormat = EXPORT_FORMAT,
             sourceReferences = definition.sourceSystems
         )
         appendAudit(
@@ -82,6 +101,8 @@ class ReportingService(
                 "artifactId" to artifact.artifactId,
                 "reportType" to artifact.reportType,
                 "maskedByDefault" to artifact.maskedByDefault,
+                "contentSha256" to artifact.contentSha256,
+                "retentionPolicy" to artifact.retentionPolicy,
                 "sourceReferenceCount" to artifact.sourceReferences.size,
                 "syntheticOnly" to true
             )
@@ -133,6 +154,102 @@ class ReportingService(
         return auditEventId
     }
 
+    private fun renderArtifactContent(
+        definition: ReportDefinitionDto,
+        artifactId: String,
+        artifactPath: String,
+        requestedBy: String,
+        requestedRole: String
+    ): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to 1,
+            "artifactId" to artifactId,
+            "reportType" to definition.reportType,
+            "title" to definition.title,
+            "category" to definition.category,
+            "artifactPath" to artifactPath,
+            "syntheticOnly" to true,
+            "maskedByDefault" to true,
+            "generatedAt" to OffsetDateTime.now(ZoneOffset.UTC).toString(),
+            "requestedByMasked" to maskIdentifier(requestedBy),
+            "requestedRole" to requestedRole,
+            "sourceSnapshot" to linkedMapOf(
+                "sourceSystems" to definition.sourceSystems,
+                "defaultMaskingPolicy" to definition.defaultMaskingPolicy,
+                "sensitive" to definition.sensitive,
+                "syntheticOnly" to definition.syntheticOnly
+            ),
+            "controls" to linkedMapOf(
+                "syntheticOnly" to true,
+                "maskedByDefault" to true,
+                "realPiiUsed" to false,
+                "realMoneyUsed" to false,
+                "externalFilingSubmitted" to false,
+                "ledgerRowsMutated" to false,
+                "reasonCapturedInMetadata" to true
+            ),
+            "sections" to renderedSections(definition)
+        )
+
+    private fun renderedSections(definition: ReportDefinitionDto): List<Map<String, Any?>> =
+        when (definition.reportType) {
+            "AUDIT_SUMMARY" -> listOf(
+                linkedMapOf(
+                    "sectionId" to "audit-control-summary",
+                    "title" to "Synthetic audit control summary",
+                    "metrics" to listOf(
+                        metric("maskingPolicy", definition.defaultMaskingPolicy),
+                        metric("reasonRequired", true),
+                        metric("accessAuditEvents", listOf("REPORT_CATALOG_VIEW", "REPORT_GENERATED", "REPORT_ARTIFACT_LIST_VIEW"))
+                    )
+                )
+            )
+            "OPERATIONS_DAILY" -> listOf(
+                linkedMapOf(
+                    "sectionId" to "operations-readiness-summary",
+                    "title" to "Synthetic operations readiness summary",
+                    "metrics" to listOf(
+                        metric("outboxVisibility", "metadata-lineage"),
+                        metric("workflowVisibility", "metadata-lineage"),
+                        metric("ledgerCommandTransactionHeld", false)
+                    )
+                )
+            )
+            "EVIDENCE_COVERAGE" -> listOf(
+                linkedMapOf(
+                    "sectionId" to "evidence-coverage-summary",
+                    "title" to "Synthetic evidence coverage summary",
+                    "metrics" to listOf(
+                        metric("coverageMatrixPath", "docs/implementation-coverage-matrix.md"),
+                        metric("evidenceRoot", "docs/test-evidence"),
+                        metric("generatedFromTargetStackSources", true)
+                    )
+                )
+            )
+            else -> listOf(
+                linkedMapOf(
+                    "sectionId" to "source-lineage-summary",
+                    "title" to "Synthetic source lineage summary",
+                    "metrics" to definition.sourceSystems.map { metric(it, "metadata-lineage") }
+                )
+            )
+        }
+
+    private fun metric(name: String, value: Any?): Map<String, Any?> =
+        linkedMapOf("name" to name, "value" to value)
+
+    private fun maskIdentifier(value: String): String =
+        when {
+            value.length <= 2 -> "**"
+            value.length <= 6 -> "${value.take(2)}***"
+            else -> "${value.take(3)}***${value.takeLast(2)}"
+        }
+
+    private fun sha256(value: Map<String, Any?>): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(objectMapper.writeValueAsBytes(value))
+            .joinToString("") { byte -> (byte.toInt() and 0xff).toString(16).padStart(2, '0') }
+
     private fun requireActor(principal: ReportingPrincipal, requestedBy: String, requestedRole: String) {
         if (principal.subject != requestedBy) {
             throw ReportingErrors.authorization("authenticated actor does not match requestedBy")
@@ -150,5 +267,8 @@ class ReportingService(
 
     private companion object {
         val ALLOWED_GENERATE_ROLES = setOf("AUDITOR", "COMPLIANCE_MANAGER", "OPS_MANAGER", "REPORTING_ANALYST")
+        const val EXPORT_FORMAT = "JSON"
+        const val RETENTION_POLICY = "SYNTHETIC_7Y"
+        const val RETENTION_YEARS = 7L
     }
 }

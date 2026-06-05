@@ -11,6 +11,7 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   const compose = await readFile("docker-compose.yml", "utf8");
   const prometheus = await readFile("infra/observability/prometheus/prometheus.yml", "utf8");
   const migration = await readFile("services/reporting-service/src/main/resources/db/migration/V001__reporting_service_foundation.sql", "utf8");
+  const renderingMigration = await readFile("services/reporting-service/src/main/resources/db/migration/V002__report_artifact_rendering.sql", "utf8");
   const keycloakServiceTokenSmoke = await readFile("scripts/run-reporting-keycloak-service-token-smoke.sh", "utf8");
 
   assert.match(settings, /include\(":services:reporting-service"\)/);
@@ -35,6 +36,10 @@ test("reporting-service is registered as a target Spring Boot service with Postg
   assert.match(migration, /UNIQUE \(requested_by, idempotency_key\)/);
   assert.match(migration, /'AUDIT_SUMMARY'/);
   assert.match(migration, /'EVIDENCE_COVERAGE'/);
+  assert.match(renderingMigration, /artifact_content JSONB NOT NULL/);
+  assert.match(renderingMigration, /content_sha256 TEXT NOT NULL/);
+  assert.match(renderingMigration, /retention_policy TEXT NOT NULL/);
+  assert.match(renderingMigration, /chk_report_artifacts_synthetic_rendered_content/);
   assert.match(keycloakServiceTokenSmoke, /grant_type=client_credentials/);
   assert.match(keycloakServiceTokenSmoke, /client_id=reporting-service-api/);
   assert.match(keycloakServiceTokenSmoke, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
@@ -55,8 +60,12 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(service, /Isolation\.SERIALIZABLE/);
   assert.match(service, /requireReason/);
   assert.match(service, /existingArtifact/);
+  assert.match(service, /renderArtifactContent/);
+  assert.match(service, /sha256/);
   assert.match(service, /REPORT_GENERATED/);
   assert.match(models, /REPORTING_POLICY_REASON_REQUIRED/);
+  assert.match(models, /artifactContent/);
+  assert.match(models, /contentSha256/);
   assert.match(models, /maskedByDefault/);
   assert.match(filter, /REPORTING_RBAC_ROUTE_POLICY/);
   assert.match(filter, /AUDITOR/);
@@ -67,5 +76,7 @@ test("reporting-service API enforces synthetic reporting controls in source and 
   assert.match(integrationTest, /isForbidden/);
   assert.match(integrationTest, /REPORTING_POLICY_REASON_REQUIRED/);
   assert.match(integrationTest, /RPT-IT-001/);
+  assert.match(integrationTest, /contentSha256/);
+  assert.match(integrationTest, /SYNTHETIC_7Y/);
   assert.match(integrationTest, /reporting_access_audit_events/);
 });

@@ -1,16 +1,16 @@
 # Reporting Service Evidence
 
-Review date: 2026-06-05
+Review date: 2026-06-06
 
-Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-platform-completion/supporting/03-reporting-service.md`. The service is target-stack Kotlin/Spring Boot with PostgreSQL metadata persistence. It does not generate real regulatory filings, real statements, real PII, or real external-bank artifacts.
+Scope: supporting Reporting Service from `docs/codex/goal-mode/full-platform-completion/supporting/03-reporting-service.md`. The service is target-stack Kotlin/Spring Boot with PostgreSQL metadata and rendered synthetic JSON artifact persistence. It does not generate real regulatory filings, real statements, real PII, or real external-bank artifacts.
 
 ## Implemented Surface
 
 - `services/reporting-service` is registered in Gradle as a standalone Spring Boot service.
 - `GET /api/reports/catalog` returns seeded synthetic report definitions and requires a business reason.
-- `POST /api/reports/artifacts` creates metadata-only report artifacts with idempotency by `(requested_by, idempotency_key)`.
+- `POST /api/reports/artifacts` creates rendered synthetic JSON report artifacts with idempotency by `(requested_by, idempotency_key)`.
 - `GET /api/reports/artifacts` lists generated artifacts with a reason-required audit event.
-- `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway.
+- `report_definitions`, `report_artifacts`, and `reporting_access_audit_events` are created by Flyway; `V002__report_artifact_rendering.sql` adds `artifact_content`, `content_sha256`, `retention_policy`, `retention_until`, and `export_format`.
 - Docker Compose platform profile exposes `reporting-service` with a dedicated `reporting_flyway_schema_history` table and Flyway baseline version `0` on the shared synthetic PostgreSQL database.
 - Prometheus scrapes `reporting-service:8090` through the platform observability profile.
 - Raw Kubernetes and Helm manifests define a reporting-service Deployment/Service with the reporting audience and dedicated Flyway table.
@@ -20,8 +20,8 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - Live Keycloak client-credentials smoke proves the confidential
   `reporting-service-api` service account can call catalog, generate, and list
   report artifact routes with simulator tokens disabled.
-- TypeScript API client methods expose reporting catalog, metadata-only artifact
-  generation, and artifact list contracts.
+- TypeScript API client methods expose reporting catalog, rendered artifact
+  generation, checksum/retention metadata, and artifact list contracts.
 - Admin-console screen manifest `ADM-701` and API-backed panel wiring expose
   reporting catalog, artifact generation, and artifact list controls when
   `NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL` is configured.
@@ -32,7 +32,8 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 ## Controls
 
 - Report access and generation require a business reason.
-- Report artifacts are metadata-only and `masked_by_default=true`.
+- Report artifacts persist rendered JSON payloads with `syntheticOnly=true`, `maskedByDefault=true`, `realPiiUsed=false`, `realMoneyUsed=false`, `externalFilingSubmitted=false`, and `ledgerRowsMutated=false`.
+- Artifact responses expose `contentSha256`, `retentionPolicy=SYNTHETIC_7Y`, `retentionUntil`, and `exportFormat=JSON`.
 - The schema seeds only synthetic report types: `AUDIT_SUMMARY`, `OPERATIONS_DAILY`, and `EVIDENCE_COVERAGE`.
 - Idempotent report generation prevents duplicate artifacts for an external retry key.
 - Reporting access appends `REPORT_CATALOG_VIEW`, `REPORT_GENERATED`, `REPORT_GENERATE_REPLAYED`, and `REPORT_ARTIFACT_LIST_VIEW` audit rows.
@@ -47,7 +48,7 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 - `npm run next:admin-console:typecheck`
 - `npm run next:audit-console:typecheck`
 - `npm run validate:manifests`
-- `node --test tests/nextScaffold.test.mjs`
+- `node --test tests/reportingServiceScaffold.test.mjs tests/nextScaffold.test.mjs`
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts`
 - `npm run test:reporting-service:integration -- --tests lab.banking.reporting.ReportingServiceIntegrationTest --rerun-tasks`
 - `npm run test:reporting-service:keycloak-service-token`
@@ -61,7 +62,7 @@ Scope: supporting Reporting Service first slice from `docs/codex/goal-mode/full-
 
 ## Remaining Risk
 
-- This slice stores artifact metadata only; runnable report rendering, retention lifecycle, and export packaging remain pending.
+- Synthetic JSON report rendering, checksum persistence, and retention/export metadata are implemented. Retention lifecycle execution and packaged artifact export/download simulation remain pending.
 - No Kafka/Outbox dispatch is added for report-generated events yet.
 - Live Kubernetes/Helm rollout and reporting browser propagation against a
   configured live reporting-service URL remain future work; the Playwright

@@ -43,6 +43,10 @@
       "requestedRole",
       "status",
       "artifactPath",
+      "contentSha256",
+      "retentionPolicy",
+      "retentionUntil",
+      "exportFormat",
       "maskedByDefault",
       "syntheticOnly",
       "generatedAt"

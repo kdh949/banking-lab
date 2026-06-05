@@ -1502,6 +1502,11 @@ export interface ReportArtifactDto {
   readonly reason: string;
   readonly status: string;
   readonly artifactPath: string;
+  readonly artifactContent: Record<string, unknown>;
+  readonly contentSha256: string;
+  readonly retentionPolicy: string;
+  readonly retentionUntil?: string | null;
+  readonly exportFormat: string;
   readonly sourceReferences: readonly string[];
   readonly maskedByDefault: boolean;
   readonly syntheticOnly: boolean;
