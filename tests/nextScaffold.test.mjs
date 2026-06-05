@@ -122,6 +122,20 @@ test("complaint-portal exposes self-service complaint extensions through manifes
   assert.equal(typeGuideManifest.query.endpoint, "GET /api/customer/complaint-types");
 });
 
+test("staff-terminal exposes PAY101 audited payment inquiry through the payment service client", async () => {
+  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/PAY-101.payment-instruction-inquiry.json", "utf8"));
+
+  assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
+  assert.match(panel, /data-testid="api-backed-staff-payment-inquiry"/);
+  assert.match(panel, /Run payment inquiry smoke/);
+  assert.match(panel, /getPaymentInstruction\(created\.item\.paymentInstructionId, lookupReason\)/);
+  assert.match(client, /getPaymentInstruction\(instructionId: string, reason\?: string\)/);
+  assert.equal(manifest.audit.reasonRequired, true);
+  assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
+});
+
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {
   const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");

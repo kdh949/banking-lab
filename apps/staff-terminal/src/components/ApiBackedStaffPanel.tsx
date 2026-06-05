@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   BankingApiError,
   createBankingApiClient,
+  type PaymentInstructionResponse,
   type StaffApprovalExecutionResponse,
   type StaffCustomerDetailDto,
   type StaffUnmaskResponse
@@ -98,9 +99,22 @@ type KeycloakUnmaskState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type PaymentInquiryState =
+  | { readonly status: "disabled" }
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "loaded";
+      readonly created: PaymentInstructionResponse;
+      readonly inquiry: PaymentInstructionResponse;
+      readonly reason: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type OidcIntent = "staff" | "checker" | "webauthn";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL || apiBaseUrl;
 const keycloakBaseUrl = process.env.NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL ?? "";
 const simulatorTokenSmokesEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED !== "false";
 const reason = "API-backed channel parity smoke";
@@ -132,6 +146,9 @@ export function ApiBackedStaffPanel() {
   );
   const [keycloakCommandState, setKeycloakCommandState] = useState<KeycloakCommandState>({ status: "idle" });
   const [keycloakUnmaskState, setKeycloakUnmaskState] = useState<KeycloakUnmaskState>({ status: "idle" });
+  const [paymentInquiryState, setPaymentInquiryState] = useState<PaymentInquiryState>(() =>
+    simulatorTokenSmokesEnabled ? { status: "idle" } : { status: "disabled" }
+  );
 
   useEffect(() => {
     if (!apiBaseUrl || !simulatorTokenSmokesEnabled) {
@@ -466,6 +483,51 @@ export function ApiBackedStaffPanel() {
     }
   };
 
+  const runPaymentInquirySmoke = async () => {
+    if (!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentInquiryState.status === "running") {
+      return;
+    }
+    setPaymentInquiryState({ status: "running" });
+    try {
+      const customerClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "customer01",
+          roles: ["CUSTOMER"],
+          customerId: "SYN-CUS-001"
+        })
+      });
+      const staffClient = createBankingApiClient({
+        baseUrl: paymentApiBaseUrl,
+        bearerToken: createSimulatorBearerToken({
+          subject: "branch01",
+          roles: ["BRANCH_STAFF"]
+        })
+      });
+      const runId = Date.now();
+      const created = await customerClient.createPaymentInstruction({
+        customerId: "SYN-CUS-001",
+        debitAccountId: "ACC-SYN-001-001",
+        billerId: "SYN-BILLER-UTIL-001",
+        amountMinor: 8_000,
+        currency: "KRW",
+        idempotencyKey: `PAY101-CREATE-${runId}`,
+        requestedBy: "customer01",
+        requestedChannel: "CUSTOMER_WEB",
+        reason: "Browser staff payment inquiry seed payment"
+      });
+      const lookupReason = "Browser PAY-101 payment instruction inquiry smoke";
+      const inquiry = await staffClient.getPaymentInstruction(created.item.paymentInstructionId, lookupReason);
+      if (!inquiry.auditEventId?.startsWith("PAU-") || inquiry.item.paymentInstructionId !== created.item.paymentInstructionId) {
+        setPaymentInquiryState({ status: "failed", message: "payment instruction inquiry did not return audited PAY-101 result" });
+        return;
+      }
+      setPaymentInquiryState({ status: "loaded", created, inquiry, reason: lookupReason });
+    } catch (error: unknown) {
+      setPaymentInquiryState({ status: "failed", message: error instanceof Error ? error.message : "Unknown payment inquiry failure" });
+    }
+  };
+
   const runKeycloakCustomerChangeSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -668,6 +730,55 @@ export function ApiBackedStaffPanel() {
             <div>
               <dt>Unmask error</dt>
               <dd>{unmaskState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-staff-payment-inquiry">
+        <button
+          type="button"
+          onClick={runPaymentInquirySmoke}
+          disabled={!paymentApiBaseUrl || !simulatorTokenSmokesEnabled || paymentInquiryState.status === "running"}
+        >
+          Run payment inquiry smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Payment inquiry</dt>
+            <dd>{paymentInquiryLabel(paymentInquiryState)}</dd>
+          </div>
+          {paymentInquiryState.status === "loaded" ? (
+            <>
+              <div>
+                <dt>Instruction</dt>
+                <dd>{paymentInquiryState.inquiry.item.paymentInstructionId}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{paymentInquiryState.inquiry.item.status}</dd>
+              </div>
+              <div>
+                <dt>Biller</dt>
+                <dd>{paymentInquiryState.inquiry.item.billerName}</dd>
+              </div>
+              <div>
+                <dt>Debit account</dt>
+                <dd>{paymentInquiryState.inquiry.item.debitAccountId}</dd>
+              </div>
+              <div>
+                <dt>Audit event</dt>
+                <dd>{paymentInquiryState.inquiry.auditEventId}</dd>
+              </div>
+              <div>
+                <dt>Reason</dt>
+                <dd>{paymentInquiryState.reason}</dd>
+              </div>
+            </>
+          ) : null}
+          {paymentInquiryState.status === "failed" ? (
+            <div>
+              <dt>Payment inquiry error</dt>
+              <dd>{paymentInquiryState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -933,6 +1044,22 @@ function unmaskLabel(state: UnmaskState): string {
   }
   if (state.status === "unmasked") {
     return "privileged unmask approved";
+  }
+  return "failed";
+}
+
+function paymentInquiryLabel(state: PaymentInquiryState): string {
+  if (state.status === "disabled") {
+    return "simulator token smoke disabled";
+  }
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "loaded") {
+    return "payment inquiry audited";
   }
   return "failed";
 }

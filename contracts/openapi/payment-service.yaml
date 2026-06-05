@@ -35,13 +35,21 @@ paths:
       operationId: getPaymentInstruction
       parameters:
         - $ref: '#/components/parameters/InstructionId'
+        - name: reason
+          in: query
+          required: false
+          description: Required for staff, ops, audit, and compliance payment lookups so PAY-101 access can be audited.
+          schema:
+            type: string
       responses:
         '200':
-          description: Payment instruction
+          description: Payment instruction, with auditEventId when a staff/ops/audit lookup reason is supplied
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
+        '400':
+          description: Staff payment lookup reason missing
   /api/payments/instructions/{instructionId}/settlements:
     post:
       summary: Record core-banking ledger settlement reference
@@ -478,6 +486,10 @@ components:
           $ref: '#/components/schemas/PaymentInstruction'
         replayed:
           type: boolean
+        auditEventId:
+          type: string
+          nullable: true
+          pattern: '^PAU-'
     PaymentInstruction:
       type: object
       required: [paymentInstructionId, customerId, debitAccountId, billerId, billerName, amountMinor, currency, status, syntheticOnly, createdAt, updatedAt]

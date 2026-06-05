@@ -50,6 +50,7 @@ class PaymentAuthorizationFilter(
             deny(request, response, principal, HttpStatus.FORBIDDEN, "actor role is not allowed for this payment API route")
             return
         }
+        request.setAttribute(PRINCIPAL_ATTRIBUTE, principal)
         filterChain.doFilter(request, response)
     }
 
@@ -110,5 +111,9 @@ class PaymentAuthorizationFilter(
                 )
             )
         )
+    }
+
+    companion object {
+        const val PRINCIPAL_ATTRIBUTE = "lab.banking.payment.security.principal"
     }
 }

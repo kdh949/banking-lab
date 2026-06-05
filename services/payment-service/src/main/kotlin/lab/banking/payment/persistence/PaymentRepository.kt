@@ -300,6 +300,43 @@ class PaymentRepository(
             mapOf("instructionId" to instructionId)
         ) { rs, _ -> rs.getString("outbox_event_id") }.firstOrNull()
 
+    fun insertPaymentInstructionViewAudit(
+        instruction: PaymentInstructionRecord,
+        actorId: String,
+        actorRole: String,
+        actorRoles: Set<String>,
+        reason: String,
+        screenId: String = "PAY-101"
+    ): String {
+        val auditEventId = "PAU-${UUID.randomUUID().toString().uppercase()}"
+        jdbc.update(
+            """
+            INSERT INTO payment_access_audit_events (
+              audit_event_id, event_type, actor_id, actor_role, actor_roles, screen_id,
+              payment_instruction_id, customer_id, debit_account_id, reason, pii_access,
+              masking_policy, synthetic_only
+            )
+            VALUES (
+              :auditEventId, 'PAYMENT_INSTRUCTION_VIEW', :actorId, :actorRole, CAST(:actorRolesJson AS jsonb), :screenId,
+              :paymentInstructionId, :customerId, :debitAccountId, :reason, true,
+              'ACCOUNT_PII', true
+            )
+            """.trimIndent(),
+            mapOf(
+                "auditEventId" to auditEventId,
+                "actorId" to actorId,
+                "actorRole" to actorRole,
+                "actorRolesJson" to objectMapper.writeValueAsString(actorRoles.sorted()),
+                "screenId" to screenId,
+                "paymentInstructionId" to instruction.paymentInstructionId,
+                "customerId" to instruction.customerId,
+                "debitAccountId" to instruction.debitAccountId,
+                "reason" to reason
+            )
+        )
+        return auditEventId
+    }
+
     fun insertAutopayAgreement(
         agreementId: String,
         customerId: String,

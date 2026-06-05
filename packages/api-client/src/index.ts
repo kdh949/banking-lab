@@ -1161,6 +1161,7 @@ export interface PaymentInstructionDto {
 export interface PaymentInstructionResponse {
   readonly item: PaymentInstructionDto;
   readonly replayed: boolean;
+  readonly auditEventId?: string | null;
 }
 
 export interface DispatchPaymentLedgerPostingRequest {
@@ -2112,12 +2113,12 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
-    getPaymentInstruction(instructionId: string) {
+    getPaymentInstruction(instructionId: string, reason?: string) {
       return request<PaymentInstructionResponse>(
         fetchImpl,
         baseUrl,
         `/api/payments/instructions/${encodeURIComponent(instructionId)}`,
-        {},
+        reason ? { reason } : {},
         options.bearerToken
       );
     },

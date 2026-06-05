@@ -10,6 +10,7 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "staff-terminal";
 const baseUrl = "http://localhost:3002";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const paymentApiBaseUrl = process.env.BANKING_LAB_E2E_PAYMENT_API_BASE_URL ?? "";
 const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
 
 function manifests() {
@@ -228,6 +229,22 @@ test("staff terminal executes Spring API-backed customer change approval when co
   await expect(panel).toContainText("SYN-CUS-CMD-001");
   await expect(panel).toContainText("010-****-1399");
   await expect(panel).toContainText("customer change executed");
+});
+
+test("staff terminal executes Payment Service PAY101 audited instruction inquiry when configured", async ({ page }) => {
+  test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment inquiry smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run payment inquiry smoke" }).click();
+  const panel = page.getByTestId("api-backed-staff-payment-inquiry");
+  await expect(panel).toContainText("payment inquiry audited", { timeout: 15_000 });
+  await expect(panel).toContainText("PAY-");
+  await expect(panel).toContainText("POSTING_REQUESTED");
+  await expect(panel).toContainText("Synthetic Utility Biller");
+  await expect(panel).toContainText("ACC-SYN-001-001");
+  await expect(panel).toContainText("PAU-");
+  await expect(panel).toContainText("Browser PAY-101 payment instruction inquiry smoke");
 });
 
 test("staff terminal ACC103 executes Spring API-backed account hold and release approvals when configured", async ({ page }) => {

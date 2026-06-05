@@ -54,7 +54,8 @@ data class PaymentInstructionDto(
 
 data class PaymentInstructionResponse(
     val item: PaymentInstructionDto,
-    val replayed: Boolean
+    val replayed: Boolean,
+    val auditEventId: String? = null
 )
 
 enum class PaymentAutopayStatus {

@@ -45,6 +45,7 @@ class PaymentAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              payment_access_audit_events,
               payment_autopay_executions,
               payment_autopay_status_history,
               payment_autopay_agreements,
@@ -110,8 +111,18 @@ class PaymentAuthorizationIntegrationTest {
             get("/api/payments/instructions/$instructionId")
                 .header("Authorization", bearer("branch01", listOf("BRANCH_STAFF")))
         )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("PAYMENT_LOOKUP_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/payments/instructions/$instructionId")
+                .queryParam("reason", "Synthetic staff payment inquiry")
+                .header("Authorization", bearer("branch01", listOf("BRANCH_STAFF")))
+        )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.item.paymentInstructionId").value(instructionId))
+            .andExpect(jsonPath("$.auditEventId").value(org.hamcrest.Matchers.startsWith("PAU-")))
+        assertEquals(1, countRows("payment_access_audit_events WHERE event_type = 'PAYMENT_INSTRUCTION_VIEW' AND reason = 'Synthetic staff payment inquiry'"))
 
         val settlementBody = """
             {

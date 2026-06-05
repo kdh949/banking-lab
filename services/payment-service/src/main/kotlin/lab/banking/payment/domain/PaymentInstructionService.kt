@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.security.MessageDigest
 import java.util.UUID
 import lab.banking.payment.persistence.PaymentRepository
+import lab.banking.payment.security.PaymentPrincipal
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -107,6 +108,38 @@ class PaymentInstructionService(
     fun instruction(instructionId: String): PaymentInstructionDto {
         val record = repository.findInstruction(instructionId) ?: throw notFound(instructionId)
         return record.toDto(repository.latestOutboxEventId(instructionId))
+    }
+
+    @Transactional
+    fun instructionRead(
+        instructionId: String,
+        reason: String?,
+        principal: PaymentPrincipal?
+    ): PaymentInstructionResponse {
+        val record = repository.findInstruction(instructionId) ?: throw notFound(instructionId)
+        val auditEventId = staffPaymentReadRole(principal)?.let { actorRole ->
+            val trimmedReason = reason?.trim()?.takeIf { it.isNotBlank() } ?: throw paymentError(
+                code = "PAYMENT_LOOKUP_REASON_REQUIRED",
+                status = HttpStatus.BAD_REQUEST,
+                policy = "PAYMENT_STAFF_REASON_REQUIRED",
+                message = "payment instruction lookup reason is required",
+                cause = "Staff, ops, audit, and compliance payment lookups must include a business reason before access is audited.",
+                fix = "Pass a non-blank reason query parameter from PAY-101 or the equivalent staff payment inquiry screen.",
+                details = mapOf("paymentInstructionId" to instructionId, "screenId" to "PAY-101")
+            )
+            repository.insertPaymentInstructionViewAudit(
+                instruction = record,
+                actorId = principal?.subject ?: "unknown-payment-reader",
+                actorRole = actorRole,
+                actorRoles = principal?.roles ?: emptySet(),
+                reason = trimmedReason
+            )
+        }
+        return PaymentInstructionResponse(
+            item = record.toDto(repository.latestOutboxEventId(instructionId)),
+            replayed = false,
+            auditEventId = auditEventId
+        )
     }
 
     @Transactional
@@ -276,6 +309,13 @@ class PaymentInstructionService(
         requireNonBlank(reason, "reason")
     }
 
+    private fun staffPaymentReadRole(principal: PaymentPrincipal?): String? {
+        if (principal == null) {
+            return null
+        }
+        return staffPaymentReadRoles.firstOrNull(principal.roles::contains)
+    }
+
     private fun requireNonBlank(value: String, field: String) {
         if (value.isBlank()) {
             throw paymentError(
@@ -360,5 +400,16 @@ class PaymentInstructionService(
         val payload = parts.joinToString(separator = "|")
         val digest = MessageDigest.getInstance("SHA-256").digest(payload.toByteArray(Charsets.UTF_8))
         return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
+    companion object {
+        private val staffPaymentReadRoles = listOf(
+            "BRANCH_STAFF",
+            "BRANCH_MANAGER",
+            "OPS_OPERATOR",
+            "OPS_MANAGER",
+            "AUDITOR",
+            "COMPLIANCE_MANAGER"
+        )
     }
 }
