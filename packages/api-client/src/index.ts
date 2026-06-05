@@ -1350,6 +1350,7 @@ export type NotificationProviderKind =
   | "SYNTHETIC_CHAT_SINK";
 export type NotificationTemplateStatus = "ACTIVE" | "RETIRED";
 export type NotificationTemplateChangeStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type NotificationWorkflowStatus = "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 
 export interface ConsumeNotificationEventRequest {
   readonly sourceEventId: string;
@@ -1459,6 +1460,20 @@ export interface NotificationTemplateChangeRequestDto {
   readonly reviewedAt?: string | null;
   readonly reviewReason?: string | null;
   readonly approvedTemplateId?: string | null;
+  readonly workflowInstanceId: string;
+  readonly workflowStatus: NotificationWorkflowStatus;
+  readonly workflowTimeline: readonly NotificationWorkflowTimelineEntryDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface NotificationWorkflowTimelineEntryDto {
+  readonly workflowEventId: string;
+  readonly eventType: string;
+  readonly fromStatus?: NotificationWorkflowStatus | null;
+  readonly toStatus: NotificationWorkflowStatus;
+  readonly actorId: string;
+  readonly reason: string;
+  readonly occurredAt: string;
   readonly syntheticOnly: boolean;
 }
 
@@ -2676,6 +2691,20 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         {},
         options.bearerToken,
         { method: "POST", body: command }
+      );
+    },
+
+    listNotificationTemplateChangeRequests(filters: {
+      readonly status?: NotificationTemplateChangeStatus;
+    } = {}) {
+      return request<readonly NotificationTemplateChangeRequestDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/templates/change-requests",
+        {
+          ...(filters.status ? { status: filters.status } : {})
+        },
+        options.bearerToken
       );
     },
 

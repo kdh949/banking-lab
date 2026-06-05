@@ -2,7 +2,7 @@
 
 Status: partial target-stack progress.
 
-Review date: 2026-06-05.
+Review date: 2026-06-06.
 
 ## Scope
 
@@ -31,6 +31,9 @@ This evidence covers the first synthetic Notification Service slice:
   and proves delivered-state mutation is rejected after dead-letter.
 - Admin template change requests with maker-checker approval/rejection,
   append-only template versioning, and the synthetic `CHAT` sink.
+- Durable Temporal-compatible notification template workflow visibility through
+  `notification_workflow_instances`, `notification_workflow_events`, template
+  change-request workflow references, and API/admin-console timeline display.
 - Recipient notification preferences with wildcard and event-specific channel
   filters, reason-required preference reads, access audit rows, masked
   suppression audit rows, and idempotent suppressed replays.
@@ -80,6 +83,7 @@ npm run next:audit-console:typecheck
 npm run next:customer-web:typecheck
 npm run packages:typecheck
 npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks
+npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationTemplateAdminIntegrationTest --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks
 npm run test:notification-service:keycloak-service-token
 npm run test:notification-service:provider-dead-letter-compose
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts apps/audit-console/e2e/audit-console-parity.spec.ts
@@ -119,6 +123,13 @@ were rerun sequentially with `--rerun-tasks`.
   the matching customer's masked delivery rows, cross-customer access is
   rejected, and admin preference/history routes stay restricted to operations,
   audit, or compliance roles as modeled.
+- `npm run test:notification-service:integration -- --tests lab.banking.notification.NotificationTemplateAdminIntegrationTest --tests lab.banking.notification.NotificationAuthorizationIntegrationTest --rerun-tasks`:
+  pass after 2026-06-06 workflow visibility update; PostgreSQL Testcontainers
+  verified template change-request workflow instance backreferences, requested
+  and terminal workflow events, auditor-readable workflow timeline API output,
+  and CUSTOMER denial on the workflow list route. The first sandboxed Gradle run
+  failed before tests with `java.net.SocketException: Operation not permitted`;
+  the approved escalated rerun passed.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
 - `npm --workspace @banking-lab/api-client run typecheck`: pass; notification
@@ -234,6 +245,11 @@ were rerun sequentially with `--rerun-tasks`.
 `NotificationTemplateAdminIntegrationTest` verifies:
 
 - pending template changes are not active and cannot be used for delivery;
+- every template change request creates a durable
+  `NOTIFICATION_TEMPLATE_CHANGE` workflow instance and `REQUESTED` timeline
+  event;
+- approval and rejection append terminal workflow events and update workflow
+  status without activating rejected templates;
 - template approval is blocked when maker and checker are the same actor;
 - checker roles are limited to operations, compliance, or notification managers;
 - approval activates a higher-version template, retires previous active
@@ -314,7 +330,8 @@ API client typecheck verifies:
 - `consumeNotificationEvent`, `getNotificationDelivery`,
   `recordNotificationFailure`, `markNotificationDelivered`,
   `listNotificationDeliveries`, `listNotificationTemplates`,
-  `createNotificationTemplateChangeRequest`, `getNotificationTemplateChangeRequest`,
+  `createNotificationTemplateChangeRequest`,
+  `listNotificationTemplateChangeRequests`, `getNotificationTemplateChangeRequest`,
   `approveNotificationTemplateChangeRequest`, and
   `rejectNotificationTemplateChangeRequest`, `listNotificationPreferences`, and
   `upsertNotificationPreference`, `listCustomerNotificationPreferences`, and
@@ -326,8 +343,10 @@ API client typecheck verifies:
 - admin-console keeps notification template approval and preference management
   manifests under the shared screen-manifest renderer path;
 - the admin API-backed panel uses `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL`
-  and the typed `listNotificationTemplates`/`listNotificationPreferences`
-  client methods;
+  and the typed
+  `listNotificationTemplates`/`listNotificationTemplateChangeRequests`/
+  `listNotificationPreferences` client methods, including workflow status and
+  timeline display;
 - audit-console keeps the `AUD-301` masked notification delivery-history inquiry
   manifest under the shared renderer path;
 - the audit API-backed panel uses `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL`
@@ -358,6 +377,9 @@ access audit, and return or store only masked synthetic recipient/channel/event
 data. Preference administration rejects `syntheticOnly=false`, stores only
 synthetic recipient/channel/event filters, and suppression audit records persist
 masked payload JSON.
+Template workflow rows are synthetic-only, reference only template change request
+IDs, actor IDs, statuses, and business reasons, and do not copy template body
+text or delivery payloads into timeline events.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 The Keycloak service-token smoke explicitly disables simulator tokens and uses

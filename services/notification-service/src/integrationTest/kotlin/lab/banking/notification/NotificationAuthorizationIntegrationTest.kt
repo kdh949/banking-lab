@@ -197,6 +197,20 @@ class NotificationAuthorizationIntegrationTest {
             .at("/changeRequestId")
             .asText()
 
+        mockMvc.perform(
+            get("/api/notifications/templates/change-requests?status=PENDING")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER")))
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            get("/api/notifications/templates/change-requests?status=PENDING")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].workflowStatus").value("PENDING_REVIEW"))
+            .andExpect(jsonPath("$[0].workflowTimeline[0].eventType").value("REQUESTED"))
+
         val approveBody = """
             {
               "approvedBy": "ops-checker-auth",
@@ -220,6 +234,8 @@ class NotificationAuthorizationIntegrationTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.workflowStatus").value("APPROVED"))
+            .andExpect(jsonPath("$.workflowTimeline[1].eventType").value("APPROVED"))
             .andExpect(jsonPath("$.approvedTemplateId").value(org.hamcrest.Matchers.startsWith("NTPL-CHAT-")))
 
         mockMvc.perform(

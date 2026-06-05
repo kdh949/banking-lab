@@ -78,6 +78,8 @@ class NotificationAuthorizationFilter(
             deliveryDelivered.matches(path) && method == "POST" -> setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR")
             path == "/api/notifications/templates" && method == "GET" ->
                 setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/notifications/templates/change-requests" && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/notifications/templates/change-requests" && method == "POST" ->
                 setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             templateChangeRead.matches(path) && method == "GET" ->

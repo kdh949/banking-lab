@@ -23,6 +23,28 @@ class NotificationTemplateAdminService(
             .listTemplates(eventType?.takeIf { it.isNotBlank() }, channel?.takeIf { it.isNotBlank() }?.uppercase())
             .map { it.toDto() }
 
+    fun changeRequests(status: String?): List<NotificationTemplateChangeRequestDto> {
+        val normalizedStatus = status
+            ?.takeIf { it.isNotBlank() }
+            ?.trim()
+            ?.uppercase()
+            ?.let { rawStatus ->
+                runCatching { NotificationTemplateChangeStatus.valueOf(rawStatus) }.getOrElse {
+                    throw notificationError(
+                        code = "NOTIFICATION_TEMPLATE_CHANGE_STATUS_INVALID",
+                        status = HttpStatus.BAD_REQUEST,
+                        message = "template change request status is not supported",
+                        cause = "Notification template workflow visibility supports only pending, approved, or rejected states.",
+                        fix = "Use one of ${NotificationTemplateChangeStatus.entries.joinToString(", ") { entry -> entry.name }}.",
+                        details = mapOf("status" to rawStatus)
+                    )
+                }
+            }
+        return repository
+            .listTemplateChangeRequests(normalizedStatus)
+            .map { it.toDto() }
+    }
+
     fun changeRequest(changeRequestId: String): NotificationTemplateChangeRequestDto =
         (repository.findTemplateChangeRequest(changeRequestId) ?: throw changeRequestNotFound(changeRequestId)).toDto()
 
@@ -48,14 +70,32 @@ class NotificationTemplateAdminService(
         }
 
         val changeRequestId = changeRequestId()
+        val workflowInstanceId = workflowInstanceId()
+        repository.insertWorkflowInstance(
+            workflowInstanceId = workflowInstanceId,
+            workflowType = "NOTIFICATION_TEMPLATE_CHANGE",
+            businessReferenceId = changeRequestId,
+            status = NotificationWorkflowStatus.PENDING_REVIEW,
+            startedBy = request.requestedBy.trim()
+        )
         repository.insertTemplateChangeRequest(
             changeRequestId = changeRequestId,
+            workflowInstanceId = workflowInstanceId,
             eventType = normalizedEventType,
             channel = normalizedChannel,
             version = request.version,
             bodyTemplate = request.bodyTemplate.trim(),
             providerKind = normalizedProvider,
             requestedBy = request.requestedBy.trim(),
+            reason = request.reason.trim()
+        )
+        repository.insertWorkflowEvent(
+            workflowEventId = workflowEventId(),
+            workflowInstanceId = workflowInstanceId,
+            eventType = "REQUESTED",
+            fromStatus = null,
+            toStatus = NotificationWorkflowStatus.PENDING_REVIEW,
+            actorId = request.requestedBy.trim(),
             reason = request.reason.trim()
         )
         return changeRequest(changeRequestId)
@@ -103,6 +143,16 @@ class NotificationTemplateAdminService(
             reason = request.reason.trim(),
             approvedTemplateId = templateId
         )
+        repository.updateWorkflowStatus(current.workflowInstanceId, NotificationWorkflowStatus.APPROVED)
+        repository.insertWorkflowEvent(
+            workflowEventId = workflowEventId(),
+            workflowInstanceId = current.workflowInstanceId,
+            eventType = "APPROVED",
+            fromStatus = current.workflowStatus,
+            toStatus = NotificationWorkflowStatus.APPROVED,
+            actorId = request.approvedBy.trim(),
+            reason = request.reason.trim()
+        )
         return changeRequest(changeRequestId)
     }
 
@@ -121,6 +171,16 @@ class NotificationTemplateAdminService(
             changeRequestId = current.changeRequestId,
             reviewedBy = request.rejectedBy.trim(),
             reviewedByRole = request.rejectedByRole.trim().uppercase(),
+            reason = request.reason.trim()
+        )
+        repository.updateWorkflowStatus(current.workflowInstanceId, NotificationWorkflowStatus.REJECTED)
+        repository.insertWorkflowEvent(
+            workflowEventId = workflowEventId(),
+            workflowInstanceId = current.workflowInstanceId,
+            eventType = "REJECTED",
+            fromStatus = current.workflowStatus,
+            toStatus = NotificationWorkflowStatus.REJECTED,
+            actorId = request.rejectedBy.trim(),
             reason = request.reason.trim()
         )
         return changeRequest(changeRequestId)
@@ -306,6 +366,21 @@ class NotificationTemplateAdminService(
             reviewedAt = reviewedAt,
             reviewReason = reviewReason,
             approvedTemplateId = approvedTemplateId,
+            workflowInstanceId = workflowInstanceId,
+            workflowStatus = workflowStatus,
+            workflowTimeline = repository.listWorkflowEvents(workflowInstanceId).map { it.toDto() },
+            syntheticOnly = syntheticOnly
+        )
+
+    private fun NotificationWorkflowEventRecord.toDto(): NotificationWorkflowTimelineEntryDto =
+        NotificationWorkflowTimelineEntryDto(
+            workflowEventId = workflowEventId,
+            eventType = eventType,
+            fromStatus = fromStatus,
+            toStatus = toStatus,
+            actorId = actorId,
+            reason = reason,
+            occurredAt = occurredAt,
             syntheticOnly = syntheticOnly
         )
 
@@ -331,6 +406,10 @@ class NotificationTemplateAdminService(
         )
 
     private fun changeRequestId(): String = "NTCR-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun workflowInstanceId(): String = "NWF-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun workflowEventId(): String = "NWE-${UUID.randomUUID().toString().uppercase()}"
 
     private fun templateId(channel: String): String = "NTPL-${channel}-${UUID.randomUUID().toString().uppercase()}"
 }

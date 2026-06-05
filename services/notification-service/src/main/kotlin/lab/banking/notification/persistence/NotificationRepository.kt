@@ -9,6 +9,8 @@ import lab.banking.notification.domain.NotificationDeliveryRecord
 import lab.banking.notification.domain.NotificationDeliveryStatus
 import lab.banking.notification.domain.NotificationPreferenceRecord
 import lab.banking.notification.domain.NotificationTemplateRecord
+import lab.banking.notification.domain.NotificationWorkflowEventRecord
+import lab.banking.notification.domain.NotificationWorkflowStatus
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 
@@ -94,6 +96,7 @@ class NotificationRepository(
 
     fun insertTemplateChangeRequest(
         changeRequestId: String,
+        workflowInstanceId: String,
         eventType: String,
         channel: String,
         version: Int,
@@ -105,16 +108,17 @@ class NotificationRepository(
         jdbc.update(
             """
             INSERT INTO notification_template_change_requests (
-              change_request_id, event_type, channel, requested_version, body_template,
+              change_request_id, workflow_instance_id, event_type, channel, requested_version, body_template,
               provider_kind, status, requested_by, request_reason, synthetic_only
             )
             VALUES (
-              :changeRequestId, :eventType, :channel, :version, :bodyTemplate,
+              :changeRequestId, :workflowInstanceId, :eventType, :channel, :version, :bodyTemplate,
               :providerKind, 'PENDING', :requestedBy, :reason, true
             )
             """.trimIndent(),
             mapOf(
                 "changeRequestId" to changeRequestId,
+                "workflowInstanceId" to workflowInstanceId,
                 "eventType" to eventType,
                 "channel" to channel,
                 "version" to version,
@@ -126,15 +130,122 @@ class NotificationRepository(
         )
     }
 
+    fun insertWorkflowInstance(
+        workflowInstanceId: String,
+        workflowType: String,
+        businessReferenceId: String,
+        status: NotificationWorkflowStatus,
+        startedBy: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO notification_workflow_instances (
+              workflow_instance_id, workflow_type, business_reference_id,
+              status, started_by, synthetic_only
+            )
+            VALUES (
+              :workflowInstanceId, :workflowType, :businessReferenceId,
+              :status, :startedBy, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "workflowInstanceId" to workflowInstanceId,
+                "workflowType" to workflowType,
+                "businessReferenceId" to businessReferenceId,
+                "status" to status.name,
+                "startedBy" to startedBy
+            )
+        )
+    }
+
+    fun updateWorkflowStatus(
+        workflowInstanceId: String,
+        status: NotificationWorkflowStatus
+    ) {
+        jdbc.update(
+            """
+            UPDATE notification_workflow_instances
+            SET status = :status,
+                completed_at = CASE
+                  WHEN :status IN ('APPROVED', 'REJECTED') THEN now()
+                  ELSE completed_at
+                END
+            WHERE workflow_instance_id = :workflowInstanceId
+            """.trimIndent(),
+            mapOf(
+                "workflowInstanceId" to workflowInstanceId,
+                "status" to status.name
+            )
+        )
+    }
+
+    fun insertWorkflowEvent(
+        workflowEventId: String,
+        workflowInstanceId: String,
+        eventType: String,
+        fromStatus: NotificationWorkflowStatus?,
+        toStatus: NotificationWorkflowStatus,
+        actorId: String,
+        reason: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO notification_workflow_events (
+              workflow_event_id, workflow_instance_id, event_type, from_status,
+              to_status, actor_id, reason, synthetic_only
+            )
+            VALUES (
+              :workflowEventId, :workflowInstanceId, :eventType, :fromStatus,
+              :toStatus, :actorId, :reason, true
+            )
+            """.trimIndent(),
+            mapOf(
+                "workflowEventId" to workflowEventId,
+                "workflowInstanceId" to workflowInstanceId,
+                "eventType" to eventType,
+                "fromStatus" to fromStatus?.name,
+                "toStatus" to toStatus.name,
+                "actorId" to actorId,
+                "reason" to reason
+            )
+        )
+    }
+
+    fun listWorkflowEvents(workflowInstanceId: String): List<NotificationWorkflowEventRecord> =
+        jdbc.query(
+            """
+            SELECT workflow_event_id, workflow_instance_id, event_type,
+                   from_status, to_status, actor_id, reason,
+                   occurred_at, synthetic_only
+            FROM notification_workflow_events
+            WHERE workflow_instance_id = :workflowInstanceId
+            ORDER BY occurred_at ASC, workflow_event_id ASC
+            """.trimIndent(),
+            mapOf("workflowInstanceId" to workflowInstanceId),
+            this::mapWorkflowEvent
+        )
+
     fun findTemplateChangeRequest(changeRequestId: String): NotificationTemplateChangeRequestRecord? =
         findTemplateChangeRequestBySql(
-            templateChangeRequestSql("WHERE change_request_id = :changeRequestId"),
+            templateChangeRequestSql("WHERE ncr.change_request_id = :changeRequestId"),
             changeRequestId
+        )
+
+    fun listTemplateChangeRequests(status: NotificationTemplateChangeStatus?): List<NotificationTemplateChangeRequestRecord> =
+        jdbc.query(
+            templateChangeRequestSql(
+                """
+                WHERE (CAST(:status AS TEXT) IS NULL OR ncr.status = :status)
+                ORDER BY ncr.requested_at DESC, ncr.change_request_id ASC
+                """.trimIndent()
+            ),
+            mapOf("status" to status?.name),
+            this::mapTemplateChangeRequest
         )
 
     fun findTemplateChangeRequestForUpdate(changeRequestId: String): NotificationTemplateChangeRequestRecord? =
         findTemplateChangeRequestBySql(
-            templateChangeRequestSql("WHERE change_request_id = :changeRequestId FOR UPDATE"),
+            templateChangeRequestSql("WHERE ncr.change_request_id = :changeRequestId FOR UPDATE"),
             changeRequestId
         )
 
@@ -598,11 +709,14 @@ class NotificationRepository(
 
     private fun templateChangeRequestSql(suffix: String): String =
         """
-        SELECT change_request_id, event_type, channel, requested_version, body_template,
-               provider_kind, status, requested_by, request_reason, requested_at,
-               reviewed_by, reviewed_by_role, reviewed_at, review_reason,
-               approved_template_id, synthetic_only
-        FROM notification_template_change_requests
+        SELECT ncr.change_request_id, ncr.event_type, ncr.channel, ncr.requested_version, ncr.body_template,
+               ncr.provider_kind, ncr.status, ncr.requested_by, ncr.request_reason, ncr.requested_at,
+               ncr.reviewed_by, ncr.reviewed_by_role, ncr.reviewed_at, ncr.review_reason,
+               ncr.approved_template_id, ncr.workflow_instance_id, nwi.status AS workflow_status,
+               ncr.synthetic_only
+        FROM notification_template_change_requests ncr
+        JOIN notification_workflow_instances nwi
+          ON nwi.workflow_instance_id = ncr.workflow_instance_id
         $suffix
         """.trimIndent()
 
@@ -623,6 +737,21 @@ class NotificationRepository(
             reviewedAt = rs.getObject("reviewed_at", OffsetDateTime::class.java),
             reviewReason = rs.getString("review_reason"),
             approvedTemplateId = rs.getString("approved_template_id"),
+            workflowInstanceId = rs.getString("workflow_instance_id"),
+            workflowStatus = NotificationWorkflowStatus.valueOf(rs.getString("workflow_status")),
+            syntheticOnly = rs.getBoolean("synthetic_only")
+        )
+
+    private fun mapWorkflowEvent(rs: ResultSet, rowNum: Int): NotificationWorkflowEventRecord =
+        NotificationWorkflowEventRecord(
+            workflowEventId = rs.getString("workflow_event_id"),
+            workflowInstanceId = rs.getString("workflow_instance_id"),
+            eventType = rs.getString("event_type"),
+            fromStatus = rs.getString("from_status")?.let(NotificationWorkflowStatus::valueOf),
+            toStatus = NotificationWorkflowStatus.valueOf(rs.getString("to_status")),
+            actorId = rs.getString("actor_id"),
+            reason = rs.getString("reason"),
+            occurredAt = rs.getObject("occurred_at", OffsetDateTime::class.java),
             syntheticOnly = rs.getBoolean("synthetic_only")
         )
 

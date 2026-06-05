@@ -113,6 +113,12 @@ class NotificationController(
     ): NotificationTemplateChangeRequestDto =
         notificationTemplateAdminService.createChangeRequest(request)
 
+    @GetMapping("/templates/change-requests")
+    fun templateChangeRequests(
+        @RequestParam(required = false) status: String?
+    ): List<NotificationTemplateChangeRequestDto> =
+        notificationTemplateAdminService.changeRequests(status)
+
     @GetMapping("/templates/change-requests/{changeRequestId}")
     fun templateChangeRequest(@PathVariable changeRequestId: String): NotificationTemplateChangeRequestDto =
         notificationTemplateAdminService.changeRequest(changeRequestId)

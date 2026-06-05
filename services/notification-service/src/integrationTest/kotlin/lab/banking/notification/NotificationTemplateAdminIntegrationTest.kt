@@ -48,6 +48,8 @@ class NotificationTemplateAdminIntegrationTest {
               notification_delivery_attempts,
               notification_delivery_requests,
               notification_inbox_events,
+              notification_workflow_events,
+              notification_workflow_instances,
               notification_template_change_requests
             RESTART IDENTITY CASCADE
             """.trimIndent()
@@ -76,6 +78,10 @@ class NotificationTemplateAdminIntegrationTest {
         )
 
         assertEquals(NotificationTemplateChangeStatus.PENDING, pending.status)
+        assertEquals("PENDING_REVIEW", pending.workflowStatus.name)
+        assertEquals(1, pending.workflowTimeline.size)
+        assertEquals("REQUESTED", pending.workflowTimeline.single().eventType)
+        assertEquals(pending.workflowInstanceId, templateAdminService.changeRequests("PENDING").single().workflowInstanceId)
         assertEquals(0, templateAdminService.templates("TemplateAdminApproved", "CHAT").size)
         val notFound = assertThrows(NotificationDomainException::class.java) {
             notificationDeliveryService.consumeEvent(sampleEvent("OBX-TEMPLATE-001", "TemplateAdminApproved", "CHAT"))
@@ -105,6 +111,10 @@ class NotificationTemplateAdminIntegrationTest {
         )
 
         assertEquals(NotificationTemplateChangeStatus.APPROVED, approved.status)
+        assertEquals(pending.workflowInstanceId, approved.workflowInstanceId)
+        assertEquals("APPROVED", approved.workflowStatus.name)
+        assertEquals(listOf("REQUESTED", "APPROVED"), approved.workflowTimeline.map { it.eventType })
+        assertEquals(listOf("PENDING_REVIEW", "APPROVED"), approved.workflowTimeline.map { it.toStatus.name })
         assertEquals("ops-checker01", approved.reviewedBy)
         assertNotNull(approved.approvedTemplateId)
         assertEquals(1, templateAdminService.templates("TemplateAdminApproved", "CHAT").size)
@@ -120,6 +130,8 @@ class NotificationTemplateAdminIntegrationTest {
         assertFalse(delivery.maskedMessage.contains("ACC-TEMPLATE-7777"), delivery.maskedMessage)
         assertFalse(delivery.maskedMessage.contains("010-1111-7777"), delivery.maskedMessage)
         assertEquals(1, countRows("notification_template_change_requests WHERE status = 'APPROVED'"))
+        assertEquals(1, countRows("notification_workflow_instances WHERE status = 'APPROVED' AND business_reference_id = '${pending.changeRequestId}'"))
+        assertEquals(2, countRows("notification_workflow_events WHERE workflow_instance_id = '${pending.workflowInstanceId}'"))
     }
 
     @Test
@@ -145,6 +157,9 @@ class NotificationTemplateAdminIntegrationTest {
         )
 
         assertEquals(NotificationTemplateChangeStatus.REJECTED, rejected.status)
+        assertEquals(NotificationTemplateChangeStatus.REJECTED.name, templateAdminService.changeRequests("REJECTED").single().status.name)
+        assertEquals("REJECTED", rejected.workflowStatus.name)
+        assertEquals(listOf("REQUESTED", "REJECTED"), rejected.workflowTimeline.map { it.eventType })
         assertEquals(0, templateAdminService.templates("TemplateAdminRejected", "PUSH").size)
         val secondDecision = assertThrows(NotificationDomainException::class.java) {
             templateAdminService.approveChangeRequest(
