@@ -81,6 +81,10 @@ class NotificationAuthorizationFilter(
                 setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
             templateChangeReject.matches(path) && method == "POST" ->
                 setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
+            path == "/api/notifications/preferences" && method == "GET" ->
+                setOf("NOTIFICATION_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/notifications/preferences" && method == "PUT" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             else -> emptySet()
         }
     }

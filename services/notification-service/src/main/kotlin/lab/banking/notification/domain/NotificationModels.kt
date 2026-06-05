@@ -65,6 +65,16 @@ data class RejectNotificationTemplateChangeRequest(
     val reason: String
 )
 
+data class UpsertNotificationPreferenceRequest(
+    val recipientId: String,
+    val channel: String,
+    val eventType: String? = null,
+    val enabled: Boolean,
+    val requestedBy: String,
+    val reason: String,
+    val syntheticOnly: Boolean = true
+)
+
 data class NotificationDeliveryDto(
     val deliveryRequestId: String,
     val sourceEventId: String,
@@ -110,6 +120,19 @@ data class NotificationTemplateChangeRequestDto(
     val syntheticOnly: Boolean
 )
 
+data class NotificationPreferenceDto(
+    val preferenceId: String,
+    val recipientId: String,
+    val channel: String,
+    val eventType: String,
+    val enabled: Boolean,
+    val requestedBy: String,
+    val reason: String,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime
+)
+
 data class NotificationTemplateRecord(
     val templateId: String,
     val eventType: String,
@@ -139,6 +162,19 @@ data class NotificationTemplateChangeRequestRecord(
     val reviewReason: String?,
     val approvedTemplateId: String?,
     val syntheticOnly: Boolean
+)
+
+data class NotificationPreferenceRecord(
+    val preferenceId: String,
+    val recipientId: String,
+    val channel: String,
+    val eventType: String,
+    val enabled: Boolean,
+    val requestedBy: String,
+    val reason: String,
+    val syntheticOnly: Boolean,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime
 )
 
 data class NotificationDeliveryRecord(

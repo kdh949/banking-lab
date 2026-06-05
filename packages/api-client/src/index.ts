@@ -1254,6 +1254,16 @@ export interface RejectNotificationTemplateChangeRequest {
   readonly reason: string;
 }
 
+export interface UpsertNotificationPreferenceRequest {
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly eventType?: string | null;
+  readonly enabled: boolean;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly?: boolean;
+}
+
 export interface NotificationDeliveryDto {
   readonly deliveryRequestId: string;
   readonly sourceEventId: string;
@@ -1302,6 +1312,19 @@ export interface NotificationTemplateChangeRequestDto {
   readonly reviewReason?: string | null;
   readonly approvedTemplateId?: string | null;
   readonly syntheticOnly: boolean;
+}
+
+export interface NotificationPreferenceDto {
+  readonly preferenceId: string;
+  readonly recipientId: string;
+  readonly channel: NotificationChannel;
+  readonly eventType: string;
+  readonly enabled: boolean;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export interface ParameterVersionDto {
@@ -2195,6 +2218,37 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    listNotificationPreferences(filters: {
+      readonly requestedBy: string;
+      readonly reason: string;
+      readonly recipientId?: string;
+      readonly channel?: NotificationChannel;
+    }) {
+      return request<readonly NotificationPreferenceDto[]>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/preferences",
+        {
+          requestedBy: filters.requestedBy,
+          reason: filters.reason,
+          ...(filters.recipientId ? { recipientId: filters.recipientId } : {}),
+          ...(filters.channel ? { channel: filters.channel } : {})
+        },
+        options.bearerToken
+      );
+    },
+
+    upsertNotificationPreference(command: UpsertNotificationPreferenceRequest) {
+      return request<NotificationPreferenceDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/notifications/preferences",
+        {},
+        options.bearerToken,
+        { method: "PUT", body: command }
+      );
+    },
+
     createNotificationTemplateChangeRequest(command: CreateNotificationTemplateChangeRequest) {
       return request<NotificationTemplateChangeRequestDto>(
         fetchImpl,
@@ -2614,7 +2668,7 @@ async function request<T>(
   path: string,
   searchParams: Record<string, string>,
   bearerToken: string | undefined,
-  options: { readonly method?: "GET" | "POST"; readonly body?: unknown } = {}
+  options: { readonly method?: "GET" | "POST" | "PUT"; readonly body?: unknown } = {}
 ): Promise<T> {
   const url = new URL(path, baseUrl);
   for (const [key, value] of Object.entries(searchParams)) {

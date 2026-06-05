@@ -7,6 +7,7 @@ import lab.banking.notification.domain.NotificationTemplateChangeRequestRecord
 import lab.banking.notification.domain.NotificationTemplateChangeStatus
 import lab.banking.notification.domain.NotificationDeliveryRecord
 import lab.banking.notification.domain.NotificationDeliveryStatus
+import lab.banking.notification.domain.NotificationPreferenceRecord
 import lab.banking.notification.domain.NotificationTemplateRecord
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
@@ -231,6 +232,111 @@ class NotificationRepository(
         )
     }
 
+    fun listPreferences(recipientId: String?, channel: String?): List<NotificationPreferenceRecord> =
+        jdbc.query(
+            """
+            SELECT preference_id, recipient_id, channel, event_type, enabled,
+                   requested_by, reason, synthetic_only, created_at, updated_at
+            FROM notification_recipient_preferences
+            WHERE (:recipientId IS NULL OR recipient_id = :recipientId)
+              AND (:channel IS NULL OR channel = :channel)
+            ORDER BY recipient_id ASC, channel ASC, event_type ASC
+            """.trimIndent(),
+            mapOf("recipientId" to recipientId, "channel" to channel),
+            this::mapPreference
+        )
+
+    fun findPreference(
+        recipientId: String,
+        channel: String,
+        eventType: String
+    ): NotificationPreferenceRecord? =
+        jdbc.query(
+            """
+            SELECT preference_id, recipient_id, channel, event_type, enabled,
+                   requested_by, reason, synthetic_only, created_at, updated_at
+            FROM notification_recipient_preferences
+            WHERE recipient_id = :recipientId
+              AND channel = :channel
+              AND event_type IN (:eventType, '*')
+            ORDER BY CASE WHEN event_type = :eventType THEN 0 ELSE 1 END
+            LIMIT 1
+            """.trimIndent(),
+            mapOf("recipientId" to recipientId, "channel" to channel, "eventType" to eventType),
+            this::mapPreference
+        ).firstOrNull()
+
+    fun upsertPreference(
+        preferenceId: String,
+        recipientId: String,
+        channel: String,
+        eventType: String,
+        enabled: Boolean,
+        requestedBy: String,
+        reason: String
+    ): NotificationPreferenceRecord =
+        jdbc.query(
+            """
+            INSERT INTO notification_recipient_preferences (
+              preference_id, recipient_id, channel, event_type, enabled,
+              requested_by, reason, synthetic_only
+            )
+            VALUES (
+              :preferenceId, :recipientId, :channel, :eventType, :enabled,
+              :requestedBy, :reason, true
+            )
+            ON CONFLICT (recipient_id, channel, event_type)
+            DO UPDATE SET
+              enabled = EXCLUDED.enabled,
+              requested_by = EXCLUDED.requested_by,
+              reason = EXCLUDED.reason,
+              updated_at = now()
+            RETURNING preference_id, recipient_id, channel, event_type, enabled,
+                      requested_by, reason, synthetic_only, created_at, updated_at
+            """.trimIndent(),
+            mapOf(
+                "preferenceId" to preferenceId,
+                "recipientId" to recipientId,
+                "channel" to channel,
+                "eventType" to eventType,
+                "enabled" to enabled,
+                "requestedBy" to requestedBy,
+                "reason" to reason
+            ),
+            this::mapPreference
+        ).single()
+
+    fun insertAccessAudit(
+        auditEventId: String,
+        action: String,
+        actorId: String,
+        reason: String,
+        targetType: String,
+        targetId: String,
+        details: Map<String, Any?>
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO notification_access_audit_events (
+              audit_event_id, action, actor_id, reason, target_type, target_id, details_json, synthetic_only
+            )
+            VALUES (
+              :auditEventId, :action, :actorId, :reason, :targetType, :targetId,
+              CAST(:detailsJson AS jsonb), true
+            )
+            """.trimIndent(),
+            mapOf(
+                "auditEventId" to auditEventId,
+                "action" to action,
+                "actorId" to actorId,
+                "reason" to reason,
+                "targetType" to targetType,
+                "targetId" to targetId,
+                "detailsJson" to objectMapper.writeValueAsString(details)
+            )
+        )
+    }
+
     fun insertDeliveryRequest(
         deliveryRequestId: String,
         sourceEventId: String,
@@ -263,6 +369,45 @@ class NotificationRepository(
                 "templateId" to templateId,
                 "maskedPayloadJson" to objectMapper.writeValueAsString(maskedPayload),
                 "maskedMessage" to maskedMessage
+            )
+        )
+    }
+
+    fun insertSuppression(
+        suppressionId: String,
+        consumerName: String,
+        sourceEventId: String,
+        eventType: String,
+        recipientId: String,
+        channel: String,
+        preferenceId: String,
+        reason: String,
+        maskedPayload: Map<String, Any?>,
+        requestedBy: String
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO notification_suppressed_events (
+              suppression_id, consumer_name, source_event_id, event_type, recipient_id,
+              channel, preference_id, reason, masked_payload_json, requested_by, synthetic_only
+            )
+            VALUES (
+              :suppressionId, :consumerName, :sourceEventId, :eventType, :recipientId,
+              :channel, :preferenceId, :reason, CAST(:maskedPayloadJson AS jsonb), :requestedBy, true
+            )
+            ON CONFLICT (consumer_name, source_event_id) DO NOTHING
+            """.trimIndent(),
+            mapOf(
+                "suppressionId" to suppressionId,
+                "consumerName" to consumerName,
+                "sourceEventId" to sourceEventId,
+                "eventType" to eventType,
+                "recipientId" to recipientId,
+                "channel" to channel,
+                "preferenceId" to preferenceId,
+                "reason" to reason,
+                "maskedPayloadJson" to objectMapper.writeValueAsString(maskedPayload),
+                "requestedBy" to requestedBy
             )
         )
     }
@@ -391,6 +536,20 @@ class NotificationRepository(
         changeRequestId: String
     ): NotificationTemplateChangeRequestRecord? =
         jdbc.query(sql, mapOf("changeRequestId" to changeRequestId), this::mapTemplateChangeRequest).firstOrNull()
+
+    private fun mapPreference(rs: ResultSet, rowNum: Int): NotificationPreferenceRecord =
+        NotificationPreferenceRecord(
+            preferenceId = rs.getString("preference_id"),
+            recipientId = rs.getString("recipient_id"),
+            channel = rs.getString("channel"),
+            eventType = rs.getString("event_type"),
+            enabled = rs.getBoolean("enabled"),
+            requestedBy = rs.getString("requested_by"),
+            reason = rs.getString("reason"),
+            syntheticOnly = rs.getBoolean("synthetic_only"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+            updatedAt = rs.getObject("updated_at", OffsetDateTime::class.java)
+        )
 
     private fun mapTemplate(rs: ResultSet, rowNum: Int): NotificationTemplateRecord =
         NotificationTemplateRecord(

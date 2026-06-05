@@ -41,6 +41,9 @@ class NotificationTemplateAdminIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              notification_access_audit_events,
+              notification_suppressed_events,
+              notification_recipient_preferences,
               notification_dead_letters,
               notification_delivery_attempts,
               notification_delivery_requests,

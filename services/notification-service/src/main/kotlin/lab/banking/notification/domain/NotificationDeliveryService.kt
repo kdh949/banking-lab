@@ -13,14 +13,20 @@ class NotificationDeliveryService(
     private val repository: NotificationRepository,
     private val objectMapper: ObjectMapper
 ) {
+    private val consumerName = "notification-service"
+
     @Transactional
     fun consumeEvent(request: ConsumeNotificationEventRequest): NotificationDeliveryResponse {
         validateConsume(request)
+        val normalizedEventType = request.eventType.trim()
+        val normalizedRecipientId = request.recipientId.trim()
+        val normalizedChannel = request.channel.trim().uppercase()
+        val normalizedRequestedBy = request.requestedBy.trim()
         val payloadHash = sha256(objectMapper.writeValueAsString(request.payload))
         val inserted = repository.recordInboxEvent(
-            consumerName = "notification-service",
+            consumerName = consumerName,
             sourceEventId = request.sourceEventId,
-            eventType = request.eventType,
+            eventType = normalizedEventType,
             payloadHash = payloadHash
         )
         if (!inserted) {
@@ -30,14 +36,36 @@ class NotificationDeliveryService(
             )
         }
 
-        val template = repository.findTemplate(request.eventType, request.channel)
+        val maskedPayload = maskPayload(request.payload)
+        val preference = repository.findPreference(
+            recipientId = normalizedRecipientId,
+            channel = normalizedChannel,
+            eventType = normalizedEventType
+        )
+        if (preference != null && !preference.enabled) {
+            repository.insertSuppression(
+                suppressionId = suppressionId(),
+                consumerName = consumerName,
+                sourceEventId = request.sourceEventId,
+                eventType = normalizedEventType,
+                recipientId = normalizedRecipientId,
+                channel = normalizedChannel,
+                preferenceId = preference.preferenceId,
+                reason = "Synthetic notification suppressed by recipient preference ${preference.eventType}",
+                maskedPayload = maskedPayload,
+                requestedBy = normalizedRequestedBy
+            )
+            return NotificationDeliveryResponse(items = emptyList(), replayed = false)
+        }
+
+        val template = repository.findTemplate(normalizedEventType, normalizedChannel)
             ?: throw notificationError(
                 code = "NOTIFICATION_TEMPLATE_NOT_FOUND",
                 status = HttpStatus.NOT_FOUND,
                 message = "notification template was not found",
                 cause = "The synthetic event has no approved notification template for the requested channel.",
                 fix = "Seed a synthetic notification template for the eventType and channel before consuming the event.",
-                details = mapOf("eventType" to request.eventType, "channel" to request.channel)
+                details = mapOf("eventType" to normalizedEventType, "channel" to normalizedChannel)
             )
         if (!template.syntheticOnly || !template.providerKind.startsWith("SYNTHETIC_")) {
             throw notificationError(
@@ -50,15 +78,14 @@ class NotificationDeliveryService(
             )
         }
 
-        val maskedPayload = maskPayload(request.payload)
         val maskedMessage = render(template.bodyTemplate, maskedPayload)
         val deliveryRequestId = deliveryRequestId()
         repository.insertDeliveryRequest(
             deliveryRequestId = deliveryRequestId,
             sourceEventId = request.sourceEventId,
-            eventType = request.eventType,
-            recipientId = request.recipientId,
-            channel = request.channel,
+            eventType = normalizedEventType,
+            recipientId = normalizedRecipientId,
+            channel = normalizedChannel,
             providerKind = template.providerKind,
             templateId = template.templateId,
             maskedPayload = maskedPayload,
@@ -69,7 +96,7 @@ class NotificationDeliveryService(
             deliveryRequestId = deliveryRequestId,
             status = NotificationDeliveryStatus.PENDING,
             providerKind = template.providerKind,
-            requestedBy = request.requestedBy,
+            requestedBy = normalizedRequestedBy,
             reason = "Synthetic notification delivery request"
         )
 
@@ -287,6 +314,8 @@ class NotificationDeliveryService(
     private fun attemptId(): String = "NAT-${UUID.randomUUID().toString().uppercase()}"
 
     private fun deadLetterId(): String = "NDLQ-${UUID.randomUUID().toString().uppercase()}"
+
+    private fun suppressionId(): String = "NSP-${UUID.randomUUID().toString().uppercase()}"
 
     private fun sha256(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))

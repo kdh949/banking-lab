@@ -22,18 +22,22 @@ This evidence covers the first synthetic Notification Service slice:
 - Retry/failure and dead-letter state transitions.
 - Admin template change requests with maker-checker approval/rejection,
   append-only template versioning, and the synthetic `CHAT` sink.
+- Recipient notification preferences with wildcard and event-specific channel
+  filters, reason-required preference reads, access audit rows, masked
+  suppression audit rows, and idempotent suppressed replays.
 - Synthetic-only OpenAPI and event contracts.
 - TypeScript API client methods for notification event consumption, delivery
   reads, provider failure recording, delivered-state marking, template reads,
-  and template change-request approval/rejection.
+  template change-request approval/rejection, and preference list/upsert.
 - Notification-service route-level authorization filter, signed JWKS JWT
   decoder, dev-only simulator token decoder, and route role policies for event
   consumption, delivery reads, failure recording, delivered-state marking, and
-  template administration.
+  template/preference administration.
 
 The slice does not claim full Notification Service completion. Customer
-preference screens, live notification-service Keycloak smoke evidence, and live
-provider integrations are not in scope. Live providers remain prohibited.
+preference screens, admin screens, live notification-service Keycloak smoke
+evidence, and live provider integrations are not in scope. Live providers remain
+prohibited.
 
 ## Commands Run
 
@@ -68,7 +72,7 @@ were rerun sequentially with `--rerun-tasks`.
 - `npm run test:notification-service:integration -- --rerun-tasks`: pass;
   PostgreSQL and Redpanda Testcontainers ran
   `NotificationDeliveryIntegrationTest`, `NotificationAuthorizationIntegrationTest`,
-  `NotificationTemplateAdminIntegrationTest`, and
+  `NotificationTemplateAdminIntegrationTest`, `NotificationPreferenceIntegrationTest`, and
   `NotificationKafkaConsumerIntegrationTest`.
 - `npm run test:notification-service:unit -- --rerun-tasks`: pass;
   notification-service Kotlin compiled and ran `NotificationEventConsumerWorkerTest`.
@@ -117,6 +121,10 @@ were rerun sequentially with `--rerun-tasks`.
   through the route policy;
 - operations managers can approve pending template changes, while auditors can
   read the activated synthetic template;
+- customers and auditors cannot mutate recipient preferences through the route
+  policy;
+- operations actors can upsert preferences, while auditors can read durable
+  preference state with reason-required audit;
 - authorization tests use only dev-enabled simulator tokens, while the runtime
   also supports signed JWKS JWT validation through `banking-lab.security.jwt.*`.
 
@@ -131,6 +139,19 @@ were rerun sequentially with `--rerun-tasks`.
 - reason, positive version, synthetic-only provider, channel/provider match, and
   raw account/phone/email literal checks are enforced before durable change
   creation.
+
+`NotificationPreferenceIntegrationTest` verifies:
+
+- wildcard disabled preferences suppress delivery creation after inbox
+  idempotency is recorded;
+- suppressed events write durable audit rows with masked account and phone
+  payload values;
+- duplicate suppressed `sourceEventId` replays return no deliveries and do not
+  duplicate suppression rows;
+- event-specific enabled preferences override wildcard opt-out rows;
+- preference reads require actor/reason and append
+  `NOTIFICATION_PREFERENCE_VIEW` audit rows;
+- preference administration requires a reason and rejects `syntheticOnly=false`.
 
 `NotificationKafkaConsumerIntegrationTest` verifies:
 
@@ -187,7 +208,8 @@ API client typecheck verifies:
   `listNotificationTemplates`, `createNotificationTemplateChangeRequest`,
   `getNotificationTemplateChangeRequest`,
   `approveNotificationTemplateChangeRequest`, and
-  `rejectNotificationTemplateChangeRequest` methods are available with typed
+  `rejectNotificationTemplateChangeRequest`, `listNotificationPreferences`, and
+  `upsertNotificationPreference` methods are available with typed
   request/response contracts.
 
 ## Synthetic Boundary
@@ -200,11 +222,14 @@ The Kafka consumer rejects outbox envelopes that do not carry `syntheticOnly=tru
 in payload or headers before creating delivery side effects.
 Template administration rejects `syntheticOnly=false`, non-matching provider
 kinds, and raw account/phone/email literals in template bodies.
+Preference administration rejects `syntheticOnly=false`, stores only synthetic
+recipient/channel/event filters, records reason-required preference read audits,
+and suppression audit records persist masked payload JSON.
 The Docker Compose services explicitly set
 `BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED=false`.
 
 ## Remaining Risk
 
-This is still a partial feature slice. Customer preference APIs, admin screens,
-retry/dead-letter behavior in a live Compose provider-sink loop, and live
-notification-service Keycloak smoke evidence remain future work.
+This is still a partial feature slice. Customer preference screens, admin
+screens, retry/dead-letter behavior in a live Compose provider-sink loop, and
+live notification-service Keycloak smoke evidence remain future work.

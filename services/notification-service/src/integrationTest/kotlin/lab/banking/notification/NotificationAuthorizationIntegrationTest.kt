@@ -15,6 +15,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.containers.PostgreSQLContainer
@@ -45,6 +46,9 @@ class NotificationAuthorizationIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              notification_access_audit_events,
+              notification_suppressed_events,
+              notification_recipient_preferences,
               notification_dead_letters,
               notification_delivery_attempts,
               notification_delivery_requests,
@@ -211,6 +215,53 @@ class NotificationAuthorizationIntegrationTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].providerKind").value("SYNTHETIC_CHAT_SINK"))
+    }
+
+    @Test
+    fun `notification preference routes enforce ops and auditor roles`() {
+        val preferenceBody = """
+            {
+              "recipientId": "CUS-NOTIF-PREF-AUTH",
+              "channel": "SMS",
+              "eventType": "PaymentLedgerPostingRequested",
+              "enabled": false,
+              "requestedBy": "ops-preference-auth",
+              "reason": "Synthetic preference authorization test"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-NOTIF-PREF-AUTH"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/notifications/preferences")
+                .header("Authorization", bearer("ops-preference-auth", listOf("OPS_OPERATOR")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(preferenceBody)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.eventType").value("PaymentLedgerPostingRequested"))
+            .andExpect(jsonPath("$.enabled").value(false))
+
+        mockMvc.perform(
+            get("/api/notifications/preferences?recipientId=CUS-NOTIF-PREF-AUTH&channel=SMS&requestedBy=audit01&reason=Synthetic%20preference%20audit")
+                .header("Authorization", bearer("audit01", listOf("AUDITOR")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recipientId").value("CUS-NOTIF-PREF-AUTH"))
     }
 
     private fun bearer(subject: String, roles: List<String>, customerId: String? = null): String {

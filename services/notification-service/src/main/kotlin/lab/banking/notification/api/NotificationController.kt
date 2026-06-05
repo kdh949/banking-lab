@@ -7,11 +7,14 @@ import lab.banking.notification.domain.MarkNotificationDeliveredRequest
 import lab.banking.notification.domain.NotificationDeliveryDto
 import lab.banking.notification.domain.NotificationDeliveryResponse
 import lab.banking.notification.domain.NotificationDeliveryService
+import lab.banking.notification.domain.NotificationPreferenceDto
+import lab.banking.notification.domain.NotificationPreferenceService
 import lab.banking.notification.domain.NotificationTemplateAdminService
 import lab.banking.notification.domain.NotificationTemplateChangeRequestDto
 import lab.banking.notification.domain.NotificationTemplateDto
 import lab.banking.notification.domain.RecordNotificationFailureRequest
 import lab.banking.notification.domain.RejectNotificationTemplateChangeRequest
+import lab.banking.notification.domain.UpsertNotificationPreferenceRequest
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -19,12 +22,14 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.PutMapping
 
 @RestController
 @RequestMapping("/api/notifications")
 class NotificationController(
     private val notificationDeliveryService: NotificationDeliveryService,
-    private val notificationTemplateAdminService: NotificationTemplateAdminService
+    private val notificationTemplateAdminService: NotificationTemplateAdminService,
+    private val notificationPreferenceService: NotificationPreferenceService
 ) {
     @PostMapping("/events")
     fun consumeEvent(@RequestBody request: ConsumeNotificationEventRequest): NotificationDeliveryResponse =
@@ -78,4 +83,19 @@ class NotificationController(
         @RequestBody request: RejectNotificationTemplateChangeRequest
     ): NotificationTemplateChangeRequestDto =
         notificationTemplateAdminService.rejectChangeRequest(changeRequestId, request)
+
+    @GetMapping("/preferences")
+    fun preferences(
+        @RequestParam(required = false) recipientId: String?,
+        @RequestParam(required = false) channel: String?,
+        @RequestParam requestedBy: String,
+        @RequestParam reason: String
+    ): List<NotificationPreferenceDto> =
+        notificationPreferenceService.preferences(recipientId, channel, requestedBy, reason)
+
+    @PutMapping("/preferences")
+    fun upsertPreference(
+        @RequestBody request: UpsertNotificationPreferenceRequest
+    ): NotificationPreferenceDto =
+        notificationPreferenceService.upsertPreference(request)
 }

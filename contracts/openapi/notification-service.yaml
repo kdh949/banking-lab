@@ -19,6 +19,16 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/NotificationChannel'
+        - name: requestedBy
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Notification templates
@@ -96,6 +106,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationTemplateChangeRequest'
+  /api/notifications/preferences:
+    get:
+      summary: List synthetic recipient notification preferences
+      operationId: listNotificationPreferences
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationPreference'
+    put:
+      summary: Create or update a synthetic recipient notification preference
+      operationId: upsertNotificationPreference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertNotificationPreferenceRequest'
+      responses:
+        '200':
+          description: Updated notification preference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
   /api/notifications/events:
     post:
       summary: Consume a domain event and create masked synthetic delivery requests
@@ -267,6 +317,27 @@ components:
           type: string
         reason:
           type: string
+    UpsertNotificationPreferenceRequest:
+      type: object
+      required: [recipientId, channel, enabled, requestedBy, reason]
+      properties:
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+          nullable: true
+          description: Optional event type; omitted or blank values are stored as the wildcard preference.
+        enabled:
+          type: boolean
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        syntheticOnly:
+          const: true
+          default: true
     NotificationDeliveryResponse:
       type: object
       required: [items, replayed]
@@ -373,3 +444,30 @@ components:
           nullable: true
         syntheticOnly:
           const: true
+    NotificationPreference:
+      type: object
+      required: [preferenceId, recipientId, channel, eventType, enabled, requestedBy, reason, syntheticOnly, createdAt, updatedAt]
+      properties:
+        preferenceId:
+          type: string
+          pattern: '^NPF-'
+        recipientId:
+          type: string
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        eventType:
+          type: string
+        enabled:
+          type: boolean
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
