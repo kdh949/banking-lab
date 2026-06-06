@@ -306,7 +306,7 @@ class ReportingRepository(
             """
             SELECT outbox_event_id, event_type, aggregate_type, aggregate_id,
                    idempotency_key, payload_json::text AS payload_json,
-                   retry_count, error_message
+                   created_at, retry_count, error_message
             FROM reporting_outbox_events
             WHERE status IN ('PENDING', 'FAILED')
               AND event_type IN (:eventTypes)
@@ -415,6 +415,7 @@ class ReportingRepository(
             aggregateId = rs.getString("aggregate_id"),
             idempotencyKey = rs.getString("idempotency_key"),
             payload = readMap(rs.getString("payload_json")),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             retryCount = rs.getInt("retry_count"),
             errorMessage = rs.getString("error_message")
         )

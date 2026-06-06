@@ -116,9 +116,13 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
         assertEquals("payment_instruction", envelope.aggregateType)
         assertEquals(created.item.paymentInstructionId, envelope.aggregateId)
         assertEquals("PaymentInstructionCanceled", envelope.eventType)
+        assertNotNull(envelope.occurredAt)
         assertEquals("PAY-KAFKA-CANCEL-001", envelope.idempotencyKey)
         assertEquals(true, envelope.headers["syntheticOnly"])
         assertEquals("payment-service", envelope.headers["sourceService"])
+        assertEquals("PaymentInstructionCanceled", envelope.headers["eventType"])
+        assertEquals(created.item.paymentInstructionId, envelope.headers["aggregateId"])
+        assertEquals(envelope.occurredAt, envelope.headers["occurredAt"])
         assertEquals(created.item.paymentInstructionId, envelope.payload["paymentInstructionId"])
         assertEquals(true, envelope.payload["syntheticOnly"])
         assertEquals(false, envelope.payload["directLedgerWrite"])
@@ -257,6 +261,10 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
                 if (!records.isEmpty) {
                     records.forEach { record ->
                         assertTrue(record.headers().any { it.key() == "syntheticOnly" })
+                        assertTrue(record.headers().any { it.key() == "sourceService" })
+                        assertTrue(record.headers().any { it.key() == "eventType" })
+                        assertTrue(record.headers().any { it.key() == "aggregateId" })
+                        assertTrue(record.headers().any { it.key() == "occurredAt" })
                         envelopes += objectMapper.readValue(record.value(), PaymentOutboxKafkaEnvelope::class.java)
                     }
                 }
@@ -294,8 +302,12 @@ class PaymentKafkaOutboxPublisherIntegrationTest {
         assertNotNull(envelope.outboxEventId)
         assertEquals("payment_instruction", envelope.aggregateType)
         assertEquals(instructionId, envelope.aggregateId)
+        assertNotNull(envelope.occurredAt)
         assertEquals(true, envelope.headers["syntheticOnly"])
         assertEquals("payment-service", envelope.headers["sourceService"])
+        assertEquals(envelope.eventType, envelope.headers["eventType"])
+        assertEquals(instructionId, envelope.headers["aggregateId"])
+        assertEquals(envelope.occurredAt, envelope.headers["occurredAt"])
         assertEquals(instructionId, envelope.payload["paymentInstructionId"])
         assertEquals(status, envelope.payload["status"])
         assertEquals(retryCount, payloadInt(envelope, "retryCount"))

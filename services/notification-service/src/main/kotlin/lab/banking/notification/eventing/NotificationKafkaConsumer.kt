@@ -56,6 +56,7 @@ class NotificationKafkaConsumer(
         config: NotificationKafkaConsumerConfig,
         envelope: NotificationOutboxKafkaEnvelope
     ): NotificationKafkaConsumeResult {
+        requireEnvelopeMetadata(envelope)
         requireSyntheticOnly(envelope)
         if (envelope.eventType !in config.supportedEventTypes) {
             return NotificationKafkaConsumeResult(
@@ -106,6 +107,21 @@ class NotificationKafkaConsumer(
             ?: booleanValue(envelope.headers["syntheticOnly"])
         require(syntheticOnly == true) {
             "notification kafka consumer accepts only synthetic-only outbox events"
+        }
+    }
+
+    private fun requireEnvelopeMetadata(envelope: NotificationOutboxKafkaEnvelope) {
+        require(firstString(envelope.headers["sourceService"]) != null) {
+            "notification kafka consumer requires sourceService envelope metadata"
+        }
+        require(firstString(envelope.headers["eventType"], envelope.eventType) == envelope.eventType) {
+            "notification kafka consumer requires matching eventType envelope metadata"
+        }
+        require(firstString(envelope.headers["aggregateId"], envelope.aggregateId) == envelope.aggregateId) {
+            "notification kafka consumer requires matching aggregateId envelope metadata"
+        }
+        require(firstString(envelope.occurredAt, envelope.headers["occurredAt"]) != null) {
+            "notification kafka consumer requires occurredAt envelope metadata"
         }
     }
 

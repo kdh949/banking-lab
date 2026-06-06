@@ -1,5 +1,7 @@
 package lab.banking.reporting.eventing
 
+import java.time.OffsetDateTime
+
 data class ReportingOutboxRecord(
     val outboxEventId: String,
     val eventType: String,
@@ -7,6 +9,7 @@ data class ReportingOutboxRecord(
     val aggregateId: String,
     val idempotencyKey: String?,
     val payload: Map<String, Any?>,
+    val createdAt: OffsetDateTime,
     val retryCount: Int = 0,
     val errorMessage: String? = null
 )
@@ -16,6 +19,7 @@ data class ReportingOutboxKafkaEnvelope(
     val aggregateType: String,
     val aggregateId: String,
     val eventType: String,
+    val occurredAt: String,
     val idempotencyKey: String?,
     val payload: Map<String, Any?>,
     val headers: Map<String, Any?> = emptyMap()

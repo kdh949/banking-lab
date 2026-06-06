@@ -67,6 +67,8 @@ class PaymentKafkaOutboxPublisher(
             )
             record.headers().add(header("outboxEventId", event.outboxEventId))
             record.headers().add(header("eventType", event.eventType))
+            record.headers().add(header("aggregateId", event.aggregateId))
+            record.headers().add(header("occurredAt", event.createdAt.toString()))
             record.headers().add(header("sourceService", "payment-service"))
             record.headers().add(header("syntheticOnly", "true"))
 
@@ -132,11 +134,15 @@ class PaymentKafkaOutboxPublisher(
             aggregateType = aggregateType,
             aggregateId = aggregateId,
             eventType = eventType,
+            occurredAt = createdAt.toString(),
             idempotencyKey = idempotencyKey,
             payload = payload,
             headers = mapOf(
                 "syntheticOnly" to true,
-                "sourceService" to "payment-service"
+                "sourceService" to "payment-service",
+                "eventType" to eventType,
+                "aggregateId" to aggregateId,
+                "occurredAt" to createdAt.toString()
             )
         )
 

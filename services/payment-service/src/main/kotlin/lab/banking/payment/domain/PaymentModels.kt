@@ -299,7 +299,8 @@ data class PaymentOutboxRecord(
     val payload: Map<String, Any?>,
     val status: String,
     val retryCount: Int,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val createdAt: OffsetDateTime
 )
 
 data class PaymentOutboxFailureRecord(

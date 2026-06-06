@@ -129,6 +129,7 @@ class LiveNotificationConsumerComposeSmokeIntegrationTest {
             aggregateType = "PaymentInstruction",
             aggregateId = "PAY-LIVE-NOTIF-001",
             eventType = "PaymentLedgerPostingRequested",
+            occurredAt = "2026-06-06T00:00:00Z",
             idempotencyKey = "IDEMP-LIVE-NOTIF-${UUID.randomUUID().toString().uppercase()}",
             payload = mapOf(
                 "contractVersion" to "2026-06-05",
@@ -140,7 +141,13 @@ class LiveNotificationConsumerComposeSmokeIntegrationTest {
                 "phone" to "010-9999-7777",
                 "syntheticOnly" to true
             ),
-            headers = mapOf("syntheticOnly" to true)
+            headers = mapOf(
+                "syntheticOnly" to true,
+                "sourceService" to "payment-service",
+                "eventType" to "PaymentLedgerPostingRequested",
+                "aggregateId" to "PAY-LIVE-NOTIF-001",
+                "occurredAt" to "2026-06-06T00:00:00Z"
+            )
         )
 
     private fun waitForNotificationSchema(

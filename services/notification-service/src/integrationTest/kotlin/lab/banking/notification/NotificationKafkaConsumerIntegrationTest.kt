@@ -16,6 +16,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -105,12 +106,19 @@ class NotificationKafkaConsumerIntegrationTest {
                 aggregateType = "DepositProduct",
                 aggregateId = "PRD-SYN-001",
                 eventType = "DepositInterestAccrued",
+                occurredAt = "2026-06-06T00:00:00Z",
                 idempotencyKey = "IDEMP-NOTIF-SKIP-001",
                 payload = mapOf(
                     "productId" to "PRD-SYN-001",
                     "syntheticOnly" to true
                 ),
-                headers = mapOf("syntheticOnly" to true)
+                headers = mapOf(
+                    "syntheticOnly" to true,
+                    "sourceService" to "core-banking-service",
+                    "eventType" to "DepositInterestAccrued",
+                    "aggregateId" to "PRD-SYN-001",
+                    "occurredAt" to "2026-06-06T00:00:00Z"
+                )
             )
         )
 
@@ -127,12 +135,48 @@ class NotificationKafkaConsumerIntegrationTest {
         assertEquals(0, countRows("notification_delivery_requests"))
     }
 
+    @Test
+    fun `Redpanda events missing envelope metadata are rejected before delivery side effects`() {
+        val topic = uniqueTopic("banking-lab-notification-metadata")
+        createTopic(topic)
+        produce(
+            topic,
+            NotificationOutboxKafkaEnvelope(
+                outboxEventId = "OBX-NOTIF-METADATA-001",
+                aggregateType = "PaymentInstruction",
+                aggregateId = "PAY-NOTIF-METADATA-001",
+                eventType = "PaymentLedgerPostingRequested",
+                occurredAt = "2026-06-06T00:00:00Z",
+                idempotencyKey = "IDEMP-NOTIF-METADATA-001",
+                payload = mapOf(
+                    "customerId" to "CUS-NOTIF-METADATA-001",
+                    "amountMinor" to 45_000,
+                    "currency" to "KRW",
+                    "syntheticOnly" to true
+                ),
+                headers = mapOf("syntheticOnly" to true)
+            )
+        )
+
+        val rejected = assertThrows(IllegalArgumentException::class.java) {
+            notificationKafkaConsumer.consumeAvailable(
+                consumerConfig(topic, uniqueGroup("notification-service-metadata")),
+                maxRecords = 1
+            )
+        }
+
+        assertEquals("notification kafka consumer requires sourceService envelope metadata", rejected.message)
+        assertEquals(0, countRows("notification_inbox_events"))
+        assertEquals(0, countRows("notification_delivery_requests"))
+    }
+
     private fun paymentEnvelope(outboxEventId: String): NotificationOutboxKafkaEnvelope =
         NotificationOutboxKafkaEnvelope(
             outboxEventId = outboxEventId,
             aggregateType = "PaymentInstruction",
             aggregateId = "PAY-NOTIF-KAFKA-001",
             eventType = "PaymentLedgerPostingRequested",
+            occurredAt = "2026-06-06T00:00:00Z",
             idempotencyKey = "IDEMP-NOTIF-KAFKA-001",
             payload = mapOf(
                 "contractVersion" to "2026-06-05",
@@ -144,7 +188,13 @@ class NotificationKafkaConsumerIntegrationTest {
                 "phone" to "010-1234-5678",
                 "syntheticOnly" to true
             ),
-            headers = mapOf("syntheticOnly" to true)
+            headers = mapOf(
+                "syntheticOnly" to true,
+                "sourceService" to "payment-service",
+                "eventType" to "PaymentLedgerPostingRequested",
+                "aggregateId" to "PAY-NOTIF-KAFKA-001",
+                "occurredAt" to "2026-06-06T00:00:00Z"
+            )
         )
 
     private fun consumerConfig(topic: String, groupId: String): NotificationKafkaConsumerConfig =
