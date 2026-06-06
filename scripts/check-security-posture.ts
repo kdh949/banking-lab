@@ -329,7 +329,7 @@ const checks: Check[] = [
       "enabled: \"true\"",
       "simulatorTokensEnabled: \"false\"",
       "devSimulatorToken: \"false\"",
-      "jwksUri: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs",
+      "jwksUri: http://banking-lab-keycloak:8080/realms/banking-lab/protocol/openid-connect/certs",
       "audience: core-banking-api",
       "domainEventPublisherClientId: reporting-helm-domain-event-publisher",
       "domainEventPublisherDeadLetterThreshold: 3",

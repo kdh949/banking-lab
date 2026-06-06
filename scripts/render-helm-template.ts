@@ -51,6 +51,14 @@ for (const expected of [
   "Service/banking-lab-notification-service",
   "Deployment/banking-lab-notification-event-consumer",
   "Deployment/banking-lab-temporal-worker",
+  "Deployment/banking-lab-keycloak",
+  "Service/banking-lab-keycloak",
+  "Deployment/banking-lab-redpanda",
+  "Service/banking-lab-redpanda",
+  "Deployment/banking-lab-temporal",
+  "Service/banking-lab-temporal",
+  "Secret/banking-lab-ingress-tls",
+  "Ingress/banking-lab-ingress",
   "Service/banking-lab-postgres",
   "StatefulSet/banking-lab-postgres",
   "NetworkPolicy/banking-lab-app-allow"
@@ -65,6 +73,18 @@ if (!rendered.includes("replace-with-local-synthetic-password")) {
 }
 if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
   errors.push("Rendered Helm output must include the Temporal worker enablement flag.");
+}
+if (
+  !rendered.includes("banking-lab-keycloak") ||
+  !rendered.includes("banking-lab-redpanda") ||
+  !rendered.includes("banking-lab-temporal") ||
+  !rendered.includes("banking-lab-ingress") ||
+  !rendered.includes("secretName: banking-lab-ingress-tls") ||
+  !rendered.includes("nginx.ingress.kubernetes.io/ssl-redirect") ||
+  !rendered.includes("replace-with-local-synthetic-tls-certificate-pem") ||
+  !rendered.includes("replace-with-local-synthetic-tls-private-key-pem")
+) {
+  errors.push("Rendered Helm output must include Keycloak, Redpanda, Temporal, and TLS Ingress resources with synthetic placeholders.");
 }
 if (
   !rendered.includes("reporting_flyway_schema_history") ||
@@ -95,7 +115,7 @@ if (
   !rendered.includes("notification-service-api") ||
   !rendered.includes("BANKING_LAB_NOTIFICATION_SERVICE_REAL_PROVIDER_ENABLED") ||
   !rendered.includes("BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_ENABLED") ||
-  !rendered.includes("redpanda:9092")
+  !rendered.includes("banking-lab-redpanda:9092")
 ) {
   errors.push("Rendered Helm output must include notification-service synthetic provider, consumer, Flyway, and audience settings.");
 }
@@ -231,6 +251,21 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.temporalWorker.resources.requests.memory": scalarFromSection(source, "temporalWorker", ["resources", "requests", "memory"]),
     ".Values.temporalWorker.resources.limits.cpu": scalarFromSection(source, "temporalWorker", ["resources", "limits", "cpu"]),
     ".Values.temporalWorker.resources.limits.memory": scalarFromSection(source, "temporalWorker", ["resources", "limits", "memory"]),
+    ".Values.keycloak.image": scalarFromSection(source, "keycloak", ["image"]),
+    ".Values.keycloak.port": scalarFromSection(source, "keycloak", ["port"]),
+    ".Values.redpanda.image": scalarFromSection(source, "redpanda", ["image"]),
+    ".Values.redpanda.kafkaPort": scalarFromSection(source, "redpanda", ["kafkaPort"]),
+    ".Values.redpanda.adminPort": scalarFromSection(source, "redpanda", ["adminPort"]),
+    ".Values.redpanda.memory": scalarFromSection(source, "redpanda", ["memory"]),
+    ".Values.temporalServer.image": scalarFromSection(source, "temporalServer", ["image"]),
+    ".Values.temporalServer.port": scalarFromSection(source, "temporalServer", ["port"]),
+    ".Values.ingress.className": scalarFromSection(source, "ingress", ["className"]),
+    ".Values.ingress.tlsSecretName": scalarFromSection(source, "ingress", ["tlsSecretName"]),
+    ".Values.ingress.appHost": scalarFromSection(source, "ingress", ["appHost"]),
+    ".Values.ingress.authHost": scalarFromSection(source, "ingress", ["authHost"]),
+    ".Values.ingress.reportingHost": scalarFromSection(source, "ingress", ["reportingHost"]),
+    ".Values.ingress.paymentHost": scalarFromSection(source, "ingress", ["paymentHost"]),
+    ".Values.ingress.notificationHost": scalarFromSection(source, "ingress", ["notificationHost"]),
     ".Values.postgres.image": scalarFromSection(source, "postgres", ["image"]),
     ".Values.postgres.database": scalarFromSection(source, "postgres", ["database"]),
     ".Values.postgres.username": scalarFromSection(source, "postgres", ["username"]),

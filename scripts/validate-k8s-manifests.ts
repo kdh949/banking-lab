@@ -31,6 +31,8 @@ const requiredFiles = [
   "keycloak-deployment.yaml",
   "redpanda-deployment.yaml",
   "temporal-deployment.yaml",
+  "ingress-tls-secret.example.yaml",
+  "ingress.yaml",
   "network-policy.yaml"
 ];
 
@@ -68,6 +70,8 @@ const postgres = requireDocument(documents, "StatefulSet", "postgres", errors);
 const keycloak = requireDocument(documents, "Deployment", "keycloak", errors);
 const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
+const ingressTlsSecret = requireDocument(documents, "Secret", "banking-lab-ingress-tls", errors);
+const ingress = requireDocument(documents, "Ingress", "banking-lab-ingress", errors);
 requireDocument(documents, "NetworkPolicy", "banking-lab-default-deny-and-app-allow", errors);
 
 for (const deployment of [coreDeployment, reportingDeployment, reportingDomainEventPublisherDeployment, paymentDeployment, paymentWorkerDeployment, paymentDomainEventPublisherDeployment, notificationDeployment, notificationConsumerDeployment, postgres, keycloak, redpanda, temporal]) {
@@ -153,6 +157,30 @@ if (
 }
 if (!hasText(secret, "replace-with-local-synthetic-password")) {
   errors.push("secret.example.yaml must use replace-with-local-synthetic-password placeholders only.");
+}
+if (
+  !hasText(ingressTlsSecret, "type: kubernetes.io/tls") ||
+  !hasText(ingressTlsSecret, "replace-with-local-synthetic-tls-certificate-pem") ||
+  !hasText(ingressTlsSecret, "replace-with-local-synthetic-tls-private-key-pem")
+) {
+  errors.push("ingress-tls-secret.example.yaml must use synthetic TLS certificate/key placeholders only.");
+}
+if (
+  !hasText(ingress, "ingressClassName: nginx") ||
+  !hasText(ingress, "nginx.ingress.kubernetes.io/ssl-redirect: \"true\"") ||
+  !hasText(ingress, "secretName: banking-lab-ingress-tls") ||
+  !hasText(ingress, "banking-lab.local") ||
+  !hasText(ingress, "auth.banking-lab.local") ||
+  !hasText(ingress, "reports.banking-lab.local") ||
+  !hasText(ingress, "payments.banking-lab.local") ||
+  !hasText(ingress, "notifications.banking-lab.local") ||
+  !hasText(ingress, "name: core-banking-service") ||
+  !hasText(ingress, "name: keycloak") ||
+  !hasText(ingress, "name: reporting-service") ||
+  !hasText(ingress, "name: payment-service") ||
+  !hasText(ingress, "name: notification-service")
+) {
+  errors.push("Ingress must route TLS hosts to core-banking, Keycloak, reporting, payment, and notification services.");
 }
 if (documents.some((document) => /real[_ -]?(customer|money|pii|bank|network)/i.test(document.content))) {
   errors.push("Kubernetes manifests must not reference real customer, money, PII, bank, or network data.");

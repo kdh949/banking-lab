@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-06-06T00:21:13.287Z",
+  "command": "npm run argocd:validate",
+  "structuralValidation": "pass",
+  "requiredFiles": [
+    "banking-lab-application.yaml",
+    "banking-lab-app.yaml"
+  ],
+  "applicationCount": 2,
+  "applications": [
+    {
+      "file": "infra/argocd/banking-lab-app.yaml",
+      "name": "banking-lab",
+      "namespace": "argocd"
+    },
+    {
+      "file": "infra/argocd/banking-lab-application.yaml",
+      "name": "banking-lab",
+      "namespace": "argocd"
+    }
+  ],
+  "productionClaim": false,
+  "syntheticOnly": true,
+  "errors": []
+}

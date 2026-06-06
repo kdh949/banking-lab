@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T18:57:27.381Z",
+  "generatedAt": "2026-06-06T00:21:12.690Z",
   "command": "npm run k8s:validate",
   "structuralValidation": "pass",
   "kubectlClientDryRun": {
@@ -29,9 +29,11 @@
     "keycloak-deployment.yaml",
     "redpanda-deployment.yaml",
     "temporal-deployment.yaml",
+    "ingress-tls-secret.example.yaml",
+    "ingress.yaml",
     "network-policy.yaml"
   ],
-  "documentCount": 25,
+  "documentCount": 27,
   "resources": [
     {
       "file": "infra/k8s/configmap.yaml",
@@ -59,6 +61,20 @@
       "apiVersion": "apps/v1",
       "kind": "Deployment",
       "name": "core-banking-temporal-worker",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/ingress-tls-secret.example.yaml",
+      "apiVersion": "v1",
+      "kind": "Secret",
+      "name": "banking-lab-ingress-tls",
+      "namespace": "banking-lab"
+    },
+    {
+      "file": "infra/k8s/ingress.yaml",
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "Ingress",
+      "name": "banking-lab-ingress",
       "namespace": "banking-lab"
     },
     {
