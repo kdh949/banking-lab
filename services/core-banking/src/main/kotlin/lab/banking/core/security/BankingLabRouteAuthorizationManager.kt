@@ -30,6 +30,11 @@ class BankingLabRouteAuthorizationManager {
             approvalReject.matches(path) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ops/security") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/ops/ledger/projection-drift-runs") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/ops/ledger/projection-rebuild-runs") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/ops/ledger/projection-rebuild-requests") && path.endsWith("/approve") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "BRANCH_MANAGER")
+            path.startsWith("/api/ops/ledger/projection-rebuild-requests") && path.endsWith("/reject") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "BRANCH_MANAGER")
+            path.startsWith("/api/ops/ledger/projection-rebuild-requests") -> setOf("OPS_OPERATOR", "OPS_MANAGER")
             path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "BRANCH_MANAGER")
             path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
             path.startsWith("/api/auth/session") -> ALL_INTERACTIVE_ROLES
