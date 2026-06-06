@@ -302,7 +302,7 @@ test("Phase 5 customer self-service manifests smoke and evidence are wired", asy
   assert.match(evidence, /npm run k8s:validate/);
   assert.match(evidence, /skipped_no_cluster/);
   assert.match(evidence, /BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN/);
-  assert.match(evidence, /spending-limit/);
+  assert.match(evidence, /spending[- ]limit/);
 
   assert.match(matrix, /Synthetic signup\/login: `CWB-001`, `CWB-002`/);
   assert.match(matrix, /Synthetic customer onboarding: `CST-201`, `CST-202`/);

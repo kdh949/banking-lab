@@ -433,6 +433,9 @@ Phase 5 validation commands:
 - `npm run test:e2e -- apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium`: passed with 1 skipped because live synthetic API and staff maker/checker token environment variables were absent.
 - `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium`: passed 3 tests and skipped 12 live API-backed smokes because live API environment variables were absent.
 - `npm run test:e2e -- --project=chromium`: passed 19 tests and skipped 59 live API/Keycloak/payment/notification smokes because corresponding environment variables were absent.
+- `git push`: passed, pushed commit `a46ca8b9` to PR #54.
+- `gh pr view 54 --json statusCheckRollup,headRefOid,url,state`: PR #54 pointed at `a46ca8b9`; hosted CI run `27070620477` completed with all jobs failed within a few seconds.
+- `gh api repos/kdh949/banking-lab/check-runs/79899068546/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
 ## Commands Not Attempted
 

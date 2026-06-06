@@ -51,7 +51,7 @@ Scope: synthetic-only customer onboarding, account opening, customer signup/logi
 - `kubectl` client dry-run is recorded as `skipped_no_cluster` because the configured local Kubernetes API returned `the server is currently unable to handle the request`; structural Kubernetes validation still passed.
 - The new signup to login to accounts to transfer to history Playwright/API smoke is gated by `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN`, and `BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN`; without those values it skips with an explicit reason.
 - DAST is skipped in local `security:evidence` because `BANKING_LAB_DAST_URL` was not set.
-- Hosted CI for PR #54 has not produced runnable job evidence because GitHub Actions reports that jobs were not started due recent account payment failure or spending-limit settings.
+- Hosted CI for PR #54 has not produced runnable job evidence. Latest checked run `27070620477` for commit `a46ca8b9` completed all jobs as failed within a few seconds, and check-run annotation `79899068546` says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
 ## Evidence Files
 
