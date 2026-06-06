@@ -366,6 +366,38 @@ Phase 3 validation commands:
 - `gh pr view 54 --json statusCheckRollup`: after polling, hosted CI run `27069864662` completed with all jobs failed within a few seconds.
 - `gh api repos/kdh949/banking-lab/check-runs/79897048781/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
+## Phase 4 Customer-Web Forms Update
+
+Implemented in commit `2ab03926` on branch `codex/customer-onboarding-self-service`:
+
+- Added customer account-list and internal synthetic recipient-lookup APIs in Kotlin/Spring.
+- Account list returns only owned, non-system accounts for the authenticated/supplied synthetic customer context, masks account numbers, and writes customer self-service audit event `ACCOUNT_LIST_VIEW`.
+- Internal recipient lookup only returns active, non-system synthetic internal accounts and masks account numbers; customer transfers now reject synthetic system accounts before ledger posting.
+- Extended OpenAPI and the shared TypeScript API client with `customerAccounts` and `internalRecipientLookup`.
+- Replaced customer-web workflow shell pages for `/signup`, `/login`, `/accounts`, `/accounts/[accountId]`, `/transfers/new`, and `/transfers/[resultId]` with form-backed React screens.
+- Customer-web session state is stored from signup/login responses and used for authorization headers and customer/account context; the new forms do not use hard-coded `SYN-CUS-001` or `ACC-SYN-001-001`.
+- Added explicit demo fallback when no live API base URL is configured, plus structured error display for validation/auth/replay/held/posted/failure states.
+- Extended customer-web Playwright structural coverage and Node structural tests for the form-backed journey.
+
+Phase 4 validation commands:
+
+- `npm run test:core-banking:integration -- --tests lab.banking.core.customer.CustomerAccountApiParityIntegrationTest --tests lab.banking.core.customer.CustomerTransferApiParityIntegrationTest`: passed.
+- `npm run next:customer-web:typecheck`: passed.
+- `npm --workspace @banking-lab/api-client run typecheck`: passed.
+- `node --test tests/nextScaffold.test.mjs tests/customerOnboardingSelfService.test.mjs`: passed, 22 tests.
+- `npm run contracts:lint`: passed.
+- `npm run contracts:check-client`: passed, 153 operation ids matched 146 shared client methods/exemptions.
+- `npm run next:customer-web:build`: passed and built the `/signup`, `/login`, `/accounts`, and `/transfers/new` routes.
+- `npm run next:customer-web`: sandboxed run failed with `listen EPERM`; escalated rerun started the local customer-web dev server at `http://localhost:3001`.
+- Browser/Playwright route inspection through the Node REPL failed because Chromium could not acquire the required macOS sandbox port; escalated Playwright was used instead.
+- `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts --project=chromium`: first run failed due an assertion expecting transfer-copy while logged out; after fixing the test expectation, rerun passed 3 tests and skipped 11 API-backed smokes because live API environment variables were absent.
+- `npm run validate:manifests`: passed, 113 screen manifests.
+- `npm test`: failed with 180 passing tests and 1 failing test. The only failure was `tests/platformDeployment.test.mjs`, because `kubectl apply --dry-run=client --validate=false -f infra/k8s` tried to use the currently configured local Kubernetes API and received `the server is currently unable to handle the request`.
+- `KUBECONFIG=/tmp/banking-lab-empty-kubeconfig npm run k8s:validate`: passed, 27 resources, `kubectl skipped_no_cluster`.
+- `git push`: passed, pushed commit `2ab03926` to PR #54.
+- `gh pr view 54 --json statusCheckRollup,headRefOid,url`: PR #54 pointed at `2ab03926`; hosted CI run `27070282790` completed with all jobs failed within a few seconds.
+- `gh api repos/kdh949/banking-lab/check-runs/79898153086/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
+
 ## Commands Not Attempted
 
 Not attempted in Phase 0:
@@ -376,4 +408,4 @@ Not attempted in Phase 0:
 - `docker compose config`
 - `docker compose --profile platform config`
 
-No Phase 4-5 implementation commands have been attempted yet.
+No Phase 5 implementation commands have been attempted yet.
