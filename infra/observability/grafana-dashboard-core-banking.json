@@ -1,0 +1,89 @@
+{
+  "editable": false,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(banking_lab_ledger_command_latency_seconds_bucket[5m])) by (le, command_type))",
+          "legendFormat": "ledger_command_latency {{command_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ledger Command Latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate(banking_lab_ledger_command_errors_total[5m])) / clamp_min(sum(rate(banking_lab_ledger_command_latency_seconds_count[5m])), 1)",
+          "legendFormat": "ledger_command_error_rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Ledger Command Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_idempotency_replay_count_total[10m]))",
+          "legendFormat": "idempotency_replay_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Idempotency Replays",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_authorization_denied_count_total[10m]))",
+          "legendFormat": "authorization_denied_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Authorization Denials",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_audit_append_failure_count_total[10m]))",
+          "legendFormat": "audit_append_failure_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Audit Append Failures",
+      "type": "stat"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 40,
+  "tags": ["banking-lab", "core-banking", "synthetic"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "Core Banking SLO",
+  "uid": "core-banking-slo",
+  "version": 1
+}

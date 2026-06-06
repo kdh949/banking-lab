@@ -25,6 +25,7 @@ class BankingLabAuthorizationFilter(
     private val routeAuthorizationManager: BankingLabRouteAuthorizationManager,
     private val securityPolicyEnforcer: BankingLabSecurityPolicyEnforcer,
     private val auditEvents: AuditEventAppender,
+    private val authorizationMetrics: AuthorizationMetrics,
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
@@ -131,6 +132,7 @@ class BankingLabAuthorizationFilter(
         fix: String
     ) {
         val requestId = request.getHeader("x-request-id") ?: "REQ-${UUID.randomUUID()}"
+        authorizationMetrics.recordDenied(code, policy, screenId(request.requestURI))
         appendDeniedAudit(request, principal, requestId, status, code, policy, message)
         response.status = status.value()
         response.contentType = "application/json"
@@ -233,6 +235,7 @@ class BankingLabAuthorizationFilter(
             path == "/api/fds/analytics" -> "FDS-301"
             path.startsWith("/api/aml/governance") -> "AML-301"
             path.startsWith("/api/ops/security") -> "OPS-SEC-101"
+            path.startsWith("/api/audit/exports") -> "AUD-501"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
             path.startsWith("/api/admin/platform/evidence-coverage") -> "ADM-501"

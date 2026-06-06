@@ -25,6 +25,7 @@ class BankingLabRouteAuthorizationManager {
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/operations/retry-queue") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
             path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.startsWith("/api/audit/exports") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             approvalApprove.matches(path) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             approvalReject.matches(path) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")

@@ -41,7 +41,8 @@ class LedgerCommandService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val objectMapper: ObjectMapper,
     private val auditEvents: AuditEventAppender,
-    private val transactionManager: PlatformTransactionManager
+    private val transactionManager: PlatformTransactionManager,
+    private val ledgerMetrics: LedgerCommandMetrics
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun deposit(command: DepositCommand): LedgerCommandResult =
@@ -601,12 +602,18 @@ class LedgerCommandService(
     fun transaction(transactionId: String): LedgerTransactionDto? =
         findTransaction(transactionId)
 
-    private fun postLedgerCommand(commandType: String, idempotencyKey: String, command: Any, create: () -> String): LedgerCommandResult {
+    private fun postLedgerCommand(commandType: String, idempotencyKey: String, command: Any, create: () -> String): LedgerCommandResult =
+        ledgerMetrics.record(commandType) {
+            postLedgerCommandInternal(commandType, idempotencyKey, command, create)
+        }
+
+    private fun postLedgerCommandInternal(commandType: String, idempotencyKey: String, command: Any, create: () -> String): LedgerCommandResult {
         val commandHash = commandHash(command)
         acquireIdempotencyLock(idempotencyKey)
         val existing = findIdempotency(idempotencyKey)
         if (existing != null) {
             ensureSameCommandHash(existing, commandHash)
+            ledgerMetrics.recordIdempotencyReplay(commandType)
             val transactionId = existing.ledgerTransactionId
                 ?: throw ledgerConflict("IDEMPOTENCY_RECORD_INCOMPLETE", "idempotency record has no ledger transaction", "idempotency record points at one business result")
             return LedgerCommandResult(findTransaction(transactionId) ?: throw ledgerNotFound("ledger transaction not found: $transactionId"), replayed = true)

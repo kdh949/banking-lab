@@ -1,0 +1,89 @@
+{
+  "editable": false,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(banking_lab_outbox_pending_count)",
+          "legendFormat": "outbox_pending_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Outbox Pending Rows",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(banking_lab_outbox_dead_letter_count)",
+          "legendFormat": "outbox_dead_letter_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Outbox Dead Letters",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_payment_publisher_events_failed_total[10m])) + sum(increase(banking_lab_payment_publisher_events_dead_lettered_total[10m]))",
+          "legendFormat": "payment_instruction_failure_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Payment Instruction Failures",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_notification_consumer_batch_failures_total[10m]))",
+          "legendFormat": "notification_dead_letter_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Notification Dead-Letter Signals",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(increase(banking_lab_reporting_publisher_events_failed_total[10m])) + sum(increase(banking_lab_reporting_publisher_events_dead_lettered_total[10m]))",
+          "legendFormat": "report_artifact_generation_failure_count",
+          "refId": "A"
+        }
+      ],
+      "title": "Report Artifact Failures",
+      "type": "stat"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 40,
+  "tags": ["banking-lab", "outbox", "synthetic"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "Outbox And Bounded Contexts",
+  "uid": "outbox-bounded-contexts",
+  "version": 1
+}

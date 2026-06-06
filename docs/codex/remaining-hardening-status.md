@@ -2,7 +2,7 @@
 
 Review date: 2026-06-06
 
-Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`, `codex/remaining-hardening-phase-6-ops-security`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
@@ -18,6 +18,8 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 
 Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through `contracts/openapi/core-banking.yaml`, `contracts/openapi/reporting-service.yaml`, standardized structured-error contract metadata on payment/notification contracts, AsyncAPI envelope metadata, reporting event schemas, root `contracts:*` scripts, CI wiring, and `tests/contractHardening.test.mjs`. Evidence is recorded in `docs/test-evidence/contract-validation-hardening.md`. PR #49 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local contract, Node, package, workflow, and service integration tests passed.
 
+Phase 6 update: secrets hygiene, default-secret fail-fast controls, observability metric validation, five operational runbooks, and a controlled audit export workflow are now implemented. `V036__audit_export_jobs.sql` stores audit export jobs/files, export requests are auditor/compliance-only, reason-required, step-up protected, idempotent, maker-checker approved, synthetic-only, and verified not to mutate ledger rows. Evidence is recorded in `docs/test-evidence/phase-6-ops-security.md`; generated Docker-forced security evidence now reports npm audit, Semgrep, Trivy filesystem scan, SBOM, and ZAP baseline DAST passing against a disposable local synthetic target. PR #50 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted and structural tests passed.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
@@ -32,6 +34,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Phase 5 ledger projection drift/rebuild now detects projection drift from `ledger_postings`, stores drift run/item evidence, submits maker-checker rebuild requests through `operator_approvals`, rebuilds only `account_balance_projections`, records before/after source/projection hashes, and exposes ops-console/API-client smoke wiring.
 - Phase 3 customer-web and staff-terminal route shells now split core workflow routes out of the single root panel path and render loading/success/replay/held/blocked/validation/auth/unexpected states from shared route components.
 - Phase 4 contract gates now lint required OpenAPI files, compare `operationId` values with the shared TypeScript API client, and verify AsyncAPI event schema references plus synthetic-only payload guards.
+- Phase 6 operations/security now includes `.env.example`, `docs/security/secrets-management.md`, `security:secrets-check`, production-like default-secret startup guard coverage, Micrometer metrics for ledger command latency/errors, idempotency replays, outbox backlog, authorization denials, and audit append failures, Prometheus/Grafana structural assets, SLO/observability docs, five runbooks, and a general audit export API.
 
 ## Partially Implemented
 
@@ -39,7 +42,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Phase 5 ledger projection drift/rebuild: core drift/rebuild workflow is now implemented. Remaining follow-up is broader live-browser/API evidence against a long-running Compose stack and any future partition/archive-aware rebuild optimizations from Phase 8.
 - Phase 3 customer/staff workflow UI hardening: route-separated workflow pages and state panels now exist. Remaining follow-up is deeper live API execution from the route pages themselves, since many real command executions still run through the existing API-backed panels and manifest renderer when service URLs are configured.
 - Phase 4 contracts: core/payment/notification/reporting OpenAPI contracts and root lint/client/event gates now exist. Remaining follow-up is DTO-level generated contract diffing, springdoc-generated spec comparison, and implementation-level event envelope validation in service integration tests.
-- Phase 6 operations/security: observability assets and a synthetic operational-security lab exist, but `security:secrets-check`, `observability:validate`, docs under `docs/operations/`, a general `POST /api/audit/exports` / `GET /api/audit/exports/{exportId}` API, and the requested five operational runbooks are not present.
+- Phase 6 operations/security: the requested secrets, observability, audit export, and runbook slice is implemented for local synthetic evidence. Remaining follow-up is live observability-stack alert evaluation, DAST with a supplied `BANKING_LAB_DAST_URL`, and any future external secret-store adapter design that remains synthetic-only.
 - Phase 7 bounded-context hardening: payment/notification/reporting implementations are substantial, but their CI and contract gates are not first-class PR jobs yet. Remaining goals should focus on missing verification links rather than duplicating already implemented service features.
 - Phase 8 large-ledger operational evidence: local synthetic load and backup/restore drills exist, but deterministic large-ledger dataset generation, ledger query benchmark scripts, generated benchmark JSON, and partition/archive readiness documentation are missing.
 
@@ -48,7 +51,6 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - A complete method-level authorization annotation audit across every high-risk service method and bounded-context denial audit rows for every payment/notification/reporting auth failure.
 - Live API execution evidence for the new customer-web and staff-terminal route pages beyond existing API-backed panels and manifest-renderer smokes.
 - DTO-level generated OpenAPI diffing and implementation-level event envelope producer validation remain missing beyond the new root contract gates.
-- Secrets placeholder check script, `security:secrets-check`, production-like default-secret fail-fast guard evidence, operations SLO/observability docs, audit export job API, and requested runbooks.
 - Large-ledger generator, partition/archive readiness checker, large dataset smoke script, query benchmark script, and generated evidence files.
 
 ## Risks
@@ -58,6 +60,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Pre-existing generated evidence changes are still dirty and must not be accidentally committed as Phase 0 implementation evidence.
 - Core-banking OpenAPI now covers broad shared-client and selected server-only operations, but it uses generic response payloads until a generated DTO/schema workflow is added.
 - UI manifests and route pages now cover core customer/staff journey structure, but live API-backed route execution is still not equivalent to a fully workflow-complete banking channel experience.
+- `npm run security:evidence` depends on network and Docker scanner availability. The first sandbox run failed on registry/Docker access and the first escalated run exposed a Semgrep fixture issue plus a Trivy DB download failure; both were resolved before the Docker-forced final rerun passed all checks, including ZAP DAST against a disposable local synthetic health endpoint.
 
 ## Phase Plan
 
@@ -67,7 +70,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Phase 5: Add ledger projection drift detection and maker-checker rebuild workflow before broader UI/contract work. Completed for the Spring/ops-console/API-client slice; keep broader live evidence/scale proof for Phase 8.
 - Phase 3: Harden customer-web and staff-terminal workflows around route-level jobs, selected API results, idempotency replay, held/blocked states, and structured error handling. Completed for route split and static/Playwright state coverage; keep live route execution evidence as a follow-up.
 - Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps. Completed for root lint/client/event gates and core/reporting contract presence; keep generated DTO/schema diffing as follow-up.
-- Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence.
+- Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence. Completed for local synthetic evidence; keep live DAST and live alert routing for an environment-enabled follow-up.
 - Phase 7: Tighten payment/notification/reporting bounded-context CI and contract verification without reimplementing completed service behavior.
 - Phase 8: Add deterministic large-ledger operational evidence, benchmark outputs, and partition/archive readiness docs.
 
@@ -128,6 +131,23 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest --rerun-tasks` | escalated pass | Phase 4 service integration verification passed with 17 Gradle tasks executed. |
 | `gh pr view 49 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #49 is mergeable but unstable because hosted CI jobs failed before runner startup. |
 | `gh api /repos/kdh949/banking-lab/check-runs/79871013246/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `npm run security:secrets-check` | first run failed, rerun pass | Phase 6 scanner initially flagged broad placeholder-like strings; after tightening allowlists and fixture handling, the final rerun passed across 856 files. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:test --tests '*SpringSecurityResourceServerTest'` | sandbox failed, escalated pass | Phase 6 default-secret production-like profile guard coverage; sandbox failed on Gradle file-lock socket. |
+| `npm run observability:validate` | pass | Validated observability docs/assets/runbooks and the required metric names. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests '*ObservabilityActuatorIntegrationTest'` | escalated pass | Verified actuator/prometheus exposure for observability metrics after Phase 6 metric wiring. |
+| `npm run test:core-banking:integration -- --tests '*AuditExport*'` | first run failed, final rerun pass | First run exposed PostgreSQL `FOR UPDATE` on the nullable side of an outer join; final rerun passed after locking only the export job alias. |
+| `npm run contracts:lint` | pass | Contract lint passed after adding audit export OpenAPI operations. |
+| `npm run contracts:check-client` | pass | Shared API client covered the new audit export operation IDs. |
+| `npm run scripts:typecheck` | pass | Script TypeScript checks passed after observability validator changes. |
+| `npm run packages:typecheck` | pass | Shared package typechecks passed after audit export API-client DTOs/methods. |
+| `npm run next:audit-console:typecheck` | pass | Audit console typecheck passed after adding the audit export smoke panel. |
+| `npm run next:audit-console:build` | pass | Audit console production build passed after adding the audit export UI state block. |
+| `npm run analytics:fds-aml:test` | sandbox failed, direct escalated `uv` pass | Sandbox failed on PyPI DNS for `hatchling`; the equivalent `uv --cache-dir .uv-cache run --directory analytics/aml-fds-python --project . --extra dev pytest` escalated rerun passed 10 Python tests after the Semgrep fixture fix. |
+| `npm run security:evidence` | sandbox failed, first escalated run failed, escalated rerun pass with DAST skipped | Sandbox lacked npm registry/Docker access. First escalated run passed npm audit and SBOM but failed Semgrep and Trivy DB download. Later rerun passed npm audit, Semgrep, Trivy, and SBOM with DAST skipped because `BANKING_LAB_DAST_URL` was unset. |
+| `BANKING_LAB_DAST_URL=http://host.docker.internal:18132/health npm run security:evidence:docker` | escalated pass | Started disposable synthetic Postgres/core-banking DAST containers, confirmed `curl -fsS http://127.0.0.1:18132/health`, then Docker-forced npm audit, Semgrep, Trivy, SBOM, and ZAP baseline all passed. Temporary containers and network were removed afterward. |
+| `npm test` | pass | Final Phase 6 structural/oracle suite passed with 172 tests after restoring Docker-forced live DAST generated evidence. |
+| `gh pr view 50 --json mergeStateStatus,statusCheckRollup,url` | pass | Confirmed PR #50 is mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79873771310/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -137,7 +157,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 3 customer/staff route hardening; targeted customer/staff typecheck/build and full local Playwright passed, with live API-backed route tests still gated by missing service URLs.
 - PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #49 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
-- `npm run security:secrets-check`: not attempted because the script is not defined yet.
-- `npm run observability:validate`: not attempted because the script is not defined yet.
+- PR #50 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
+- Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in Phase 6; this phase added structural assets and validator coverage.
 - `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.
 - Live Docker/Kubernetes/DAST/load/backup drills from the final command list were not rerun in Phase 0 because this phase is an inventory baseline, not an evidence refresh.

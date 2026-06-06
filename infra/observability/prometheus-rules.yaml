@@ -1,0 +1,107 @@
+groups:
+  - name: banking-lab-core-banking
+    interval: 30s
+    rules:
+      - alert: LedgerCommandLatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(banking_lab_ledger_command_latency_seconds_bucket[5m])) by (le, command_type)) > 1
+        for: 10m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: ledger_command_latency
+        annotations:
+          summary: Synthetic ledger command p95 latency exceeded 1s.
+          runbook: docs/operations/runbooks/eod-failure.md
+      - alert: LedgerCommandErrorRateHigh
+        expr: sum(rate(banking_lab_ledger_command_errors_total[5m])) / clamp_min(sum(rate(banking_lab_ledger_command_latency_seconds_count[5m])), 1) > 0.02
+        for: 10m
+        labels:
+          severity: critical
+          syntheticOnly: "true"
+          metric: ledger_command_error_rate
+        annotations:
+          summary: Synthetic ledger command error rate exceeded 2%.
+          runbook: docs/operations/runbooks/ledger-drift.md
+      - alert: IdempotencyReplaySpike
+        expr: sum(increase(banking_lab_idempotency_replay_count_total[10m])) > 25
+        for: 5m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: idempotency_replay_count
+        annotations:
+          summary: Idempotency replay volume is above the synthetic operating band.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md
+      - alert: AuthorizationDeniedSpike
+        expr: sum(increase(banking_lab_authorization_denied_count_total[10m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: authorization_denied_count
+        annotations:
+          summary: Authorization denials spiked across protected routes.
+          runbook: docs/operations/runbooks/authz-denial-spike.md
+      - alert: AuditAppendFailure
+        expr: sum(increase(banking_lab_audit_append_failure_count_total[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          syntheticOnly: "true"
+          metric: audit_append_failure_count
+        annotations:
+          summary: Audit hash-chain append failed.
+          runbook: docs/operations/runbooks/postgres-restore.md
+  - name: banking-lab-eventing-and-contexts
+    interval: 30s
+    rules:
+      - alert: OutboxPendingBacklog
+        expr: sum(banking_lab_outbox_pending_count) > 100
+        for: 15m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: outbox_pending_count
+        annotations:
+          summary: Durable outbox pending backlog exceeded the synthetic threshold.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md
+      - alert: OutboxDeadLetterPresent
+        expr: sum(banking_lab_outbox_dead_letter_count) > 0 or sum(increase(banking_lab_outbox_worker_events_dead_lettered_total[5m])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          syntheticOnly: "true"
+          metric: outbox_dead_letter_count
+        annotations:
+          summary: Durable outbox dead-letter rows exist.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md
+      - alert: PaymentInstructionFailures
+        expr: sum(increase(banking_lab_payment_publisher_events_failed_total[10m])) > 0 or sum(increase(banking_lab_payment_publisher_events_dead_lettered_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: payment_instruction_failure_count
+        annotations:
+          summary: Synthetic payment instruction publication failures occurred.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md
+      - alert: NotificationDeadLetterPresent
+        expr: sum(increase(banking_lab_notification_consumer_batch_failures_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: notification_dead_letter_count
+        annotations:
+          summary: Notification consumer failures may require dead-letter review.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md
+      - alert: ReportArtifactGenerationFailures
+        expr: sum(increase(banking_lab_reporting_publisher_events_failed_total[10m])) > 0 or sum(increase(banking_lab_reporting_publisher_events_dead_lettered_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          syntheticOnly: "true"
+          metric: report_artifact_generation_failure_count
+        annotations:
+          summary: Synthetic reporting artifact event publication failures occurred.
+          runbook: docs/operations/runbooks/outbox-dead-letter.md

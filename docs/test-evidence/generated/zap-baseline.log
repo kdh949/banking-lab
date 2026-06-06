@@ -66,6 +66,9 @@ PASS: Charset Mismatch [90011]
 PASS: Application Error Disclosure [90022]
 PASS: WSDL File Detection [90030]
 PASS: Loosely Scoped Cookie [90033]
-IGNORE: Non-Storable Content [10049] x 1 
+IGNORE: Non-Storable Content [10049] x 4 
 	http://host.docker.internal:18132/ (200 OK)
+	http://host.docker.internal:18132/health (200 OK)
+	http://host.docker.internal:18132/robots.txt (200 OK)
+	http://host.docker.internal:18132/sitemap.xml (200 OK)
 FAIL-NEW: 0	FAIL-INPROG: 0	WARN-NEW: 0	WARN-INPROG: 0	INFO: 0	IGNORE: 1	PASS: 66

@@ -3,18 +3,18 @@
   "Trivy": {
     "Version": "0.71.0"
   },
-  "ReportID": "019e9398-590c-7f23-af18-15458513d34d",
-  "CreatedAt": "2026-06-04T17:04:55.564992961Z",
-  "ArtifactID": "sha256:d74e1988459de00c9d7fd62d978ef9050445cf1d26c5ee647c6e109386bf9fbd",
+  "ReportID": "019e9cab-6a1c-70ef-9177-21a5a6f70856",
+  "CreatedAt": "2026-06-06T11:22:20.060062468Z",
+  "ArtifactID": "sha256:e548bfa48fe31ea3831c62c9f2f43f7eff11e038fc2ac4d4783bf76b47f1a8e3",
   "ArtifactName": "/workspace",
   "ArtifactType": "repository",
   "Metadata": {
     "RepoURL": "https://github.com/kdh949/banking-lab.git",
-    "Branch": "main",
-    "Commit": "dae2063424c20905cdeeb9441e6655b06eb79549",
-    "CommitMsg": "Merge pull request #17 from kdh949/codex/live-phase5-evidence\n\nfeat: 라이브 운영 증적 강화",
+    "Branch": "codex/remaining-hardening-phase-6-ops-security",
+    "Commit": "68c2976844bba2be7c4f75cd78a2cff82c8f435b",
+    "CommitMsg": "feat: 운영 관측성 지표 추가",
     "Author": "Donghyun Kim \u003ckdh949@naver.com\u003e",
-    "Committer": "GitHub \u003cnoreply@github.com\u003e"
+    "Committer": "Donghyun Kim \u003ckdh949@naver.com\u003e"
   },
   "Results": [
     {
