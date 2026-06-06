@@ -14,7 +14,7 @@ Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configur
 
 Phase 5 update: ledger projection drift/rebuild operations now have Flyway migration `V035`, `LedgerProjectionIntegrityService`, `/api/ops/ledger/projection-*` APIs, reason-required drift checks, approval-gated rebuild requests, idempotent rebuild execution, ops-console manifests `OPS-LEDGER-101` through `OPS-LEDGER-103`, shared API-client methods, targeted Playwright smoke wiring, and `LedgerProjection*` Testcontainers coverage. Evidence is recorded in `docs/test-evidence/ledger-projection-integrity-workflow.md`.
 
-Phase 3 update: customer-web now has route-backed workflow pages for login, accounts, account detail, transfers, complaints, cards, loans, payments, notifications, and security; staff-terminal now has route-backed workflow pages for transaction code, customer, account, approvals, audit, and workflow timeline views. The route pages reuse shared route components, manifest metadata, structured-error/idempotency/FDS/approval state panels, and mark synthetic demo fallbacks explicitly. Evidence is recorded in `docs/test-evidence/phase-3-workflow-route-hardening.md`.
+Phase 3 update: customer-web now has route-backed workflow pages for login, accounts, account detail, transfers, complaints, cards, loans, payments, notifications, and security; staff-terminal now has route-backed workflow pages for transaction code, customer, account, approvals, audit, and workflow timeline views. The route pages reuse shared route components, manifest metadata, structured-error/idempotency/FDS/approval state panels, and mark synthetic demo fallbacks explicitly. Evidence is recorded in `docs/test-evidence/phase-3-workflow-route-hardening.md`. PR #48 hosted GitHub Actions were attempted and rerun, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted tests passed and the blocked hosted CI gate is recorded as external availability evidence.
 
 ## Already Implemented
 
@@ -112,6 +112,8 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 | `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` | first run failed, rerun pass | First run exposed a strict duplicate text assertion after adding the customer route link; rerun passed with 9 passed and 29 skipped. |
 | `npm run validate:manifests` | pass | Validated 109 manifests after route UI changes; manifests themselves were not changed in Phase 3. |
 | `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 19 passed and 58 skipped; live API-backed tests remained gated by missing service URLs. |
+| `gh pr view 48 --json state,mergeStateStatus,statusCheckRollup,headRefName,baseRefName,url` | pass | Confirmed PR #48 was open and mergeable but unstable after hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79869938417/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -119,6 +121,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 - `npm run platform:validate`: reserved for Phase 1 CI/platform work.
 - Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
 - Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 3 customer/staff route hardening; targeted customer/staff typecheck/build and full local Playwright passed, with live API-backed route tests still gated by missing service URLs.
+- PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - `npm run contracts:lint`, `npm run contracts:check-client`, and `npm run contracts:check-events`: not attempted because these scripts are not defined yet.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.
 - `npm run observability:validate`: not attempted because the script is not defined yet.

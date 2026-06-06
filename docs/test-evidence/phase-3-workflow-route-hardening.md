@@ -31,11 +31,14 @@ Scope: Phase 3 customer-web and staff-terminal route workflow hardening for the 
 | `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` | first run failed, rerun pass | Initial failure caught a strict duplicate text assertion after adding a customer route link; rerun passed with 9 passed and 29 skipped. |
 | `npm run validate:manifests` | pass | Validated 109 manifests; Phase 3 changed route UI, not manifest definitions. |
 | `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 19 passed and 58 skipped. |
+| `gh pr view 48 --json state,mergeStateStatus,statusCheckRollup,headRefName,baseRefName,url` | pass | PR #48 is open and mergeable but unstable because hosted CI checks failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79869938417/annotations` | pass | GitHub Actions reported that hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Not Run
 
 - Live route execution against Spring/Keycloak was not run because `BANKING_LAB_E2E_API_BASE_URL`, Keycloak, payment, and notification service URLs were not configured in this local phase run.
 - Full all-channel `next:*` typecheck/build matrix was not rerun; the changed customer-web and staff-terminal apps were targeted.
+- PR #48 hosted CI jobs did not execute after push/rerun because GitHub account billing/spending limits blocked runner allocation. This is recorded as an external CI availability gate, not a passed or failed test step.
 
 ## Residual Risk
 
