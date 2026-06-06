@@ -286,6 +286,30 @@ Validation commands run after this document was created:
 - `gh api repos/kdh949/banking-lab/actions/runs/27068786983/jobs`: showed all 19 jobs completed in 2-4 seconds with no recorded steps and no runner assigned.
 - `gh api repos/kdh949/banking-lab/check-runs/79894195214/annotations`: showed hosted CI was blocked before job startup because the GitHub account has failed recent payments or needs a higher spending limit.
 
+## Phase 1 Staff Customer Onboarding Update
+
+Implemented in commit `60cf986f` on branch `codex/customer-onboarding-self-service`:
+
+- Added `customer_onboarding_requests` and `customer_auth_identities` for synthetic-only onboarding requests and local synthetic auth identity bindings.
+- Added Spring customer onboarding service/controller/models with maker-checker approval, separation of duties, idempotency/command hash conflict detection, structured errors, password hashing through `PasswordEncoder`, and execution audit event `CUSTOMER_ONBOARDING_EXECUTED`.
+- Added staff terminal screen manifests `CST-201` and `CST-202`, OpenAPI operation ids, and typed API client methods for request/get/approve/reject/execute.
+- Added integration tests covering request replay, command hash conflict, self-approval rejection, checker approval, execution, hashed auth identity creation, missing reason, weak password, duplicate username, rejected execution, and audit persistence.
+- Added Node structural tests for Phase 1 contract/client/manifest/persistence wiring.
+
+Phase 1 validation commands:
+
+- `node --test tests/customerOnboardingSelfService.test.mjs`: passed, 2 tests.
+- `npm run validate:manifests`: passed, 111 screen manifests.
+- `npm run contracts:lint`: first run failed because the approve endpoint was incorrectly marked reason-required without a reason field; contract metadata was corrected and rerun passed.
+- `npm run contracts:check-client`: passed, 144 operation ids matched 137 shared client methods/exemptions.
+- `npm --workspace @banking-lab/api-client run typecheck`: passed.
+- `npm run next:staff-terminal:typecheck`: passed.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.onboarding.CustomerOnboardingIntegrationTest`: first Phase 1 run found two test/setup issues; after fixes, reruns passed. Latest rerun passed with Gradle up to date.
+- `npm test`: passed, 176 tests.
+- `git push`: passed, pushed commit `60cf986f` to PR #54.
+- `gh pr view 54 --json url,headRefName,baseRefName,state,statusCheckRollup`: showed PR #54 remains open, with all hosted checks reported failed for run `27069232879`.
+- `gh api repos/kdh949/banking-lab/check-runs/79895386075/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
+
 ## Commands Not Attempted
 
 Not attempted in Phase 0:
@@ -296,4 +320,4 @@ Not attempted in Phase 0:
 - `docker compose config`
 - `docker compose --profile platform config`
 
-No functional Phase 1-5 implementation commands have been attempted yet.
+No Phase 2-5 implementation commands have been attempted yet.
