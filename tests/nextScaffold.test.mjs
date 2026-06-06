@@ -316,6 +316,10 @@ test("staff-terminal exposes WRK003 workflow timeline through the Spring API cli
 test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
   const panel = await readFile("apps/ops-console/src/components/ApiBackedOpsPanel.tsx", "utf8");
   const manifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-404.payment-outbox-dispatch.json", "utf8"));
+  const driftManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-101.projection-drift-monitor.json", "utf8"));
+  const rebuildManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-102.projection-rebuild-request.json", "utf8"));
+  const evidenceManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-103.projection-rebuild-evidence.json", "utf8"));
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
 
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
   assert.match(panel, /mismatchType/);
@@ -327,8 +331,24 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   assert.match(panel, /reconciliationParameters/);
   assert.match(panel, /requestReconciliationParameterChange/);
   assert.match(panel, /Browser OPS-301 parameter change smoke/);
+  assert.match(panel, /data-testid="api-backed-ledger-projection-workflow"/);
+  assert.match(panel, /startLedgerProjectionDriftRun/);
+  assert.match(panel, /requestLedgerProjectionRebuild/);
+  assert.match(panel, /approveLedgerProjectionRebuildRequest/);
+  assert.match(panel, /executeLedgerProjectionRebuild/);
+  assert.match(panel, /Browser OPS-LEDGER-101 projection drift smoke/);
+  assert.match(client, /LedgerProjectionDriftRunResponse/);
+  assert.match(client, /LedgerProjectionRebuildRunResponse/);
+  assert.match(client, /ledgerProjectionRebuildRun/);
   assert.equal(manifest.api.command, "POST /api/payments/outbox/ledger-postings/dispatch-next");
   assert.equal(manifest.audit.reasonRequired, true);
+  assert.equal(driftManifest.actions[0].target, "POST /api/ops/ledger/projection-drift-runs");
+  assert.equal(driftManifest.audit.reasonRequired, true);
+  assert.equal(rebuildManifest.api.command, "POST /api/ops/ledger/projection-rebuild-requests");
+  assert.equal(rebuildManifest.approval.businessTypes[0], "LEDGER_PROJECTION_REBUILD");
+  assert.equal(rebuildManifest.highRisk, true);
+  assert.equal(evidenceManifest.actions[2].target, "POST /api/ops/ledger/projection-rebuild-requests/{requestId}/execute");
+  assert.equal(evidenceManifest.workflow.name, "ledgerProjectionRebuildWorkflow");
 });
 
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {

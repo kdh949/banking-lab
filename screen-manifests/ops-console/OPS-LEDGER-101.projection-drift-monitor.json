@@ -1,0 +1,39 @@
+{
+  "screenId": "OPS-LEDGER-101",
+  "transactionCode": "OPSL101",
+  "title": "Projection Drift Monitor",
+  "app": "ops-console",
+  "type": "DASHBOARD",
+  "domain": "ledger",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR"],
+  "layout": {
+    "template": "dashboard",
+    "customerContext": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE",
+    "eventTypes": ["LEDGER_PROJECTION_DRIFT_RUN"]
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "widgets": ["sourcePostingHash", "projectionHash", "driftItems", "auditEvidence"],
+  "actions": [
+    {
+      "id": "startProjectionDriftRun",
+      "label": "Run Drift Check",
+      "type": "command",
+      "target": "POST /api/ops/ledger/projection-drift-runs"
+    },
+    {
+      "id": "readProjectionDriftRun",
+      "label": "Read Drift Run",
+      "type": "query",
+      "target": "GET /api/ops/ledger/projection-drift-runs/{runId}"
+    }
+  ]
+}
