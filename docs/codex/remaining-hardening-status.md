@@ -99,13 +99,15 @@ Phase 5 update: ledger projection drift/rebuild operations now have Flyway migra
 | `scripts/run-core-banking-tests.sh :services:core-banking:test` | pass | Full core-banking unit task after Phase 5 changes. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest` | pass | Full core-banking Testcontainers integration task passed after adding `V035`. |
 | `npm run test:e2e -- --grep "projection"` | skipped | Playwright started local Next dev servers and skipped the live API projection workflow smoke because `BANKING_LAB_E2E_API_BASE_URL` was unset. |
+| `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts` | pass | Full ops-console Playwright file passed after stabilizing the manifest workflow-label assertion exposed by CI. |
+| `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 17 passed and 58 skipped; live API-backed tests remained gated by missing service URLs. |
 
 ## Commands Not Attempted
 
 - `docker compose --profile platform config`: reserved for Phase 1 CI/platform work.
 - `npm run platform:validate`: reserved for Phase 1 CI/platform work.
 - Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
-- Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 5 backend-first projection work; targeted ops-console typecheck/build passed and projection Playwright grep was run with the live API smoke skipped due missing `BANKING_LAB_E2E_API_BASE_URL`.
+- Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 5 backend-first projection work; targeted ops-console typecheck/build and ops-console Playwright file passed, and projection Playwright grep was run with the live API smoke skipped due missing `BANKING_LAB_E2E_API_BASE_URL`.
 - `npm run contracts:lint`, `npm run contracts:check-client`, and `npm run contracts:check-events`: not attempted because these scripts are not defined yet.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.
 - `npm run observability:validate`: not attempted because the script is not defined yet.

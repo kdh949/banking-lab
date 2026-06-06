@@ -42,6 +42,8 @@ Passed for the targeted Phase 5 slice:
 | `npm run packages:typecheck` | pass | Screen/form/API/auth package typechecks passed. |
 | `npm test` | pass | 169 Node oracle/structural tests passed; Node remains reference-only. |
 | `npm run test:e2e -- --grep "projection"` | skipped | Playwright started Next dev servers and skipped the single live API projection test because `BANKING_LAB_E2E_API_BASE_URL` was unset. |
+| `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts` | pass | Full ops-console Playwright file passed locally after making the manifest workflow-label assertion tolerate multiple rendered workflow labels. |
+| `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 17 passed and 58 skipped; live API-backed tests remained gated by missing service URLs. |
 
 ## Not Run
 
