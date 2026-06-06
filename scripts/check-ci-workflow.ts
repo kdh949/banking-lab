@@ -43,6 +43,9 @@ requireJobCommand("compose-platform-config", "docker compose --profile platform 
 requireJobCommand("contracts-validation", "tests/springScaffold.test.mjs");
 requireJobCommand("contracts-validation", "tests/nextScaffold.test.mjs");
 requireJobCommand("contracts-validation", "tests/stackRetirementAreaAudit.test.mjs");
+requireJobCommand("contracts-validation", "npm run contracts:lint");
+requireJobCommand("contracts-validation", "npm run contracts:check-client");
+requireJobCommand("contracts-validation", "npm run contracts:check-events");
 
 if (!source.includes("workflow_dispatch:")) {
   errors.push("CI workflow must keep workflow_dispatch for manual runs.");

@@ -1,0 +1,671 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Core Banking API
+  version: 0.1.0
+  description: Synthetic-only core banking, staff operations, ledger projection integrity, customer channel, complaint, card, loan, product, parameter, audit, FDS, AML, and admin APIs.
+x-banking-lab-contract:
+  syntheticOnly: true
+  structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
+paths:
+  /api/staff/customers/{customerId}/detail:
+    get:
+      operationId: staffCustomerDetail
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/{customerId}/change-requests:
+    post:
+      operationId: requestCustomerInfoChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/{accountId}/hold-requests:
+    post:
+      operationId: requestAccountHold
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/{accountId}/hold-release-requests:
+    post:
+      operationId: requestAccountHoldRelease
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/{customerId}/transfer-limits:
+    get:
+      operationId: staffTransferLimits
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/operations/retry-queue:
+    get:
+      operationId: staffOperationalRetryQueue
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/workflows/{businessReferenceId}/timeline:
+    get:
+      operationId: staffWorkflowTimeline
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/{accountId}/limit-change-requests:
+    post:
+      operationId: requestTransferLimitChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/{customerId}/kyc-review-requests:
+    post:
+      operationId: requestCustomerKycReview
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/{accountId}/fee-waiver-requests:
+    post:
+      operationId: requestFeeWaiver
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/transactions/{transactionId}/correction-requests:
+    post:
+      operationId: requestTransactionCorrection
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/products/deposits:
+    get:
+      operationId: depositProducts
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/products/deposits/{productId}:
+    get:
+      operationId: depositProduct
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/products/deposits/{productId}/rate-change-requests:
+    post:
+      operationId: requestDepositRateChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/interest-accruals/run:
+    post:
+      operationId: runInterestAccrual
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/interest-posting-batches:
+    post:
+      operationId: postInterestBatch
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/fees/policies:
+    get:
+      operationId: feePolicies
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/fees/policies/{policyId}:
+    get:
+      operationId: feePolicy
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fees:
+    get:
+      operationId: staffFees
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fee-policies/{policyId}/change-requests:
+    post:
+      operationId: requestFeePolicyChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/fee-posting-batches:
+    post:
+      operationId: postFeeBatch
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/eod/close:
+    post:
+      operationId: requestEodClose
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/eod/{businessDate}:
+    get:
+      operationId: eodMonitor
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-drift-runs:
+    post:
+      operationId: startLedgerProjectionDriftRun
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-drift-runs/{runId}:
+    get:
+      operationId: ledgerProjectionDriftRun
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-rebuild-requests:
+    post:
+      operationId: requestLedgerProjectionRebuild
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-rebuild-requests/{requestId}/approve:
+    post:
+      operationId: approveLedgerProjectionRebuildRequest
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-rebuild-requests/{requestId}/reject:
+    post:
+      operationId: rejectLedgerProjectionRebuildRequest
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-rebuild-requests/{requestId}/execute:
+    post:
+      operationId: executeLedgerProjectionRebuild
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/ledger/projection-rebuild-runs/{runId}:
+    get:
+      operationId: ledgerProjectionRebuildRun
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/products:
+    get:
+      operationId: loanProducts
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/applications:
+    post:
+      operationId: requestLoanApplication
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/{loanId}:
+    get:
+      operationId: loanDetail
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/{loanId}/repayments:
+    post:
+      operationId: repayLoan
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/{loanId}/prepayments:
+    post:
+      operationId: prepayLoan
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/loans/{loanId}/accruals/run:
+    post:
+      operationId: runLoanAccrual
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards:
+    post:
+      operationId: issueCard
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/{cardId}:
+    get:
+      operationId: cardDetail
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/3ds-simulations:
+    post:
+      operationId: simulateCardThreeDs
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/authorizations:
+    post:
+      operationId: authorizeCard
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/authorizations/{authorizationId}/captures:
+    post:
+      operationId: captureCardAuthorization
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/authorizations/{authorizationId}/cancel:
+    post:
+      operationId: cancelCardAuthorization
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/captures/{captureId}/reverse:
+    post:
+      operationId: reverseCardCapture
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/cards/{cardId}/loss-report:
+    post:
+      operationId: reportCardLost
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/parameters/reconciliation:
+    get:
+      operationId: reconciliationParameters
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/parameters/reconciliation/history:
+    get:
+      operationId: reconciliationParameterHistory
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/parameters/reconciliation/change-requests:
+    post:
+      operationId: requestReconciliationParameterChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/audit-parameters:
+    get:
+      operationId: auditParameters
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/audit-parameters/history:
+    get:
+      operationId: auditParameterHistory
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/audit-parameters/change-requests:
+    post:
+      operationId: requestAuditParameterChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-parameters:
+    get:
+      operationId: fdsParameters
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-parameters/history:
+    get:
+      operationId: fdsParameterHistory
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-parameters/change-requests:
+    post:
+      operationId: requestFdsParameterChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/fds/analytics:
+    get:
+      operationId: fdsAnalyticsEvidence
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/security-parameters:
+    get:
+      operationId: securityParameters
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/security-parameters/history:
+    get:
+      operationId: securityParameterHistory
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/security-parameters/change-requests:
+    post:
+      operationId: requestSecurityParameterChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/authorization-parameters:
+    get:
+      operationId: authorizationParameters
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/authorization-parameters/history:
+    get:
+      operationId: authorizationParameterHistory
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/authorization-parameters/change-requests:
+    post:
+      operationId: requestAuthorizationParameterChange
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/pii/unmask:
+    post:
+      operationId: unmaskStaffCustomer
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/accounts/{accountId}/detail:
+    get:
+      operationId: customerAccountDetail
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/transfers:
+    post:
+      operationId: requestCustomerTransfer
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+    get:
+      operationId: customerTransfers
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/transactions:
+    get:
+      operationId: customerTransactions
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customers/{customerId}/statements:
+    get:
+      operationId: customerStatement
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/transactions/{transactionId}/confirmation:
+    get:
+      operationId: transactionConfirmation
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/accounts/{accountId}/balance-certificate:
+    get:
+      operationId: balanceCertificate
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customers/{customerId}/access-history:
+    get:
+      operationId: customerAccessHistory
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/complaints:
+    post:
+      operationId: requestCustomerComplaint
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+    get:
+      operationId: customerComplaints
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/complaints/{caseId}/confirm:
+    post:
+      operationId: confirmCustomerComplaint
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/complaints/{caseId}/materials:
+    post:
+      operationId: submitCustomerComplaintMaterial
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/complaints/{caseId}/reopen-requests:
+    post:
+      operationId: reopenCustomerComplaint
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/complaint-types:
+    get:
+      operationId: complaintTypeGuide
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/complaints:
+    get:
+      operationId: complaintCases
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/complaints/{caseId}/answer-drafts:
+    post:
+      operationId: draftComplaintAnswer
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/approvals:
+    get:
+      operationId: staffApprovals
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/approvals/{approvalId}:
+    get:
+      operationId: staffApproval
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/approvals/{approvalId}/approve:
+    post:
+      operationId: approveStaffApproval
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/approvals/{approvalId}/reject:
+    post:
+      operationId: rejectStaffApproval
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/reconciliation-items:
+    get:
+      operationId: reconciliationItems
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/reconciliation-items/{itemId}/adjustment-requests:
+    post:
+      operationId: requestReconciliationAdjustment
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/audit/events:
+    get:
+      operationId: auditEvents
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/summary:
+    get:
+      operationId: adminPlatformSummary
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/evidence-coverage:
+    get:
+      operationId: adminEvidenceCoverage
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/admin/platform/system-status:
+    get:
+      operationId: adminSystemStatus
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-cases:
+    get:
+      operationId: fdsCases
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-cases/{caseId}/assign:
+    post:
+      operationId: assignFdsCase
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-cases/{caseId}/release-requests:
+    post:
+      operationId: requestFdsRelease
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-cases/{caseId}/block-requests:
+    post:
+      operationId: requestFdsBlock
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/aml-cases:
+    get:
+      operationId: amlCases
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/aml-cases/{caseId}/closure-requests:
+    post:
+      operationId: requestAmlClosure
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/deposits:
+    post:
+      operationId: postLedgerDeposit
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/withdrawals:
+    post:
+      operationId: postLedgerWithdrawal
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/transfers:
+    post:
+      operationId: postLedgerTransfer
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/reversals:
+    post:
+      operationId: postLedgerReversal
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/adjustments:
+    post:
+      operationId: postLedgerAdjustment
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ledger/payment-postings:
+    post:
+      operationId: postPaymentLedgerPosting
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+components:
+  responses:
+    AnyJsonResponse:
+      description: Synthetic banking response payload. Detailed DTOs are defined in the shared TypeScript API client for this phase.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AnyJson'
+    StructuredErrorResponse:
+      description: Structured banking API error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StructuredError'
+  schemas:
+    AnyJson:
+      type: object
+      additionalProperties: true
+    StructuredError:
+      type: object
+      required: [code, message, traceId, syntheticOnly]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        traceId: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        syntheticOnly:
+          const: true

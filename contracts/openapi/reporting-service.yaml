@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: Banking Lab Synthetic Reporting Service API
+  version: 0.1.0
+  description: Synthetic-only reporting artifact, catalog, export, retention, audit, and outbox-backed reporting domain event API.
+x-banking-lab-contract:
+  syntheticOnly: true
+  structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
+paths:
+  /health:
+    get:
+      operationId: reportingHealth
+      x-api-client-required: false
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/reports/catalog:
+    get:
+      operationId: reportCatalog
+      x-reason-required: true
+      parameters:
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/reports/artifacts:
+    post:
+      operationId: generateReportArtifact
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+    get:
+      operationId: reportArtifacts
+      x-reason-required: true
+      parameters:
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+        - name: reportType
+          in: query
+          required: false
+          schema: { type: string }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/reports/artifacts/{artifactId}/export:
+    get:
+      operationId: exportReportArtifact
+      x-reason-required: true
+      parameters:
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/reports/retention/sweeps:
+    post:
+      operationId: runReportRetentionSweep
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+components:
+  responses:
+    AnyJsonResponse:
+      description: Synthetic reporting response payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AnyJson'
+    StructuredErrorResponse:
+      description: Structured reporting API error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StructuredError'
+  schemas:
+    AnyJson:
+      type: object
+      additionalProperties: true
+    StructuredError:
+      type: object
+      required: [code, message, traceId, syntheticOnly]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        traceId: { type: string }
+        syntheticOnly:
+          const: true

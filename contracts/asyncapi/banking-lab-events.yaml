@@ -2,6 +2,25 @@ asyncapi: 3.0.0
 info:
   title: Banking Lab Synthetic Event Backbone
   version: 0.1.0
+x-banking-lab-envelope:
+  required:
+    - syntheticOnly
+    - sourceService
+    - eventType
+    - aggregateId
+    - occurredAt
+  properties:
+    syntheticOnly:
+      const: true
+    sourceService:
+      enum: [core-banking-service, payment-service, notification-service, reporting-service]
+    eventType:
+      type: string
+    aggregateId:
+      type: string
+    occurredAt:
+      type: string
+      format: date-time
 channels:
   ledger.transaction.posted:
     address: ledger.transaction.posted
@@ -87,6 +106,24 @@ channels:
       NotificationDeliveryDeadLettered:
         payload:
           $ref: ../events/notification-delivery-dead-lettered.schema.json
+  report.artifact.generated:
+    address: report.artifact.generated
+    messages:
+      ReportArtifactGenerated:
+        payload:
+          $ref: ../events/report-artifact-generated.schema.json
+  report.artifact.exported:
+    address: report.artifact.exported
+    messages:
+      ReportArtifactExported:
+        payload:
+          $ref: ../events/report-artifact-exported.schema.json
+  report.retention-sweep.completed:
+    address: report.retention-sweep.completed
+    messages:
+      ReportRetentionSweepCompleted:
+        payload:
+          $ref: ../events/report-retention-sweep-completed.schema.json
 operations:
   publishLedgerTransactionPosted:
     action: send
@@ -144,3 +181,15 @@ operations:
     action: send
     channel:
       $ref: '#/channels/notification.delivery.dead-lettered'
+  publishReportArtifactGenerated:
+    action: send
+    channel:
+      $ref: '#/channels/report.artifact.generated'
+  publishReportArtifactExported:
+    action: send
+    channel:
+      $ref: '#/channels/report.artifact.exported'
+  publishReportRetentionSweepCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/report.retention-sweep.completed'

@@ -3,6 +3,9 @@ info:
   title: Banking Lab Synthetic Notification Service API
   version: 0.1.0
   description: Synthetic-only notification event consumption and delivery status API with durable retry and dead-letter state.
+x-banking-lab-contract:
+  syntheticOnly: true
+  structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
 paths:
   /api/notifications/templates:
     get:
@@ -369,6 +372,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationDelivery'
 components:
+  responses:
+    StructuredErrorResponse:
+      description: Structured notification API error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StructuredError'
   parameters:
     DeliveryRequestId:
       name: deliveryRequestId
@@ -391,6 +401,23 @@ components:
       schema:
         type: string
   schemas:
+    StructuredError:
+      type: object
+      required: [code, message, traceId, syntheticOnly]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        traceId:
+          type: string
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        syntheticOnly:
+          const: true
     NotificationChannel:
       type: string
       enum: [SMS, EMAIL, PUSH, CHAT]

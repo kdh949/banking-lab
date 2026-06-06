@@ -137,6 +137,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run contracts:lint
+      - run: npm run contracts:check-client
+      - run: npm run contracts:check-events
       - run: node --test tests/springScaffold.test.mjs tests/nextScaffold.test.mjs tests/stackRetirementAreaAudit.test.mjs
 
   compose-platform-config:

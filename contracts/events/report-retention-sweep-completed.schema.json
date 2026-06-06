@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/report-retention-sweep-completed.schema.json",
+  "title": "ReportRetentionSweepCompleted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sweepDate",
+    "expiredCount",
+    "expiredArtifactIds",
+    "syntheticOnly",
+    "ledgerRowsMutated"
+  ],
+  "properties": {
+    "sweepDate": { "type": "string", "format": "date" },
+    "expiredCount": { "type": "integer", "minimum": 0 },
+    "expiredArtifactIds": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^RPT-" }
+    },
+    "syntheticOnly": { "const": true },
+    "ledgerRowsMutated": { "const": false }
+  }
+}
