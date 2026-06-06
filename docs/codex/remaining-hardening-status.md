@@ -8,6 +8,8 @@ Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node 
 
 Working tree note: before Phase 0 edits, the workspace already had modified generated evidence under `docs/test-evidence/generated/` and untracked Codex planning documents under `docs/codex/`. Phase 0 documentation avoids treating those pre-existing generated changes as new implementation evidence.
 
+Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/ci.yml` for payment, notification, reporting, aggregate Gradle unit tests, platform validation, structural contracts validation, and Docker Compose profile rendering. `docs/test-evidence/ci-coverage-hardening.md` records the PR/manual boundary and fallback policy. Contract validation remains structural until Phase 4 adds dedicated OpenAPI/AsyncAPI drift scripts.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
@@ -17,10 +19,10 @@ Working tree note: before Phase 0 edits, the workspace already had modified gene
 - Shared TypeScript packages exist for screen rendering, form validation, API client calls, and auth client behavior; package typechecks pass in the current baseline.
 - Payment, notification, and reporting bounded contexts have Spring source, Flyway migrations, service-specific scripts, integration tests, OpenAPI/Event contract artifacts for several surfaces, Docker Compose profiles, Kubernetes/Helm resources, and evidence documents.
 - Outbox, Redpanda, Temporal, Keycloak/JWKS, security evidence, formal ledger checks, backup/restore, synthetic load, and platform structural validation have existing implementation/evidence from earlier phases.
+- Phase 1 CI full-service wiring now connects service-specific backend jobs, aggregate Gradle unit checks, platform structural validation, structural contract checks, and Compose profile config rendering to PR CI.
 
 ## Partially Implemented
 
-- Phase 1 CI full-service verification: root scripts already exist for payment, notification, reporting, platform validation, and Compose checks, but `.github/workflows/ci.yml` currently runs only core-banking for backend verification and does not explicitly run payment, notification, reporting, backend-all-gradle, platform, contracts, or profile Compose validation jobs.
 - Phase 2 authentication/authorization standardization: secure defaults, signed JWKS validation, simulator-token opt-in, trusted-device/session/step-up policy, and authorization tests exist, but services still rely on custom authorization filters and custom token decoders. Spring Security OAuth2 Resource Server dependencies/configuration and method-level authorization are not yet the canonical runtime path.
 - Phase 5 ledger projection drift/rebuild: balance projections and integrity checks exist, and backup/restore evidence checks projection equality, but dedicated drift run tables, rebuild request/run tables, maker-checker rebuild APIs, ops manifests, and `LedgerProjection*` integration tests are missing.
 - Phase 3 customer/staff workflow UI hardening: API-backed panels and manifests exist, but customer-web and staff-terminal still rely heavily on single-page panel flows. Route-separated real workflow pages, token lifecycle UX, and full state panels for loading/success/replay/held/validation/auth/unexpected failures need deeper implementation.
@@ -31,8 +33,6 @@ Working tree note: before Phase 0 edits, the workspace already had modified gene
 
 ## Missing
 
-- CI jobs or matrix entries for `backend-payment-service`, `backend-notification-service`, `backend-reporting-service`, `backend-all-gradle`, `platform-validation`, `contracts-validation`, and `compose-platform-config`.
-- `docs/test-evidence/ci-coverage-hardening.md`.
 - Spring Security Resource Server configuration classes such as `SecurityConfig`, JWT authentication converter/policy adapter, resource server dependencies, and Spring Security tests for the standard filter chain.
 - Dedicated ledger projection drift/rebuild Flyway migrations, services, controllers, ops-console manifests, API-client methods, tests, and evidence.
 - Customer-web route split for login/accounts/account detail/transfers/complaints/cards/loans/payments/notifications/security and staff-terminal route/workflow hardening beyond API-backed panels.
