@@ -2,7 +2,7 @@
 
 ## Scope
 
-This playbook implements the 2026-06-02 gstack engineering and DX review plans. The current Node.js `.mjs` runtime remains the executable reference until Kotlin/Spring Boot backend parity and TypeScript/Next.js frontend parity are proven.
+This playbook started from the 2026-06-02 gstack engineering and DX review plans. Kotlin/Spring Boot backend parity and TypeScript/Next.js frontend parity are now proven for the current synthetic lab scope, so the Node.js `.mjs` runtime is archived oracle/reference material rather than a target-path runtime dependency.
 
 The migration must preserve these controls:
 
@@ -49,14 +49,14 @@ npm install
 npm run parity
 ```
 
-Expected result before Kotlin/Next parity exists:
+Expected current result:
 
 ```text
 Parity scenario map covers 43 Node reference scenarios.
 Validated screen manifests.
 Node reference tests passed.
 Evidence pack generated.
-Node reference runtime remains required.
+Node reference runtime remains archived oracle/reference material.
 ```
 
 Node retirement gate:
@@ -65,35 +65,48 @@ Node retirement gate:
 npm run node:retirement-gate
 ```
 
-Expected result at this stage:
+Gate metadata source of truth: `docs/migration/node-retirement-gate.json`.
+
+Expected current result:
 
 ```text
-Node reference retirement gate: blocked
+Node reference retirement gate: ready
+All required retirement gates have passing evidence.
 ```
 
-The blocked result is correct until Spring Boot, Next.js, parity tests, evidence, and final review gates are complete.
+Any future material target-stack change should keep this result ready by rerunning parity, evidence, and retirement-gate checks before claiming the change is releasable.
 
-Spring Boot scaffold commands once JDK and Gradle are available:
+Spring Boot target commands with JDK 21:
 
 ```bash
-docker compose --profile migration up -d postgres
-gradle :services:core-banking:test
-gradle :services:core-banking:bootRun
-curl http://127.0.0.1:8081/health
+npm run test:core-banking:unit
+npm run test:core-banking:integration
+npm run test:payment-service:unit
+npm run test:notification-service:unit
+npm run test:reporting-service:unit
 ```
 
-After a Gradle wrapper is committed, replace the raw `gradle` commands with:
+Direct Gradle equivalents:
 
 ```bash
 ./gradlew :services:core-banking:test
-./gradlew :services:core-banking:bootRun
+./gradlew :services:core-banking:integrationTest
+./gradlew :services:payment-service:test
+./gradlew :services:notification-service:test
+./gradlew :services:reporting-service:test
 ```
 
-Customer-web Next scaffold commands:
+Next.js channel commands:
 
 ```bash
 npm run next:customer-web:typecheck
-npm run next:customer-web:build
+npm run next:staff-terminal:typecheck
+npm run next:complaint-portal:typecheck
+npm run next:ops-console:typecheck
+npm run next:audit-console:typecheck
+npm run next:fds-aml-console:typecheck
+npm run next:admin-console:typecheck
+npm run packages:typecheck
 npm audit --omit=dev
 ```
 
@@ -106,9 +119,9 @@ npm audit --omit=dev
 5. Preserve current route semantics first; publish OpenAPI from Spring after route parity stabilizes.
 6. Add Next.js app shells that render from existing screen manifests instead of hand-coded business screens.
 7. Generate or hand-maintain a typed TypeScript API client only after the OpenAPI contract stabilizes.
-8. Run `npm run parity` plus target Kotlin/Next tests side by side until all mapped scenarios pass.
+8. Run `npm run parity` plus target Kotlin/Next tests side by side so all mapped scenarios stay passing.
 9. Update evidence, ADRs, architecture notes, threat/control mappings, reconciliation reports, and demos.
-10. Remove Node only when `docs/migration/node-retirement-gate.json` changes to `ready` with evidence for every gate.
+10. Keep Node as archived oracle/reference material unless a fresh deletion plan reruns `npm run node:retirement-gate`, parity, evidence refresh, and boundary audits without losing regression coverage.
 
 ## First Vertical Slice
 
@@ -117,12 +130,13 @@ Backend:
 - Spring Boot `/health` returns `status=ok`, `syntheticOnly=true`, and audit hash-chain status.
 - Flyway applies the canonical `db/migrations/V...` migrations.
 - Structured API error responses match `docs/migration/structured-api-error-contract.md`.
+- Core, payment, notification, and reporting Spring services are registered Gradle modules.
 
 Frontend:
 
-- One Next.js shell renders manifest metadata for `customer-web`.
-- No one-off business screen logic is introduced before the shared manifest renderer exists.
-- Keep the legacy customer-web shell under `legacy-node-reference/apps/customer-web/public/index.html` until Node reference retirement is approved.
+- Seven Next.js channel apps render manifest metadata and API-backed panels.
+- Shared API/auth/screen/form packages stay the target channel integration path.
+- Legacy static shells remain under `legacy-node-reference/apps` only as archived reference assets.
 
 Parity:
 
@@ -131,7 +145,7 @@ Parity:
 
 ## Do Not Delete Yet
 
-Do not remove or rewrite these reference assets until the retirement gate is ready:
+Do not remove or rewrite these reference assets without a dedicated retirement-deletion plan and fresh passing evidence:
 
 - `runtime/server.mjs`
 - `runtime/labApp.mjs`
@@ -141,4 +155,4 @@ Do not remove or rewrite these reference assets until the retirement gate is rea
 - `tests/*.test.mjs`
 - evidence scripts under `scripts/generate-*.mjs`
 
-Deletion before parity removes the only executable proof for ledger, idempotency, audit, masking, maker-checker, workflow, reconciliation, and evidence behavior.
+The current gate is ready, but these assets still provide regression comparison. Deletion should be treated as a separate controlled change, not a routine documentation or feature cleanup.

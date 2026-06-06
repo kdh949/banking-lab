@@ -1,5 +1,9 @@
 # Migration Log
 
+## Current Status
+
+As of 2026-06-06, `npm run node:retirement-gate` reports `ready` for the current synthetic lab scope. The historical entries below keep their original point-in-time wording, including older `blocked` status notes, because they document how the migration gates changed over time. For current release decisions, use `docs/migration/node-retirement-gate.json`, `docs/test-evidence/parity-coverage-matrix.md`, `docs/test-evidence/evidence-gap-report.md`, and `docs/test-evidence/node-retirement-review.md`.
+
 ## 2026-06-02: Migration Foundation Gates
 
 Source plans:

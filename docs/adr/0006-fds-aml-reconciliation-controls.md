@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted for the original Phase 6 controls. Superseded for target-path runtime by the Spring FDS, AML, reconciliation, approval, workflow, Temporal, and PostgreSQL/Flyway implementation.
+
+## Current Status
+
+Current target implementation lives under `services/core-banking/src/main/kotlin/lab/banking/core/{fds,aml,reconciliation,workflow,temporal}` with PostgreSQL-backed state, maker-checker approvals, Temporal workflow references, and API/channel evidence. The legacy Node implementation remains oracle/reference material only.
 
 ## Context
 
@@ -22,4 +26,4 @@ Phase 6 introduces operational risk workflows around customer transfers and dail
 - Customer-visible transfer status and FDS case status remain consistent.
 - Closed-day direct mutation is rejected by the same ledger guard used for normal posting commands.
 - Reconciliation corrections preserve auditability because no balance is directly mutated.
-- The implementation is still in-memory; persistence and replay recovery remain future work.
+- The original Node implementation remains in-memory only as an oracle/reference path. Target FDS, AML, reconciliation, approvals, workflow references, and ledger effects are PostgreSQL/Flyway-backed in current evidence.

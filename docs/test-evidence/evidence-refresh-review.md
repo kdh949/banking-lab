@@ -34,7 +34,7 @@ This review now aligns with the ready Node retirement gate after verified passke
 - `npm run next:staff-terminal:typecheck` passed.
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run retirement:audit` passed with blocked status, 64 approved-reference `.mjs` files, 37 target anchors, 336 evidence paths, and 42/42 mapped scenarios.
+- Historical `npm run retirement:audit` output from this review passed with blocked status, 64 approved-reference `.mjs` files, 37 target anchors, 336 evidence paths, and the then-current mapped scenario set. Current release decisions should use the later ready gate, which tracks 43/43 mapped scenarios.
 - `npm run retirement:stack-audit` passed.
 - `npm run retirement:generated-boundary` passed.
 - `npm run retirement:ready-simulate` passed.

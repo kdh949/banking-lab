@@ -30,24 +30,26 @@ The implementation prioritizes bank-grade controls over UI breadth:
 - staff sensitive access is reason-required and audited
 - high-risk operations require maker-checker approval
 - screens scale through manifests and reusable templates
-- screen manifests are validated for 60+ catalog breadth and unique transaction codes
+- screen manifests are validated for 100+ catalog breadth and unique transaction codes
 - every phase has tests and evidence
 
 ## 3. Overall Architecture
 
 ```text
-apps/*                  TypeScript/Next.js target channel apps
-legacy-node-reference   Node runtime, service oracle, and static reference shells
-legacy-node-reference/packages/banking-domain ledger, audit, masking, auth, maker-checker
-packages/screen-engine  screen manifest loader and validator
-packages/form-engine    reusable validation helpers
-services/core-banking   ledger command service
-services/complaint-*    complaint workflow
-services/fds-service    FDS rule and case lifecycle
-services/aml-service    AML case simulation
-services/reconciliation EOD and unmatched item workflow
-runtime                 local Node HTTP runtime
-docs                    ADRs, evidence, mappings, drills, demo scripts
+apps/*                    TypeScript/Next.js target channel apps
+services/core-banking     Kotlin/Spring Boot core ledger, customer, staff, complaint, FDS/AML, reconciliation, admin, parameter, loan, card, statement, workflow, and audit APIs
+services/payment-service  Kotlin/Spring Boot payment instruction, autopay, cancellation, outbox worker, and domain-event publisher
+services/notification-service Kotlin/Spring Boot notification delivery, preference, template, and event-consumer service
+services/reporting-service Kotlin/Spring Boot report artifact, export, retention, and domain-event publisher service
+analytics/aml-fds-python  Python/DuckDB/scikit-learn synthetic AML/FDS analytics
+packages/*                TypeScript API, auth, channel UI, screen, and form packages
+screen-manifests          manifest-driven channel and operations screens
+contracts                 OpenAPI, AsyncAPI, event, and Temporal contracts
+db/migrations             Flyway PostgreSQL schema V001-V036
+infra                     Docker Compose, Kubernetes, Helm, Terraform, Argo CD, observability, and security assets
+legacy-node-reference     archived Node oracle modules and static reference shells
+runtime                   local Node reference HTTP runtime for parity/oracle comparison
+docs                      ADRs, evidence, mappings, drills, demo scripts
 ```
 
 ## 4. Core Ledger Design
@@ -83,7 +85,7 @@ The staff terminal includes:
 
 The customer web includes:
 
-- mock customer login
+- Keycloak/OIDC-backed synthetic login paths in the target channel apps, with the Node reference retaining mock login only for oracle tests
 - account list and detail from projected ledger balances
 - transaction history from the same ledger source used by staff inquiry
 - idempotent transfer submission
@@ -139,7 +141,7 @@ Operations controls:
 Implemented controls:
 
 - append-only audit hash chain
-- role-shaped mock users
+- Keycloak/OIDC role and claim enforcement in target Spring services, with simulator tokens allowed only through explicit development profiles
 - PII masking and privileged unmask path
 - reason-required sensitive staff access
 - high-risk approval business types
@@ -170,7 +172,7 @@ docker compose config
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
 
-The current manifest catalog contains 74 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
+The current manifest catalog contains 109 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
 
 `npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC through a local `tlc` command, `BANKING_LAB_TLC_CMD`, `BANKING_LAB_TLC_JAR`, a repo-local TLC jar, or `~/Downloads/tla2tools.jar`, resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback when a TLC jar is used, and then runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
 
@@ -194,7 +196,7 @@ The Node retirement evidence remains valid for the previous target-stack migrati
 
 ## 11.2 Kotlin + Next.js Migration
 
-The current Node.js `.mjs` runtime is the executable reference for the intended Kotlin/Spring Boot backend and TypeScript/Next.js frontend migration. Do not delete the Node reference until the retirement gate is ready.
+The Node.js `.mjs` runtime is now archived oracle/reference material. The current retirement gate is ready for the synthetic lab scope, and target-path behavior belongs in Kotlin/Spring Boot, TypeScript/Next.js, Python analytics, PostgreSQL/Flyway, Redpanda/Kafka, Temporal, and the platform assets.
 
 Migration entrypoints:
 
@@ -203,21 +205,29 @@ npm run parity
 npm run node:retirement-gate
 ```
 
-Read `docs/migration/kotlin-next-playbook.md` before adding target-stack code. The migration must preserve the 42 mapped Node reference scenarios in `docs/migration/parity-scenarios.json`, use the structured error contract in `docs/migration/structured-api-error-contract.md`, and keep `docs/migration/node-retirement-gate.json` blocked until Spring Boot, Next.js, evidence, and review gates pass.
+Read `docs/migration/kotlin-next-playbook.md` before changing parity-sensitive behavior. The migration must preserve the 43 mapped Node reference scenarios in `docs/migration/parity-scenarios.json`, use the structured error contract in `docs/migration/structured-api-error-contract.md`, and keep `docs/migration/node-retirement-gate.json` ready by rerunning the gate after material target-stack changes.
 
-Initial Spring Boot scaffold files live under `services/core-banking/src/main/kotlin`. Once JDK 21 and Gradle are available, verify the target backend with:
+Target Spring Boot services live under `services/*/src/main/kotlin`. Use JDK 21 for Gradle commands on this workstation. Verify the target backend with:
 
 ```bash
-docker compose --profile migration up -d postgres
-gradle :services:core-banking:test
-gradle :services:core-banking:bootRun
+npm run test:core-banking:unit
+npm run test:core-banking:integration
+npm run test:payment-service:unit
+npm run test:notification-service:unit
+npm run test:reporting-service:unit
 ```
 
-Initial Next.js scaffold files live under `apps/customer-web/src`. Legacy static app shells now live under `legacy-node-reference/apps` for the Node reference runtime, not under the target Next app directories. Verify the target frontend with:
+Target Next.js channel apps live under `apps/*/src`. Legacy static app shells live under `legacy-node-reference/apps` for the Node reference runtime, not under the target Next app directories. Verify the target frontend with:
 
 ```bash
 npm run next:customer-web:typecheck
-npm run next:customer-web:build
+npm run next:staff-terminal:typecheck
+npm run next:complaint-portal:typecheck
+npm run next:ops-console:typecheck
+npm run next:audit-console:typecheck
+npm run next:fds-aml-console:typecheck
+npm run next:admin-console:typecheck
+npm run packages:typecheck
 npm audit --omit=dev
 ```
 
@@ -283,17 +293,14 @@ This is a local simulation:
 - no real customer PII
 - no public complaint service
 
-Runtime persistence is in-memory. The SQL migration captures the intended relational contract, but durable storage is not yet wired to the runtime.
+The target Spring services use PostgreSQL/Flyway-backed state for ledger, audit, approvals, workflows, FDS/AML, reconciliation, payment, notification, and reporting slices covered by current evidence. The local `npm start` Node runtime remains an in-memory archived reference/oracle path only.
 
 ## 16. Future Improvements
 
 Next engineering slices:
 
-- PostgreSQL persistence for ledger, approvals, audit, and cases
-- real OAuth2/OIDC simulator such as Keycloak
-- crash recovery for approval execution
-- outbox/inbox event processing
-- observability with OpenTelemetry, Prometheus, Grafana, and Loki
-- formal ledger model with TLA+ or Alloy
-- Playwright browser E2E once a browser target is available
-- SAST/SCA/SBOM automation
+- broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
+- extend high-contention retry or operator-visible failure policy to every future financial command path
+- add live browser evidence for broader session/device UX and authorization exception paths
+- add native source-table partitioning only after composite foreign-key planning is complete
+- keep rerunning security, observability, parity, and node-retirement gates before release evidence refreshes

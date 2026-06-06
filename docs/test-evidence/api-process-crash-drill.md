@@ -42,4 +42,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the API process crash after durable ledger/outbox commit blocker for the current synthetic customer-transfer path. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
+This closes the API process crash after durable ledger/outbox commit blocker for the current synthetic customer-transfer path. Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to its named control and the Node reference stays archived oracle/reference material.

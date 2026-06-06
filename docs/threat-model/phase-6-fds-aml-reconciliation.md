@@ -21,4 +21,4 @@
 
 ## Residual Risk
 
-The current runtime is in-memory. A later persistence phase needs durable case storage, recovery-safe approval execution, and replay protection across process restarts.
+The archived Node reference runtime is in-memory by design. Current target FDS, AML, reconciliation, approval, and workflow state is Spring/PostgreSQL-backed with Temporal and restart evidence for the current synthetic scope. Remaining risk is broader live-platform hardening and future workflow variants, not missing target persistence for the documented Phase 6 paths.

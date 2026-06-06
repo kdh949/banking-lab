@@ -175,4 +175,4 @@ The temporary transition Compose stack was removed with `docker compose --profil
 
 ## Retirement Impact
 
-This closes workflow-specific trace/log correlation for Temporal signal and approval-completion events across the current banking case types, plus live rejection and self-approval failure transitions. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
+This closes workflow-specific trace/log correlation for Temporal signal and approval-completion events across the current banking case types, plus live rejection and self-approval failure transitions. Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to its named control and the Node reference stays archived oracle/reference material.

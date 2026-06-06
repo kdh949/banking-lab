@@ -84,4 +84,4 @@ Passed.
 
 ## Retirement Impact
 
-This closes the current Temporal platform host-crash-shaped restart evidence slice for synthetic workflows. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
+This closes the current Temporal platform host-crash-shaped restart evidence slice for synthetic workflows. Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to its named control and the Node reference stays archived oracle/reference material.

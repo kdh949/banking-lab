@@ -115,4 +115,4 @@ curl --retry 10 --retry-delay 5 --retry-all-errors -fsS http://127.0.0.1:13101/p
 
 ## Retirement Impact
 
-This closes the local observability readiness, Prometheus scrape, Loki ingestion, Loki ruler alert, and Grafana dashboard validation blockers for the target stack. Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
+This closes the local observability readiness, Prometheus scrape, Loki ingestion, Loki ruler alert, and Grafana dashboard validation blockers for the target stack. Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to its named control and the Node reference stays archived oracle/reference material.

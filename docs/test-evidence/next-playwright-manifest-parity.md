@@ -39,9 +39,9 @@ When `BANKING_LAB_E2E_API_BASE_URL` is set, the specs additionally prove a read-
 - `ops-console` loads a synthetic reconciliation item from Spring.
 - `audit-console` loads audit event hash-chain evidence from Spring.
 - `fds-aml-console` loads synthetic FDS and AML cases from Spring.
-- `admin-console` loads a synthetic platform-control summary from Spring and keeps the Node reference boundary visible as blocked.
+- `admin-console` loads a synthetic platform-control summary from Spring and keeps the Node reference boundary visible as archived oracle/reference material.
 
-These tests do not claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console now has live browser proof for `security-admin01` Keycloak token propagation into the Spring admin platform summary route, but this only closes the admin surface smoke gap; the Node retirement gate remains blocked by non-synthetic passkey operations and final retirement review.
+These tests do not by themselves claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console now has live browser proof for `security-admin01` Keycloak token propagation into the Spring admin platform summary route, and the broader retirement gate is now ready through separate parity, passkey, evidence-refresh, and final-review artifacts.
 
 ## Local Command
 
