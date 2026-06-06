@@ -1666,6 +1666,174 @@ export interface ParameterChangeRequestResponse {
   readonly replayed: boolean;
 }
 
+export interface LedgerProjectionDriftRunCommand {
+  readonly requestedBy: string;
+  readonly requestedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+  readonly accountId?: string | null;
+  readonly currency?: string | null;
+  readonly asOfBusinessDate?: string | null;
+}
+
+export interface LedgerProjectionDriftRunDto {
+  readonly runId: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly accountId?: string | null;
+  readonly currency?: string | null;
+  readonly asOfBusinessDate?: string | null;
+  readonly sourcePostingCount: number;
+  readonly sourceLastPostingId?: string | null;
+  readonly sourceHash: string;
+  readonly driftItemCount: number;
+  readonly auditEventId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly completedAt?: string | null;
+}
+
+export interface LedgerProjectionDriftItemDto {
+  readonly itemId: string;
+  readonly runId: string;
+  readonly accountId: string;
+  readonly currency: string;
+  readonly expectedLedgerBalanceMinor: number;
+  readonly actualLedgerBalanceMinor?: number | null;
+  readonly expectedAvailableBalanceMinor: number;
+  readonly actualAvailableBalanceMinor?: number | null;
+  readonly holdAmountMinor: number;
+  readonly driftAmountMinor: number;
+  readonly sourcePostingCount: number;
+  readonly sourceLastPostingId?: string | null;
+  readonly sourceHash: string;
+  readonly status: string;
+  readonly createdAt: string;
+}
+
+export interface LedgerProjectionDriftRunResponse {
+  readonly item: LedgerProjectionDriftRunDto;
+  readonly items: readonly LedgerProjectionDriftItemDto[];
+  readonly replayed: boolean;
+}
+
+export interface LedgerProjectionRebuildRequestCommand {
+  readonly requestedBy: string;
+  readonly requestedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+  readonly accountId?: string | null;
+  readonly currency?: string | null;
+  readonly driftRunId?: string | null;
+}
+
+export interface LedgerProjectionRebuildApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly screenId?: string;
+}
+
+export interface LedgerProjectionRebuildRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
+export interface LedgerProjectionRebuildExecuteCommand {
+  readonly executedBy: string;
+  readonly executedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface LedgerProjectionRebuildRequestDto {
+  readonly requestId: string;
+  readonly driftRunId?: string | null;
+  readonly accountId?: string | null;
+  readonly currency?: string | null;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly approvalId: string;
+  readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly beforeSourcePostingCount: number;
+  readonly beforeSourceLastPostingId?: string | null;
+  readonly beforeSourceHash: string;
+  readonly beforeProjectionHash: string;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface LedgerProjectionRebuildRunDto {
+  readonly runId: string;
+  readonly requestId: string;
+  readonly approvalId: string;
+  readonly status: string;
+  readonly executedBy: string;
+  readonly executedByRole: string;
+  readonly reason: string;
+  readonly accountId?: string | null;
+  readonly currency?: string | null;
+  readonly beforeSourcePostingCount: number;
+  readonly beforeSourceLastPostingId?: string | null;
+  readonly beforeSourceHash: string;
+  readonly beforeProjectionHash: string;
+  readonly afterSourcePostingCount: number;
+  readonly afterSourceLastPostingId?: string | null;
+  readonly afterSourceHash: string;
+  readonly afterProjectionHash: string;
+  readonly rebuiltItemCount: number;
+  readonly auditEventId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly completedAt?: string | null;
+}
+
+export interface LedgerProjectionRebuildItemDto {
+  readonly itemId: string;
+  readonly runId: string;
+  readonly accountId: string;
+  readonly currency: string;
+  readonly previousLedgerBalanceMinor?: number | null;
+  readonly rebuiltLedgerBalanceMinor: number;
+  readonly previousAvailableBalanceMinor?: number | null;
+  readonly rebuiltAvailableBalanceMinor: number;
+  readonly holdAmountMinor: number;
+  readonly driftAmountMinor: number;
+  readonly sourcePostingCount: number;
+  readonly sourceLastPostingId?: string | null;
+  readonly sourceHash: string;
+  readonly status: string;
+  readonly createdAt: string;
+}
+
+export interface LedgerProjectionRebuildRequestResponse {
+  readonly item: LedgerProjectionRebuildRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+}
+
+export interface LedgerProjectionRebuildReviewResponse {
+  readonly item: LedgerProjectionRebuildRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+}
+
+export interface LedgerProjectionRebuildRunResponse {
+  readonly item: LedgerProjectionRebuildRunDto;
+  readonly items: readonly LedgerProjectionRebuildItemDto[];
+  readonly replayed: boolean;
+}
+
 export interface FdsAnalyticsEvidenceResultDto {
   readonly transactionId: string;
   readonly customerId: string;
@@ -2232,6 +2400,81 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/ops/eod/${encodeURIComponent(businessDate)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    startLedgerProjectionDriftRun(command: LedgerProjectionDriftRunCommand) {
+      return request<LedgerProjectionDriftRunResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/ledger/projection-drift-runs",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    ledgerProjectionDriftRun(runId: string) {
+      return request<LedgerProjectionDriftRunResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/ledger/projection-drift-runs/${encodeURIComponent(runId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    requestLedgerProjectionRebuild(command: LedgerProjectionRebuildRequestCommand) {
+      return request<LedgerProjectionRebuildRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/ops/ledger/projection-rebuild-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    approveLedgerProjectionRebuildRequest(requestId: string, command: LedgerProjectionRebuildApproveCommand) {
+      return request<LedgerProjectionRebuildReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/ledger/projection-rebuild-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectLedgerProjectionRebuildRequest(requestId: string, command: LedgerProjectionRebuildRejectCommand) {
+      return request<LedgerProjectionRebuildReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/ledger/projection-rebuild-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeLedgerProjectionRebuild(requestId: string, command: LedgerProjectionRebuildExecuteCommand) {
+      return request<LedgerProjectionRebuildRunResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/ledger/projection-rebuild-requests/${encodeURIComponent(requestId)}/execute`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    ledgerProjectionRebuildRun(runId: string) {
+      return request<LedgerProjectionRebuildRunResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/ops/ledger/projection-rebuild-runs/${encodeURIComponent(runId)}`,
         {},
         options.bearerToken
       );

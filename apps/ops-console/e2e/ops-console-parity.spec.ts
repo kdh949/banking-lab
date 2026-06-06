@@ -43,7 +43,7 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
   await expect(page.getByText("Balanced adjustments only")).toBeVisible();
   await expect(page.getByText("Mismatch corrections require approval")).toBeVisible();
   await expect(page.getByText("RECONCILIATION_ADJUSTMENT").first()).toBeVisible();
-  await expect(page.getByText("workflow timeline", { exact: true })).toBeVisible();
+  await expect(page.getByText("workflow timeline", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("ADJUSTMENT_REQUESTED")).toBeVisible();
   await expect(page.getByText("reason required").first()).toBeVisible();
 });
@@ -114,6 +114,24 @@ test("ops console requests Spring API-backed reconciliation parameter change whe
   await expect(panel).toContainText("PENDING_APPROVAL");
   await expect(panel).toContainText("APR-");
   await expect(panel).toContainText("RPC-");
+});
+
+test("ops console executes Spring API-backed ledger projection rebuild workflow when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed OPS-LEDGER projection workflow smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Run projection rebuild smoke" }).click();
+  const panel = page.getByTestId("api-backed-ledger-projection-workflow");
+  await expect(panel).toContainText("projection rebuild completed", { timeout: 15_000 });
+  await expect(panel).toContainText("LEDGER_PROJECTION_REBUILD");
+  await expect(panel).toContainText("ACC-SYN-CORR-TO");
+  await expect(panel).toContainText("LPD-");
+  await expect(panel).toContainText("LPR-");
+  await expect(panel).toContainText("LPRUN-");
+  await expect(panel).toContainText("projection rows rebuilt");
+  await expect(panel).toContainText("Source hash");
+  await expect(panel).toContainText("Projection hash");
 });
 
 test("ops console executes Payment Service OPS404 outbox dispatch when configured", async ({ page }) => {

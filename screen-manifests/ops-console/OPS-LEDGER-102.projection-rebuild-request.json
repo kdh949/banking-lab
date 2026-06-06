@@ -1,0 +1,64 @@
+{
+  "screenId": "OPS-LEDGER-102",
+  "transactionCode": "OPSL102",
+  "title": "Projection Rebuild Request",
+  "app": "ops-console",
+  "type": "COMMAND",
+  "domain": "ledger",
+  "highRisk": true,
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "OPS_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["LEDGER_PROJECTION_REBUILD"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE",
+    "eventTypes": ["COMMAND_REQUESTED"]
+  },
+  "fields": [
+    {
+      "name": "accountId",
+      "label": "Account ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "currency",
+      "label": "Currency",
+      "type": "select",
+      "required": false,
+      "options": ["KRW", "USD"]
+    },
+    {
+      "name": "driftRunId",
+      "label": "Drift Run ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Rebuild Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/ops/ledger/projection-rebuild-requests"
+  },
+  "postActions": ["createApprovalRequest", "recordSourceHash", "createAuditEvent"]
+}

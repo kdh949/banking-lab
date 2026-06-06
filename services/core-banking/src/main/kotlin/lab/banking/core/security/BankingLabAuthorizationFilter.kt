@@ -202,6 +202,9 @@ class BankingLabAuthorizationFilter(
     private fun screenId(path: String): String =
         when {
             path.startsWith("/api/staff/approvals") -> "APR-201"
+            path.startsWith("/api/ops/ledger/projection-drift-runs") -> "OPS-LEDGER-101"
+            path.startsWith("/api/ops/ledger/projection-rebuild-requests") -> "OPS-LEDGER-102"
+            path.startsWith("/api/ops/ledger/projection-rebuild-runs") -> "OPS-LEDGER-103"
             path.startsWith("/api/auth/session") -> "AUTH-SESSION"
             path.startsWith("/api/products/deposits") -> "PRD-101"
             path.startsWith("/api/staff/products/deposits") -> "PRD-102"

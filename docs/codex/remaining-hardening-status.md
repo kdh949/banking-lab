@@ -2,7 +2,7 @@
 
 Review date: 2026-06-06
 
-Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
@@ -12,10 +12,12 @@ Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/
 
 Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configuration are now present in all four Spring services. Signed JWKS tokens are verified through Spring/Nimbus decoders, route authorization remains in explicit policy layers, simulator tokens require dev/test double opt-in and fail fast in prod-like profiles, and selected high-risk core APIs now have method-level `@PreAuthorize` gates. Evidence is recorded in `docs/test-evidence/spring-security-resource-server-hardening.md`.
 
+Phase 5 update: ledger projection drift/rebuild operations now have Flyway migration `V035`, `LedgerProjectionIntegrityService`, `/api/ops/ledger/projection-*` APIs, reason-required drift checks, approval-gated rebuild requests, idempotent rebuild execution, ops-console manifests `OPS-LEDGER-101` through `OPS-LEDGER-103`, shared API-client methods, targeted Playwright smoke wiring, and `LedgerProjection*` Testcontainers coverage. Evidence is recorded in `docs/test-evidence/ledger-projection-integrity-workflow.md`.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
-- Core banking ledger controls are implemented in Kotlin/Spring Boot with PostgreSQL/Flyway migrations through `V034`, including customers, accounts, postings, balance projections, idempotency, reversal, adjustment, closed-date controls, audit hash chain, maker-checker, workflow state, statement/certificate read models, EOD, product/fee/loan/card slices, operational-security lab controls, AML/FDS governance, and complaint extensions.
+- Core banking ledger controls are implemented in Kotlin/Spring Boot with PostgreSQL/Flyway migrations through `V035`, including customers, accounts, postings, balance projections, idempotency, reversal, adjustment, closed-date controls, audit hash chain, maker-checker, workflow state, statement/certificate read models, EOD, product/fee/loan/card slices, operational-security lab controls, AML/FDS governance, complaint extensions, and ledger projection drift/rebuild workflow state.
 - Existing Node `.mjs` tests remain oracle/reference tests and are guarded by retirement/boundary checks. The current baseline rerun passed `npm test` with 167 tests.
 - Screen manifest infrastructure is broad and validated: 106 manifests across customer, staff, complaint, ops, audit, FDS/AML, and admin channels.
 - Shared TypeScript packages exist for screen rendering, form validation, API client calls, and auth client behavior; package typechecks pass in the current baseline.
@@ -23,11 +25,12 @@ Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configur
 - Outbox, Redpanda, Temporal, Keycloak/JWKS, security evidence, formal ledger checks, backup/restore, synthetic load, and platform structural validation have existing implementation/evidence from earlier phases.
 - Phase 1 CI full-service wiring now connects service-specific backend jobs, aggregate Gradle unit checks, platform structural validation, structural contract checks, and Compose profile config rendering to PR CI.
 - Phase 2 Spring Security Resource Server standardization now protects Spring service API routes with stateless Security filter chains, issuer/audience-aware JWT decoding, Keycloak-style role extraction, simulator-token prod-like profile guards, structured auth failures, and selected high-risk method authorization.
+- Phase 5 ledger projection drift/rebuild now detects projection drift from `ledger_postings`, stores drift run/item evidence, submits maker-checker rebuild requests through `operator_approvals`, rebuilds only `account_balance_projections`, records before/after source/projection hashes, and exposes ops-console/API-client smoke wiring.
 
 ## Partially Implemented
 
 - Phase 2 authentication/authorization standardization: Resource Server authentication is now the canonical signed-JWT path, but legacy compatibility decoders remain for dev/test fallback and bounded-context authorization-denied audit expansion is not complete.
-- Phase 5 ledger projection drift/rebuild: balance projections and integrity checks exist, and backup/restore evidence checks projection equality, but dedicated drift run tables, rebuild request/run tables, maker-checker rebuild APIs, ops manifests, and `LedgerProjection*` integration tests are missing.
+- Phase 5 ledger projection drift/rebuild: core drift/rebuild workflow is now implemented. Remaining follow-up is broader live-browser/API evidence against a long-running Compose stack and any future partition/archive-aware rebuild optimizations from Phase 8.
 - Phase 3 customer/staff workflow UI hardening: API-backed panels and manifests exist, but customer-web and staff-terminal still rely heavily on single-page panel flows. Route-separated real workflow pages, token lifecycle UX, and full state panels for loading/success/replay/held/validation/auth/unexpected failures need deeper implementation.
 - Phase 4 contracts: `contracts/openapi/payment-service.yaml`, `contracts/openapi/notification-service.yaml`, `contracts/asyncapi/banking-lab-events.yaml`, and event schemas exist, but `core-banking` and `reporting-service` OpenAPI contracts are missing and root `contracts:lint`, `contracts:check-client`, and `contracts:check-events` scripts are not present.
 - Phase 6 operations/security: observability assets and a synthetic operational-security lab exist, but `security:secrets-check`, `observability:validate`, docs under `docs/operations/`, a general `POST /api/audit/exports` / `GET /api/audit/exports/{exportId}` API, and the requested five operational runbooks are not present.
@@ -37,7 +40,6 @@ Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configur
 ## Missing
 
 - A complete method-level authorization annotation audit across every high-risk service method and bounded-context denial audit rows for every payment/notification/reporting auth failure.
-- Dedicated ledger projection drift/rebuild Flyway migrations, services, controllers, ops-console manifests, API-client methods, tests, and evidence.
 - Customer-web route split for login/accounts/account detail/transfers/complaints/cards/loans/payments/notifications/security and staff-terminal route/workflow hardening beyond API-backed panels.
 - Contract lint/check scripts and complete OpenAPI/AsyncAPI coverage for core-banking, reporting-service, and the shared client/event drift gates.
 - Secrets placeholder check script, `security:secrets-check`, production-like default-secret fail-fast guard evidence, operations SLO/observability docs, audit export job API, and requested runbooks.
@@ -56,7 +58,7 @@ Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configur
 - Phase 0: Baseline status and coverage-matrix note only. Do not duplicate existing features.
 - Phase 1: Add CI jobs for all service tests, platform validation, contracts validation, and Compose profile config; document CI coverage.
 - Phase 2: Standardize Spring Security OAuth2 Resource Server while preserving current RBAC/ABAC, step-up, trusted-device, session, simulator-token, structured-error, and denial-audit behavior.
-- Phase 5: Add ledger projection drift detection and maker-checker rebuild workflow before broader UI/contract work.
+- Phase 5: Add ledger projection drift detection and maker-checker rebuild workflow before broader UI/contract work. Completed for the Spring/ops-console/API-client slice; keep broader live evidence/scale proof for Phase 8.
 - Phase 3: Harden customer-web and staff-terminal workflows around route-level jobs, selected API results, idempotency replay, held/blocked states, and structured error handling.
 - Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps.
 - Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence.
@@ -85,13 +87,27 @@ Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configur
 | `scripts/run-core-banking-tests.sh :services:core-banking:test :services:payment-service:test :services:notification-service:test :services:reporting-service:test` | first run failed, rerun pass | First run exposed MVC-slice default security on health metadata endpoints; rerun passed after test and runtime permit fixes. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest` | first runs failed, final rerun pass | Exposed and fixed method-security disabled-mode behavior, servlet-only security config, structured method-denial handling, and AML reviewer workflow role alignment. |
 | `scripts/run-core-banking-tests.sh :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest` | pass | Full bounded-context integration tasks passed. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin` | sandbox failed, escalated pass | Phase 5 backend compile; sandbox failed on Gradle file-lock socket, approved rerun passed. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:compileIntegrationTestKotlin` | pass | Compiled `LedgerProjection*` integration tests after adding the projection integrity workflow. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests '*LedgerProjection*'` | first two runs failed, final rerun pass | First runs exposed incorrect test expectations for account-scoped posting count and drift-run count; final rerun passed after assertion fixes. |
+| `npm run scripts:typecheck` | pass | Phase 5 TypeScript script/client typecheck after API-client projection methods. |
+| `npm run next:ops-console:typecheck` | pass | Ops console TypeScript check after projection workflow panel wiring. |
+| `npm run next:ops-console:build` | pass | Next.js ops-console production build after `OPS-LEDGER-*` manifest and API panel updates. |
+| `npm run validate:manifests` | pass | Validated 109 manifests after adding `OPS-LEDGER-101`, `OPS-LEDGER-102`, and `OPS-LEDGER-103`. |
+| `npm run packages:typecheck` | pass | Shared package typechecks passed after API-client projection DTOs/methods. |
+| `npm test` | pass | 169 passed after adding structural coverage for the projection API client and manifests. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:test` | pass | Full core-banking unit task after Phase 5 changes. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest` | pass | Full core-banking Testcontainers integration task passed after adding `V035`. |
+| `npm run test:e2e -- --grep "projection"` | skipped | Playwright started local Next dev servers and skipped the live API projection workflow smoke because `BANKING_LAB_E2E_API_BASE_URL` was unset. |
+| `npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts` | pass | Full ops-console Playwright file passed after stabilizing the manifest workflow-label assertion exposed by CI. |
+| `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 17 passed and 58 skipped; live API-backed tests remained gated by missing service URLs. |
 
 ## Commands Not Attempted
 
 - `docker compose --profile platform config`: reserved for Phase 1 CI/platform work.
 - `npm run platform:validate`: reserved for Phase 1 CI/platform work.
 - Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
-- `npm run next:*:typecheck`, `npm run next:*:build`, and `npm run test:e2e`: not required for Phase 0 documentation baseline; will be run in the UI hardening phase or final verification as scope requires.
+- Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 5 backend-first projection work; targeted ops-console typecheck/build and ops-console Playwright file passed, and projection Playwright grep was run with the live API smoke skipped due missing `BANKING_LAB_E2E_API_BASE_URL`.
 - `npm run contracts:lint`, `npm run contracts:check-client`, and `npm run contracts:check-events`: not attempted because these scripts are not defined yet.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.
 - `npm run observability:validate`: not attempted because the script is not defined yet.

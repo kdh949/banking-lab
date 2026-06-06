@@ -1,0 +1,56 @@
+{
+  "screenId": "OPS-LEDGER-103",
+  "transactionCode": "OPSL103",
+  "title": "Projection Rebuild Evidence",
+  "app": "ops-console",
+  "type": "CASE",
+  "domain": "ledger",
+  "requiredRoles": ["OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR"],
+  "layout": {
+    "template": "case",
+    "customerContext": false
+  },
+  "workflow": {
+    "name": "ledgerProjectionRebuildWorkflow",
+    "states": ["PENDING_APPROVAL", "APPROVED", "REJECTED", "EXECUTED", "COMPLETED"]
+  },
+  "approval": {
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["LEDGER_PROJECTION_REBUILD"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE",
+    "eventTypes": ["LEDGER_PROJECTION_REBUILD_EXECUTED"]
+  },
+  "sections": ["requestSummary", "approvalTimeline", "sourcePostingHash", "beforeAfterProjectionHash", "rebuiltItems", "auditEvidence"],
+  "actions": [
+    {
+      "id": "approveProjectionRebuild",
+      "label": "Approve Request",
+      "type": "command",
+      "target": "POST /api/ops/ledger/projection-rebuild-requests/{requestId}/approve"
+    },
+    {
+      "id": "rejectProjectionRebuild",
+      "label": "Reject Request",
+      "type": "command",
+      "target": "POST /api/ops/ledger/projection-rebuild-requests/{requestId}/reject"
+    },
+    {
+      "id": "executeProjectionRebuild",
+      "label": "Execute Rebuild",
+      "type": "command",
+      "target": "POST /api/ops/ledger/projection-rebuild-requests/{requestId}/execute"
+    },
+    {
+      "id": "readProjectionRebuildRun",
+      "label": "Read Evidence",
+      "type": "query",
+      "target": "GET /api/ops/ledger/projection-rebuild-runs/{runId}"
+    }
+  ]
+}

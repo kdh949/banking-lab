@@ -5,6 +5,9 @@ import {
   BankingApiError,
   createBankingApiClient,
   type EodClosingMonitorDto,
+  type LedgerProjectionDriftRunResponse,
+  type LedgerProjectionRebuildRequestResponse,
+  type LedgerProjectionRebuildRunResponse,
   type ParameterChangeRequestResponse,
   type ParameterListResponse,
   type PaymentOutboxDispatchResponse,
@@ -70,6 +73,17 @@ type ReconciliationParameterCommandState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type LedgerProjectionWorkflowState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "completed";
+      readonly drift: LedgerProjectionDriftRunResponse;
+      readonly request: LedgerProjectionRebuildRequestResponse;
+      readonly run: LedgerProjectionRebuildRunResponse;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 type OperatorKeycloakLoginState =
   | { readonly status: "offline" }
   | { readonly status: "idle" }
@@ -119,6 +133,7 @@ const storedOperatorLoginKey = "bankingLabOpsKeycloakOperatorLogin";
 const adjustmentItemId = "REC-SYN-CMD-001";
 const reconciliationFailureItemId = "REC-SYN-FAIL-001";
 const eodMonitorBusinessDate = "2026-02-03";
+const projectionSmokeAccountId = "ACC-SYN-CORR-TO";
 
 export function ApiBackedOpsPanel() {
   const [state, setState] = useState<ApiState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
@@ -130,6 +145,7 @@ export function ApiBackedOpsPanel() {
     apiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
   const [reconciliationParameterCommandState, setReconciliationParameterCommandState] = useState<ReconciliationParameterCommandState>({ status: "idle" });
+  const [ledgerProjectionState, setLedgerProjectionState] = useState<LedgerProjectionWorkflowState>({ status: "idle" });
   const [keycloakOperatorState, setKeycloakOperatorState] = useState<OperatorKeycloakLoginState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -522,6 +538,46 @@ export function ApiBackedOpsPanel() {
     }
   };
 
+  const runLedgerProjectionWorkflowSmoke = async () => {
+    if (!apiBaseUrl || ledgerProjectionState.status === "running") {
+      return;
+    }
+    setLedgerProjectionState({ status: "running" });
+    try {
+      const drift = await projectionClient("ops01", ["OPS_OPERATOR"]).startLedgerProjectionDriftRun({
+        requestedBy: "ops01",
+        requestedByRole: "OPS_OPERATOR",
+        reason: "Browser OPS-LEDGER-101 projection drift smoke",
+        idempotencyKey: `OPS-LEDGER-DRIFT-${globalThis.crypto.randomUUID()}`,
+        accountId: projectionSmokeAccountId,
+        currency: "KRW"
+      });
+      const request = await projectionClient("ops01", ["OPS_OPERATOR"], true).requestLedgerProjectionRebuild({
+        requestedBy: "ops01",
+        requestedByRole: "OPS_OPERATOR",
+        reason: "Browser OPS-LEDGER-102 projection rebuild request smoke",
+        idempotencyKey: `OPS-LEDGER-REQUEST-${globalThis.crypto.randomUUID()}`,
+        accountId: projectionSmokeAccountId,
+        currency: "KRW",
+        driftRunId: drift.item.runId
+      });
+      await projectionClient("manager01", ["OPS_MANAGER"], true).approveLedgerProjectionRebuildRequest(request.item.requestId, {
+        approvedBy: "manager01",
+        approvedByRole: "OPS_MANAGER",
+        screenId: "OPS-LEDGER-102"
+      });
+      const run = await projectionClient("ops01", ["OPS_OPERATOR"], true).executeLedgerProjectionRebuild(request.item.requestId, {
+        executedBy: "ops01",
+        executedByRole: "OPS_OPERATOR",
+        reason: "Browser OPS-LEDGER-103 projection rebuild execution smoke",
+        idempotencyKey: `OPS-LEDGER-EXEC-${globalThis.crypto.randomUUID()}`
+      });
+      setLedgerProjectionState({ status: "completed", drift, request, run });
+    } catch (error: unknown) {
+      setLedgerProjectionState({ status: "failed", message: error instanceof Error ? error.message : "Unknown ledger projection workflow failure" });
+    }
+  };
+
   const runKeycloakReconciliationAdjustmentSmoke = async () => {
     if (
       !apiBaseUrl ||
@@ -835,6 +891,71 @@ export function ApiBackedOpsPanel() {
             <div>
               <dt>Command error</dt>
               <dd>{reconciliationParameterCommandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+      <div className="api-actions" data-testid="api-backed-ledger-projection-workflow">
+        <button
+          type="button"
+          onClick={runLedgerProjectionWorkflowSmoke}
+          disabled={!apiBaseUrl || ledgerProjectionState.status === "running"}
+        >
+          Run projection rebuild smoke
+        </button>
+        <dl>
+          <div>
+            <dt>OPS-LEDGER</dt>
+            <dd>{ledgerProjectionWorkflowLabel(ledgerProjectionState)}</dd>
+          </div>
+          {ledgerProjectionState.status === "completed" ? (
+            <>
+              <div>
+                <dt>Business type</dt>
+                <dd>LEDGER_PROJECTION_REBUILD</dd>
+              </div>
+              <div>
+                <dt>Account</dt>
+                <dd>{projectionSmokeAccountId}</dd>
+              </div>
+              <div>
+                <dt>Drift run</dt>
+                <dd>{ledgerProjectionState.drift.item.runId}</dd>
+              </div>
+              <div>
+                <dt>Drift items</dt>
+                <dd>{ledgerProjectionState.drift.item.driftItemCount}</dd>
+              </div>
+              <div>
+                <dt>Request</dt>
+                <dd>{ledgerProjectionState.request.item.requestId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{ledgerProjectionState.request.approval.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Rebuild run</dt>
+                <dd>{ledgerProjectionState.run.item.runId}</dd>
+              </div>
+              <div>
+                <dt>Evidence</dt>
+                <dd>{ledgerProjectionState.run.item.rebuiltItemCount} projection rows rebuilt</dd>
+              </div>
+              <div>
+                <dt>Source hash</dt>
+                <dd>{ledgerProjectionState.run.item.afterSourceHash.slice(0, 16)}</dd>
+              </div>
+              <div>
+                <dt>Projection hash</dt>
+                <dd>{ledgerProjectionState.run.item.afterProjectionHash.slice(0, 16)}</dd>
+              </div>
+            </>
+          ) : null}
+          {ledgerProjectionState.status === "failed" ? (
+            <div>
+              <dt>Projection error</dt>
+              <dd>{ledgerProjectionState.message}</dd>
             </div>
           ) : null}
         </dl>
@@ -1159,6 +1280,19 @@ function reconciliationParameterCommandLabel(state: ReconciliationParameterComma
   return "failed";
 }
 
+function ledgerProjectionWorkflowLabel(state: LedgerProjectionWorkflowState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "completed") {
+    return "projection rebuild completed";
+  }
+  return "failed";
+}
+
 function keycloakOperatorLabel(state: OperatorKeycloakLoginState): string {
   if (state.status === "offline") {
     return "Keycloak URL not configured";
@@ -1258,6 +1392,25 @@ function reconciliationParameterClient(stepUp = false) {
     bearerToken: createSimulatorBearerToken({
       subject: "ops01",
       roles: ["OPS_MANAGER"],
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
+}
+
+function projectionClient(subject: string, roles: readonly string[], stepUp = false) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject,
+      roles,
       ...(stepUp
         ? {
             authTimeEpochSeconds: nowEpochSeconds,
