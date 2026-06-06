@@ -37,7 +37,7 @@ Post-fix verification commit: `480873add2d956ea9f1ff70554b5f17367f08abb`
 
 PR: `#54`
 
-Hosted GitHub Actions CI is blocked by billing/spending-limit and has not passed. The latest inspected check-run annotation for PR #54 says: `The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings`.
+Hosted GitHub Actions CI is blocked by billing/spending-limit and has not passed. Inspected PR #54 check-run annotations consistently say: `The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings`. Head-specific hosted-CI block records are also posted in the PR discussion.
 
 Local validation used the existing local dependency and Playwright browser installation. CI setup commands such as `npm ci`, `actions/setup-node`, `actions/setup-java`, `gradle/actions/setup-gradle`, and `npx playwright install --with-deps chromium` were not re-run locally; the commands below are the runnable validation equivalents of the workflow steps.
 

@@ -51,7 +51,7 @@ Scope: synthetic-only customer onboarding, account opening, customer signup/logi
 - `kubectl` client dry-run is recorded as `skipped_no_cluster` because the configured local Kubernetes API returned `the server is currently unable to handle the request`; structural Kubernetes validation still passed.
 - The new signup to login to accounts to transfer to history Playwright/API smoke is gated by `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN`, and `BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN`; without those values it skips with an explicit reason.
 - Plain local `security:evidence` skips DAST when `BANKING_LAB_DAST_URL` is not set; the 2026-06-07 local follow-up also ran Docker-forced security evidence against a disposable local synthetic core-banking target with DAST enabled.
-- Hosted CI for PR #54 has not produced runnable job evidence. Latest checked run `27070620477` for commit `a46ca8b9` completed all jobs as failed within a few seconds, and check-run annotation `79899068546` says the job was not started because recent account payments have failed or the spending limit needs to be increased.
+- Hosted CI for PR #54 has not produced runnable job evidence. Inspected runs complete all jobs as failed within a few seconds before any runner starts, and check-run annotations say the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
 ## 2026-06-07 Local CI-Equivalent Follow-Up
 
@@ -61,7 +61,7 @@ Matrix baseline commit: `aed3b563a0d5caf07e099f24e8d4fabcb12fd7b3`
 
 Post-fix verification commit: `480873add2d956ea9f1ff70554b5f17367f08abb`
 
-Hosted GitHub Actions CI is blocked by billing/spending-limit and has not passed. Latest inspected PR #54 check-run annotation `79899158251` says the job was not started because recent account payments failed or the spending limit must be increased.
+Hosted GitHub Actions CI is blocked by billing/spending-limit and has not passed. Head-specific hosted-CI block records are posted in the PR discussion; inspected check-run annotations say the job was not started because recent account payments failed or the spending limit must be increased.
 
 The local CI-equivalent matrix is recorded in `docs/test-evidence/ci.md`. Node reference tests, manifests, all Next.js channel typechecks/builds, contracts, platform structural validation, Compose config, Playwright manifest E2E, security evidence including Docker-forced ZAP DAST, formal ledger model, and non-core backend services passed. The initial full core-banking integration run failed in `MultiInstanceLedgerHaDrIntegrationTest` because independent security-disabled non-web Spring contexts could not create `CustomerAuthService` without a `PasswordEncoder` bean. Commit `480873add2d956ea9f1ff70554b5f17367f08abb` moved the password encoder into a web-independent Spring configuration; the exact HA test then passed, `ComplaintCaseApiParityIntegrationTest` passed on isolated rerun after a transient full-suite Flyway/PostgreSQL read timeout, and the final full `npm run test:core-banking:integration` rerun completed successfully.
 
