@@ -71,6 +71,8 @@ Passed for the implemented Phase 6 slice:
 | `docker stop banking-lab-dast-postgres` | escalated pass | Cleaned up disposable DAST database. |
 | `docker network rm banking-lab-dast-live` | escalated pass | Removed disposable DAST network. |
 | `npm test` | pass | Final Phase 6 Node structural/oracle suite passed with 172 tests after the Docker-forced generated security evidence refresh. |
+| `gh pr view 50 --json mergeStateStatus,statusCheckRollup,url` | pass | PR #50 is mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79873771310/annotations` | pass | GitHub Actions reported that the job was not started because account payments/spending limits blocked runner allocation. |
 
 ## Generated Security Evidence
 
@@ -99,6 +101,7 @@ Generated artifact paths:
 
 - Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in this phase. This phase added structural observability assets, application metrics, and runbook validation.
 - Full cross-service Gradle suites were not rerun for Phase 6; the changed backend areas were covered by targeted Spring tests and the audit export integration test.
+- PR #50 hosted CI jobs did not execute because GitHub account billing/spending limits blocked runner allocation before job steps started. This is recorded as external CI availability evidence, not a passed hosted CI run.
 
 ## Residual Risk
 

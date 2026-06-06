@@ -18,7 +18,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 
 Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through `contracts/openapi/core-banking.yaml`, `contracts/openapi/reporting-service.yaml`, standardized structured-error contract metadata on payment/notification contracts, AsyncAPI envelope metadata, reporting event schemas, root `contracts:*` scripts, CI wiring, and `tests/contractHardening.test.mjs`. Evidence is recorded in `docs/test-evidence/contract-validation-hardening.md`. PR #49 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local contract, Node, package, workflow, and service integration tests passed.
 
-Phase 6 update: secrets hygiene, default-secret fail-fast controls, observability metric validation, five operational runbooks, and a controlled audit export workflow are now implemented. `V036__audit_export_jobs.sql` stores audit export jobs/files, export requests are auditor/compliance-only, reason-required, step-up protected, idempotent, maker-checker approved, synthetic-only, and verified not to mutate ledger rows. Evidence is recorded in `docs/test-evidence/phase-6-ops-security.md`; generated Docker-forced security evidence now reports npm audit, Semgrep, Trivy filesystem scan, SBOM, and ZAP baseline DAST passing against a disposable local synthetic target.
+Phase 6 update: secrets hygiene, default-secret fail-fast controls, observability metric validation, five operational runbooks, and a controlled audit export workflow are now implemented. `V036__audit_export_jobs.sql` stores audit export jobs/files, export requests are auditor/compliance-only, reason-required, step-up protected, idempotent, maker-checker approved, synthetic-only, and verified not to mutate ledger rows. Evidence is recorded in `docs/test-evidence/phase-6-ops-security.md`; generated Docker-forced security evidence now reports npm audit, Semgrep, Trivy filesystem scan, SBOM, and ZAP baseline DAST passing against a disposable local synthetic target. PR #50 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted and structural tests passed.
 
 ## Already Implemented
 
@@ -146,6 +146,8 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 | `npm run security:evidence` | sandbox failed, first escalated run failed, escalated rerun pass with DAST skipped | Sandbox lacked npm registry/Docker access. First escalated run passed npm audit and SBOM but failed Semgrep and Trivy DB download. Later rerun passed npm audit, Semgrep, Trivy, and SBOM with DAST skipped because `BANKING_LAB_DAST_URL` was unset. |
 | `BANKING_LAB_DAST_URL=http://host.docker.internal:18132/health npm run security:evidence:docker` | escalated pass | Started disposable synthetic Postgres/core-banking DAST containers, confirmed `curl -fsS http://127.0.0.1:18132/health`, then Docker-forced npm audit, Semgrep, Trivy, SBOM, and ZAP baseline all passed. Temporary containers and network were removed afterward. |
 | `npm test` | pass | Final Phase 6 structural/oracle suite passed with 172 tests after restoring Docker-forced live DAST generated evidence. |
+| `gh pr view 50 --json mergeStateStatus,statusCheckRollup,url` | pass | Confirmed PR #50 is mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79873771310/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -155,6 +157,7 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 - Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 3 customer/staff route hardening; targeted customer/staff typecheck/build and full local Playwright passed, with live API-backed route tests still gated by missing service URLs.
 - PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #49 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
+- PR #50 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in Phase 6; this phase added structural assets and validator coverage.
 - `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.
 - Live Docker/Kubernetes/DAST/load/backup drills from the final command list were not rerun in Phase 0 because this phase is an inventory baseline, not an evidence refresh.
