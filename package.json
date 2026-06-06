@@ -42,6 +42,7 @@
     "aml:str-report": "node --experimental-strip-types scripts/run-aml-str-report.ts",
     "governance:evidence": "node --experimental-strip-types scripts/run-governance-evidence.ts",
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
+    "ci:check-workflow": "node --experimental-strip-types scripts/check-ci-workflow.ts",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",
     "retirement:ready-simulate": "node --experimental-strip-types scripts/check-node-retirement-ready-simulation.ts",

@@ -12,6 +12,10 @@ The 2026-06-06 remaining-hardening baseline is recorded in `docs/codex/remaining
 
 Current Phase 0 command evidence reran `npm ci`, `npm test`, `npm run validate:manifests`, `npm run packages:typecheck`, `npm run scripts:typecheck`, `docker compose config`, `npm run test:core-banking:unit`, and `npm run test:core-banking:integration`. The two Gradle commands failed inside the sandbox with a file-lock socket denial and passed after approved unsandboxed reruns.
 
+## Phase 1 CI Coverage Hardening
+
+The Phase 1 CI hardening evidence is recorded in `docs/test-evidence/ci-coverage-hardening.md`. The default PR workflow now includes explicit payment-service, notification-service, reporting-service, aggregate Gradle unit, platform structural, contract structural, and Docker Compose profile config jobs. Contract validation is intentionally structural in this phase; full OpenAPI/AsyncAPI drift prevention remains assigned to Phase 4.
+
 | Area | Feature/Screen | Manifest | Next UI | API Client | Spring API | PostgreSQL | Keycloak/AuthZ | Audit | Maker-checker | E2E/Integration Test | Evidence | Status |
 | ---- | -------------- | -------- | ------- | ---------- | ---------- | ---------- | -------------- | ----- | ------------- | -------------------- | -------- | ------ |
 | customer-web | Account overview/detail/history: `CWB-101`, `CWB-102`, `CWB-103` | yes | yes | yes | yes; transaction history plus statement/confirmation/certificate reads | yes; ledger postings drive statement artifacts and `balance_certificate_snapshots` persist certificate source metadata | customer token path when configured | self-service account and statement artifact audit with certificate snapshot audit references | not-applicable | Playwright conditional API smoke, Spring integration, statement read-model integration with persisted certificate snapshots, live customer Keycloak propagation for current API-backed paths | `docs/test-evidence/api-backed-channel-smoke.md`, `docs/test-evidence/keycloak-live-realm-smoke.md`, `docs/test-evidence/statement-read-models.md` | live-keycloak-backed |
