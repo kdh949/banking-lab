@@ -2,7 +2,7 @@
 
 Review date: 2026-06-06
 
-Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`, `codex/remaining-hardening-phase-6-ops-security`, `codex/remaining-hardening-phase-7-bounded-contexts`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`, `codex/remaining-hardening-phase-6-ops-security`, `codex/remaining-hardening-phase-7-bounded-contexts`, `codex/remaining-hardening-phase-8-large-ledger`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
@@ -22,6 +22,8 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 
 Phase 7 update: payment-service and reporting-service Kafka publishers now include persisted event envelope metadata (`sourceService`, `eventType`, `aggregateId`, `occurredAt`, `syntheticOnly`) in record headers and JSON envelope headers, and their Redpanda integration tests assert that metadata. Notification-service now rejects Kafka events missing required envelope metadata before creating delivery side effects. Existing payment/notification/reporting Compose and Keycloak service-token smokes were rerun for this bounded slice. Evidence is recorded in `docs/test-evidence/phase-7-bounded-context-hardening.md`. PR #51 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local bounded-context, contract, secrets, and structural tests passed.
 
+Phase 8 update: deterministic synthetic large-ledger dataset and benchmark evidence are now implemented through `scripts/generate-large-ledger-dataset.ts`, `scripts/check-ledger-partition-readiness.ts`, `npm run ledger:large-dataset-smoke`, and `npm run ledger:query-benchmark`. Generated evidence records 240 synthetic customers, 720 customer accounts, 5,000 balanced ledger transactions, 10,000 postings, unique idempotency keys, projection equality, archive candidate counts, partition-route consistency, and query-shape benchmark evidence. `docs/architecture/ledger-partition-archive-plan.md` documents the current FK-compatible route-table partition strategy and the future native source-table partition migration gate.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
@@ -38,6 +40,7 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 - Phase 4 contract gates now lint required OpenAPI files, compare `operationId` values with the shared TypeScript API client, and verify AsyncAPI event schema references plus synthetic-only payload guards.
 - Phase 6 operations/security now includes `.env.example`, `docs/security/secrets-management.md`, `security:secrets-check`, production-like default-secret startup guard coverage, Micrometer metrics for ledger command latency/errors, idempotency replays, outbox backlog, authorization denials, and audit append failures, Prometheus/Grafana structural assets, SLO/observability docs, five runbooks, and a general audit export API.
 - Phase 7 bounded-context verification now hardens payment/reporting producer envelopes and notification consumer envelope validation against the AsyncAPI backbone metadata.
+- Phase 8 large-ledger evidence now has deterministic synthetic dataset generation, partition/archive readiness checks, query benchmark JSON, architecture documentation, and structural tests.
 
 ## Partially Implemented
 
@@ -47,14 +50,14 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 - Phase 4 contracts: core/payment/notification/reporting OpenAPI contracts and root lint/client/event gates now exist. Remaining follow-up is DTO-level generated contract diffing, springdoc-generated spec comparison, and implementation-level event envelope validation in service integration tests.
 - Phase 6 operations/security: the requested secrets, observability, audit export, and runbook slice is implemented for local synthetic evidence. Remaining follow-up is live observability-stack alert evaluation, DAST with a supplied `BANKING_LAB_DAST_URL`, and any future external secret-store adapter design that remains synthetic-only.
 - Phase 7 bounded-context hardening: payment/notification/reporting implementations and CI jobs are substantial. This phase adds implementation-level envelope metadata verification and reruns bounded-context Compose/Keycloak smokes; remaining follow-up is generated JSON Schema validation of live Kafka records and any future notification domain-event producer if that bounded context starts publishing events.
-- Phase 8 large-ledger operational evidence: local synthetic load and backup/restore drills exist, but deterministic large-ledger dataset generation, ledger query benchmark scripts, generated benchmark JSON, and partition/archive readiness documentation are missing.
+- Phase 8 large-ledger operational evidence: deterministic in-memory synthetic dataset and benchmark evidence now exists. Remaining follow-up is live PostgreSQL `EXPLAIN ANALYZE` evidence on a disposable large dataset and any future native range partition migration after composite-key FK planning.
 
 ## Missing
 
 - A complete method-level authorization annotation audit across every high-risk service method and bounded-context denial audit rows for every payment/notification/reporting auth failure.
 - Live API execution evidence for the new customer-web and staff-terminal route pages beyond existing API-backed panels and manifest-renderer smokes.
 - DTO-level generated OpenAPI diffing and implementation-level event envelope producer validation remain missing beyond the new root contract gates.
-- Large-ledger generator, partition/archive readiness checker, large dataset smoke script, query benchmark script, and generated evidence files.
+- Live PostgreSQL large-ledger `EXPLAIN ANALYZE` evidence and native source-table range partition migration remain future work; Phase 8 intentionally avoids the broader composite-key FK migration in this slice.
 
 ## Risks
 
@@ -75,7 +78,7 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 - Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps. Completed for root lint/client/event gates and core/reporting contract presence; keep generated DTO/schema diffing as follow-up.
 - Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence. Completed for local synthetic evidence; keep live DAST and live alert routing for an environment-enabled follow-up.
 - Phase 7: Tighten payment/notification/reporting bounded-context CI and contract verification without reimplementing completed service behavior. Completed for envelope metadata verification, bounded-context Gradle coverage, and existing Compose/Keycloak service-token smoke reruns.
-- Phase 8: Add deterministic large-ledger operational evidence, benchmark outputs, and partition/archive readiness docs.
+- Phase 8: Add deterministic large-ledger operational evidence, benchmark outputs, and partition/archive readiness docs. Completed for synthetic in-memory evidence and schema-readiness checks; keep live PostgreSQL benchmark evidence as a future environment-enabled follow-up.
 
 ## Commands Attempted
 
@@ -168,6 +171,13 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 7 whitespace validation passed while excluding pre-existing generated evidence changes. |
 | `gh pr view 51 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #51 was mergeable but unstable because hosted CI jobs failed before runner startup. |
 | `gh api /repos/kdh949/banking-lab/check-runs/79874851504/annotations` | pass | Confirmed observed PR #51 GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `npm run ledger:large-dataset-smoke` | pass | Phase 8 generated deterministic synthetic large-ledger summary JSON and markdown evidence. |
+| `npm run ledger:query-benchmark` | pass | Phase 8 generated partition/archive readiness and query benchmark JSON evidence. |
+| `npm run scripts:typecheck` | pass | Phase 8 script TypeScript strict check passed after adding large-ledger scripts. |
+| `npm test` | first runs failed, final rerun pass | New Phase 8 structural test initially had brittle source-text assertions; final rerun passed 174 tests after assertion fixes and status updates. |
+| `npm run ledger:integrity-check` | sandbox failed, escalated pass | Sandbox failed on Gradle file-lock socket; approved rerun passed `LedgerDatabaseIntegrityIntegrationTest` with rerun tasks. |
+| `npm run security:secrets-check` | pass | Phase 8 secret placeholder scan passed for 863 files. |
+| `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 8 whitespace validation passed while excluding pre-existing generated evidence changes. |
 
 ## Commands Not Attempted
 
@@ -180,5 +190,5 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 - PR #50 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #51 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in Phase 6; this phase added structural assets and validator coverage.
-- `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.
+- Live PostgreSQL `EXPLAIN ANALYZE` for Phase 8 account statement, reconciliation, and archive candidate queries was not attempted; the current phase records deterministic in-memory synthetic benchmark evidence and migration/schema readiness.
 - Live Docker/Kubernetes/DAST/load/backup drills from the final command list were not rerun in Phase 0 because this phase is an inventory baseline, not an evidence refresh.
