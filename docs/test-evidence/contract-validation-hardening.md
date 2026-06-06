@@ -37,10 +37,12 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 | `npm run ci:check-workflow` | pass | Confirmed the `contracts-validation` CI job runs the new `contracts:*` gates. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest` | sandbox failed, escalated up-to-date pass | Sandbox failed before tests on Gradle file-lock socket; first escalated rerun completed with tasks up-to-date, so it was not counted as a real test execution. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest --rerun-tasks` | escalated pass | Real integration rerun passed with 17 tasks executed. |
+| `gh pr view 49 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | PR #49 is mergeable but unstable because hosted GitHub Actions jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79871013246/annotations` | pass | GitHub Actions reported that hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Not Run Yet
 
-- GitHub-hosted CI has not been rerun for this phase yet; the previous Phase 3 PR showed account billing/spending-limit runner allocation failures.
+- PR #49 hosted CI jobs did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started. This is recorded as an external CI availability gate, not a passed or failed test step.
 
 ## Residual Risk
 

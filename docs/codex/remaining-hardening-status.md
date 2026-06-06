@@ -16,7 +16,7 @@ Phase 5 update: ledger projection drift/rebuild operations now have Flyway migra
 
 Phase 3 update: customer-web now has route-backed workflow pages for login, accounts, account detail, transfers, complaints, cards, loans, payments, notifications, and security; staff-terminal now has route-backed workflow pages for transaction code, customer, account, approvals, audit, and workflow timeline views. The route pages reuse shared route components, manifest metadata, structured-error/idempotency/FDS/approval state panels, and mark synthetic demo fallbacks explicitly. Evidence is recorded in `docs/test-evidence/phase-3-workflow-route-hardening.md`. PR #48 hosted GitHub Actions were attempted and rerun, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted tests passed and the blocked hosted CI gate is recorded as external availability evidence.
 
-Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through `contracts/openapi/core-banking.yaml`, `contracts/openapi/reporting-service.yaml`, standardized structured-error contract metadata on payment/notification contracts, AsyncAPI envelope metadata, reporting event schemas, root `contracts:*` scripts, CI wiring, and `tests/contractHardening.test.mjs`. Evidence is recorded in `docs/test-evidence/contract-validation-hardening.md`.
+Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through `contracts/openapi/core-banking.yaml`, `contracts/openapi/reporting-service.yaml`, standardized structured-error contract metadata on payment/notification contracts, AsyncAPI envelope metadata, reporting event schemas, root `contracts:*` scripts, CI wiring, and `tests/contractHardening.test.mjs`. Evidence is recorded in `docs/test-evidence/contract-validation-hardening.md`. PR #49 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local contract, Node, package, workflow, and service integration tests passed.
 
 ## Already Implemented
 
@@ -126,6 +126,8 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 | `npm run ci:check-workflow` | pass | Confirmed `contracts-validation` runs the new `contracts:*` scripts. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest` | sandbox failed, escalated up-to-date pass | Sandbox failed on Gradle file-lock socket; first escalated rerun completed with tasks up-to-date and was not counted as real test execution. |
 | `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest --rerun-tasks` | escalated pass | Phase 4 service integration verification passed with 17 Gradle tasks executed. |
+| `gh pr view 49 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #49 is mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79871013246/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -134,7 +136,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 - Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
 - Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 3 customer/staff route hardening; targeted customer/staff typecheck/build and full local Playwright passed, with live API-backed route tests still gated by missing service URLs.
 - PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
-- GitHub-hosted CI for Phase 4 has not run yet; the previous Phase 3 PR showed account billing/spending-limit runner allocation failures.
+- PR #49 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.
 - `npm run observability:validate`: not attempted because the script is not defined yet.
 - `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.
