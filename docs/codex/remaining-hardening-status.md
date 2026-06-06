@@ -2,7 +2,7 @@
 
 Review date: 2026-06-06
 
-Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`, `codex/remaining-hardening-phase-6-ops-security`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`, `codex/remaining-hardening-phase-6-ops-security`, `codex/remaining-hardening-phase-7-bounded-contexts`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
@@ -20,6 +20,8 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 
 Phase 6 update: secrets hygiene, default-secret fail-fast controls, observability metric validation, five operational runbooks, and a controlled audit export workflow are now implemented. `V036__audit_export_jobs.sql` stores audit export jobs/files, export requests are auditor/compliance-only, reason-required, step-up protected, idempotent, maker-checker approved, synthetic-only, and verified not to mutate ledger rows. Evidence is recorded in `docs/test-evidence/phase-6-ops-security.md`; generated Docker-forced security evidence now reports npm audit, Semgrep, Trivy filesystem scan, SBOM, and ZAP baseline DAST passing against a disposable local synthetic target. PR #50 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted and structural tests passed.
 
+Phase 7 update: payment-service and reporting-service Kafka publishers now include persisted event envelope metadata (`sourceService`, `eventType`, `aggregateId`, `occurredAt`, `syntheticOnly`) in record headers and JSON envelope headers, and their Redpanda integration tests assert that metadata. Notification-service now rejects Kafka events missing required envelope metadata before creating delivery side effects. Existing payment/notification/reporting Compose and Keycloak service-token smokes were rerun for this bounded slice. Evidence is recorded in `docs/test-evidence/phase-7-bounded-context-hardening.md`.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
@@ -35,6 +37,7 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 - Phase 3 customer-web and staff-terminal route shells now split core workflow routes out of the single root panel path and render loading/success/replay/held/blocked/validation/auth/unexpected states from shared route components.
 - Phase 4 contract gates now lint required OpenAPI files, compare `operationId` values with the shared TypeScript API client, and verify AsyncAPI event schema references plus synthetic-only payload guards.
 - Phase 6 operations/security now includes `.env.example`, `docs/security/secrets-management.md`, `security:secrets-check`, production-like default-secret startup guard coverage, Micrometer metrics for ledger command latency/errors, idempotency replays, outbox backlog, authorization denials, and audit append failures, Prometheus/Grafana structural assets, SLO/observability docs, five runbooks, and a general audit export API.
+- Phase 7 bounded-context verification now hardens payment/reporting producer envelopes and notification consumer envelope validation against the AsyncAPI backbone metadata.
 
 ## Partially Implemented
 
@@ -43,7 +46,7 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 - Phase 3 customer/staff workflow UI hardening: route-separated workflow pages and state panels now exist. Remaining follow-up is deeper live API execution from the route pages themselves, since many real command executions still run through the existing API-backed panels and manifest renderer when service URLs are configured.
 - Phase 4 contracts: core/payment/notification/reporting OpenAPI contracts and root lint/client/event gates now exist. Remaining follow-up is DTO-level generated contract diffing, springdoc-generated spec comparison, and implementation-level event envelope validation in service integration tests.
 - Phase 6 operations/security: the requested secrets, observability, audit export, and runbook slice is implemented for local synthetic evidence. Remaining follow-up is live observability-stack alert evaluation, DAST with a supplied `BANKING_LAB_DAST_URL`, and any future external secret-store adapter design that remains synthetic-only.
-- Phase 7 bounded-context hardening: payment/notification/reporting implementations are substantial, but their CI and contract gates are not first-class PR jobs yet. Remaining goals should focus on missing verification links rather than duplicating already implemented service features.
+- Phase 7 bounded-context hardening: payment/notification/reporting implementations and CI jobs are substantial. This phase adds implementation-level envelope metadata verification and reruns bounded-context Compose/Keycloak smokes; remaining follow-up is generated JSON Schema validation of live Kafka records and any future notification domain-event producer if that bounded context starts publishing events.
 - Phase 8 large-ledger operational evidence: local synthetic load and backup/restore drills exist, but deterministic large-ledger dataset generation, ledger query benchmark scripts, generated benchmark JSON, and partition/archive readiness documentation are missing.
 
 ## Missing
@@ -71,7 +74,7 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 - Phase 3: Harden customer-web and staff-terminal workflows around route-level jobs, selected API results, idempotency replay, held/blocked states, and structured error handling. Completed for route split and static/Playwright state coverage; keep live route execution evidence as a follow-up.
 - Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps. Completed for root lint/client/event gates and core/reporting contract presence; keep generated DTO/schema diffing as follow-up.
 - Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence. Completed for local synthetic evidence; keep live DAST and live alert routing for an environment-enabled follow-up.
-- Phase 7: Tighten payment/notification/reporting bounded-context CI and contract verification without reimplementing completed service behavior.
+- Phase 7: Tighten payment/notification/reporting bounded-context CI and contract verification without reimplementing completed service behavior. Completed for envelope metadata verification, bounded-context Gradle coverage, and existing Compose/Keycloak service-token smoke reruns.
 - Phase 8: Add deterministic large-ledger operational evidence, benchmark outputs, and partition/archive readiness docs.
 
 ## Commands Attempted
@@ -148,6 +151,21 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 | `npm test` | pass | Final Phase 6 structural/oracle suite passed with 172 tests after restoring Docker-forced live DAST generated evidence. |
 | `gh pr view 50 --json mergeStateStatus,statusCheckRollup,url` | pass | Confirmed PR #50 is mergeable but unstable because hosted CI jobs failed before runner startup. |
 | `gh api /repos/kdh949/banking-lab/check-runs/79873771310/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `scripts/run-core-banking-tests.sh :services:payment-service:integrationTest --tests '*PaymentKafkaOutboxPublisherIntegrationTest' :services:notification-service:integrationTest --tests '*NotificationKafkaConsumerIntegrationTest' :services:reporting-service:integrationTest --tests '*ReportingKafkaOutboxPublisherIntegrationTest'` | escalated pass | Phase 7 targeted Redpanda/Testcontainers envelope metadata verification for payment, notification, and reporting bounded contexts. |
+| `scripts/run-core-banking-tests.sh :services:payment-service:test :services:payment-service:integrationTest :services:notification-service:test :services:notification-service:integrationTest :services:reporting-service:test :services:reporting-service:integrationTest` | escalated pass | Phase 7 full bounded-context Gradle unit/integration tasks passed. |
+| `npm run contracts:lint` | pass | Phase 7 contract lint rerun after envelope metadata hardening. |
+| `npm run contracts:check-client` | pass | Phase 7 shared API-client contract drift gate rerun. |
+| `npm run contracts:check-events` | pass | Phase 7 AsyncAPI schema-reference and synthetic-only event guard rerun. |
+| `npm run test:payment-service:outbox-worker-compose` | escalated pass | Disposable synthetic Compose stack proved payment outbox worker settlement path. |
+| `npm run test:payment-service:domain-publisher-compose` | escalated pass | Disposable synthetic Compose stack proved payment domain-event publisher path. |
+| `npm run test:payment-service:keycloak-service-token` | escalated pass | Disposable synthetic Keycloak/core/payment stack accepted a `PAYMENT_SERVICE` service token. |
+| `npm run test:notification-service:provider-dead-letter-compose` | escalated pass | Disposable synthetic Compose stack proved notification provider retry/dead-letter behavior. |
+| `npm run test:notification-service:keycloak-service-token` | escalated pass | Disposable synthetic Keycloak/notification stack accepted a `NOTIFICATION_SERVICE` service token. |
+| `npm run test:reporting-service:domain-publisher-compose` | escalated pass | Disposable synthetic Compose stack proved reporting domain-event publisher path. |
+| `npm run test:reporting-service:keycloak-service-token` | escalated pass | Disposable synthetic Keycloak/reporting stack accepted a `REPORTING_ANALYST` service token. |
+| `npm run security:secrets-check` | pass | Phase 7 secret placeholder scan passed for 857 files. |
+| `npm test` | pass | Phase 7 final Node oracle/structural suite passed with 172 tests. |
+| `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 7 whitespace validation passed while excluding pre-existing generated evidence changes. |
 
 ## Commands Not Attempted
 
