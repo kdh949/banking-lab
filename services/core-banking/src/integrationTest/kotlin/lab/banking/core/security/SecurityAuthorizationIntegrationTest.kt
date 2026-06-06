@@ -23,7 +23,13 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
-@SpringBootTest(properties = ["banking-lab.security.enabled=true"])
+@SpringBootTest(
+    properties = [
+        "banking-lab.security.enabled=true",
+        "banking-lab.security.simulator-tokens-enabled=true",
+        "banking-lab.security.dev-simulator-token-enabled=true"
+    ]
+)
 @AutoConfigureMockMvc
 @Testcontainers
 class SecurityAuthorizationIntegrationTest {

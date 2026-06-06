@@ -5,6 +5,7 @@ import java.util.UUID
 import lab.banking.core.common.BankingLabDomainException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -50,6 +51,27 @@ class StructuredApiErrorHandler {
             )
         )
     }
+
+    @ExceptionHandler(AuthorizationDeniedException::class)
+    fun authorizationDenied(
+        error: AuthorizationDeniedException,
+        request: HttpServletRequest
+    ): ResponseEntity<StructuredApiErrorEnvelope> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            StructuredApiErrorEnvelope(
+                error = StructuredApiError(
+                    code = "AUTHORIZATION_POLICY_VIOLATION",
+                    message = error.message ?: "actor role is not allowed for this API route",
+                    statusCode = 403,
+                    domain = "auth",
+                    policy = "RBAC_ABAC_POLICY_REQUIRED",
+                    cause = "The authenticated Keycloak/OIDC principal did not satisfy the modeled method-level authorization policy.",
+                    fix = "Retry with a valid synthetic Bearer token whose role matches the high-risk operation.",
+                    requestId = requestId(request),
+                    route = request.requestURI
+                )
+            )
+        )
 
     @ExceptionHandler(NoResourceFoundException::class)
     fun noResource(error: NoResourceFoundException, request: HttpServletRequest): ResponseEntity<StructuredApiErrorEnvelope> =

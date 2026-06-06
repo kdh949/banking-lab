@@ -59,6 +59,7 @@ test("AML STR report generator produces synthetic-only model and reporting artif
 test("AML/FDS governance API surface enforces high-risk controls in source", async () => {
   const service = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlFdsGovernanceService.kt", "utf8");
   const authFilter = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabAuthorizationFilter.kt", "utf8");
+  const routePolicy = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabRouteAuthorizationManager.kt", "utf8");
   const securityPolicy = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabSecurityPolicyEnforcer.kt", "utf8");
 
   assert.match(service, /MAKER_CHECKER_SELF_APPROVAL_REJECTED/);
@@ -66,7 +67,8 @@ test("AML/FDS governance API surface enforces high-risk controls in source", asy
   assert.match(service, /approvedByRole != "COMPLIANCE_MANAGER"/);
   assert.match(service, /SANCTIONS_SCREENING_HIT/);
   assert.match(service, /SANCTIONS_FALSE_POSITIVE_DISPOSITIONED/);
-  assert.match(authFilter, /path\.startsWith\("\/api\/aml\/governance"\)/);
-  assert.match(authFilter, /"AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR"/);
+  assert.match(authFilter, /routeAuthorizationManager\.allowedRoles\(request\)/);
+  assert.match(routePolicy, /path\.startsWith\("\/api\/aml\/governance"\)/);
+  assert.match(routePolicy, /"AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR"/);
   assert.match(securityPolicy, /path\.startsWith\("\/api\/aml\/governance\/"\)/);
 });

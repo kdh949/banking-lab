@@ -22,6 +22,7 @@ class BankingLabAuthorizationFilter(
     @param:Value("\${banking-lab.cors.allowed-origins:http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:3003,http://127.0.0.1:3004,http://127.0.0.1:3005,http://127.0.0.1:3006,http://127.0.0.1:3007}")
     private val allowedCorsOrigins: String,
     private val decoder: BankingLabTokenDecoder,
+    private val routeAuthorizationManager: BankingLabRouteAuthorizationManager,
     private val securityPolicyEnforcer: BankingLabSecurityPolicyEnforcer,
     private val auditEvents: AuditEventAppender,
     private val objectMapper: ObjectMapper
@@ -40,7 +41,7 @@ class BankingLabAuthorizationFilter(
             deny(request, response, null, HttpStatus.UNAUTHORIZED, "authentication token is missing or invalid")
             return
         }
-        val allowedRoles = allowedRoles(request)
+        val allowedRoles = routeAuthorizationManager.allowedRoles(request)
         if (allowedRoles.isNotEmpty() && !principal.hasAnyRole(allowedRoles)) {
             deny(request, response, principal, HttpStatus.FORBIDDEN, "actor role is not allowed for this API route")
             return
@@ -68,39 +69,6 @@ class BankingLabAuthorizationFilter(
             return false
         }
         return path.startsWith("/api/") && path != "/api/health"
-    }
-
-    private fun allowedRoles(request: HttpServletRequest): Set<String> {
-        val method = request.method
-        val path = request.requestURI
-        return when {
-            path.startsWith("/api/customer/") -> setOf("CUSTOMER")
-            path.startsWith("/api/customers/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/transactions/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/accounts/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/products/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/fees/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/loans/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/cards/") || path == "/api/cards" -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path == "/api/fds/analytics" -> setOf("FDS_REVIEWER", "AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
-            path.startsWith("/api/aml/governance") -> setOf("AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
-            path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/staff/operations/retry-queue") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
-            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
-            path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
-            path.matches(Regex("^/api/staff/approvals/[^/]+/approve$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
-            path.matches(Regex("^/api/staff/approvals/[^/]+/reject$")) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
-            path.startsWith("/api/ops/security") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
-            path.startsWith("/api/ops/") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "BRANCH_MANAGER")
-            path.startsWith("/api/admin/") -> setOf("COMPLIANCE_MANAGER", "PASSKEY_RECOVERY_ADMIN")
-            path.startsWith("/api/auth/session") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER", "PASSKEY_RECOVERY_ADMIN")
-            path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
-            path == "/api/ledger/payment-postings" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
-            path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
-            else -> emptySet()
-        }
     }
 
     private fun customerOwnershipDenied(request: HttpServletRequest, principal: BankingLabPrincipal): Boolean {

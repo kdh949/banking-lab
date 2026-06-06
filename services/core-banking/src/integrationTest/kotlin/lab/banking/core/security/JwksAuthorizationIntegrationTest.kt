@@ -116,6 +116,74 @@ class JwksAuthorizationIntegrationTest {
     }
 
     @Test
+    fun `resource server validates issuer audience resource roles and scope roles`() {
+        mockMvc.perform(
+            get("/api/staff/customers/SYN-CUS-001/detail")
+                .header(
+                    "Authorization",
+                    signedBearer(
+                        subject = "resource-role-staff01",
+                        roles = emptyList(),
+                        resourceAccessRoles = mapOf("banking-lab-api" to listOf("BRANCH_STAFF"))
+                    )
+                )
+                .queryParam("reason", "Resource access role smoke")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.customerId").value("SYN-CUS-001"))
+
+        mockMvc.perform(
+            get("/api/audit/events")
+                .header(
+                    "Authorization",
+                    signedBearer(
+                        subject = "scope-auditor01",
+                        roles = emptyList(),
+                        scope = "AUDITOR"
+                    )
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items").isArray)
+
+        mockMvc.perform(
+            get("/api/staff/customers/SYN-CUS-001/detail")
+                .header(
+                    "Authorization",
+                    signedBearer(
+                        subject = "wrong-issuer01",
+                        roles = listOf("BRANCH_STAFF"),
+                        issuerOverride = "http://untrusted-issuer.local/realms/banking-lab"
+                    )
+                )
+                .header("x-request-id", "REQ-JWKS-WRONG-ISSUER")
+                .queryParam("reason", "Wrong issuer denial smoke")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-JWKS-WRONG-ISSUER"))
+
+        mockMvc.perform(
+            get("/api/staff/customers/SYN-CUS-001/detail")
+                .header(
+                    "Authorization",
+                    signedBearer(
+                        subject = "wrong-audience01",
+                        roles = listOf("BRANCH_STAFF"),
+                        audienceOverride = "other-synthetic-api"
+                    )
+                )
+                .header("x-request-id", "REQ-JWKS-WRONG-AUDIENCE")
+                .queryParam("reason", "Wrong audience denial smoke")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-JWKS-WRONG-AUDIENCE"))
+
+        assertEquals(2, countRows("audit_events WHERE event_type = 'AUTHORIZATION_DENIED'"))
+    }
+
+    @Test
     fun `signed JWKS token enforces step up trusted device and session revocation`() {
         mockMvc.perform(
             post("/api/staff/pii/unmask")
@@ -325,14 +393,18 @@ class JwksAuthorizationIntegrationTest {
         authenticationMethods: List<String> = emptyList(),
         assuranceLevel: String? = null,
         authTime: Instant? = null,
-        expiresAt: Instant = Instant.now().plusSeconds(300)
+        expiresAt: Instant = Instant.now().plusSeconds(300),
+        issuerOverride: String? = null,
+        audienceOverride: String? = null,
+        resourceAccessRoles: Map<String, List<String>> = emptyMap(),
+        scope: String? = null
     ): String {
         val header = mapOf("alg" to "RS256", "typ" to "JWT", "kid" to keyId)
         val now = Instant.now()
         val payload = linkedMapOf<String, Any?>(
-            "iss" to issuer,
+            "iss" to (issuerOverride ?: issuer),
             "sub" to subject,
-            "aud" to listOf(audience),
+            "aud" to listOf(audienceOverride ?: audience),
             "iat" to now.epochSecond,
             "nbf" to now.minusSeconds(5).epochSecond,
             "exp" to expiresAt.epochSecond,
@@ -354,6 +426,14 @@ class JwksAuthorizationIntegrationTest {
         }
         if (authTime != null) {
             payload["auth_time"] = authTime.epochSecond
+        }
+        if (resourceAccessRoles.isNotEmpty()) {
+            payload["resource_access"] = resourceAccessRoles.mapValues { (_, mappedRoles) ->
+                mapOf("roles" to mappedRoles)
+            }
+        }
+        if (!scope.isNullOrBlank()) {
+            payload["scope"] = scope
         }
         val encodedHeader = base64Url(objectMapper.writeValueAsBytes(header))
         val encodedPayload = base64Url(objectMapper.writeValueAsBytes(payload))

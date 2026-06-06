@@ -2,13 +2,15 @@
 
 Review date: 2026-06-06
 
-Branch: `codex/remaining-hardening-phase-0`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
 Working tree note: before Phase 0 edits, the workspace already had modified generated evidence under `docs/test-evidence/generated/` and untracked Codex planning documents under `docs/codex/`. Phase 0 documentation avoids treating those pre-existing generated changes as new implementation evidence.
 
 Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/ci.yml` for payment, notification, reporting, aggregate Gradle unit tests, platform validation, structural contracts validation, and Docker Compose profile rendering. `docs/test-evidence/ci-coverage-hardening.md` records the PR/manual boundary and fallback policy. Contract validation remains structural until Phase 4 adds dedicated OpenAPI/AsyncAPI drift scripts.
+
+Phase 2 update: Spring Security and OAuth2 Resource Server dependencies/configuration are now present in all four Spring services. Signed JWKS tokens are verified through Spring/Nimbus decoders, route authorization remains in explicit policy layers, simulator tokens require dev/test double opt-in and fail fast in prod-like profiles, and selected high-risk core APIs now have method-level `@PreAuthorize` gates. Evidence is recorded in `docs/test-evidence/spring-security-resource-server-hardening.md`.
 
 ## Already Implemented
 
@@ -20,10 +22,11 @@ Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/
 - Payment, notification, and reporting bounded contexts have Spring source, Flyway migrations, service-specific scripts, integration tests, OpenAPI/Event contract artifacts for several surfaces, Docker Compose profiles, Kubernetes/Helm resources, and evidence documents.
 - Outbox, Redpanda, Temporal, Keycloak/JWKS, security evidence, formal ledger checks, backup/restore, synthetic load, and platform structural validation have existing implementation/evidence from earlier phases.
 - Phase 1 CI full-service wiring now connects service-specific backend jobs, aggregate Gradle unit checks, platform structural validation, structural contract checks, and Compose profile config rendering to PR CI.
+- Phase 2 Spring Security Resource Server standardization now protects Spring service API routes with stateless Security filter chains, issuer/audience-aware JWT decoding, Keycloak-style role extraction, simulator-token prod-like profile guards, structured auth failures, and selected high-risk method authorization.
 
 ## Partially Implemented
 
-- Phase 2 authentication/authorization standardization: secure defaults, signed JWKS validation, simulator-token opt-in, trusted-device/session/step-up policy, and authorization tests exist, but services still rely on custom authorization filters and custom token decoders. Spring Security OAuth2 Resource Server dependencies/configuration and method-level authorization are not yet the canonical runtime path.
+- Phase 2 authentication/authorization standardization: Resource Server authentication is now the canonical signed-JWT path, but legacy compatibility decoders remain for dev/test fallback and bounded-context authorization-denied audit expansion is not complete.
 - Phase 5 ledger projection drift/rebuild: balance projections and integrity checks exist, and backup/restore evidence checks projection equality, but dedicated drift run tables, rebuild request/run tables, maker-checker rebuild APIs, ops manifests, and `LedgerProjection*` integration tests are missing.
 - Phase 3 customer/staff workflow UI hardening: API-backed panels and manifests exist, but customer-web and staff-terminal still rely heavily on single-page panel flows. Route-separated real workflow pages, token lifecycle UX, and full state panels for loading/success/replay/held/validation/auth/unexpected failures need deeper implementation.
 - Phase 4 contracts: `contracts/openapi/payment-service.yaml`, `contracts/openapi/notification-service.yaml`, `contracts/asyncapi/banking-lab-events.yaml`, and event schemas exist, but `core-banking` and `reporting-service` OpenAPI contracts are missing and root `contracts:lint`, `contracts:check-client`, and `contracts:check-events` scripts are not present.
@@ -33,7 +36,7 @@ Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/
 
 ## Missing
 
-- Spring Security Resource Server configuration classes such as `SecurityConfig`, JWT authentication converter/policy adapter, resource server dependencies, and Spring Security tests for the standard filter chain.
+- A complete method-level authorization annotation audit across every high-risk service method and bounded-context denial audit rows for every payment/notification/reporting auth failure.
 - Dedicated ledger projection drift/rebuild Flyway migrations, services, controllers, ops-console manifests, API-client methods, tests, and evidence.
 - Customer-web route split for login/accounts/account detail/transfers/complaints/cards/loans/payments/notifications/security and staff-terminal route/workflow hardening beyond API-backed panels.
 - Contract lint/check scripts and complete OpenAPI/AsyncAPI coverage for core-banking, reporting-service, and the shared client/event drift gates.
@@ -73,14 +76,21 @@ Phase 1 update: full-service CI wiring is now implemented in `.github/workflows/
 | `docker compose config` | pass | Default Compose config rendered; default profile expands the legacy/reference web service only. |
 | `npm run test:core-banking:unit` | sandbox failed, escalated pass | Sandbox failed on Gradle file-lock socket; approved rerun passed `:services:core-banking:test`. |
 | `npm run test:core-banking:integration` | sandbox failed, escalated pass | Sandbox failed on Gradle file-lock socket; approved rerun passed `:services:core-banking:integrationTest`. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:payment-service:compileKotlin :services:notification-service:compileKotlin :services:reporting-service:compileKotlin` | sandbox failed, escalated pass | Phase 2 compile check for all Spring services; sandbox failed on Gradle file-lock socket, approved rerun passed. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:test --tests '*SpringSecurityResourceServerTest'` | pass | Phase 2 unit coverage for JWT claim conversion and prod-like simulator profile guard. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests '*Security*' --tests '*Authorization*' --tests '*Jwks*'` | first run failed, rerun pass | First run exposed `JwtException` handling and raw simulator timestamp issues; rerun passed after decoder fixes. |
+| `scripts/run-core-banking-tests.sh :services:payment-service:integrationTest --tests '*Authorization*' :services:notification-service:integrationTest --tests '*Authorization*' :services:reporting-service:integrationTest` | pass | Phase 2 bounded-context authorization coverage behind Spring Security Resource Server. |
+| `npm run scripts:typecheck` | pass | Phase 2 script typecheck. |
+| `npm test` | first run failed, rerun pass | First run exposed source-scaffold test drift after route policy extraction; rerun passed after updating the test. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:test :services:payment-service:test :services:notification-service:test :services:reporting-service:test` | first run failed, rerun pass | First run exposed MVC-slice default security on health metadata endpoints; rerun passed after test and runtime permit fixes. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest` | first runs failed, final rerun pass | Exposed and fixed method-security disabled-mode behavior, servlet-only security config, structured method-denial handling, and AML reviewer workflow role alignment. |
+| `scripts/run-core-banking-tests.sh :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest` | pass | Full bounded-context integration tasks passed. |
 
 ## Commands Not Attempted
 
 - `docker compose --profile platform config`: reserved for Phase 1 CI/platform work.
 - `npm run platform:validate`: reserved for Phase 1 CI/platform work.
-- `npm run test:payment-service:unit` and `npm run test:payment-service:integration`: reserved for Phase 1 service-CI wiring.
-- `npm run test:notification-service:unit` and `npm run test:notification-service:integration`: reserved for Phase 1 service-CI wiring.
-- `npm run test:reporting-service:unit` and `npm run test:reporting-service:integration`: reserved for Phase 1 service-CI wiring.
+- Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
 - `npm run next:*:typecheck`, `npm run next:*:build`, and `npm run test:e2e`: not required for Phase 0 documentation baseline; will be run in the UI hardening phase or final verification as scope requires.
 - `npm run contracts:lint`, `npm run contracts:check-client`, and `npm run contracts:check-events`: not attempted because these scripts are not defined yet.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.

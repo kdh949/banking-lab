@@ -13,6 +13,7 @@ import lab.banking.core.reconciliation.ReconciliationDailyClosingCommand
 import lab.banking.core.reconciliation.ReconciliationOpsService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -41,6 +42,7 @@ class LedgerController(
         ledgerResponse(ledgerCommandService.reverseTransaction(command))
 
     @PostMapping("/ledger/adjustments")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('OPS_OPERATOR','BRANCH_MANAGER','COMPLIANCE_MANAGER')")
     fun adjustment(@RequestBody command: AdjustmentCommand): ResponseEntity<LedgerCommandResult> =
         ledgerResponse(ledgerCommandService.adjustment(command))
 
@@ -49,6 +51,7 @@ class LedgerController(
         ledgerResponse(ledgerCommandService.billPayment(command))
 
     @PostMapping("/ops/daily-closings")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('OPS_OPERATOR','OPS_MANAGER','BRANCH_MANAGER')")
     fun closeBusinessDay(@RequestBody command: ReconciliationDailyClosingCommand): ResponseEntity<ReconciliationClosingResponse> {
         val result = reconciliationOpsService.closeBusinessDay(command)
         return ResponseEntity.status(if (result.replayed) HttpStatus.OK else HttpStatus.CREATED).body(result)
