@@ -24,19 +24,21 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: 9000
+              name: management
           envFrom:
             - secretRef:
                 name: banking-lab-secret
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: http
+              port: management
             initialDelaySeconds: 45
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /health/live
-              port: http
+              port: management
             initialDelaySeconds: 60
             periodSeconds: 20
 ---
@@ -56,3 +58,6 @@ spec:
     - name: http
       port: 8080
       targetPort: http
+    - name: management
+      port: 9000
+      targetPort: management

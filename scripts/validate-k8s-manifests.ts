@@ -68,6 +68,7 @@ const notificationConsumerDeployment = requireDocument(documents, "Deployment", 
 const workerDeployment = requireDocument(documents, "Deployment", "core-banking-temporal-worker", errors);
 const postgres = requireDocument(documents, "StatefulSet", "postgres", errors);
 const keycloak = requireDocument(documents, "Deployment", "keycloak", errors);
+const keycloakService = requireDocument(documents, "Service", "keycloak", errors);
 const redpanda = requireDocument(documents, "Deployment", "redpanda", errors);
 const temporal = requireDocument(documents, "Deployment", "temporal", errors);
 const ingressTlsSecret = requireDocument(documents, "Secret", "banking-lab-ingress-tls", errors);
@@ -81,6 +82,15 @@ for (const deployment of [coreDeployment, reportingDeployment, reportingDomainEv
 }
 if (!hasText(workerDeployment, "BANKING_LAB_TEMPORAL_WORKER_ENABLED") || !hasText(workerDeployment, "value: \"true\"")) {
   errors.push("Temporal worker deployment must explicitly enable BANKING_LAB_TEMPORAL_WORKER_ENABLED=true.");
+}
+if (
+  !hasText(keycloak, "name: management") ||
+  !hasText(keycloak, "containerPort: 9000") ||
+  !hasText(keycloak, "port: management") ||
+  !hasText(keycloakService, "targetPort: management") ||
+  !hasText(keycloakService, "port: 9000")
+) {
+  errors.push("Keycloak deployment/service must expose management port 9000 and use it for health probes.");
 }
 if (
   !hasText(reportingDeployment, "reporting_flyway_schema_history") ||

@@ -133,16 +133,20 @@ analytics:
   image: banking-lab/aml-fds-python:local
 
 keycloak:
+  replicas: 1
   image: quay.io/keycloak/keycloak:26.0
   port: 8080
+  managementPort: 9000
 
 redpanda:
+  replicas: 1
   image: redpandadata/redpanda:v24.3.7
   kafkaPort: 9092
   adminPort: 9644
   memory: 1G
 
 temporalServer:
+  replicas: 1
   image: temporalio/auto-setup:1.26
   port: 7233
 

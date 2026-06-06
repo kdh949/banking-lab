@@ -76,6 +76,8 @@ if (!rendered.includes("BANKING_LAB_TEMPORAL_WORKER_ENABLED")) {
 }
 if (
   !rendered.includes("banking-lab-keycloak") ||
+  !rendered.includes("port: 9000") ||
+  !rendered.includes("targetPort: management") ||
   !rendered.includes("banking-lab-redpanda") ||
   !rendered.includes("banking-lab-temporal") ||
   !rendered.includes("banking-lab-ingress") ||
@@ -251,12 +253,16 @@ function buildReplacementMap(source: string): Record<string, string> {
     ".Values.temporalWorker.resources.requests.memory": scalarFromSection(source, "temporalWorker", ["resources", "requests", "memory"]),
     ".Values.temporalWorker.resources.limits.cpu": scalarFromSection(source, "temporalWorker", ["resources", "limits", "cpu"]),
     ".Values.temporalWorker.resources.limits.memory": scalarFromSection(source, "temporalWorker", ["resources", "limits", "memory"]),
+    ".Values.keycloak.replicas": scalarFromSection(source, "keycloak", ["replicas"]),
     ".Values.keycloak.image": scalarFromSection(source, "keycloak", ["image"]),
     ".Values.keycloak.port": scalarFromSection(source, "keycloak", ["port"]),
+    ".Values.keycloak.managementPort": scalarFromSection(source, "keycloak", ["managementPort"]),
+    ".Values.redpanda.replicas": scalarFromSection(source, "redpanda", ["replicas"]),
     ".Values.redpanda.image": scalarFromSection(source, "redpanda", ["image"]),
     ".Values.redpanda.kafkaPort": scalarFromSection(source, "redpanda", ["kafkaPort"]),
     ".Values.redpanda.adminPort": scalarFromSection(source, "redpanda", ["adminPort"]),
     ".Values.redpanda.memory": scalarFromSection(source, "redpanda", ["memory"]),
+    ".Values.temporalServer.replicas": scalarFromSection(source, "temporalServer", ["replicas"]),
     ".Values.temporalServer.image": scalarFromSection(source, "temporalServer", ["image"]),
     ".Values.temporalServer.port": scalarFromSection(source, "temporalServer", ["port"]),
     ".Values.ingress.className": scalarFromSection(source, "ingress", ["className"]),
