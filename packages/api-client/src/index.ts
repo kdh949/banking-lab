@@ -415,6 +415,102 @@ export interface RejectApprovalCommand {
   readonly screenId?: string;
 }
 
+export interface CustomerOnboardingRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey: string;
+  readonly customerName: string;
+  readonly customerPhone: string;
+  readonly customerAddress: string;
+  readonly customerGrade?: string;
+  readonly riskGrade?: string;
+  readonly sourceOfFundsCode?: string;
+  readonly transactionPurposeCode?: string;
+  readonly username: string;
+  readonly temporaryPassword: string;
+}
+
+export interface CustomerOnboardingApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly screenId?: string;
+}
+
+export interface CustomerOnboardingRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
+export interface CustomerOnboardingExecuteCommand {
+  readonly executedBy: string;
+  readonly executedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface CustomerOnboardingRequestDto {
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED" | string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly approvalId: string;
+  readonly requestedCustomerName: string;
+  readonly requestedCustomerPhone: string;
+  readonly requestedCustomerAddress: string;
+  readonly requestedCustomerGrade: string;
+  readonly requestedRiskGrade: string;
+  readonly requestedSourceOfFundsCode: string;
+  readonly requestedTransactionPurposeCode: string;
+  readonly requestedUsername: string;
+  readonly generatedCustomerId?: string | null;
+  readonly generatedAuthSubject?: string | null;
+  readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly executedBy?: string | null;
+  readonly executedByRole?: string | null;
+  readonly executedAt?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreatedSyntheticCustomerDto {
+  readonly customerId: string;
+  readonly authSubject: string;
+  readonly username: string;
+  readonly kycStatus: string;
+}
+
+export interface CustomerOnboardingRequestResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerOnboardingReviewResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerOnboardingExecuteResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly customer?: CreatedSyntheticCustomerDto | null;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
 export interface CustomerInfoChangeCommand {
   readonly requestedBy?: string;
   readonly requestedByRole?: string;
@@ -2222,6 +2318,60 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
     request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
 
   return {
+    requestStaffCustomerOnboarding(command: CustomerOnboardingRequestCommand) {
+      return request<CustomerOnboardingRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/customers/onboarding-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    staffCustomerOnboardingRequest(requestId: string) {
+      return request<CustomerOnboardingRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingApproveCommand) {
+      return request<CustomerOnboardingReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingRejectCommand) {
+      return request<CustomerOnboardingReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingExecuteCommand) {
+      return request<CustomerOnboardingExecuteResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/execute`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
     staffCustomerDetail(customerId: string, reason: string) {
       return request<StaffAccessItemResponse<StaffCustomerDetailDto>>(
         fetchImpl,

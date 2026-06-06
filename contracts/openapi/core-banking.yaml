@@ -7,6 +7,44 @@ x-banking-lab-contract:
   syntheticOnly: true
   structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
 paths:
+  /api/staff/customers/onboarding-requests:
+    post:
+      operationId: requestStaffCustomerOnboarding
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/onboarding-requests/{requestId}:
+    get:
+      operationId: staffCustomerOnboardingRequest
+      x-synthetic-only: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/onboarding-requests/{requestId}/approve:
+    post:
+      operationId: approveStaffCustomerOnboardingRequest
+      x-synthetic-only: true
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/onboarding-requests/{requestId}/reject:
+    post:
+      operationId: rejectStaffCustomerOnboardingRequest
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.rejectReason
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/onboarding-requests/{requestId}/execute:
+    post:
+      operationId: executeStaffCustomerOnboardingRequest
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/customers/{customerId}/detail:
     get:
       operationId: staffCustomerDetail

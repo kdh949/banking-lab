@@ -69,9 +69,9 @@ export const staffWorkflowRoutes: Record<StaffWorkflowRouteKey, StaffWorkflowRou
     href: "/customers/[customerId]",
     title: "Customer Lookup",
     eyebrow: "Inquiry Template",
-    screenIds: ["CST-001", "CST-002", "CST-003", "CST-104"],
-    apiMethods: ["staffCustomerDetail", "unmaskStaffCustomer"],
-    controls: ["CustomerSelector", "ReasonInput", "StepUpRequiredPanel", "AuditReferencePanel"],
+    screenIds: ["CST-001", "CST-002", "CST-003", "CST-104", "CST-201", "CST-202"],
+    apiMethods: ["staffCustomerDetail", "unmaskStaffCustomer", "requestStaffCustomerOnboarding", "approveStaffCustomerOnboardingRequest", "executeStaffCustomerOnboardingRequest"],
+    controls: ["CustomerSelector", "ReasonInput", "StepUpRequiredPanel", "ApprovalStatusTimeline", "AuditReferencePanel"],
     states: [
       ...reasonRequiredStates,
       { label: "Unmask", value: "PRIVILEGED_UNMASK_TIMEBOXED", detail: "High-risk unmask requires reason and audit.", tone: "warning" }
