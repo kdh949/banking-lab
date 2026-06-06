@@ -60,4 +60,39 @@ class SpringSecurityResourceServerTest {
             devSimulatorTokenEnabled = true
         ).afterPropertiesSet()
     }
+
+    @Test
+    fun `default database passwords fail fast for prod like profiles`() {
+        val prodEnvironment = MockEnvironment().withProperty("spring.profiles.active", "prod-like")
+        prodEnvironment.setActiveProfiles("prod-like")
+
+        assertThrows(IllegalStateException::class.java) {
+            BankingLabDefaultSecretProfileGuard(
+                environment = prodEnvironment,
+                datasourcePassword = "banking_lab",
+                datasourceUsername = "banking_lab"
+            ).afterPropertiesSet()
+        }
+
+        assertThrows(IllegalStateException::class.java) {
+            BankingLabDefaultSecretProfileGuard(
+                environment = prodEnvironment,
+                datasourcePassword = "replace-with-local-synthetic-password",
+                datasourceUsername = "banking_lab"
+            ).afterPropertiesSet()
+        }
+
+        BankingLabDefaultSecretProfileGuard(
+            environment = prodEnvironment,
+            datasourcePassword = "synthetic-prod-like-secret-from-private-env",
+            datasourceUsername = "banking_lab"
+        ).afterPropertiesSet()
+
+        val devEnvironment = MockEnvironment()
+        BankingLabDefaultSecretProfileGuard(
+            environment = devEnvironment,
+            datasourcePassword = "banking_lab",
+            datasourceUsername = "banking_lab"
+        ).afterPropertiesSet()
+    }
 }
