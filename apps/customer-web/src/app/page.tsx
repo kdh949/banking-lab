@@ -12,6 +12,7 @@ import {
   ChannelWorkflow
 } from "../../../../packages/channel-ui/src";
 import { ApiBackedCustomerPanel } from "../components/ApiBackedCustomerPanel";
+import { customerWorkflowRouteSummaries } from "../components/workflow-routes";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
 export default async function CustomerWebPage() {
@@ -29,6 +30,20 @@ export default async function CustomerWebPage() {
       </ChannelMetricGrid>
 
       <ApiBackedCustomerPanel />
+
+      <ChannelPanel title="Route Workflow Surface" eyebrow="Phase 3 route split">
+        <nav className="workflow-route-nav" aria-label="Customer route workflow surface">
+          {customerWorkflowRouteSummaries.map((route) => (
+            <a
+              href={route.href.replace("[accountId]", "ACC-SELECTED").replace("[resultId]", "TRF-RESULT").replace("[caseId]", "CMP-CASE").replace("[cardId]", "CARD-SELECTED")}
+              key={route.href}
+            >
+              <strong>{route.title}</strong>
+              <span className="workflow-route-note">{route.screenIds.join(", ")}</span>
+            </a>
+          ))}
+        </nav>
+      </ChannelPanel>
 
       <ChannelSplit
         aside={

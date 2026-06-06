@@ -867,6 +867,48 @@ p {
   background: var(--surface-container);
 }
 
+.route-workflow-list {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+.route-workflow-list a {
+  display: grid;
+  gap: 2px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  color: var(--text);
+  padding: 6px 8px;
+  text-decoration: none;
+}
+
+.route-workflow-list a:hover {
+  border-color: var(--primary);
+  background: var(--surface-container-low);
+}
+
+.route-workflow-list strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-workflow-list span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel-new-screen {
   position: relative;
 }

@@ -32,21 +32,65 @@ test("customer web renders account, transfer, and complaint controls from manife
 
   await expect(page.getByText("Default PII masking")).toBeVisible();
   await expect(page.getByText("CUSTOMER_SELF").first()).toBeVisible();
-  await expect(page.getByText("Complaint Entry", { exact: true })).toBeVisible();
+  await expect(page.getByText("Complaint Entry", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("WAITING_APPROVAL").first()).toBeVisible();
 });
 
-test("customer web shell has no app-router one-off business screens", async () => {
+test("customer web exposes route-backed workflow screens through shared route components", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
+  const routeComponent = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "workflow-routes.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
-  expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
+  expect(files).toEqual([
+    "accounts",
+    "api",
+    "cards",
+    "complaints",
+    "globals.css",
+    "layout.tsx",
+    "loans",
+    "login",
+    "notifications",
+    "page.tsx",
+    "payments",
+    "security",
+    "transfers"
+  ]);
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
   expect(pageSource).toContain("loadCustomerWebManifests");
+  expect(pageSource).toContain("customerWorkflowRouteSummaries");
+  expect(routeComponent).toContain("CustomerWorkflowRoutePage");
+  expect(routeComponent).toContain("CWB-201");
+  expect(routeComponent).toContain("POSTED");
+  expect(routeComponent).toContain("HELD");
+  expect(routeComponent).toContain("FAILED");
+  expect(routeComponent).toContain("BLOCKED");
+  expect(routeComponent).toContain("STEP_UP_REQUIRED");
+  expect(routeComponent).toContain("synthetic demo fallback");
   expect(pageSource).not.toContain("fetch(\"/api/customer/transfers\"");
   expect(pageSource).not.toContain("fetch('/api/customer/transfers'");
+});
+
+test("customer web route pages render transfer and complaint workflow states", async ({ page }) => {
+  await page.goto(`${baseUrl}/transfers/new`);
+
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New Transfer" }).first()).toBeVisible();
+  await expect(page.getByText("POSTED").first()).toBeVisible();
+  await expect(page.getByText("REPLAYED").first()).toBeVisible();
+  await expect(page.getByText("HELD").first()).toBeVisible();
+  await expect(page.getByText("FAILED").first()).toBeVisible();
+  await expect(page.getByText("BLOCKED").first()).toBeVisible();
+  await expect(page.getByText("StructuredErrorPanel").first()).toBeVisible();
+  await expect(page.getByText("FdsHoldStatusPanel").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/complaints/CMP-ROUTE-001`);
+  await expect(page.getByRole("heading", { name: "Complaint Detail: CMP-ROUTE-001" }).first()).toBeVisible();
+  await expect(page.getByText("WAITING_APPROVAL").first()).toBeVisible();
+  await expect(page.getByText("CLOSED").first()).toBeVisible();
+  await expect(page.getByText("CUSTOMER_OWNERSHIP_DENIED").first()).toBeVisible();
 });
 
 test("customer web loads owned masked account detail from the Spring API when configured", async ({ page }) => {

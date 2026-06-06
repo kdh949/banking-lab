@@ -24,6 +24,7 @@ import {
   TerminalWorkspace,
   type TerminalProfile
 } from "./terminal-ui";
+import { staffWorkflowRouteSummaries } from "./workflow-route-summaries";
 
 type ManifestEvidence = {
   readonly transactionCode: string;
@@ -137,11 +138,30 @@ export function TerminalNavigationWorkbench({ evidence }: { readonly evidence: M
             <ManualPanel />
             <NewScreenPanel />
             <ManifestEvidenceStrip evidence={evidence} />
+            <RouteWorkflowPanel />
             <ApiBackedStaffPanel />
           </TerminalBentoGrid>
         </TerminalBody>
       </TerminalWorkspace>
     </TerminalShell>
+  );
+}
+
+function RouteWorkflowPanel() {
+  return (
+    <TerminalPanel title="Route Workflow Surface" icon="account_tree" className="panel-small" headerVariant="tertiary">
+      <div className="route-workflow-list" aria-label="Staff route workflow surface">
+        {staffWorkflowRouteSummaries.map((route) => (
+          <a
+            href={route.href.replace("[transactionCode]", "CST001").replace("[customerId]", "SYN-CUS-001").replace("[accountId]", "ACC-SYN-001-001").replace("[businessReferenceId]", "TX-SYN-CORR-001")}
+            key={route.href}
+          >
+            <strong>{route.title}</strong>
+            <span>{route.screenIds.join(", ")}</span>
+          </a>
+        ))}
+      </div>
+    </TerminalPanel>
   );
 }
 
