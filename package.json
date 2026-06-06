@@ -97,6 +97,8 @@
     "data:dq-check": "uv --cache-dir .uv-cache run --directory analytics/aml-fds-python --project . banking-lab-data-platform --source-dir sample-data/data-platform --output-dir ../../docs/test-evidence/generated/data-platform",
     "k8s:validate": "node --experimental-strip-types scripts/validate-k8s-manifests.ts",
     "helm:template": "node --experimental-strip-types scripts/render-helm-template.ts",
+    "argocd:validate": "node --experimental-strip-types scripts/validate-argocd-manifests.ts",
+    "platform:validate": "npm run k8s:validate && npm run helm:template && npm run argocd:validate",
     "generate:synthetic-data": "node scripts/generate-synthetic-data.mjs",
     "evidence:phase1": "node scripts/generate-phase1-evidence.mjs",
     "evidence:phase2": "node scripts/generate-phase2-evidence.mjs",

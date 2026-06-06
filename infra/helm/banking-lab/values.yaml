@@ -47,10 +47,10 @@ paymentService:
   image: banking-lab/payment-service:local
   port: 8088
   securityAudience: payment-service-api
-  coreBankingTokenUrl: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/token
+  coreBankingTokenUrl: http://banking-lab-keycloak:8080/realms/banking-lab/protocol/openid-connect/token
   coreBankingClientId: payment-service-api
   ledgerCommandTopic: banking.lab.core-banking.ledger-commands
-  domainEventPublisherBootstrapServers: redpanda:9092
+  domainEventPublisherBootstrapServers: banking-lab-redpanda:9092
   domainEventPublisherTopic: banking.lab.payment-events
   domainEventPublisherClientId: payment-helm-domain-event-publisher
   domainEventPublisherEventTypes: PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated
@@ -75,7 +75,7 @@ notificationService:
   image: banking-lab/notification-service:local
   port: 8089
   securityAudience: notification-service-api
-  eventConsumerBootstrapServers: redpanda:9092
+  eventConsumerBootstrapServers: banking-lab-redpanda:9092
   eventConsumerTopic: banking.lab.domain-events
   eventConsumerClientId: notification-service-event-consumer
   eventConsumerGroupId: notification-service
@@ -112,18 +112,18 @@ postgres:
   storage: 2Gi
 
 temporal:
-  target: temporal:7233
+  target: banking-lab-temporal:7233
 
 outbox:
-  bootstrapServers: redpanda:9092
+  bootstrapServers: banking-lab-redpanda:9092
   topic: banking.lab.domain-events
 
 security:
   enabled: "true"
   simulatorTokensEnabled: "false"
   devSimulatorToken: "false"
-  jwksUri: http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs
-  issuer: http://keycloak:8080/realms/banking-lab
+  jwksUri: http://banking-lab-keycloak:8080/realms/banking-lab/protocol/openid-connect/certs
+  issuer: http://banking-lab-keycloak:8080/realms/banking-lab
   audience: core-banking-api
   trustedDeviceEnforcementEnabled: "true"
   stepUpEnforcementEnabled: "true"
@@ -131,3 +131,26 @@ security:
 
 analytics:
   image: banking-lab/aml-fds-python:local
+
+keycloak:
+  image: quay.io/keycloak/keycloak:26.0
+  port: 8080
+
+redpanda:
+  image: redpandadata/redpanda:v24.3.7
+  kafkaPort: 9092
+  adminPort: 9644
+  memory: 1G
+
+temporalServer:
+  image: temporalio/auto-setup:1.26
+  port: 7233
+
+ingress:
+  className: nginx
+  tlsSecretName: banking-lab-ingress-tls
+  appHost: banking-lab.local
+  authHost: auth.banking-lab.local
+  reportingHost: reports.banking-lab.local
+  paymentHost: payments.banking-lab.local
+  notificationHost: notifications.banking-lab.local
