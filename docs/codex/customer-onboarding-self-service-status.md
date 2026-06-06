@@ -336,6 +336,36 @@ Phase 2 validation commands:
 - `gh pr view 54 --json statusCheckRollup`: showed hosted CI run `27069520636` completed with all jobs failed within a few seconds.
 - `gh api repos/kdh949/banking-lab/check-runs/79896132048/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
+## Phase 3 Customer Signup/Login Update
+
+Implemented in commit `2e0d2266` on branch `codex/customer-onboarding-self-service`:
+
+- Added `POST /api/auth/customer/signup` and `POST /api/auth/customer/login` in Kotlin/Spring under `/api/auth/customer`.
+- Added `synthetic_customer_signup_customer_seq` plus `signup_idempotency_key` and `signup_command_hash` on `customer_auth_identities` so self-signup is synthetic-only and idempotent.
+- Signup creates `customers`, `customer_kyc_profiles` with `PENDING` synthetic KYC status, and `customer_auth_identities`; it hashes passwords with Spring `PasswordEncoder` and rejects duplicate/reserved usernames, weak passwords, and idempotency-key command hash conflicts.
+- Login validates synthetic credentials, updates failed-login counters and last-login state, returns structured `CUSTOMER_AUTHENTICATION_FAILED` on invalid credentials, and does not store plaintext passwords in auth metadata or audit payloads.
+- Added a guarded simulator-token issuer that returns lab-format bearer tokens only when `banking-lab.security.customer-auth.synthetic-token-issuer-enabled`, simulator-token decoding, and dev simulator tokens are explicitly enabled.
+- Extended the prod-like profile guard so synthetic customer token issuance fails fast in `prod`, `production`, `prod-like`, and `prodlike` profiles.
+- Whitelisted signup/login in both Spring Security and `BankingLabAuthorizationFilter`, while leaving `/api/auth/session` authenticated as the session proof endpoint.
+- Added OpenAPI operation ids and API-client methods `signupCustomer` and `loginCustomer`.
+
+Phase 3 validation commands:
+
+- `npm run test:core-banking:integration -- --tests lab.banking.core.auth.CustomerAuthIntegrationTest`: first sandbox attempt failed before tests with Gradle `java.net.SocketException: Operation not permitted`; escalated rerun passed, 4 tests.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.auth.CustomerAuthIntegrationTest --tests lab.banking.core.account.AccountOpeningIntegrationTest --tests lab.banking.core.onboarding.CustomerOnboardingIntegrationTest`: passed.
+- `npm run test:core-banking:unit -- --tests lab.banking.core.security.SpringSecurityResourceServerTest`: passed.
+- `node --test tests/customerOnboardingSelfService.test.mjs`: passed, 6 tests.
+- `npm run contracts:lint`: passed.
+- `npm run contracts:check-client`: passed, 151 operation ids matched 144 shared client methods/exemptions.
+- `npm --workspace @banking-lab/api-client run typecheck`: passed.
+- `npm run validate:manifests`: passed, 113 screen manifests.
+- `npm run next:staff-terminal:typecheck`: passed.
+- `npm test`: passed, 180 tests.
+- `git push`: passed, pushed commit `2e0d2266` to PR #54.
+- `gh pr view 54 --json url,headRefName,baseRefName,state,statusCheckRollup`: PR #54 remained open against `main`; initial latest run `27069864662` was queued.
+- `gh pr view 54 --json statusCheckRollup`: after polling, hosted CI run `27069864662` completed with all jobs failed within a few seconds.
+- `gh api repos/kdh949/banking-lab/check-runs/79897048781/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
+
 ## Commands Not Attempted
 
 Not attempted in Phase 0:
@@ -346,4 +376,4 @@ Not attempted in Phase 0:
 - `docker compose config`
 - `docker compose --profile platform config`
 
-No Phase 3-5 implementation commands have been attempted yet.
+No Phase 4-5 implementation commands have been attempted yet.
