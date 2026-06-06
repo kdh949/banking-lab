@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:e8ad110c-463f-4d9c-b4a6-04b8ed889a4f",
+  "serialNumber": "urn:uuid:f01cef3d-c4cc-4bb2-8ad7-93d84bb335f1",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-04T17:05:02+00:00",
+    "timestamp": "2026-06-06T11:22:26+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "461f89d8-51f7-4ec4-b215-b1cada4132b6",
+      "bom-ref": "ef306bac-2112-43ea-948b-83d9d237f9dd",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "2eef67c9-4627-4714-acdb-169c211aaf69",
+      "bom-ref": "3d98f471-2c21-4e49-b575-b74bb83fd67e",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -48,7 +48,7 @@
       ]
     },
     {
-      "bom-ref": "3ba0aebe-ef19-4741-aeab-9e5ddac50125",
+      "bom-ref": "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780",
       "type": "application",
       "name": "analytics/aml-fds-python/uv.lock",
       "properties": [
@@ -1874,7 +1874,7 @@
   ],
   "dependencies": [
     {
-      "ref": "2eef67c9-4627-4714-acdb-169c211aaf69",
+      "ref": "3d98f471-2c21-4e49-b575-b74bb83fd67e",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
@@ -1891,16 +1891,16 @@
       ]
     },
     {
-      "ref": "3ba0aebe-ef19-4741-aeab-9e5ddac50125",
+      "ref": "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780",
       "dependsOn": [
         "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {
-      "ref": "461f89d8-51f7-4ec4-b215-b1cada4132b6",
+      "ref": "ef306bac-2112-43ea-948b-83d9d237f9dd",
       "dependsOn": [
-        "2eef67c9-4627-4714-acdb-169c211aaf69",
-        "3ba0aebe-ef19-4741-aeab-9e5ddac50125"
+        "3d98f471-2c21-4e49-b575-b74bb83fd67e",
+        "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780"
       ]
     },
     {

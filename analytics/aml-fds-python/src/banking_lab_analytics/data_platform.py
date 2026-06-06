@@ -108,9 +108,20 @@ def load_sources(connection: Any, postings_path: Path, projections_path: Path) -
 def inject_dirty_fixture(connection: Any) -> None:
     connection.execute(
         """
-        UPDATE account_balance_projections
-        SET ledger_balance_minor = ledger_balance_minor + 1
-        WHERE account_id = 'ACC-DATA-001'
+        CREATE OR REPLACE TABLE account_balance_projections AS
+        SELECT
+          account_id,
+          customer_id,
+          currency,
+          CASE
+            WHEN account_id = 'ACC-DATA-001' THEN ledger_balance_minor + 1
+            ELSE ledger_balance_minor
+          END AS ledger_balance_minor,
+          available_balance_minor,
+          hold_amount_minor,
+          risk_grade,
+          account_status
+        FROM account_balance_projections
         """
     )
     connection.execute(
