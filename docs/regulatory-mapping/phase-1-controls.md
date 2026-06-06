@@ -50,7 +50,7 @@
 | --- | --- |
 | Shared complaint case source | Customer/staff complaint list test |
 | Complaint SLA and timeline | `receiveComplaint`, workflow evidence |
-| Ordered complaint state transitions | `services/complaint-service`, workflow tests |
+| Ordered complaint state transitions | `services/core-banking/src/main/kotlin/lab/banking/core/complaint`, workflow tests |
 | Answer approval before send | `COMPLAINT_ANSWER_SEND` approval test |
 | Customer answer confirmation | Customer confirmation close test |
 | Complaint workflow manifests | `CMP-101`, `CMP-102`, `CMP-201` manifest validation |

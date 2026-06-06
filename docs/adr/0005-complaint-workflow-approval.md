@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted for the original complaint workflow slice. Superseded for target-path runtime by the Spring complaint module and PostgreSQL-backed workflow/case persistence.
+
+## Current Status
+
+Current target implementation lives under `services/core-banking/src/main/kotlin/lab/banking/core/complaint`, with workflow references and complaint source data backed by Flyway migrations and Spring integration evidence. The legacy Node workflow remains oracle/reference material only.
 
 ## Context
 
@@ -10,7 +14,7 @@ Phase 5 requires customer complaint intake, state transitions, owner assignment,
 
 ## Decision
 
-Use the complaint workflow helper in `services/complaint-service` and store cases in the shared runtime state.
+Use the complaint workflow helper in the current Spring complaint module for target behavior. The original Node helper remains an oracle/reference path, not the target case store.
 
 Controls:
 
@@ -30,11 +34,11 @@ Positive:
 
 Tradeoffs:
 
-- Case data is still in-memory until persistence is implemented.
-- Approval roles are mock-role based until real session auth is wired.
+- The original Node case data is in-memory by design because it is only an oracle/reference path.
+- Target complaint APIs use Spring security roles and Keycloak/OIDC token paths in current evidence.
 
 ## Follow-up
 
-- Persist complaint cases, comments, attachments, and timeline.
+- Keep expanding complaint comments, attachments, and timeline evidence in the Spring target module.
 - Add department transfer and reopen flows.
 - Add complaint report exports for the final evidence pack.

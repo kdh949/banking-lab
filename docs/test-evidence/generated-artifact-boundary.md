@@ -28,4 +28,4 @@ The audit verifies:
 
 ## Retirement Impact
 
-This audit prevents generated Next.js/Gradle output from being confused with allowed target source. Node retirement remains blocked by non-synthetic passkey operations and final retirement review.
+This audit prevents generated Next.js/Gradle output from being confused with allowed target source. Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to generated-artifact boundaries and the Node reference stays archived oracle/reference material.

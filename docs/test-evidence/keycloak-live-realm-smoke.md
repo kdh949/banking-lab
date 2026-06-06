@@ -225,4 +225,4 @@ During the customer-web smoke, a direct Keycloak token diagnostic initially retu
 - Browser-based Next.js login and role propagation are covered for the current customer-web API-backed smoke paths: masked account detail, transfer retry, transfer failure, transfer history/status, held/failed status, complaint entry, and complaint confirmation.
 - Staff-terminal browser login and role propagation are covered for masked customer lookup and branch-maker/manager-checker customer-change approval.
 - FDS/AML-console browser login and role propagation are covered for risk read-model access, FDS release/block approval, AML closure approval, and duplicate workflow failure-state rendering.
-- Node retirement remains blocked until non-synthetic passkey operations and final retirement review are complete.
+- Node retirement is now ready for the current synthetic lab scope; this evidence slice remains scoped to its named control and the Node reference stays archived oracle/reference material.

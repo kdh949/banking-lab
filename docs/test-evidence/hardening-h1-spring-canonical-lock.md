@@ -35,12 +35,14 @@ npm run next:admin-console:build
 - `node --test tests/stackRetirementAreaAudit.test.mjs`: pass, 3 tests.
 - `npm run retirement:stack-audit`: pass.
 - `npm run node:retirement-gate`: pass, ready.
-- `npm run parity`: pass after sandbox escalation for localhost listener permissions; 42 mapped Node reference scenarios remained target-backed, 142 Node/reference tests passed, 87 manifests validated, and 10 screen-engine tests passed.
+- `npm run parity`: pass after sandbox escalation for localhost listener permissions; the then-current mapped Node reference scenarios remained target-backed, 142 Node/reference tests passed, 87 manifests validated, and 10 screen-engine tests passed.
 - `npm test`: pass after sandbox escalation for localhost listener permissions, 142 tests.
 - `npm run validate:manifests`: pass, 87 manifests.
 - `npm run test:screen-engine`: pass, 10 tests.
 - `npm run scripts:typecheck`: pass.
 - All seven `npm run next:<app>:build` commands passed for customer-web, staff-terminal, complaint-portal, ops-console, audit-console, fds-aml-console, and admin-console.
+
+Current inventory note: later slices expanded the parity map to 43 mapped Node reference scenarios and the manifest catalog to 109 checked-in screen manifests. Use current parity/gate outputs for release decisions; keep the older command counts above as this H1 run's evidence.
 
 ## New Guard
 

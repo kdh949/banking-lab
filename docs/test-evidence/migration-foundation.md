@@ -2,16 +2,16 @@
 
 ## Acceptance Checks
 
-- Node reference runtime is retained until parity gates pass.
+- Node reference runtime is retained only as archived oracle/reference material after parity gates passed.
 - Current 43 Node reference scenarios are mapped to Kotlin/Spring and Next/Playwright target tests.
 - Parity command runs Node reference tests, manifest validation, target screen-engine manifest parity tests, and evidence pack generation.
 - API failures expose structured error fields for invariant, policy, cause, fix, request ID, and documentation.
-- Spring Boot/Kotlin scaffold declares `/health`, structured error DTOs, PostgreSQL, Flyway, and Testcontainers dependencies.
+- Spring Boot/Kotlin services declare `/health`, structured error DTOs, PostgreSQL, Flyway, Testcontainers, security, outbox, workflow, payment, notification, and reporting dependencies.
 - Kotlin/Spring ledger commands now persist source-of-truth transactions and postings through PostgreSQL/Flyway.
 - Testcontainers verifies idempotency replay/conflict, outbox row insertion, closed-day rejection, reversal, and REPEATABLE READ/SERIALIZABLE concurrent withdrawal safety.
-- Customer-web Next scaffold renders from existing manifests while the static Node reference shell is preserved under `legacy-node-reference/apps`.
+- Seven Next.js channel apps render from existing manifests while static Node reference shells are preserved under `legacy-node-reference/apps`.
 - Next dependency lock resolves `postcss` to the fixed override version.
-- Node retirement gate remains blocked until Kotlin/Next parity evidence exists.
+- Node retirement gate is ready for the current synthetic lab scope; rerun the gate after material target-stack changes.
 
 ## Commands
 
@@ -53,6 +53,12 @@ docker run --rm -e TESTCONTAINERS_RYUK_DISABLED=true -e TESTCONTAINERS_HOST_OVER
 - `npm run test:screen-engine`: passed, 4/4 target TypeScript screen-engine manifest parity tests.
 - `npm run parity`: passed under the approved execution path after the sandbox blocked local Node reference HTTP server `listen(127.0.0.1)`. The parity runner now includes `npm run test:screen-engine`.
 
+## 2026-06-06 Current Gate Check
+
+- `npm run node:retirement-gate`: passed with `ready` status.
+- Current parity inventory covers 43 mapped Node reference scenarios, all target-backed.
+- The Node runtime remains preserved as archived oracle/reference material, not as a target-path dependency.
+
 ## Evidence Artifacts
 
 - `docs/migration/kotlin-next-playbook.md`
@@ -78,8 +84,7 @@ docker run --rm -e TESTCONTAINERS_RYUK_DISABLED=true -e TESTCONTAINERS_HOST_OVER
 
 ## Remaining Risk
 
-- Host-level Kotlin execution is still unavailable because this environment has no Java runtime and no Gradle CLI; Docker/JDK execution is the current verification path.
-- Full Spring Boot `bootRun` plus live `/health` smoke test is still pending.
-- Next.js scaffold currently covers `customer-web`; the remaining app shells and Playwright parity flows are pending.
-- Durable approval execution remains a target-stack gap until PostgreSQL-backed execution state exists.
-- SERIALIZABLE and REPEATABLE READ concurrency currently reject some simultaneous withdrawals through transaction conflicts instead of retrying them to completion. This prevents overdraw but needs retry policy work in the next ledger hardening slice.
+- Historical 2026-06-02 host-level Java/Gradle failures are no longer the only verification path; current evidence uses JDK 21 and Docker/Testcontainers paths where needed.
+- Node is retired only from target-path dependency for the current synthetic lab scope. Keep the archived oracle/reference boundary until a separate deletion plan preserves regression coverage.
+- Broader future command paths should continue to reuse bounded retry or operator-visible failure handling for serialization conflicts.
+- Live platform hardening still needs ingress-controller traffic, real TLS termination evidence, Argo CD controller sync health, canary promotion, and multi-node storage behavior before any production-like deployment claim.

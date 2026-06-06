@@ -1,6 +1,6 @@
 # Legacy Node Reference Boundary
 
-This directory contains Node.js modules and static browser shells that are still needed by the executable reference oracle.
+This directory contains Node.js modules and static browser shells used by the archived executable reference oracle.
 
 They are not target service or channel implementations. Target service code belongs under `services/` and must use the approved target stack, such as Kotlin/Spring Boot for core banking services or Python for analytics/simulators where the plan allows it. Target channel code belongs under `apps/*/src` and must use TypeScript/Next.js.
 
@@ -11,4 +11,4 @@ They are not target service or channel implementations. Target service code belo
 - `apps/` holds legacy static HTML shells for the Node reference runtime.
 - `ui/public/` holds the legacy static JS/CSS used by those shells.
 
-Keep this directory only while `docs/migration/node-retirement-gate.json` is blocked. Do not add new target behavior here.
+`docs/migration/node-retirement-gate.json` is ready for the current synthetic lab scope, but this directory remains useful for regression comparison and historical oracle behavior. Do not add new target behavior here, and do not delete it without a separate deletion plan that preserves parity evidence.

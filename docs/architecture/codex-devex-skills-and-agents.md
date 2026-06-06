@@ -21,7 +21,7 @@ It does not change runtime behavior, tests, root package scripts, source impleme
 - `maker-checker-review` covers separation of duties, business reasons, privileged unmasking, complaint answer approval, FDS/AML actions, and reconciliation adjustment approval.
 - `structured-error-contract-review` covers stable error response shape and required error families.
 - `evidence-pack-builder` covers proof commands, skipped-test reporting, milestone evidence, and node retirement gate discipline.
-- `migration-parity-review` covers the 42 Node reference scenarios and the Kotlin/Next target parity gate.
+- `migration-parity-review` covers the 43 Node reference scenarios and the Kotlin/Next target parity gate.
 
 ## Agent Examples
 
@@ -34,7 +34,7 @@ The `.codex/agents/*.toml` files are project examples for future coordinator-spa
 
 ## Controls Preserved
 
-- Node reference runtime remains required until the retirement gate is ready.
+- Node reference runtime remains archived oracle/reference material after the retirement gate reached ready status.
 - Shared root and implementation files stay coordinator-owned.
 - Skills require evidence to cite commands actually run.
 - All workflows keep synthetic-only boundaries.

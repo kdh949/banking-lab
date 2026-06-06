@@ -17,7 +17,7 @@ This threat model covers the local synthetic banking lab: customer web, staff te
 
 | Threat | Example | Control |
 | --- | --- | --- |
-| Spoofing | using a staff-only action as customer | role-shaped mock sessions and manifest roles |
+| Spoofing | using a staff-only action as customer | Keycloak/OIDC roles, Spring route policy, and manifest roles |
 | Tampering | changing balance directly | no balance mutation API; balances projected from postings |
 | Repudiation | staff denies sensitive lookup | reason-required audit hash chain |
 | Information disclosure | customer sees internal complaint draft | public complaint DTO removes draft and approval fields |
@@ -36,8 +36,7 @@ This threat model covers the local synthetic banking lab: customer web, staff te
 
 ## Residual Risk
 
-- Runtime state is in-memory.
-- Approval execution is not crash-recovered.
-- Mock auth is not production identity.
-- No centralized observability stack yet.
-- No formal TLA+/Alloy model yet.
+- The archived Node reference runtime remains in-memory by design and must not be used as the target implementation.
+- Target services have PostgreSQL/Flyway, Keycloak/OIDC, Redpanda/Kafka, Temporal, observability, security, and formal evidence for the current synthetic scope, but this is still a local lab, not production deployment proof.
+- Live platform hardening still needs ingress-controller traffic, real TLS termination evidence, Argo CD controller sync health, canary promotion, and multi-node storage behavior.
+- Broader future command paths should keep adding explicit retry or operator-visible failure policies for serialization conflicts.

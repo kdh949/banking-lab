@@ -4,6 +4,8 @@
 >
 > 최종 목표: Kotlin/Java + Spring Boot, PostgreSQL, Kafka/Redpanda, Temporal, Next.js, Keycloak, OpenTelemetry, Kubernetes, Terraform, Helm, Argo CD 기반의 규제 대응형 모의 은행 시스템을 만든다.
 
+> 현재 상태(2026-06-06): 이 문서는 rewrite 실행 방향을 남긴 계획 문서다. 현재 저장소는 Spring Boot 서비스, Next.js 채널 앱, PostgreSQL/Flyway, Redpanda/Kafka Outbox, Temporal, Keycloak, Python/DuckDB analytics, Kubernetes/Helm/Terraform/Argo CD, 보안/관측성 증거를 포함하며, `docs/migration/node-retirement-gate.json`은 현재 synthetic lab 범위에서 `ready` 상태다. 아래의 단계별 문구 중 과거 `placeholder`나 target 구조 표현은 계획 맥락으로 읽고, 현재 증거 판단은 `docs/test-evidence/evidence-gap-report.md`, `docs/test-evidence/parity-coverage-matrix.md`, `docs/test-evidence/node-retirement-review.md`를 우선한다.
+
 ---
 
 ## 0. Codex에게 주는 최상위 지시
@@ -791,11 +793,10 @@ OWASP ASVS 5.0 mapping
 ### 14.2 산출물
 
 ```text
-docs/security/asvs-mapping.md
-docs/security/sast-report.md
-docs/security/sca-report.md
-docs/security/container-scan-report.md
-docs/security/sbom.md
+docs/regulatory-mapping/owasp-asvs-mapping.md
+docs/test-evidence/generated/security-evidence-summary.md
+docs/test-evidence/security-docker-rerun.md
+infra/security/sbom.md
 docs/threat-model/system-threat-model.md
 ```
 
@@ -832,11 +833,9 @@ otel-collector
 Kubernetes 확장 구조:
 
 ```text
-infra/k8s/base
-infra/k8s/overlays/local
-infra/k8s/overlays/dev
+infra/k8s
 infra/helm/banking-lab
-infra/argocd/applications
+infra/argocd
 ```
 
 ### 15.3 Terraform
@@ -844,11 +843,7 @@ infra/argocd/applications
 로컬/클라우드 추상화 준비:
 
 ```text
-infra/terraform/modules/postgres
-infra/terraform/modules/kafka
-infra/terraform/modules/keycloak
-infra/terraform/environments/local
-infra/terraform/environments/dev
+infra/terraform/main.tf
 ```
 
 ---

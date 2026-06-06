@@ -257,4 +257,4 @@ This strict verifier fails when `docs/test-evidence/generated/passkey-non-synthe
 
 ## Retirement Impact
 
-Node retirement remains blocked until this evidence is proven and the final retirement review confirms no critical behavior depends on Node-only code.
+Node retirement is now ready for the current synthetic lab scope because this evidence is proven and the final retirement review confirms no critical current behavior depends on Node-only code. Keep rerunning the verifier before future retirement-gate claims.

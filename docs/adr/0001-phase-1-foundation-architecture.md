@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted for the original Phase 1 foundation. Superseded for target-path runtime by Kotlin/Spring Boot, PostgreSQL/Flyway, Next.js, Keycloak, Redpanda/Kafka, Temporal, and platform evidence.
+
+## Current Status
+
+The Node runtime described below is now archived oracle/reference material. Target services live under `services/*`, target channel apps live under `apps/*/src`, and PostgreSQL/Flyway-backed Spring services provide the current target persistence path.
 
 ## Context
 
