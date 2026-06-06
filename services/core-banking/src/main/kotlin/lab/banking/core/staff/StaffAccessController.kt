@@ -5,6 +5,7 @@ import lab.banking.core.approval.RejectApprovalCommand
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -68,6 +69,7 @@ class StaffAccessController(
         staffAccessService.workflowTimeline(businessReferenceId, reason)
 
     @PostMapping("/pii/unmask")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('BRANCH_MANAGER','AUDITOR','COMPLIANCE_MANAGER')")
     fun unmask(@RequestBody command: PiiUnmaskCommand): StaffUnmaskResponse =
         staffAccessService.unmaskCustomer(command)
 
@@ -79,6 +81,7 @@ class StaffAccessController(
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestCustomerInfoChange(customerId, command))
 
     @PostMapping("/accounts/{accountId}/hold-requests")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('BRANCH_STAFF','BRANCH_MANAGER','OPS_MANAGER','COMPLIANCE_MANAGER')")
     fun requestAccountHold(
         @PathVariable accountId: String,
         @RequestBody command: AccountHoldRequestCommand
@@ -86,6 +89,7 @@ class StaffAccessController(
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestAccountHold(accountId, command))
 
     @PostMapping("/accounts/{accountId}/hold-release-requests")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('BRANCH_STAFF','BRANCH_MANAGER','OPS_MANAGER','COMPLIANCE_MANAGER')")
     fun requestAccountHoldRelease(
         @PathVariable accountId: String,
         @RequestBody command: AccountHoldReleaseRequestCommand
@@ -93,6 +97,7 @@ class StaffAccessController(
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestAccountHoldRelease(accountId, command))
 
     @PostMapping("/accounts/{accountId}/limit-change-requests")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('BRANCH_STAFF','BRANCH_MANAGER','OPS_MANAGER','COMPLIANCE_MANAGER')")
     fun requestTransferLimitChange(
         @PathVariable accountId: String,
         @RequestBody command: TransferLimitChangeRequestCommand
@@ -114,6 +119,7 @@ class StaffAccessController(
         ResponseEntity.status(HttpStatus.CREATED).body(staffAccessService.requestFeeWaiver(accountId, command))
 
     @PostMapping("/transactions/{transactionId}/correction-requests")
+    @PreAuthorize("@bankingLabMethodSecurityPolicy.securityDisabled() or hasAnyRole('BRANCH_STAFF','BRANCH_MANAGER','OPS_MANAGER','COMPLIANCE_MANAGER')")
     fun requestTransactionCorrection(
         @PathVariable transactionId: String,
         @RequestBody command: TransactionCorrectionRequestCommand

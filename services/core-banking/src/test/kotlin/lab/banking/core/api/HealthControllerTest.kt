@@ -4,9 +4,13 @@ import lab.banking.core.config.BankingLabProperties
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpHeaders
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -17,7 +21,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @WebMvcTest(HealthController::class)
 @EnableConfigurationProperties(BankingLabProperties::class)
-@Import(lab.banking.core.config.SecurityHeadersFilter::class)
+@Import(lab.banking.core.config.SecurityHeadersFilter::class, HealthControllerTest.PermitAllSecurityConfig::class)
 @TestPropertySource(
     properties = [
         "banking-lab.synthetic-only=true",
@@ -59,5 +63,15 @@ class HealthControllerTest {
         mockMvc.perform(get("/sitemap.xml"))
             .andExpect(status().isOk)
             .andExpect(content().string("""<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />"""))
+    }
+
+    @TestConfiguration
+    class PermitAllSecurityConfig {
+        @Bean
+        fun testSecurityFilterChain(http: HttpSecurity): SecurityFilterChain =
+            http
+                .csrf { it.disable() }
+                .authorizeHttpRequests { it.anyRequest().permitAll() }
+                .build()
     }
 }
