@@ -279,6 +279,12 @@ Validation commands run after this document was created:
 - `npm run scripts:typecheck`: passed.
 - `npm run test:core-banking:unit`: first sandboxed run failed before tests with Gradle `FileLockContentionHandler` `java.net.SocketException: Operation not permitted`; escalated rerun passed with `:services:core-banking:test` up to date.
 - `npm run test:core-banking:integration`: first sandboxed run failed before tests with Gradle `FileLockContentionHandler` `java.net.SocketException: Operation not permitted`; escalated rerun passed with `:services:core-banking:integrationTest` up to date.
+- `git push -u origin codex/customer-onboarding-self-service`: passed.
+- `gh pr create --base main --head codex/customer-onboarding-self-service --title "docs: 고객 셀프서비스 기준 상태 문서 추가" --body "..."`
+  passed and opened PR #54.
+- `gh pr checks 54`: completed with all hosted checks reported as failed.
+- `gh api repos/kdh949/banking-lab/actions/runs/27068786983/jobs`: showed all 19 jobs completed in 2-4 seconds with no recorded steps and no runner assigned.
+- `gh api repos/kdh949/banking-lab/check-runs/79894195214/annotations`: showed hosted CI was blocked before job startup because the GitHub account has failed recent payments or needs a higher spending limit.
 
 ## Commands Not Attempted
 
@@ -289,6 +295,5 @@ Not attempted in Phase 0:
 - `npm run test:e2e`
 - `docker compose config`
 - `docker compose --profile platform config`
-- Hosted CI
 
 No functional Phase 1-5 implementation commands have been attempted yet.
