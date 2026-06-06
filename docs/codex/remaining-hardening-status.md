@@ -22,7 +22,7 @@ Phase 6 update: secrets hygiene, default-secret fail-fast controls, observabilit
 
 Phase 7 update: payment-service and reporting-service Kafka publishers now include persisted event envelope metadata (`sourceService`, `eventType`, `aggregateId`, `occurredAt`, `syntheticOnly`) in record headers and JSON envelope headers, and their Redpanda integration tests assert that metadata. Notification-service now rejects Kafka events missing required envelope metadata before creating delivery side effects. Existing payment/notification/reporting Compose and Keycloak service-token smokes were rerun for this bounded slice. Evidence is recorded in `docs/test-evidence/phase-7-bounded-context-hardening.md`. PR #51 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local bounded-context, contract, secrets, and structural tests passed.
 
-Phase 8 update: deterministic synthetic large-ledger dataset and benchmark evidence are now implemented through `scripts/generate-large-ledger-dataset.ts`, `scripts/check-ledger-partition-readiness.ts`, `npm run ledger:large-dataset-smoke`, and `npm run ledger:query-benchmark`. Generated evidence records 240 synthetic customers, 720 customer accounts, 5,000 balanced ledger transactions, 10,000 postings, unique idempotency keys, projection equality, archive candidate counts, partition-route consistency, and query-shape benchmark evidence. `docs/architecture/ledger-partition-archive-plan.md` documents the current FK-compatible route-table partition strategy and the future native source-table partition migration gate.
+Phase 8 update: deterministic synthetic large-ledger dataset and benchmark evidence are now implemented through `scripts/generate-large-ledger-dataset.ts`, `scripts/check-ledger-partition-readiness.ts`, `npm run ledger:large-dataset-smoke`, and `npm run ledger:query-benchmark`. Generated evidence records 240 synthetic customers, 720 customer accounts, 5,000 balanced ledger transactions, 10,000 postings, unique idempotency keys, projection equality, archive candidate counts, partition-route consistency, and query-shape benchmark evidence. `docs/architecture/ledger-partition-archive-plan.md` documents the current FK-compatible route-table partition strategy and the future native source-table partition migration gate. PR #52 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local Phase 8 commands passed.
 
 ## Already Implemented
 
@@ -178,6 +178,8 @@ Phase 8 update: deterministic synthetic large-ledger dataset and benchmark evide
 | `npm run ledger:integrity-check` | sandbox failed, escalated pass | Sandbox failed on Gradle file-lock socket; approved rerun passed `LedgerDatabaseIntegrityIntegrationTest` with rerun tasks. |
 | `npm run security:secrets-check` | pass | Phase 8 secret placeholder scan passed for 863 files. |
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 8 whitespace validation passed while excluding pre-existing generated evidence changes. |
+| `gh pr view 52 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #52 was mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79875480085/annotations` | pass | Confirmed observed PR #52 GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -189,6 +191,7 @@ Phase 8 update: deterministic synthetic large-ledger dataset and benchmark evide
 - PR #49 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #50 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #51 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
+- PR #52 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in Phase 6; this phase added structural assets and validator coverage.
 - Live PostgreSQL `EXPLAIN ANALYZE` for Phase 8 account statement, reconciliation, and archive candidate queries was not attempted; the current phase records deterministic in-memory synthetic benchmark evidence and migration/schema readiness.
 - Live Docker/Kubernetes/DAST/load/backup drills from the final command list were not rerun in Phase 0 because this phase is an inventory baseline, not an evidence refresh.
