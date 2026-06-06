@@ -182,24 +182,52 @@ test("staff terminal renders command and maker-checker approval screens without 
   await expect(page.getByTestId("manifest-fee-policy-api-panel")).toBeAttached();
 });
 
-test("staff terminal shell has no app-router one-off business screens", async () => {
+test("staff terminal exposes route-backed workflow screens through shared route components", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const componentDir = path.join(repoRoot, "apps", app, "src", "components");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const screenSource = readFileSync(path.join(componentDir, "terminal-screens.tsx"), "utf8");
   const uiSource = readFileSync(path.join(componentDir, "terminal-ui.tsx"), "utf8");
+  const routeComponent = readFileSync(path.join(componentDir, "workflow-routes.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
-  expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
+  expect(files).toEqual(["accounts", "api", "approvals", "audit", "customers", "globals.css", "layout.tsx", "page.tsx", "tx", "workflows"]);
   expect(pageSource).toContain("loadChannelManifests");
   expect(pageSource).toContain("StaffIntegratedWorkspace");
   expect(screenSource).toContain("TerminalPortalDashboard");
   expect(screenSource).toContain("TerminalShell");
+  expect(screenSource).toContain("staffWorkflowRouteSummaries");
   expect(uiSource).toContain("TerminalField");
   expect(uiSource).toContain("TerminalButton");
+  expect(routeComponent).toContain("StaffWorkflowRoutePage");
+  expect(routeComponent).toContain("POLICY_REASON_REQUIRED");
+  expect(routeComponent).toContain("MAKER_CHECKER_SEPARATION_REQUIRED");
+  expect(routeComponent).toContain("AUTHORIZATION_DENIED");
   expect(pageSource).not.toContain("fetch(\"/api/staff");
   expect(pageSource).not.toContain("fetch('/api/staff");
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
+});
+
+test("staff terminal route pages render reason-required and maker-checker workflow states", async ({ page }) => {
+  await page.goto(`${baseUrl}/customers/SYN-CUS-ROUTE`);
+
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Customer Lookup: SYN-CUS-ROUTE" }).first()).toBeVisible();
+  await expect(page.getByText("POLICY_REASON_REQUIRED").first()).toBeVisible();
+  await expect(page.getByText("AUTHORIZATION_DENIED").first()).toBeVisible();
+  await expect(page.getByText("PRIVILEGED_UNMASK_TIMEBOXED").first()).toBeVisible();
+  await expect(page.getByText("ReasonInput").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/approvals`);
+  await expect(page.getByRole("heading", { name: "Approval Inbox" }).first()).toBeVisible();
+  await expect(page.getByText("APPROVAL_REQUESTED").first()).toBeVisible();
+  await expect(page.getByText("MAKER_CHECKER_SEPARATION_REQUIRED").first()).toBeVisible();
+  await expect(page.getByText("APPROVED").first()).toBeVisible();
+  await expect(page.getByText("REJECTED").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/tx/CST001`);
+  await expect(page.getByRole("heading", { name: "Transaction Code: CST001" }).first()).toBeVisible();
+  await expect(page.getByText("CST-001").first()).toBeVisible();
 });
 
 test("staff terminal loads masked customer detail from the Spring API when configured", async ({ page }) => {

@@ -425,6 +425,101 @@ ul {
   color: var(--muted);
 }
 
+.workflow-route-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-route-nav a {
+  display: grid;
+  min-height: 46px;
+  align-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  color: var(--text);
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.workflow-route-nav a[aria-current="page"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-weight: 800;
+}
+
+.workflow-state-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-state {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  padding: 10px;
+}
+
+.workflow-state strong {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.workflow-state span,
+.workflow-state small,
+.workflow-route-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.workflow-state-critical {
+  border-color: #e2b2b2;
+  background: #fff8f8;
+}
+
+.workflow-state-success {
+  border-color: #9ecdc4;
+  background: #f1fffc;
+}
+
+.workflow-state-warning {
+  border-color: #dec38f;
+  background: #fffaf0;
+}
+
+.workflow-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-form-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workflow-form-grid input,
+.workflow-form-grid select,
+.workflow-form-grid textarea {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--text);
+  padding: 6px 8px;
+}
+
 @media (max-width: 980px) {
   .channel-shell {
     grid-template-columns: 1fr;
@@ -437,7 +532,10 @@ ul {
   .channel-card-grid,
   .channel-card-grid-wide,
   .channel-metric-grid,
-  .channel-split {
+  .channel-split,
+  .workflow-route-nav,
+  .workflow-state-grid,
+  .workflow-form-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 export type ChannelAppId =
   | "customer-web"
+  | "staff-terminal"
   | "complaint-portal"
   | "ops-console"
   | "audit-console"

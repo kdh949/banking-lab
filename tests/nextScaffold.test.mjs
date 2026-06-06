@@ -27,14 +27,28 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   const page = await readFile("apps/customer-web/src/app/page.tsx", "utf8");
   const loader = await readFile("apps/customer-web/src/lib/manifestLoader.ts", "utf8");
   const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
+  const routes = await readFile("apps/customer-web/src/components/workflow-routes.tsx", "utf8");
+  const transferRoute = await readFile("apps/customer-web/src/app/transfers/new/page.tsx", "utf8");
+  const accountRoute = await readFile("apps/customer-web/src/app/accounts/[accountId]/page.tsx", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
   const notificationDeliveryManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-802.notification-delivery-history.json", "utf8"));
 
   assert.match(page, /loadCustomerWebManifests/);
+  assert.match(page, /customerWorkflowRouteSummaries/);
   assert.match(loader, /screen-manifests/);
   assert.match(loader, /customer-web/);
   assert.match(loader, /manifest\.app === "customer-web"/);
+  assert.match(routes, /CustomerWorkflowRoutePage/);
+  assert.match(routes, /CWB-201/);
+  assert.match(routes, /POSTED/);
+  assert.match(routes, /HELD/);
+  assert.match(routes, /FAILED/);
+  assert.match(routes, /BLOCKED/);
+  assert.match(routes, /STEP_UP_REQUIRED/);
+  assert.match(routes, /synthetic demo fallback/);
+  assert.match(transferRoute, /routeKey: "transferNew"/);
+  assert.match(accountRoute, /routeKey: "accountDetail"/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
   assert.match(panel, /data-testid="api-backed-customer-payment-domain"/);
   assert.match(panel, /createPaymentInstruction/);
@@ -311,6 +325,26 @@ test("staff-terminal exposes WRK003 workflow timeline through the Spring API cli
   assert.equal(manifest.audit.reasonRequired, true);
   assert.equal(manifest.audit.eventTypes[0], "WORKFLOW_TIMELINE_VIEW");
   assert.equal(dashboard.actions.some((action) => action.target === "WRK-003"), true);
+});
+
+test("staff-terminal exposes route-backed reason and approval workflow pages", async () => {
+  const routes = await readFile("apps/staff-terminal/src/components/workflow-routes.tsx", "utf8");
+  const dashboard = await readFile("apps/staff-terminal/src/components/terminal-screens.tsx", "utf8");
+  const customerRoute = await readFile("apps/staff-terminal/src/app/customers/[customerId]/page.tsx", "utf8");
+  const approvalRoute = await readFile("apps/staff-terminal/src/app/approvals/page.tsx", "utf8");
+  const txRoute = await readFile("apps/staff-terminal/src/app/tx/[transactionCode]/page.tsx", "utf8");
+
+  assert.match(routes, /StaffWorkflowRoutePage/);
+  assert.match(routes, /POLICY_REASON_REQUIRED/);
+  assert.match(routes, /MAKER_CHECKER_SEPARATION_REQUIRED/);
+  assert.match(routes, /AUTHORIZATION_DENIED/);
+  assert.match(routes, /staffCustomerDetail/);
+  assert.match(routes, /approveStaffApproval/);
+  assert.match(routes, /staffWorkflowTimeline/);
+  assert.match(dashboard, /staffWorkflowRouteSummaries/);
+  assert.match(customerRoute, /routeKey: "customers"/);
+  assert.match(approvalRoute, /routeKey: "approvals"/);
+  assert.match(txRoute, /routeKey: "tx"/);
 });
 
 test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
