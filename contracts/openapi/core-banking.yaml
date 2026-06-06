@@ -7,6 +7,19 @@ x-banking-lab-contract:
   syntheticOnly: true
   structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
 paths:
+  /api/auth/customer/signup:
+    post:
+      operationId: signupCustomer
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/auth/customer/login:
+    post:
+      operationId: loginCustomer
+      x-synthetic-only: true
+      x-synthetic-auth-dev-test-only: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/customers/onboarding-requests:
     post:
       operationId: requestStaffCustomerOnboarding

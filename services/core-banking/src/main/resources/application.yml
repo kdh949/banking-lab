@@ -9,6 +9,9 @@ banking-lab:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}
     dev-simulator-token-enabled: ${BANKING_LAB_DEV_SIMULATOR_TOKEN:false}
+    customer-auth:
+      synthetic-token-issuer-enabled: ${BANKING_LAB_CUSTOMER_AUTH_SYNTHETIC_TOKEN_ISSUER_ENABLED:false}
+      token-ttl-seconds: ${BANKING_LAB_CUSTOMER_AUTH_TOKEN_TTL_SECONDS:3600}
     trusted-device-enforcement-enabled: ${BANKING_LAB_SECURITY_TRUSTED_DEVICE_ENFORCEMENT_ENABLED:true}
     step-up:
       enforcement-enabled: ${BANKING_LAB_SECURITY_STEP_UP_ENFORCEMENT_ENABLED:true}

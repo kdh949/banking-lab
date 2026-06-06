@@ -42,6 +42,7 @@ class SecurityConfig(
         http.authorizeHttpRequests {
             it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             it.requestMatchers("/", "/health", "/api/health", "/robots.txt", "/sitemap.xml", "/actuator/health", "/actuator/health/**").permitAll()
+            it.requestMatchers(HttpMethod.POST, "/api/auth/customer/signup", "/api/auth/customer/login").permitAll()
             it.requestMatchers("/api/**").authenticated()
             it.anyRequest().permitAll()
         }

@@ -49,7 +49,17 @@ class SpringSecurityResourceServerTest {
             BankingLabSimulatorTokenProfileGuard(
                 environment = prodEnvironment,
                 simulatorTokensEnabled = true,
-                devSimulatorTokenEnabled = true
+                devSimulatorTokenEnabled = true,
+                syntheticCustomerAuthTokenIssuerEnabled = false
+            ).afterPropertiesSet()
+        }
+
+        assertThrows(IllegalStateException::class.java) {
+            BankingLabSimulatorTokenProfileGuard(
+                environment = prodEnvironment,
+                simulatorTokensEnabled = false,
+                devSimulatorTokenEnabled = false,
+                syntheticCustomerAuthTokenIssuerEnabled = true
             ).afterPropertiesSet()
         }
 
@@ -57,7 +67,8 @@ class SpringSecurityResourceServerTest {
         BankingLabSimulatorTokenProfileGuard(
             environment = testEnvironment,
             simulatorTokensEnabled = true,
-            devSimulatorTokenEnabled = true
+            devSimulatorTokenEnabled = true,
+            syntheticCustomerAuthTokenIssuerEnabled = true
         ).afterPropertiesSet()
     }
 

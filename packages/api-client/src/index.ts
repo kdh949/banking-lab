@@ -4,6 +4,53 @@ export interface BankingApiClientOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface CustomerSignupCommand {
+  readonly idempotencyKey: string;
+  readonly username: string;
+  readonly password: string;
+  readonly syntheticCustomerName: string;
+  readonly syntheticPhone?: string;
+  readonly syntheticAddress?: string;
+  readonly customerGrade?: string;
+  readonly riskGrade?: string;
+  readonly sourceOfFundsCode?: string;
+  readonly transactionPurposeCode?: string;
+}
+
+export interface CustomerLoginCommand {
+  readonly username: string;
+  readonly password: string;
+}
+
+export interface CustomerAuthCustomerDto {
+  readonly customerId: string;
+  readonly authSubject: string;
+  readonly username: string;
+  readonly kycStatus: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAuthSessionDto {
+  readonly subject: string;
+  readonly customerId: string;
+  readonly roles: readonly string[];
+  readonly issuer: string;
+  readonly sessionId: string;
+  readonly authTime: string;
+  readonly issuedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAuthResponse {
+  readonly customer: CustomerAuthCustomerDto;
+  readonly session: CustomerAuthSessionDto;
+  readonly bearerToken: string;
+  readonly tokenType: "Bearer" | string;
+  readonly expiresAt: string;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
 export interface StaffAccessItemResponse<T> {
   readonly auditEventId: string;
   readonly item: T;
@@ -2419,6 +2466,28 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
     request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
 
   return {
+    signupCustomer(command: CustomerSignupCommand) {
+      return request<CustomerAuthResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/auth/customer/signup",
+        {},
+        undefined,
+        { method: "POST", body: command }
+      );
+    },
+
+    loginCustomer(command: CustomerLoginCommand) {
+      return request<CustomerAuthResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/auth/customer/login",
+        {},
+        undefined,
+        { method: "POST", body: command }
+      );
+    },
+
     requestStaffCustomerOnboarding(command: CustomerOnboardingRequestCommand) {
       return request<CustomerOnboardingRequestResponse>(
         fetchImpl,

@@ -69,6 +69,11 @@ class BankingLabAuthorizationFilter(
         if (request.method.equals("OPTIONS", ignoreCase = true)) {
             return false
         }
+        if (request.method.equals("POST", ignoreCase = true) &&
+            (path == "/api/auth/customer/signup" || path == "/api/auth/customer/login")
+        ) {
+            return false
+        }
         return path.startsWith("/api/") && path != "/api/health"
     }
 
@@ -254,6 +259,8 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> "WRK-003"
             path.startsWith("/api/staff/customers/onboarding-requests") -> "CST-201"
             path.startsWith("/api/staff/accounts/opening-requests") -> "ACC-201"
+            path.startsWith("/api/auth/customer/signup") -> "CWB-001"
+            path.startsWith("/api/auth/customer/login") -> "CWB-002"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"

@@ -134,3 +134,65 @@ test("Phase 2 synthetic account opening persistence and service preserve ledger 
   assert.match(controller, /hasAnyRole\('BRANCH_STAFF','BRANCH_MANAGER','COMPLIANCE_MANAGER'\)/);
   assert.match(controller, /hasAnyRole\('BRANCH_MANAGER','COMPLIANCE_MANAGER'\)/);
 });
+
+test("Phase 3 synthetic customer signup and login contract and client are wired", async () => {
+  const [contract, client] = await Promise.all([
+    read("contracts/openapi/core-banking.yaml"),
+    read("packages/api-client/src/index.ts")
+  ]);
+
+  for (const operationId of ["signupCustomer", "loginCustomer"]) {
+    assert.match(contract, new RegExp(`operationId: ${operationId}`));
+    assert.match(client, new RegExp(`${operationId}\\(`));
+  }
+
+  assert.match(contract, /\/api\/auth\/customer\/signup/);
+  assert.match(contract, /\/api\/auth\/customer\/login/);
+  assert.match(contract, /x-synthetic-auth-dev-test-only: true/);
+  assert.match(contract, /x-idempotency-policy: body\.idempotencyKey/);
+  assert.match(client, /interface CustomerSignupCommand/);
+  assert.match(client, /interface CustomerLoginCommand/);
+  assert.match(client, /interface CustomerAuthResponse/);
+  assert.match(client, /bearerToken: string/);
+});
+
+test("Phase 3 synthetic customer auth implementation is guarded hashed and unauthenticated", async () => {
+  const [migration, service, issuer, controller, securityConfig, authFilter, guard] = await Promise.all([
+    read("db/migrations/V039__synthetic_customer_signup_auth.sql"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/auth/SyntheticCustomerAuthTokenIssuer.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthController.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/security/SecurityConfig.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabAuthorizationFilter.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabSimulatorTokenProfileGuard.kt")
+  ]);
+
+  assert.match(migration, /CREATE SEQUENCE synthetic_customer_signup_customer_seq/);
+  assert.match(migration, /signup_idempotency_key TEXT UNIQUE/);
+  assert.match(migration, /signup_command_hash TEXT/);
+
+  assert.match(service, /passwordEncoder\.encode/);
+  assert.match(service, /passwordEncoder\.matches/);
+  assert.match(service, /CUSTOMER_SIGNUP_SUCCEEDED/);
+  assert.match(service, /CUSTOMER_LOGIN_SUCCEEDED/);
+  assert.match(service, /CUSTOMER_LOGIN_FAILED/);
+  assert.match(service, /passwordStoredPlaintext" to false/);
+  assert.match(service, /keycloakAdminApiCalled" to false/);
+  assert.match(service, /realKycProviderCalled" to false/);
+  assert.match(service, /requireSameSignupCommandHash/);
+  assert.doesNotMatch(service, /password_hash = :password/);
+
+  assert.match(issuer, /customer-auth\.synthetic-token-issuer-enabled:false/);
+  assert.match(issuer, /simulatorTokensEnabled && devSimulatorTokenEnabled/);
+  assert.match(issuer, /"roles" to listOf\("CUSTOMER"\)/);
+  assert.match(issuer, /"customerId" to customerId/);
+  assert.match(issuer, /"realKeycloakToken" to false/);
+
+  assert.match(controller, /\/api\/auth\/customer/);
+  assert.match(controller, /@PostMapping\("\/signup"\)/);
+  assert.match(controller, /@PostMapping\("\/login"\)/);
+  assert.match(securityConfig, /requestMatchers\(HttpMethod\.POST, "\/api\/auth\/customer\/signup", "\/api\/auth\/customer\/login"\)\.permitAll/);
+  assert.match(authFilter, /path == "\/api\/auth\/customer\/signup"/);
+  assert.match(authFilter, /path == "\/api\/auth\/customer\/login"/);
+  assert.match(guard, /synthetic customer auth token issuance is dev\/test only/);
+});

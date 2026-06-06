@@ -11,7 +11,9 @@ class BankingLabSimulatorTokenProfileGuard(
     @param:Value("\${banking-lab.security.simulator-tokens-enabled:false}")
     private val simulatorTokensEnabled: Boolean,
     @param:Value("\${banking-lab.security.dev-simulator-token-enabled:false}")
-    private val devSimulatorTokenEnabled: Boolean
+    private val devSimulatorTokenEnabled: Boolean,
+    @param:Value("\${banking-lab.security.customer-auth.synthetic-token-issuer-enabled:false}")
+    private val syntheticCustomerAuthTokenIssuerEnabled: Boolean
 ) : InitializingBean {
     override fun afterPropertiesSet() {
         val activeProfiles = environment.activeProfiles.map { it.lowercase() }.toSet()
@@ -19,6 +21,11 @@ class BankingLabSimulatorTokenProfileGuard(
         if (prodLike && (simulatorTokensEnabled || devSimulatorTokenEnabled)) {
             throw IllegalStateException(
                 "simulator tokens are dev/test only and must be disabled for prod-like profiles"
+            )
+        }
+        if (prodLike && syntheticCustomerAuthTokenIssuerEnabled) {
+            throw IllegalStateException(
+                "synthetic customer auth token issuance is dev/test only and must be disabled for prod-like profiles"
             )
         }
     }
