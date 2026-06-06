@@ -41,11 +41,13 @@ Scope: Phase 7 of `docs/codex/remaining-hardening-goals.md` for payment, notific
 | `npm run security:secrets-check` | pass | Secret placeholder scan passed for 857 files after Phase 7 changes. |
 | `npm test` | pass | Node oracle/structural suite passed with 172 tests. |
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Whitespace validation passed while excluding pre-existing generated evidence changes. |
+| `gh pr view 51 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | PR #51 was mergeable but unstable because hosted CI check runs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79874770856/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Not Run Yet
 
 - Full platform live runtime, Kubernetes, DAST, and large-ledger drills were not part of Phase 7 and are tracked separately.
-- Hosted GitHub Actions for this phase have not been attempted yet in this evidence file; they will be recorded after the Phase 7 PR is opened.
+- PR #51 hosted GitHub Actions were attempted, but all jobs failed before runner startup due GitHub account billing/spending-limit restrictions. No hosted test steps executed.
 
 ## Residual Risk
 

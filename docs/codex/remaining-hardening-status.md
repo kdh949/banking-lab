@@ -20,7 +20,7 @@ Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through 
 
 Phase 6 update: secrets hygiene, default-secret fail-fast controls, observability metric validation, five operational runbooks, and a controlled audit export workflow are now implemented. `V036__audit_export_jobs.sql` stores audit export jobs/files, export requests are auditor/compliance-only, reason-required, step-up protected, idempotent, maker-checker approved, synthetic-only, and verified not to mutate ledger rows. Evidence is recorded in `docs/test-evidence/phase-6-ops-security.md`; generated Docker-forced security evidence now reports npm audit, Semgrep, Trivy filesystem scan, SBOM, and ZAP baseline DAST passing against a disposable local synthetic target. PR #50 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted and structural tests passed.
 
-Phase 7 update: payment-service and reporting-service Kafka publishers now include persisted event envelope metadata (`sourceService`, `eventType`, `aggregateId`, `occurredAt`, `syntheticOnly`) in record headers and JSON envelope headers, and their Redpanda integration tests assert that metadata. Notification-service now rejects Kafka events missing required envelope metadata before creating delivery side effects. Existing payment/notification/reporting Compose and Keycloak service-token smokes were rerun for this bounded slice. Evidence is recorded in `docs/test-evidence/phase-7-bounded-context-hardening.md`.
+Phase 7 update: payment-service and reporting-service Kafka publishers now include persisted event envelope metadata (`sourceService`, `eventType`, `aggregateId`, `occurredAt`, `syntheticOnly`) in record headers and JSON envelope headers, and their Redpanda integration tests assert that metadata. Notification-service now rejects Kafka events missing required envelope metadata before creating delivery side effects. Existing payment/notification/reporting Compose and Keycloak service-token smokes were rerun for this bounded slice. Evidence is recorded in `docs/test-evidence/phase-7-bounded-context-hardening.md`. PR #51 hosted GitHub Actions were attempted, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local bounded-context, contract, secrets, and structural tests passed.
 
 ## Already Implemented
 
@@ -166,6 +166,8 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 | `npm run security:secrets-check` | pass | Phase 7 secret placeholder scan passed for 857 files. |
 | `npm test` | pass | Phase 7 final Node oracle/structural suite passed with 172 tests. |
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 7 whitespace validation passed while excluding pre-existing generated evidence changes. |
+| `gh pr view 51 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #51 was mergeable but unstable because hosted CI jobs failed before runner startup. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79874770856/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 
@@ -176,6 +178,7 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 - PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #49 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - PR #50 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
+- PR #51 hosted CI jobs were attempted but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
 - Live Prometheus/Grafana/Loki/Tempo alert-routing evidence was not rerun in Phase 6; this phase added structural assets and validator coverage.
 - `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.
 - Live Docker/Kubernetes/DAST/load/backup drills from the final command list were not rerun in Phase 0 because this phase is an inventory baseline, not an evidence refresh.
