@@ -6,6 +6,12 @@ Scope: target-stack Banking Lab implementation only. The legacy Node runtime is 
 
 Status values are limited to `complete`, `api-backed-read`, `api-backed-command`, `browser-e2e-backed`, `live-keycloak-backed`, `manifest-only`, `partial`, `missing`, and `not-applicable`.
 
+## Phase 0 Remaining Hardening Baseline
+
+The 2026-06-06 remaining-hardening baseline is recorded in `docs/codex/remaining-hardening-status.md`. It confirms the existing target-stack coverage below should not be duplicated, and it scopes the next hardening work to CI full-service verification, Spring Security Resource Server standardization, ledger projection drift/rebuild operations, route-level customer/staff workflows, contract validation scripts, secrets/observability/runbooks, bounded-context CI/contract gates, and large-ledger operational evidence.
+
+Current Phase 0 command evidence reran `npm ci`, `npm test`, `npm run validate:manifests`, `npm run packages:typecheck`, `npm run scripts:typecheck`, `docker compose config`, `npm run test:core-banking:unit`, and `npm run test:core-banking:integration`. The two Gradle commands failed inside the sandbox with a file-lock socket denial and passed after approved unsandboxed reruns.
+
 | Area | Feature/Screen | Manifest | Next UI | API Client | Spring API | PostgreSQL | Keycloak/AuthZ | Audit | Maker-checker | E2E/Integration Test | Evidence | Status |
 | ---- | -------------- | -------- | ------- | ---------- | ---------- | ---------- | -------------- | ----- | ------------- | -------------------- | -------- | ------ |
 | customer-web | Account overview/detail/history: `CWB-101`, `CWB-102`, `CWB-103` | yes | yes | yes | yes; transaction history plus statement/confirmation/certificate reads | yes; ledger postings drive statement artifacts and `balance_certificate_snapshots` persist certificate source metadata | customer token path when configured | self-service account and statement artifact audit with certificate snapshot audit references | not-applicable | Playwright conditional API smoke, Spring integration, statement read-model integration with persisted certificate snapshots, live customer Keycloak propagation for current API-backed paths | `docs/test-evidence/api-backed-channel-smoke.md`, `docs/test-evidence/keycloak-live-realm-smoke.md`, `docs/test-evidence/statement-read-models.md` | live-keycloak-backed |
