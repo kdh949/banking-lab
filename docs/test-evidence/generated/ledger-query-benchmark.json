@@ -1,0 +1,130 @@
+{
+  "generatedAt": "2026-06-06T11:55:36.352Z",
+  "command": "npm run ledger:query-benchmark",
+  "status": "pass",
+  "syntheticOnly": true,
+  "datasetHash": "46bc4baf35f8fff447648aa47cfea9778c08903cae9726daa7f271cc97262b4b",
+  "config": {
+    "customerCount": 240,
+    "accountCount": 720,
+    "transactionCount": 5000,
+    "seed": 424242,
+    "startDate": "2025-01-01",
+    "endDate": "2026-12-31",
+    "currency": "KRW",
+    "archiveCutoffDate": "2026-01-01"
+  },
+  "migrationEvidence": {
+    "migrationFilesScanned": [
+      "db/migrations/V001__foundation.sql",
+      "db/migrations/V002__ledger_constraints.sql",
+      "db/migrations/V003__audit_approval_workflow.sql",
+      "db/migrations/V004__outbox_inbox.sql",
+      "db/migrations/V005__fds_aml_reconciliation.sql",
+      "db/migrations/V007__workflow_case_lifecycle.sql",
+      "db/migrations/V008__staff_access_contact_fields.sql",
+      "db/migrations/V009__fds_held_transfer_details.sql",
+      "db/migrations/V010__temporal_workflow_references.sql",
+      "db/migrations/V011__audit_hash_chain_lock.sql",
+      "db/migrations/V012__customer_transfer_results.sql",
+      "db/migrations/V013__account_hold_requests.sql",
+      "db/migrations/V014__account_limit_change_requests.sql",
+      "db/migrations/V015__customer_kyc_review_requests.sql",
+      "db/migrations/V016__fee_waiver_requests.sql",
+      "db/migrations/V017__transaction_correction_requests.sql",
+      "db/migrations/V018__deposit_products_interest.sql",
+      "db/migrations/V019__fee_policies_posting.sql",
+      "db/migrations/V020__limit_usage_counters.sql",
+      "db/migrations/V021__eod_closing_steps.sql",
+      "db/migrations/V022__loan_domain.sql",
+      "db/migrations/V023__card_domain.sql",
+      "db/migrations/V024__parameter_admin_controls.sql",
+      "db/migrations/V025__limit_defaults_and_parameter_seed_resilience.sql",
+      "db/migrations/V026__security_auth_hardening_controls.sql",
+      "db/migrations/V027__ledger_db_integrity_and_accounting_structure.sql",
+      "db/migrations/V028__operational_security_lab_controls.sql",
+      "db/migrations/V029__aml_fds_governance_reporting.sql",
+      "db/migrations/V030__payment_ledger_posting_type.sql",
+      "db/migrations/V031__complaint_self_service_extensions.sql",
+      "db/migrations/V032__complaint_source_references.sql",
+      "db/migrations/V033__reconciliation_mismatch_taxonomy.sql",
+      "db/migrations/V034__statement_balance_certificate_snapshots.sql",
+      "db/migrations/V035__ledger_projection_integrity_workflow.sql",
+      "db/migrations/V036__audit_export_jobs.sql"
+    ],
+    "sourceTablePartitionDecision": "ledger_transactions and ledger_postings remain FK-compatible source tables; V027 adds range-partitioned route tables keyed by business_date as the current low-risk migration path."
+  },
+  "checks": [
+    {
+      "id": "business-date-index-coverage",
+      "status": "pass",
+      "details": "ledger transaction and reconciliation date-range indexes are present in Flyway migrations"
+    },
+    {
+      "id": "partition-route-schema-present",
+      "status": "pass",
+      "details": "V027 route tables and insert triggers preserve FK-compatible source ledger rows"
+    },
+    {
+      "id": "partition-route-consistency",
+      "status": "pass",
+      "details": "5000 transaction routes and 10000 posting routes match generated business dates"
+    },
+    {
+      "id": "old-date-archive-candidate-query",
+      "status": "pass",
+      "details": "2494 transactions before 2026-01-01 remain balanced archive candidates"
+    },
+    {
+      "id": "account-statement-index-coverage",
+      "status": "pass",
+      "details": "statement lookup can use posting account/currency and transaction business-date indexes"
+    }
+  ],
+  "queryEvidence": [
+    {
+      "id": "account-statement-date-range",
+      "status": "pass",
+      "durationMillis": 0.015584000000004039,
+      "fullScanRows": 10000,
+      "indexedCandidateRows": 20,
+      "resultRows": 2,
+      "indexEvidence": [
+        "idx_ledger_postings_account",
+        "idx_ledger_transactions_business_date"
+      ],
+      "plan": "lookup postings by account_id=ACCT-SYN-000022, then constrain joined ledger_transactions.business_date between 2026-01-01 and 2026-03-31"
+    },
+    {
+      "id": "reconciliation-business-date-range",
+      "status": "pass",
+      "durationMillis": 0.06520799999999838,
+      "fullScanRows": 5000,
+      "indexedCandidateRows": 728,
+      "resultRows": 645,
+      "indexEvidence": [
+        "idx_reconciliation_items_business_date",
+        "idx_ledger_transactions_business_date"
+      ],
+      "plan": "use business_date range 2026-04-01 through 2026-06-30 for reconciliation item and ledger transaction comparison"
+    },
+    {
+      "id": "archive-candidate-business-date-cutoff",
+      "status": "pass",
+      "durationMillis": 0.5801250000000095,
+      "fullScanRows": 5000,
+      "indexedCandidateRows": 2494,
+      "resultRows": 2494,
+      "indexEvidence": [
+        "idx_ledger_transactions_business_date",
+        "ledger_transaction_partition_routes"
+      ],
+      "plan": "select posted ledger transactions where business_date < 2026-01-01, then archive only balanced source rows plus route metadata"
+    }
+  ],
+  "residualRisks": [
+    "Native range partitioning of ledger_transactions or ledger_postings would require a future composite-key migration because many current foreign keys reference ledger_transaction_id directly.",
+    "This is an in-memory synthetic benchmark smoke and schema-readiness check, not production throughput evidence.",
+    "Live EXPLAIN ANALYZE evidence should be captured later against a disposable PostgreSQL dataset if an environment is provisioned."
+  ]
+}

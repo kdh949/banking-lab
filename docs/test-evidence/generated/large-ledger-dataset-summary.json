@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-06-06T11:55:36.256Z",
+  "command": "npm run ledger:large-dataset-smoke",
+  "status": "pass",
+  "syntheticOnly": true,
+  "deterministic": true,
+  "config": {
+    "customerCount": 240,
+    "accountCount": 720,
+    "transactionCount": 5000,
+    "seed": 424242,
+    "startDate": "2025-01-01",
+    "endDate": "2026-12-31",
+    "currency": "KRW",
+    "archiveCutoffDate": "2026-01-01"
+  },
+  "datasetHash": "46bc4baf35f8fff447648aa47cfea9778c08903cae9726daa7f271cc97262b4b",
+  "counts": {
+    "customers": 240,
+    "customerAccounts": 720,
+    "systemAccounts": 1,
+    "ledgerTransactions": 5000,
+    "ledgerPostings": 10000,
+    "idempotencyKeys": 5000,
+    "balanceProjections": 721,
+    "transactionPartitionRoutes": 5000,
+    "postingPartitionRoutes": 10000,
+    "archiveCandidateTransactions": 2494
+  },
+  "balance": {
+    "transactionImbalanceCount": 0,
+    "projectionMismatchCount": 0,
+    "globalNetByCurrency": {
+      "KRW": 0
+    }
+  },
+  "samples": {
+    "firstTransactionId": "LTX-LARGE-00000001",
+    "lastTransactionId": "LTX-LARGE-00005000",
+    "busiestAccountId": "ACCT-SYN-000022"
+  },
+  "checks": [
+    {
+      "id": "deterministic-seed-replay",
+      "status": "pass",
+      "details": "first hash 46bc4baf35f8fff447648aa47cfea9778c08903cae9726daa7f271cc97262b4b, replay hash 46bc4baf35f8fff447648aa47cfea9778c08903cae9726daa7f271cc97262b4b"
+    },
+    {
+      "id": "balanced-postings",
+      "status": "pass",
+      "details": "0 transactions have non-zero debit/credit net"
+    },
+    {
+      "id": "projection-matches-postings",
+      "status": "pass",
+      "details": "0 account/currency projections differ from signed postings"
+    },
+    {
+      "id": "idempotency-keys-unique",
+      "status": "pass",
+      "details": "5000 unique keys for 5000 transactions"
+    },
+    {
+      "id": "business-dates-in-range",
+      "status": "pass",
+      "details": "2025-01-01 through 2026-12-31"
+    },
+    {
+      "id": "partition-route-coverage",
+      "status": "pass",
+      "details": "5000 transaction routes and 10000 posting routes"
+    },
+    {
+      "id": "synthetic-boundary",
+      "status": "pass",
+      "details": "all identifiers use CUS-SYN, ACCT-SYN, LTX-LARGE, and IDEMP-LARGE fixtures only"
+    }
+  ]
+}
