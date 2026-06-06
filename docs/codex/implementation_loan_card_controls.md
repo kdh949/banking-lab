@@ -130,7 +130,7 @@ Phase order is dependency-ordered. Phase 1 (limits + holds + EOD) is foundationa
 4. **Agreement** — e-sign simulation (record consent + agreement hash; synthetic).
 5. **Disbursement** — balanced ledger transaction via a new `DisburseLoanCommand` in `LedgerCommandService`: debit a loan-asset/clearing account, credit the customer deposit account. New posting types `LOAN_PRINCIPAL`, `LOAN_INTEREST`, `LOAN_REPAYMENT`. Idempotent.
 6. **Schedule** — generate `loan_repayment_schedules` + installments. Support **원리금균등 (equal payment)** and **원금균등 (equal principal)**. Math must be reproducible.
-7. **Repayment** — scheduled auto-debit via `LoanRepaymentCommand` (balanced posting reducing principal/interest). 
+7. **Repayment** — scheduled auto-debit via `LoanRepaymentCommand` (balanced posting reducing principal/interest).
 8. **Delinquency** — missed installment triggers `loan_delinquencies` and 연체이자 (penalty interest) accrual.
 9. **Early repayment** — 중도상환수수료 (prepayment fee) computed and posted.
 

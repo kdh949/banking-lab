@@ -65,4 +65,3 @@ limit invariants.
 ## Explicit Non-Goals
 
 No real card network limit sharing and no external credit bureau limits.
-

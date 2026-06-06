@@ -49,4 +49,3 @@ channels.
 
 No copy-paste screen farm, no marketing landing page as primary app surface, and
 no hidden API calls outside shared client conventions.
-

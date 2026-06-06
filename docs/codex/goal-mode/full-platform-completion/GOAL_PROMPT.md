@@ -76,4 +76,3 @@ Stop and report blocked only when no defensible next action remains under the
 current permissions or environment. The report must include attempted paths,
 evidence gathered, exact blocker, and the smallest input or environment change
 that would unlock progress.
-

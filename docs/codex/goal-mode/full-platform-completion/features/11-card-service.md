@@ -64,4 +64,3 @@ screen engine tests, and ledger invariant checks for captures/reversals.
 
 No real card issuing, PAN handling, PCI production scope, acquirer network, or
 payment processor integration.
-

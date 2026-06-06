@@ -68,4 +68,3 @@ ledger invariant tests, and manifest validation.
 
 No real credit bureau, real underwriting, real collateral, real collections, or
 production loan servicing integration.
-

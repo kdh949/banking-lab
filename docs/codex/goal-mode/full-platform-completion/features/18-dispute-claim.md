@@ -67,4 +67,3 @@ self-approval rejection, unauthorized access, and customer/staff visibility.
 
 No real card network chargeback, no real complaint intake from the public, and no
 production legal/regulatory filing.
-

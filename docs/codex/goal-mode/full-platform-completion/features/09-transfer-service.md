@@ -69,4 +69,3 @@ customer/staff status consistency.
 ## Explicit Non-Goals
 
 No real interbank transfer network and no real payment rail integration.
-

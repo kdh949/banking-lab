@@ -64,4 +64,3 @@ ops/staff typechecks. Evidence must show versioned rates and approved changes.
 
 No real deposit product sale, no regulatory disclosure automation, and no real
 pricing engine integration.
-

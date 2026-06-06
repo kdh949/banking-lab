@@ -67,4 +67,3 @@ usage.
 ## Explicit Non-Goals
 
 No external payment network posting and no mutable transaction correction.
-

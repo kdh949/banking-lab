@@ -65,4 +65,3 @@ validation, Keycloak smoke, security posture check, and platform evidence checks
 
 No real production admin console, no real infrastructure mutation from the lab
 UI, and no secret management for production systems.
-

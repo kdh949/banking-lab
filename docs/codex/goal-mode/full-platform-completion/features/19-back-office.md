@@ -67,4 +67,3 @@ screen-engine tests, Playwright smoke, Keycloak smoke, and evidence refresh.
 
 No real branch operations, real employee accounts, real HR integration, or live
 production operations console.
-

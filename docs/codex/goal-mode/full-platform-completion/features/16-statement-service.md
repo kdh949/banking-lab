@@ -63,4 +63,3 @@ validation, ledger invariant tests, and backup/restore evidence where relevant.
 
 No legally binding bank statement, no real document delivery, and no production
 certificate issuance.
-

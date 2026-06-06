@@ -47,4 +47,3 @@ refresh.
 
 No real regulatory report, no production customer statement, and no external
 document delivery.
-

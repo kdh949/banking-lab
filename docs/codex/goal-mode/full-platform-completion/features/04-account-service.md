@@ -71,4 +71,3 @@ posting commands.
 
 No real account numbers, no real bank account opening, and no external banking
 network enrollment.
-

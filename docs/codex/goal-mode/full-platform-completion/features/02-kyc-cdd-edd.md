@@ -72,4 +72,3 @@ synthetic provider boundary. Update evidence after Spring integration tests pass
 
 No real identity verification, sanctions screening, document capture, biometric
 check, or external KYC/AML provider integration.
-

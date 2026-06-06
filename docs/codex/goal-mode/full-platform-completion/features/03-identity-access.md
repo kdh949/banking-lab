@@ -70,4 +70,3 @@ typechecks, live Keycloak smoke where available, and security evidence commands.
 
 No production identity tenant, no real customer MFA enrollment, and no real
 identity-provider dependency outside local/synthetic lab configuration.
-

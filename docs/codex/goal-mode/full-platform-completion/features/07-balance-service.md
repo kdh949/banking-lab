@@ -67,4 +67,3 @@ holds and available balance.
 ## Explicit Non-Goals
 
 No real bank balance, no cross-bank balance inquiry, and no mutable balance edit.
-

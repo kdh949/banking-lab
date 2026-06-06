@@ -62,4 +62,3 @@ manifest validation, and statement tests for fee line visibility.
 
 No real merchant fee settlement, real ATM network fee, or production pricing
 engine.
-

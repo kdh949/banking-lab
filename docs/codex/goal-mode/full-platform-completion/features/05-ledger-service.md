@@ -69,4 +69,3 @@ read-model tests, reconciliation tests, and backup/restore drills.
 ## Explicit Non-Goals
 
 No real money, no real settlement ledger, and no direct balance mutation.
-

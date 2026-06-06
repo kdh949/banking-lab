@@ -93,4 +93,3 @@ that need one PostgreSQL transaction boundary. Use separate services or folders
 for capabilities with different deployment, scaling, or integration lifecycles:
 payment, notification, analytics, reporting, simulators, platform, and security
 verification.
-
