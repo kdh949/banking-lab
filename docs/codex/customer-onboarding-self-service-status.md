@@ -310,6 +310,32 @@ Phase 1 validation commands:
 - `gh pr view 54 --json url,headRefName,baseRefName,state,statusCheckRollup`: showed PR #54 remains open, with all hosted checks reported failed for run `27069232879`.
 - `gh api repos/kdh949/banking-lab/check-runs/79895386075/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
+## Phase 2 Staff Account Opening Update
+
+Implemented in commit `ca9a319a` on branch `codex/customer-onboarding-self-service`:
+
+- Added `account_opening_requests` and `synthetic_account_opening_seq` for synthetic account-opening workflow state and generated account numbers.
+- Added Spring account-opening service/controller/models with maker-checker approval, idempotency/command hash conflict detection, request/review/execute states, structured errors, and execution audit event `ACCOUNT_OPENING_EXECUTED`.
+- Execution creates `accounts`, `account_limits`, and zero `account_balance_projections`; optional opening deposits post only through `LedgerCommandService.deposit`, producing balanced `ledger_transactions`/`ledger_postings`, idempotency records, and outbox events.
+- Added staff terminal screen manifests `ACC-201` and `ACC-202`, OpenAPI operation ids, and typed API client methods for request/get/approve/reject/execute.
+- Added integration tests covering request replay, command hash conflict, self-approval rejection, checker approval, execution, generated account number masking, opening deposit ledger posting, execute replay, missing reason, invalid limits, missing deposit idempotency key, rejected execution, and audit/outbox persistence.
+- Extended Node structural tests for Phase 2 account-opening contract/client/manifest/persistence/ledger-boundary wiring.
+
+Phase 2 validation commands:
+
+- `npm run test:core-banking:integration -- --tests lab.banking.core.account.AccountOpeningIntegrationTest`: passed.
+- `node --test tests/customerOnboardingSelfService.test.mjs`: passed, 4 tests.
+- `npm run validate:manifests`: passed, 113 screen manifests.
+- `npm run contracts:lint`: passed.
+- `npm run contracts:check-client`: passed, 149 operation ids matched 142 shared client methods/exemptions.
+- `npm --workspace @banking-lab/api-client run typecheck`: passed.
+- `npm run next:staff-terminal:typecheck`: passed.
+- `npm run test:core-banking:integration -- --tests lab.banking.core.account.AccountOpeningIntegrationTest --tests lab.banking.core.onboarding.CustomerOnboardingIntegrationTest`: passed.
+- `npm test`: passed, 178 tests.
+- `git push`: passed, pushed commit `ca9a319a` to PR #54.
+- `gh pr view 54 --json statusCheckRollup`: showed hosted CI run `27069520636` completed with all jobs failed within a few seconds.
+- `gh api repos/kdh949/banking-lab/check-runs/79896132048/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
+
 ## Commands Not Attempted
 
 Not attempted in Phase 0:
@@ -320,4 +346,4 @@ Not attempted in Phase 0:
 - `docker compose config`
 - `docker compose --profile platform config`
 
-No Phase 2-5 implementation commands have been attempted yet.
+No Phase 3-5 implementation commands have been attempted yet.
