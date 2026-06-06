@@ -1,0 +1,48 @@
+{
+  "screenId": "CWB-002",
+  "transactionCode": "CWB002",
+  "title": "Customer Login",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "auth",
+  "highRisk": false,
+  "requiredRoles": ["PUBLIC_SYNTHETIC_CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_LOGIN_SUCCEEDED", "CUSTOMER_LOGIN_FAILED"]
+  },
+  "fields": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "required": true,
+      "mask": "SECRET"
+    }
+  ],
+  "api": {
+    "command": "POST /api/auth/customer/login",
+    "clientMethod": "loginCustomer",
+    "syntheticOnly": true,
+    "syntheticAuthDevTestOnly": true
+  },
+  "postActions": ["storeSyntheticSession", "showStructuredErrors"]
+}

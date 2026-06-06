@@ -244,3 +244,68 @@ test("Phase 4 customer account list recipient lookup and form routes are wired",
   assert.doesNotMatch(selfService, /SYN-CUS-001/);
   assert.doesNotMatch(selfService, /ACC-SYN-001-001/);
 });
+
+test("Phase 5 customer self-service manifests smoke and evidence are wired", async () => {
+  const [signupManifestText, loginManifestText, accountManifestText, transferManifestText, smoke, evidence, matrix] = await Promise.all([
+    read("screen-manifests/customer-web/CWB-001.customer-signup.json"),
+    read("screen-manifests/customer-web/CWB-002.customer-login.json"),
+    read("screen-manifests/customer-web/CWB-101.account-overview.json"),
+    read("screen-manifests/customer-web/CWB-201.internal-transfer.json"),
+    read("apps/customer-web/e2e/customer-onboarding-self-service.spec.ts"),
+    read("docs/test-evidence/customer-onboarding-self-service.md"),
+    read("docs/implementation-coverage-matrix.md")
+  ]);
+
+  const signupManifest = JSON.parse(signupManifestText);
+  const loginManifest = JSON.parse(loginManifestText);
+  const accountManifest = JSON.parse(accountManifestText);
+  const transferManifest = JSON.parse(transferManifestText);
+
+  assert.equal(signupManifest.screenId, "CWB-001");
+  assert.equal(signupManifest.api.clientMethod, "signupCustomer");
+  assert.equal(signupManifest.api.idempotencyPolicy, "body.idempotencyKey");
+  assert.equal(signupManifest.api.syntheticAuthDevTestOnly, true);
+  assert.equal(signupManifest.audit.selfService, true);
+  assert.equal(signupManifest.fields.some((field) => field.name === "password" && field.mask === "SECRET"), true);
+  assert.equal(loginManifest.screenId, "CWB-002");
+  assert.equal(loginManifest.api.clientMethod, "loginCustomer");
+  assert.equal(loginManifest.audit.eventTypes.includes("CUSTOMER_LOGIN_FAILED"), true);
+  assert.equal(accountManifest.api.clientMethod, "customerAccounts");
+  assert.equal(accountManifest.api.ownershipEnforced, true);
+  assert.equal(accountManifest.audit.eventTypes.includes("ACCOUNT_LIST_VIEW"), true);
+  assert.equal(transferManifest.api.lookupClientMethod, "internalRecipientLookup");
+  assert.equal(transferManifest.api.clientMethod, "requestCustomerTransfer");
+  assert.equal(transferManifest.api.internalRecipientOnly, true);
+  assert.equal(transferManifest.api.idempotencyPolicy, "body.idempotencyKey");
+
+  for (const token of [
+    "BANKING_LAB_E2E_API_BASE_URL",
+    "BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN",
+    "BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN",
+    "signupCustomer",
+    "loginCustomer",
+    "requestStaffAccountOpening",
+    "approveStaffAccountOpeningRequest",
+    "executeStaffAccountOpeningRequest",
+    "customerAccounts",
+    "internalRecipientLookup",
+    "requestCustomerTransfer",
+    "customerTransactions",
+    "customerTransfers",
+    "signup->login->accounts->transfer->history"
+  ]) {
+    assert.match(smoke, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(evidence, /Customer Onboarding Self-Service Evidence/);
+  assert.match(evidence, /synthetic-only/);
+  assert.match(evidence, /npm run k8s:validate/);
+  assert.match(evidence, /skipped_no_cluster/);
+  assert.match(evidence, /BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN/);
+  assert.match(evidence, /spending-limit/);
+
+  assert.match(matrix, /Synthetic signup\/login: `CWB-001`, `CWB-002`/);
+  assert.match(matrix, /Synthetic customer onboarding: `CST-201`, `CST-202`/);
+  assert.match(matrix, /Synthetic account opening: `ACC-201`, `ACC-202`/);
+  assert.match(matrix, /docs\/test-evidence\/customer-onboarding-self-service\.md/);
+});

@@ -247,7 +247,7 @@ console.log(
 );
 
 function isClusterConnectionFailure(stderr: string): boolean {
-  return /connection.*refused|operation not permitted|the server.*could not find|no configuration has been provided|unable to connect/i.test(stderr);
+  return /connection.*refused|operation not permitted|the server.*could not find|the server is currently unable to handle the request|couldn't get current server API group list|no configuration has been provided|unable to connect/i.test(stderr);
 }
 
 function trim(value: string | undefined): string {

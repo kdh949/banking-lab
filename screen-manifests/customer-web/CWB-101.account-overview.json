@@ -1,7 +1,7 @@
 {
   "screenId": "CWB-101",
   "transactionCode": "CWB101",
-  "title": "Customer Account Overview",
+  "title": "Customer Account List",
   "app": "customer-web",
   "type": "INQUIRY",
   "domain": "account",
@@ -14,28 +14,43 @@
     "enabled": true,
     "reasonRequired": false,
     "piiAccess": false,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["ACCOUNT_LIST_VIEW"]
   },
   "query": {
     "endpoint": "GET /api/customer/accounts",
+    "clientMethod": "customerAccounts",
     "fields": [
       {
         "name": "customerId",
         "label": "Customer ID",
-        "type": "hidden",
+        "type": "session-customer-id",
         "required": true
       }
     ]
   },
   "resultTable": {
-    "columns": ["maskedAccountNo", "status", "ledgerBalanceMinor", "availableBalanceMinor"]
+    "columns": ["maskedAccountNo", "status", "availableBalanceMinor", "ledgerBalanceMinor", "syntheticOnly"]
   },
   "actions": [
+    {
+      "id": "openAccountDetail",
+      "label": "Open Account Detail",
+      "type": "navigate",
+      "target": "CWB-102"
+    },
     {
       "id": "openTransfer",
       "label": "Open Transfer",
       "type": "navigate",
       "target": "CWB-201"
     }
-  ]
+  ],
+  "api": {
+    "query": "GET /api/customer/accounts",
+    "clientMethod": "customerAccounts",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
 }

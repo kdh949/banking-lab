@@ -1,7 +1,7 @@
 {
   "screenId": "CWB-201",
   "transactionCode": "CWB201",
-  "title": "Internal Transfer Simulation",
+  "title": "Internal Synthetic Transfer",
   "app": "customer-web",
   "type": "COMMAND",
   "domain": "transfer",
@@ -19,24 +19,32 @@
     "enabled": true,
     "reasonRequired": false,
     "piiAccess": false,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_TRANSFER_REQUESTED", "INTERNAL_RECIPIENT_LOOKUP"]
   },
   "fields": [
     {
       "name": "fromAccountId",
       "label": "From Account",
-      "type": "account-select",
+      "type": "owned-account-select",
+      "required": true
+    },
+    {
+      "name": "recipientQuery",
+      "label": "Recipient Account Number Or ID",
+      "type": "internal-recipient-lookup",
       "required": true
     },
     {
       "name": "toAccountId",
-      "label": "To Account",
-      "type": "account-select",
+      "label": "Resolved Recipient Account",
+      "type": "hidden",
       "required": true
     },
     {
       "name": "amountMinor",
-      "label": "Amount",
+      "label": "Amount Minor Units",
       "type": "money",
       "required": true
     },
@@ -48,7 +56,14 @@
     }
   ],
   "api": {
-    "command": "POST /api/customer/transfers"
+    "lookup": "GET /api/customer/recipients/internal-account-lookup",
+    "lookupClientMethod": "internalRecipientLookup",
+    "command": "POST /api/customer/transfers",
+    "clientMethod": "requestCustomerTransfer",
+    "idempotencyPolicy": "body.idempotencyKey",
+    "ownershipEnforced": true,
+    "internalRecipientOnly": true,
+    "syntheticOnly": true
   },
-  "postActions": ["createAuditEvent", "showTransferResult"]
+  "postActions": ["createAuditEvent", "showReplayStatus", "showTransferResult", "showStructuredErrors"]
 }

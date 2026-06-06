@@ -398,6 +398,42 @@ Phase 4 validation commands:
 - `gh pr view 54 --json statusCheckRollup,headRefOid,url`: PR #54 pointed at `2ab03926`; hosted CI run `27070282790` completed with all jobs failed within a few seconds.
 - `gh api repos/kdh949/banking-lab/check-runs/79898153086/annotations`: latest hosted CI annotation says the job was not started because recent account payments have failed or the spending limit needs to be increased.
 
+## Phase 5 Contracts, Manifests, Evidence, And Smoke Update
+
+Implemented on branch `codex/customer-onboarding-self-service` after Phase 4:
+
+- Added customer-web manifests `CWB-001` and `CWB-002` for synthetic signup/login, including password masking, idempotent signup policy, dev/test synthetic-auth metadata, and self-service audit event coverage.
+- Updated `CWB-101` and `CWB-201` to describe form-backed owned account list and internal synthetic transfer flows, including `customerAccounts`, `internalRecipientLookup`, `requestCustomerTransfer`, ownership enforcement, internal-recipient-only policy, and idempotency policy.
+- Added an env-gated Playwright/API smoke at `apps/customer-web/e2e/customer-onboarding-self-service.spec.ts`. When live synthetic API and staff maker/checker bearer tokens are supplied, it signs up a unique customer, logs in, opens two approved synthetic accounts through staff maker-checker APIs, lists owned accounts, looks up the destination as an internal recipient, posts an idempotent transfer, checks transfer replay, reads source-account transaction history, and renders the account/result routes with stored session state.
+- Updated `docs/test-evidence/customer-onboarding-self-service.md` and `docs/implementation-coverage-matrix.md`.
+- Extended structural tests for the Phase 5 manifests, smoke, evidence, and reusable form-contract field list.
+- Adjusted Kubernetes validation so an unavailable local Kubernetes API discovery response is recorded through the existing `skipped_no_cluster` path after structural manifest validation succeeds.
+
+Phase 5 validation commands:
+
+- `npm run test:core-banking:integration -- --tests lab.banking.core.onboarding.CustomerOnboardingIntegrationTest --tests lab.banking.core.account.AccountOpeningIntegrationTest --tests lab.banking.core.auth.CustomerAuthIntegrationTest --tests lab.banking.core.customer.CustomerAccountApiParityIntegrationTest --tests lab.banking.core.customer.CustomerTransferApiParityIntegrationTest`: passed.
+- `npm run next:customer-web:typecheck`: passed.
+- `npm run next:customer-web:build`: passed.
+- `npm run next:staff-terminal:typecheck`: passed.
+- `npm run packages:typecheck`: passed.
+- `npm run scripts:typecheck`: passed.
+- `npm run contracts:lint`: passed.
+- `npm run contracts:check-client`: passed, 153 operation ids matched 146 shared client methods/exemptions.
+- `npm run validate:manifests`: passed, 115 screen manifests.
+- `node --test tests/customerOnboardingSelfService.test.mjs`: passed, 8 tests.
+- `node --test tests/nextScaffold.test.mjs tests/customerOnboardingSelfService.test.mjs`: passed, 23 tests.
+- `node --test tests/manifestExpansionForm.test.mjs`: passed, 2 tests.
+- `npm test`: passed, 182 tests.
+- `npm run k8s:validate`: passed, 27 resources, `kubectl skipped_no_cluster`.
+- `npm run platform:validate`: passed for Kubernetes structural validation, Helm template validation, and Argo CD validation.
+- `docker compose config`: passed.
+- `docker compose --profile platform config`: passed.
+- `npm run security:secrets-check`: passed, 886 files checked.
+- `npm run security:evidence`: first sandboxed run failed due registry/Docker access restrictions; approved escalated rerun passed npm audit, Semgrep, Trivy, and CycloneDX SBOM, with DAST skipped because `BANKING_LAB_DAST_URL` was not set.
+- `npm run test:e2e -- apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium`: passed with 1 skipped because live synthetic API and staff maker/checker token environment variables were absent.
+- `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium`: passed 3 tests and skipped 12 live API-backed smokes because live API environment variables were absent.
+- `npm run test:e2e -- --project=chromium`: passed 19 tests and skipped 59 live API/Keycloak/payment/notification smokes because corresponding environment variables were absent.
+
 ## Commands Not Attempted
 
 Not attempted in Phase 0:
@@ -408,4 +444,4 @@ Not attempted in Phase 0:
 - `docker compose config`
 - `docker compose --profile platform config`
 
-No Phase 5 implementation commands have been attempted yet.
+No additional Phase 5 implementation commands are pending locally. Hosted CI still must be rerun after GitHub billing/spending-limit settings allow jobs to start.
