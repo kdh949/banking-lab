@@ -2,7 +2,7 @@
 
 Review date: 2026-06-06
 
-Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`
+Phase branches: `codex/remaining-hardening-phase-0`, `codex/remaining-hardening-phase-1-ci`, `codex/remaining-hardening-phase-2-security`, `codex/remaining-hardening-phase-5-ledger-projection`, `codex/remaining-hardening-phase-3-workflow-ui`, `codex/remaining-hardening-phase-4-contracts`
 
 Scope: Phase 0 baseline for `docs/codex/remaining-hardening-goals.md`. The Node runtime remains a legacy oracle/reference only. This status covers the current synthetic lab and does not add real money, real PII, real financial-network, real card-network, Open Banking, or real KYC/provider integration.
 
@@ -16,11 +16,13 @@ Phase 5 update: ledger projection drift/rebuild operations now have Flyway migra
 
 Phase 3 update: customer-web now has route-backed workflow pages for login, accounts, account detail, transfers, complaints, cards, loans, payments, notifications, and security; staff-terminal now has route-backed workflow pages for transaction code, customer, account, approvals, audit, and workflow timeline views. The route pages reuse shared route components, manifest metadata, structured-error/idempotency/FDS/approval state panels, and mark synthetic demo fallbacks explicitly. Evidence is recorded in `docs/test-evidence/phase-3-workflow-route-hardening.md`. PR #48 hosted GitHub Actions were attempted and rerun, but every job was blocked before runner startup by GitHub account billing/spending-limit restrictions; local targeted tests passed and the blocked hosted CI gate is recorded as external availability evidence.
 
+Phase 4 update: OpenAPI/AsyncAPI contract validation is now implemented through `contracts/openapi/core-banking.yaml`, `contracts/openapi/reporting-service.yaml`, standardized structured-error contract metadata on payment/notification contracts, AsyncAPI envelope metadata, reporting event schemas, root `contracts:*` scripts, CI wiring, and `tests/contractHardening.test.mjs`. Evidence is recorded in `docs/test-evidence/contract-validation-hardening.md`.
+
 ## Already Implemented
 
 - Target-stack repository shape exists: Gradle includes `core-banking`, `payment-service`, `notification-service`, and `reporting-service`; Next.js channel workspaces and shared packages exist; Docker Compose, Kubernetes, Helm, Argo CD, Keycloak, Temporal, Redpanda, and observability files are structurally present.
 - Core banking ledger controls are implemented in Kotlin/Spring Boot with PostgreSQL/Flyway migrations through `V035`, including customers, accounts, postings, balance projections, idempotency, reversal, adjustment, closed-date controls, audit hash chain, maker-checker, workflow state, statement/certificate read models, EOD, product/fee/loan/card slices, operational-security lab controls, AML/FDS governance, complaint extensions, and ledger projection drift/rebuild workflow state.
-- Existing Node `.mjs` tests remain oracle/reference tests and are guarded by retirement/boundary checks. The current baseline rerun passed `npm test` with 170 tests after Phase 3 route structural coverage.
+- Existing Node `.mjs` tests remain oracle/reference tests and are guarded by retirement/boundary checks. The current baseline rerun passed `npm test` with 172 tests after Phase 4 contract structural coverage.
 - Screen manifest infrastructure is broad and validated: 109 manifests across customer, staff, complaint, ops, audit, FDS/AML, and admin channels.
 - Shared TypeScript packages exist for screen rendering, form validation, API client calls, and auth client behavior; package typechecks pass in the current baseline.
 - Payment, notification, and reporting bounded contexts have Spring source, Flyway migrations, service-specific scripts, integration tests, OpenAPI/Event contract artifacts for several surfaces, Docker Compose profiles, Kubernetes/Helm resources, and evidence documents.
@@ -29,13 +31,14 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 - Phase 2 Spring Security Resource Server standardization now protects Spring service API routes with stateless Security filter chains, issuer/audience-aware JWT decoding, Keycloak-style role extraction, simulator-token prod-like profile guards, structured auth failures, and selected high-risk method authorization.
 - Phase 5 ledger projection drift/rebuild now detects projection drift from `ledger_postings`, stores drift run/item evidence, submits maker-checker rebuild requests through `operator_approvals`, rebuilds only `account_balance_projections`, records before/after source/projection hashes, and exposes ops-console/API-client smoke wiring.
 - Phase 3 customer-web and staff-terminal route shells now split core workflow routes out of the single root panel path and render loading/success/replay/held/blocked/validation/auth/unexpected states from shared route components.
+- Phase 4 contract gates now lint required OpenAPI files, compare `operationId` values with the shared TypeScript API client, and verify AsyncAPI event schema references plus synthetic-only payload guards.
 
 ## Partially Implemented
 
 - Phase 2 authentication/authorization standardization: Resource Server authentication is now the canonical signed-JWT path, but legacy compatibility decoders remain for dev/test fallback and bounded-context authorization-denied audit expansion is not complete.
 - Phase 5 ledger projection drift/rebuild: core drift/rebuild workflow is now implemented. Remaining follow-up is broader live-browser/API evidence against a long-running Compose stack and any future partition/archive-aware rebuild optimizations from Phase 8.
 - Phase 3 customer/staff workflow UI hardening: route-separated workflow pages and state panels now exist. Remaining follow-up is deeper live API execution from the route pages themselves, since many real command executions still run through the existing API-backed panels and manifest renderer when service URLs are configured.
-- Phase 4 contracts: `contracts/openapi/payment-service.yaml`, `contracts/openapi/notification-service.yaml`, `contracts/asyncapi/banking-lab-events.yaml`, and event schemas exist, but `core-banking` and `reporting-service` OpenAPI contracts are missing and root `contracts:lint`, `contracts:check-client`, and `contracts:check-events` scripts are not present.
+- Phase 4 contracts: core/payment/notification/reporting OpenAPI contracts and root lint/client/event gates now exist. Remaining follow-up is DTO-level generated contract diffing, springdoc-generated spec comparison, and implementation-level event envelope validation in service integration tests.
 - Phase 6 operations/security: observability assets and a synthetic operational-security lab exist, but `security:secrets-check`, `observability:validate`, docs under `docs/operations/`, a general `POST /api/audit/exports` / `GET /api/audit/exports/{exportId}` API, and the requested five operational runbooks are not present.
 - Phase 7 bounded-context hardening: payment/notification/reporting implementations are substantial, but their CI and contract gates are not first-class PR jobs yet. Remaining goals should focus on missing verification links rather than duplicating already implemented service features.
 - Phase 8 large-ledger operational evidence: local synthetic load and backup/restore drills exist, but deterministic large-ledger dataset generation, ledger query benchmark scripts, generated benchmark JSON, and partition/archive readiness documentation are missing.
@@ -44,7 +47,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 
 - A complete method-level authorization annotation audit across every high-risk service method and bounded-context denial audit rows for every payment/notification/reporting auth failure.
 - Live API execution evidence for the new customer-web and staff-terminal route pages beyond existing API-backed panels and manifest-renderer smokes.
-- Contract lint/check scripts and complete OpenAPI/AsyncAPI coverage for core-banking, reporting-service, and the shared client/event drift gates.
+- DTO-level generated OpenAPI diffing and implementation-level event envelope producer validation remain missing beyond the new root contract gates.
 - Secrets placeholder check script, `security:secrets-check`, production-like default-secret fail-fast guard evidence, operations SLO/observability docs, audit export job API, and requested runbooks.
 - Large-ledger generator, partition/archive readiness checker, large dataset smoke script, query benchmark script, and generated evidence files.
 
@@ -53,7 +56,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 - Historical evidence documents include many prior passing commands. This Phase 0 status records only commands actually rerun during this baseline.
 - Gradle tests require unsandboxed execution on this workstation because Gradle file-lock sockets fail inside the sandbox with `java.net.SocketException: Operation not permitted`.
 - Pre-existing generated evidence changes are still dirty and must not be accidentally committed as Phase 0 implementation evidence.
-- Existing service-specific OpenAPI/Event artifacts can create a false sense of complete contract governance; root drift-prevention scripts are still absent.
+- Core-banking OpenAPI now covers broad shared-client and selected server-only operations, but it uses generic response payloads until a generated DTO/schema workflow is added.
 - UI manifests and route pages now cover core customer/staff journey structure, but live API-backed route execution is still not equivalent to a fully workflow-complete banking channel experience.
 
 ## Phase Plan
@@ -63,7 +66,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 - Phase 2: Standardize Spring Security OAuth2 Resource Server while preserving current RBAC/ABAC, step-up, trusted-device, session, simulator-token, structured-error, and denial-audit behavior.
 - Phase 5: Add ledger projection drift detection and maker-checker rebuild workflow before broader UI/contract work. Completed for the Spring/ops-console/API-client slice; keep broader live evidence/scale proof for Phase 8.
 - Phase 3: Harden customer-web and staff-terminal workflows around route-level jobs, selected API results, idempotency replay, held/blocked states, and structured error handling. Completed for route split and static/Playwright state coverage; keep live route execution evidence as a follow-up.
-- Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps.
+- Phase 4: Add contract lint/drift scripts and fill OpenAPI/AsyncAPI coverage gaps. Completed for root lint/client/event gates and core/reporting contract presence; keep generated DTO/schema diffing as follow-up.
 - Phase 6: Add secrets hygiene, observability validation/runbooks, and audit export evidence.
 - Phase 7: Tighten payment/notification/reporting bounded-context CI and contract verification without reimplementing completed service behavior.
 - Phase 8: Add deterministic large-ledger operational evidence, benchmark outputs, and partition/archive readiness docs.
@@ -114,6 +117,15 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 | `npm run test:e2e` | pass | Full local Playwright manifest suite passed with 19 passed and 58 skipped; live API-backed tests remained gated by missing service URLs. |
 | `gh pr view 48 --json state,mergeStateStatus,statusCheckRollup,headRefName,baseRefName,url` | pass | Confirmed PR #48 was open and mergeable but unstable after hosted CI jobs failed before runner startup. |
 | `gh api /repos/kdh949/banking-lab/check-runs/79869938417/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `npm run contracts:lint` | pass | Phase 4 contract lint validated 4 OpenAPI files and the AsyncAPI backbone. |
+| `npm run contracts:check-client` | pass | Phase 4 client drift gate validated 135 operation IDs against 128 shared API client methods/exemptions. |
+| `npm run contracts:check-events` | pass | Phase 4 event gate validated 17 AsyncAPI schema references and synthetic-only payload guards. |
+| `npm run scripts:typecheck` | pass | Typechecked the new TypeScript contract scripts. |
+| `npm run packages:typecheck` | pass | Shared package typechecks passed after Phase 4 contract gate additions. |
+| `npm test` | pass | 172 structural/oracle tests passed after adding contract hardening coverage. |
+| `npm run ci:check-workflow` | pass | Confirmed `contracts-validation` runs the new `contracts:*` scripts. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest` | sandbox failed, escalated up-to-date pass | Sandbox failed on Gradle file-lock socket; first escalated rerun completed with tasks up-to-date and was not counted as real test execution. |
+| `scripts/run-core-banking-tests.sh :services:core-banking:integrationTest :services:payment-service:integrationTest :services:notification-service:integrationTest :services:reporting-service:integrationTest --rerun-tasks` | escalated pass | Phase 4 service integration verification passed with 17 Gradle tasks executed. |
 
 ## Commands Not Attempted
 
@@ -122,7 +134,7 @@ Phase 3 update: customer-web now has route-backed workflow pages for login, acco
 - Full unfiltered all-service Gradle unit and integration tasks were rerun during Phase 2 as listed above.
 - Full `npm run next:*:typecheck`, full `npm run next:*:build`, and live API-backed Playwright execution: not required for Phase 3 customer/staff route hardening; targeted customer/staff typecheck/build and full local Playwright passed, with live API-backed route tests still gated by missing service URLs.
 - PR #48 hosted CI jobs were attempted and rerun but did not execute because GitHub account billing/spending limits blocked runner allocation before any job steps started.
-- `npm run contracts:lint`, `npm run contracts:check-client`, and `npm run contracts:check-events`: not attempted because these scripts are not defined yet.
+- GitHub-hosted CI for Phase 4 has not run yet; the previous Phase 3 PR showed account billing/spending-limit runner allocation failures.
 - `npm run security:secrets-check`: not attempted because the script is not defined yet.
 - `npm run observability:validate`: not attempted because the script is not defined yet.
 - `npm run ledger:large-dataset-smoke` and `npm run ledger:query-benchmark`: not attempted because these scripts are not defined yet.

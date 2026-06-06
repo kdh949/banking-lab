@@ -16,7 +16,7 @@ Scope: Phase 1 of the remaining-hardening plan. This evidence covers CI wiring o
 | `backend-reporting-service` | Reporting-service unit and integration tests | Prevents reporting bounded-context regressions in artifact generation, export metadata, retention, outbox, and authorization. |
 | `backend-all-gradle` | Aggregate unit test tasks for all Spring services | Catches Gradle multi-project wiring breakage and cross-module build drift early. |
 | `platform-validation` | `npm run platform:validate` | Validates Kubernetes, Helm, and Argo CD structural expectations without claiming a live cluster. |
-| `contracts-validation` | Existing scaffold/contract structural tests | Guards checked-in OpenAPI/AsyncAPI/Temporal contract anchors until Phase 4 adds full contract lint/drift scripts. |
+| `contracts-validation` | `npm run contracts:lint`, `npm run contracts:check-client`, `npm run contracts:check-events`, and existing scaffold/contract structural tests | Guards checked-in OpenAPI/AsyncAPI contract anchors, shared API-client drift, event schema references, and scaffold contract regressions. |
 | `compose-platform-config` | `docker compose config`, `docker compose --profile platform config` | Ensures default and platform Compose profiles render syntactically and include configured service topology. |
 | `playwright-manifest-e2e` | `npm run test:e2e` | Preserves manifest-backed browser shell and conditional API smoke coverage. |
 | `security-evidence` | `npm audit --audit-level=high`, `npm run security:evidence` | Keeps SCA/security evidence generation connected to CI with explicit scanner/DAST skip reporting. |
@@ -51,7 +51,7 @@ Manual or nightly jobs should remain separate for higher-cost or environment-dep
 - Docker Compose config rendering is allowed in PR CI because it does not start services.
 - Kubernetes/Helm/Argo CD validation remains structural. If `kubectl` or a live cluster is missing, validation must record an explicit skip or structural-only status rather than a live-cluster pass.
 - Helm rendering may use the existing Node structural fallback only when the Helm CLI is unavailable; evidence must identify the fallback renderer.
-- Contract validation is structural in Phase 1. It must not be described as full OpenAPI/AsyncAPI drift prevention until Phase 4 adds `contracts:lint`, `contracts:check-client`, and `contracts:check-events`.
+- Phase 4 adds `contracts:lint`, `contracts:check-client`, and `contracts:check-events`. If these scripts are unavailable or skipped in a future branch, CI/evidence must explicitly record the skipped gate rather than claiming contract drift prevention.
 - Security evidence must record scanner/DAST skip reasons when Docker, scanner images, or `BANKING_LAB_DAST_URL` are unavailable.
 
 ## No Unrun Pass Claims
