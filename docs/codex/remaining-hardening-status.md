@@ -167,7 +167,7 @@ Phase 7 update: payment-service and reporting-service Kafka publishers now inclu
 | `npm test` | pass | Phase 7 final Node oracle/structural suite passed with 172 tests. |
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Phase 7 whitespace validation passed while excluding pre-existing generated evidence changes. |
 | `gh pr view 51 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | Confirmed PR #51 was mergeable but unstable because hosted CI jobs failed before runner startup. |
-| `gh api /repos/kdh949/banking-lab/check-runs/79874770856/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79874851504/annotations` | pass | Confirmed observed PR #51 GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Commands Not Attempted
 

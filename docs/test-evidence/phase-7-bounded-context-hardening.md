@@ -42,7 +42,7 @@ Scope: Phase 7 of `docs/codex/remaining-hardening-goals.md` for payment, notific
 | `npm test` | pass | Node oracle/structural suite passed with 172 tests. |
 | `git diff --check -- . ':!docs/test-evidence/generated/*'` | pass | Whitespace validation passed while excluding pre-existing generated evidence changes. |
 | `gh pr view 51 --json state,mergeStateStatus,mergeable,statusCheckRollup,url,headRefName,baseRefName` | pass | PR #51 was mergeable but unstable because hosted CI check runs failed before runner startup. |
-| `gh api /repos/kdh949/banking-lab/check-runs/79874770856/annotations` | pass | Confirmed GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
+| `gh api /repos/kdh949/banking-lab/check-runs/79874851504/annotations` | pass | Confirmed observed PR #51 GitHub Actions annotation: hosted jobs were not started because account payments/spending limits blocked runner allocation. |
 
 ## Not Run Yet
 
