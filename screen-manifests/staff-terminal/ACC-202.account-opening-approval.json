@@ -1,0 +1,86 @@
+{
+  "screenId": "ACC-202",
+  "transactionCode": "ACC202",
+  "title": "Synthetic Account Opening Approval",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "account",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_MANAGER", "COMPLIANCE_MANAGER", "OPS_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["ACCOUNT_OPENING"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["APPROVAL_APPROVED", "APPROVAL_REJECTED", "ACCOUNT_OPENING_EXECUTED"],
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "fields": [
+    {
+      "name": "requestId",
+      "label": "Opening Request ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "approvalId",
+      "label": "Approval ID",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "approvedBy",
+      "label": "Checker ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "rejectedBy",
+      "label": "Rejecting Checker ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "rejectReason",
+      "label": "Reject Reason",
+      "type": "textarea",
+      "required": false
+    },
+    {
+      "name": "executedBy",
+      "label": "Executor ID",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "executeIdempotencyKey",
+      "label": "Execution Idempotency Key",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "reason",
+      "label": "Business Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/accounts/opening-requests/{requestId}/approve | POST /api/staff/accounts/opening-requests/{requestId}/reject | POST /api/staff/accounts/opening-requests/{requestId}/execute"
+  },
+  "workflow": {
+    "name": "account-opening-review-execution",
+    "states": ["PENDING_APPROVAL", "APPROVED", "REJECTED", "EXECUTED", "FAILED"]
+  },
+  "postActions": ["enforceSeparationOfDuties", "executeOnlyAfterApproval", "createSyntheticAccount", "postOpeningDepositThroughLedger", "createAuditEvent"]
+}

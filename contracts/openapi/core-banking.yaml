@@ -45,6 +45,44 @@ paths:
       x-reason-required: true
       x-reason-policy: body.reason
       responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/opening-requests:
+    post:
+      operationId: requestStaffAccountOpening
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/opening-requests/{requestId}:
+    get:
+      operationId: staffAccountOpeningRequest
+      x-synthetic-only: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/opening-requests/{requestId}/approve:
+    post:
+      operationId: approveStaffAccountOpeningRequest
+      x-synthetic-only: true
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/opening-requests/{requestId}/reject:
+    post:
+      operationId: rejectStaffAccountOpeningRequest
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.rejectReason
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/opening-requests/{requestId}/execute:
+    post:
+      operationId: executeStaffAccountOpeningRequest
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/customers/{customerId}/detail:
     get:
       operationId: staffCustomerDetail

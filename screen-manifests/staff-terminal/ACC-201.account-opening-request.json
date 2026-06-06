@@ -1,0 +1,105 @@
+{
+  "screenId": "ACC-201",
+  "transactionCode": "ACC201",
+  "title": "Synthetic Account Opening Request",
+  "app": "staff-terminal",
+  "type": "COMMAND",
+  "domain": "account",
+  "highRisk": true,
+  "requiredRoles": ["BRANCH_STAFF", "BRANCH_MANAGER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true,
+    "tabbed": true
+  },
+  "approval": {
+    "required": true,
+    "approverRole": "BRANCH_MANAGER",
+    "makerChecker": true,
+    "businessTypes": ["ACCOUNT_OPENING"]
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "eventTypes": ["APPROVAL_REQUESTED", "ACCOUNT_OPENING_EXECUTED"],
+    "piiAccess": true,
+    "maskingPolicy": "ACCOUNT_PII"
+  },
+  "fields": [
+    {
+      "name": "customerId",
+      "label": "Synthetic Customer ID",
+      "type": "text",
+      "required": true,
+      "mask": "customerId"
+    },
+    {
+      "name": "productCode",
+      "label": "Synthetic Product Code",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "accountAlias",
+      "label": "Account Alias",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "currency",
+      "label": "Currency",
+      "type": "select",
+      "required": true
+    },
+    {
+      "name": "dailyTransferLimitMinor",
+      "label": "Daily Transfer Limit",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "singleTransferLimitMinor",
+      "label": "Single Transfer Limit",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "initialDepositAmountMinor",
+      "label": "Opening Deposit",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "initialDepositIdempotencyKey",
+      "label": "Opening Deposit Idempotency Key",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "businessDate",
+      "label": "Business Date",
+      "type": "date",
+      "required": false
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Request Idempotency Key",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "label": "Business Reason",
+      "type": "textarea",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/staff/accounts/opening-requests"
+  },
+  "workflow": {
+    "name": "account-opening-maker-checker",
+    "states": ["PENDING_APPROVAL", "APPROVED", "REJECTED", "EXECUTED", "FAILED"]
+  },
+  "postActions": ["createApprovalRequest", "generateSyntheticAccountNumber", "createZeroBalanceProjection", "postOpeningDepositThroughLedger", "createAuditEvent"]
+}

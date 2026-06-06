@@ -511,6 +511,107 @@ export interface CustomerOnboardingExecuteResponse {
   readonly syntheticOnly: boolean;
 }
 
+export interface AccountOpeningRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey: string;
+  readonly customerId: string;
+  readonly productCode?: string;
+  readonly accountAlias?: string | null;
+  readonly currency?: string;
+  readonly dailyTransferLimitMinor?: number;
+  readonly singleTransferLimitMinor?: number;
+  readonly initialDepositAmountMinor?: number;
+  readonly initialDepositIdempotencyKey?: string | null;
+  readonly businessDate?: string | null;
+}
+
+export interface AccountOpeningApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly screenId?: string;
+}
+
+export interface AccountOpeningRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
+export interface AccountOpeningExecuteCommand {
+  readonly executedBy: string;
+  readonly executedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface AccountOpeningRequestDto {
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED" | string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly approvalId: string;
+  readonly customerId: string;
+  readonly requestedProductCode: string;
+  readonly requestedAccountAlias?: string | null;
+  readonly requestedCurrency: string;
+  readonly requestedDailyTransferLimitMinor: number;
+  readonly requestedSingleTransferLimitMinor: number;
+  readonly requestedInitialDepositAmountMinor: number;
+  readonly requestedInitialDepositIdempotencyKey?: string | null;
+  readonly requestedBusinessDate?: string | null;
+  readonly generatedAccountId?: string | null;
+  readonly generatedMaskedAccountNo?: string | null;
+  readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly executedBy?: string | null;
+  readonly executedByRole?: string | null;
+  readonly executedAt?: string | null;
+  readonly initialDepositLedgerTransactionId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreatedSyntheticAccountDto {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly currency: string;
+  readonly ledgerBalanceMinor: number;
+  readonly availableBalanceMinor: number;
+  readonly initialDepositLedgerTransactionId?: string | null;
+}
+
+export interface AccountOpeningRequestResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AccountOpeningReviewResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AccountOpeningExecuteResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly account?: CreatedSyntheticAccountDto | null;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
 export interface CustomerInfoChangeCommand {
   readonly requestedBy?: string;
   readonly requestedByRole?: string;
@@ -2366,6 +2467,60 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/execute`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestStaffAccountOpening(command: AccountOpeningRequestCommand) {
+      return request<AccountOpeningRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/accounts/opening-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    staffAccountOpeningRequest(requestId: string) {
+      return request<AccountOpeningRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveStaffAccountOpeningRequest(requestId: string, command: AccountOpeningApproveCommand) {
+      return request<AccountOpeningReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectStaffAccountOpeningRequest(requestId: string, command: AccountOpeningRejectCommand) {
+      return request<AccountOpeningReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeStaffAccountOpeningRequest(requestId: string, command: AccountOpeningExecuteCommand) {
+      return request<AccountOpeningExecuteResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/execute`,
         {},
         options.bearerToken,
         { method: "POST", body: command }

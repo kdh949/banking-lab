@@ -253,6 +253,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/operations/retry-queue") -> "WRK-002"
             path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> "WRK-003"
             path.startsWith("/api/staff/customers/onboarding-requests") -> "CST-201"
+            path.startsWith("/api/staff/accounts/opening-requests") -> "ACC-201"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"
