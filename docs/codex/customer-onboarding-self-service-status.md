@@ -1,0 +1,294 @@
+# Customer Onboarding And Self-Service Status
+
+Review date: 2026-06-07
+
+Scope: Phase 0 baseline for the synthetic customer/account onboarding and customer-web self-service goal. This document records target-stack Kotlin/Spring, PostgreSQL, TypeScript/Next.js, OpenAPI, API-client, manifest, and test evidence only. The legacy Node runtime remains a reference oracle and is not counted as target implementation.
+
+## Current Baseline
+
+- The target stack is already present: `services/core-banking` is Kotlin/Spring Boot, PostgreSQL-backed Flyway migrations live under `db/migrations`, customer/staff channels are Next.js apps, screen manifests are checked in, and shared API client methods exist for many current customer and staff flows.
+- The foundation schema already has `customers`, `customer_kyc_profiles`, `accounts`, `account_limits`, `account_balance_projections`, ledger tables, `idempotency_keys`, `operator_approvals`, audit events, outbox events, and several existing staff request tables.
+- Synthetic seed data creates fixed customers and accounts such as `SYN-CUS-001`, `SYN-CUS-002`, `ACC-SYN-001-001`, and `ACC-SYN-002-001`.
+- Existing staff operations cover reason-required customer/account/transaction reads, PII unmask, customer information change, account hold/release, transfer-limit change, KYC review, fee waiver, and transaction correction. These use maker-checker patterns for high-risk actions.
+- Existing customer operations cover a single account detail endpoint, transaction history, internal transfer command, transfer status, customer complaints, statements, certificates, cards, loans, notifications, and access history.
+- Existing customer transfer service uses SERIALIZABLE retry around customer commands, validates source-account ownership, persists transfer results by idempotency key and command hash, routes successful internal transfers through `LedgerCommandService.internalTransfer`, and stores held/failed states without unsafe postings.
+- Security currently authenticates `/api/**` except health endpoints. `/api/auth/session` returns the current authenticated principal and customerId claim, but unauthenticated customer signup/login endpoints are not yet present or whitelisted.
+- Existing customer-web routes are route-backed workflow/state pages. They describe session source, structured errors, demo fallback, account/transfer states, and API method coverage, but they are not real signup/login/account-list/transfer forms using dynamic session state.
+- Existing staff-terminal routes are route-backed workflow/state pages and a manifest renderer. They support existing transaction-code screens and API smoke panels, but they do not include customer onboarding or account-opening request screens.
+- `docs/architecture/phase-4-customer-web.md` lists `GET /api/customer/accounts`, but the current Spring controller, OpenAPI contract, and API client do not expose a customer account-list operation. This status treats that as a baseline gap, not implemented behavior.
+
+## Existing APIs
+
+Current target-stack APIs relevant to this goal:
+
+- `GET /api/auth/session`
+- `GET /api/staff/customers/search`
+- `GET /api/staff/customers/{customerId}/detail`
+- `GET /api/staff/accounts/search`
+- `GET /api/staff/transactions/search`
+- `GET /api/staff/customers/{customerId}/transfer-limits`
+- `GET /api/staff/operations/retry-queue`
+- `GET /api/staff/workflows/{businessReferenceId}/timeline`
+- `POST /api/staff/pii/unmask`
+- `POST /api/staff/customers/{customerId}/change-requests`
+- `POST /api/staff/accounts/{accountId}/hold-requests`
+- `POST /api/staff/accounts/{accountId}/hold-release-requests`
+- `POST /api/staff/accounts/{accountId}/limit-change-requests`
+- `POST /api/staff/customers/{customerId}/kyc-review-requests`
+- `POST /api/staff/accounts/{accountId}/fee-waiver-requests`
+- `POST /api/staff/transactions/{transactionId}/correction-requests`
+- `POST /api/staff/approvals/{approvalId}/approve`
+- `POST /api/staff/approvals/{approvalId}/reject`
+- `GET /api/customer/accounts/{accountId}/detail`
+- `POST /api/customer/transfers`
+- `GET /api/customer/transfers`
+- `GET /api/customer/transactions`
+
+Current API-client methods relevant to this goal:
+
+- `staffCustomerDetail`
+- `requestCustomerInfoChange`
+- `requestAccountHold`
+- `requestAccountHoldRelease`
+- `staffTransferLimits`
+- `requestTransferLimitChange`
+- `requestCustomerKycReview`
+- `requestFeeWaiver`
+- `requestTransactionCorrection`
+- `unmaskStaffCustomer`
+- `customerAccountDetail`
+- `requestCustomerTransfer`
+- `customerTransactions`
+- `customerTransfers`
+
+## Missing APIs
+
+Missing target-stack APIs required by the goal:
+
+- `POST /api/staff/customers/onboarding-requests`
+- `GET /api/staff/customers/onboarding-requests/{requestId}`
+- `POST /api/staff/customers/onboarding-requests/{requestId}/approve`
+- `POST /api/staff/customers/onboarding-requests/{requestId}/reject`
+- `POST /api/staff/customers/onboarding-requests/{requestId}/execute`
+- `POST /api/staff/customers/{customerId}/account-opening-requests`
+- `GET /api/staff/account-opening-requests/{requestId}`
+- `POST /api/staff/account-opening-requests/{requestId}/approve`
+- `POST /api/staff/account-opening-requests/{requestId}/reject`
+- `POST /api/staff/account-opening-requests/{requestId}/execute`
+- `POST /api/auth/customer/signup`
+- `POST /api/auth/customer/login`
+- `GET /api/customer/accounts` for owned account list
+- `GET /api/customer/recipients/internal-account-lookup`
+
+Missing persistence/control pieces required by the goal:
+
+- `customer_onboarding_requests`
+- `customer_auth_identities`
+- `account_opening_requests`
+- synthetic account-number sequence/generator
+- customer password hashing storage and login failure/lock state
+- signup/login synthetic-auth profile settings separate from the current simulator-token decoder flags
+- route-level unauthenticated exceptions for signup/login in both Spring Security and the custom authorization filter
+
+Missing contract/client coverage:
+
+- OpenAPI operation IDs for customer onboarding, account opening, customer signup, customer login, customer account list, and internal recipient lookup.
+- API-client methods for the same operations.
+- Contract markers for `syntheticOnly`, reason-required staff commands, and idempotent command policy on the new operations.
+
+## Existing UI
+
+Current customer-web routes:
+
+- `/login`: workflow state page for OIDC/session boundary, not a synthetic username/password login form.
+- `/accounts`: workflow state page for account overview, currently tied to manifest/API coverage rather than a dynamic owned account list.
+- `/accounts/[accountId]`: workflow state page for account detail route state.
+- `/transfers/new`: workflow state page for transfer states, not a real source account selector, recipient lookup, amount entry, and submit flow.
+- `/transfers/[resultId]`: workflow state page for result/status states.
+- Additional route-backed pages exist for complaints, cards, loans, payments, notifications, and security.
+
+Current staff-terminal routes:
+
+- `/customers/[customerId]`: route-backed customer lookup workflow.
+- `/accounts/[accountId]`: route-backed account operations workflow.
+- `/approvals`: approval inbox workflow.
+- `/audit`: audit events workflow.
+- `/tx/[transactionCode]`: transaction-code workflow.
+- `/workflows/[businessReferenceId]`: workflow timeline route.
+- The manifest renderer currently includes existing staff screens such as `CST-001`, `CST-002`, `CST-003`, `CST-103`, `ACC-101`, `ACC-102`, `ACC-103`, `ACC-104`, `LIM-101`, `LIM-102`, `APR-001`, and `AUD-001`.
+
+Existing manifests relevant to this goal:
+
+- `screen-manifests/customer-web/CWB-101.account-overview.json`
+- `screen-manifests/customer-web/CWB-102.account-detail.json`
+- `screen-manifests/customer-web/CWB-103.transaction-history.json`
+- `screen-manifests/customer-web/CWB-201.internal-transfer.json`
+- `screen-manifests/customer-web/CWB-202.transfer-result.json`
+- `screen-manifests/customer-web/CWB-203.transfer-status.json`
+- `screen-manifests/staff-terminal/CST-001.customer-search.json`
+- `screen-manifests/staff-terminal/CST-002.customer-detail.json`
+- `screen-manifests/staff-terminal/CST-003.customer-360.json`
+- `screen-manifests/staff-terminal/CST-103.customer-info-change.json`
+- `screen-manifests/staff-terminal/ACC-101.account-search.json`
+- `screen-manifests/staff-terminal/ACC-102.account-detail.json`
+- `screen-manifests/staff-terminal/ACC-103.account-hold.json`
+- `screen-manifests/staff-terminal/ACC-104.account-hold-release.json`
+- `screen-manifests/staff-terminal/APR-001.approval-inbox.json`
+
+## Missing UI
+
+Missing customer-web UI:
+
+- `/signup`
+- real `/login` synthetic username/password form backed by `POST /api/auth/customer/login`
+- session/token state provider using returned synthetic login token or a configured OIDC token
+- owned account-list view backed by `GET /api/customer/accounts`
+- account detail page that loads from dynamic session/account selection instead of fixed demo IDs
+- internal recipient lookup UI backed by `GET /api/customer/recipients/internal-account-lookup`
+- transfer form with source account selector, recipient account lookup, amount input, idempotency key generation, structured error display, replay/held/posted/failure result handling, and result navigation
+
+Missing staff-terminal UI/manifests:
+
+- customer onboarding request route/screen
+- customer onboarding approval/detail route/screen
+- account opening request route/screen
+- account opening approval/detail route/screen
+- transaction-code entries for the above if they are exposed through the manifest renderer
+- API-backed panels for request, approve/reject, execute, replay/conflict, and validation/auth failures
+
+Missing screen manifests expected by the goal:
+
+- `screen-manifests/customer-web/CWB-001-customer-signup.json`
+- `screen-manifests/customer-web/CWB-002-customer-login.json`
+- `screen-manifests/customer-web/CWB-101-account-list.json` or a deliberate update to the existing `CWB-101.account-overview.json`
+- `screen-manifests/customer-web/CWB-201-internal-transfer-form.json` or a deliberate update to the existing `CWB-201.internal-transfer.json`
+- `screen-manifests/staff-terminal/CST-201-customer-onboarding.json`
+- `screen-manifests/staff-terminal/CST-202-customer-onboarding-approval.json`
+- `screen-manifests/staff-terminal/ACC-201-account-opening.json`
+- `screen-manifests/staff-terminal/ACC-202-account-opening-approval.json`
+
+## Proposed Phases
+
+Phase 1 should add synthetic customer onboarding as a high-risk staff command:
+
+- Add `customer_onboarding_requests` and `customer_auth_identities`.
+- Add `ApprovalBusinessTypes.CUSTOMER_ONBOARDING`.
+- Add Kotlin request/detail/approve/reject/execute service and controller.
+- Reuse persistent maker-checker and audit controls.
+- Store idempotency key and command hash, including replay and conflict behavior.
+- Execute only after independent checker approval and create `customers`, `customer_kyc_profiles`, and `customer_auth_identities`.
+- Never call real KYC, Keycloak Admin API, real identity, or external data APIs.
+
+Phase 2 should add account opening as a high-risk staff command:
+
+- Add `account_opening_requests` and synthetic account-number generation.
+- Add `ApprovalBusinessTypes.ACCOUNT_OPENING`.
+- Request/approve/reject/execute against existing customers.
+- Create `accounts`, `account_limits`, and `account_balance_projections` only after approval.
+- If an initial deposit is allowed, call `LedgerCommandService.deposit` rather than inserting ledger rows directly.
+- Ensure execute replay cannot create duplicate accounts or duplicate deposits.
+
+Phase 3 should add customer signup/login:
+
+- Add unauthenticated `POST /api/auth/customer/signup` and `POST /api/auth/customer/login`.
+- Whitelist those routes in Spring Security and `BankingLabAuthorizationFilter`.
+- Use `PasswordEncoder`; never store plaintext password or audit payload password values.
+- Issue simulator bearer tokens only when explicit dev/test synthetic-auth settings allow it.
+- Fail fast or return structured denial in prod-like profiles when synthetic token issue is enabled.
+- Keep `/api/auth/session` as the authenticated session proof endpoint.
+
+Phase 4 should replace customer-web workflow shells for this journey with real form-backed screens:
+
+- Add `/signup`.
+- Upgrade `/login`, `/accounts`, `/accounts/[accountId]`, `/transfers/new`, and `/transfers/[resultId]`.
+- Use token/session state and customer ownership, not hard-coded customer/account IDs.
+- Add account list and internal recipient lookup support.
+- Render structured validation, auth, replay, held, posted, and unexpected-failure states.
+- Label demo fallback clearly when live API/session settings are unavailable.
+
+Phase 5 should update contracts, client, manifests, tests, and evidence:
+
+- Update `contracts/openapi/core-banking.yaml`.
+- Update `packages/api-client/src/index.ts`.
+- Add or update screen manifests.
+- Add Spring integration tests for onboarding, account opening, signup/login, account list, recipient lookup, and customer transfers.
+- Add Playwright/API smoke for signup to login to accounts to transfer to history, with explicit skip reasons when live environment variables are absent.
+- Update `docs/test-evidence/customer-onboarding-self-service.md` and `docs/implementation-coverage-matrix.md`.
+
+## Commands Attempted
+
+Inspection commands run during Phase 0 before this document was created:
+
+- `git status --short --branch`
+- `sed -n '1,240p' PLAN.md`
+- `sed -n '1,260p' BANKING_LAB_CODEX_PROMPT.md`
+- `sed -n '1,260p' AGENTS.md`
+- `sed -n '1,260p' docs/codex/customer-onboarding-self-service-goals.md`
+- `sed -n '261,620p' docs/codex/customer-onboarding-self-service-goals.md`
+- `sed -n '621,1100p' docs/codex/customer-onboarding-self-service-goals.md`
+- `sed -n '1,220p' /Users/donghyunkim/.codex/skills/commit-convention/SKILL.md`
+- `git checkout -b codex/customer-onboarding-self-service`
+- `rg --files tests`
+- `rg --files docs`
+- `rg --files services/core-banking/src/main/kotlin/lab/banking/core apps/customer-web/src apps/staff-terminal/src packages/api-client/src contracts/openapi screen-manifests`
+- `rg -n "^(test|describe|it)\\(" tests/*.test.mjs`
+- `rg -n "(RequestMapping|GetMapping|PostMapping|PutMapping|DeleteMapping)" services/core-banking/src/main/kotlin/lab/banking/core/customer services/core-banking/src/main/kotlin/lab/banking/core/staff services/core-banking/src/main/kotlin/lab/banking/core/security services/core-banking/src/main/kotlin/lab/banking/core/approval`
+- `rg -n "(/api/auth|/api/customer|/api/customers|/api/staff|/api/accounts|/api/transfers|customer|account|transfer|signup|login)" contracts/openapi/core-banking.yaml packages/api-client/src/index.ts apps/customer-web/src apps/staff-terminal/src`
+- `rg --files apps/customer-web/src/app apps/staff-terminal/src/app`
+- `sed -n '1,260p' docs/implementation-coverage-matrix.md`
+- `sed -n '1,220p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferController.kt`
+- `sed -n '1,320p' services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/security/SecurityConfig.kt`
+- `sed -n '1,220p' services/core-banking/src/main/kotlin/lab/banking/core/security/AuthSessionController.kt`
+- `rg -n "CREATE TABLE (customers|customer_kyc_profiles|customer_auth_identities|customer_onboarding_requests|accounts|account_limits|account_balance_projections|account_opening_requests)|CREATE SEQUENCE synthetic_account|customer_auth_identities|customer_onboarding_requests|account_opening_requests" services db infra`
+- `sed -n '1,140p' db/migrations/V001__foundation.sql`
+- `rg -n "CREATE TABLE .*requests|approval|idempotency|command_hash|customer_auth|opening|onboarding" db/migrations services/core-banking/src/main/kotlin/lab/banking/core/staff services/core-banking/src/main/kotlin/lab/banking/core/approval`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountService.kt`
+- `sed -n '1,360p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferService.kt`
+- `sed -n '3180,3300p' packages/api-client/src/index.ts`
+- `sed -n '1,430p' apps/customer-web/src/components/workflow-routes.tsx`
+- `sed -n '1,340p' apps/staff-terminal/src/components/workflow-routes.tsx`
+- `rg --files screen-manifests/customer-web screen-manifests/staff-terminal | rg "(CWB-001|CWB-002|CWB-101|CWB-201|CST-201|CST-202|ACC-201|ACC-202|signup|login|account-list|internal-transfer-form|onboarding|opening)"`
+- `sed -n '400,440p' contracts/openapi/core-banking.yaml`
+- `sed -n '1,180p' docs/architecture/phase-4-customer-web.md`
+- `sed -n '1,200p' docs/architecture/phase-3-staff-terminal.md`
+- `sed -n '1,180p' docs/test-evidence/phase-4-customer-web.md`
+- `rg -n "Customer(Account|Transfer|Self|Signup|Login|Onboarding|Opening)|customerAccount|customerTransfers|signupCustomer|loginCustomer|listCustomerAccounts|internal-account-lookup|/api/customer/accounts" services/core-banking/src/test services/core-banking/src/integrationTest tests apps/customer-web/e2e apps/staff-terminal/e2e`
+- `rg -n "class .*IntegrationTest|fun .*customer|@Test" services/core-banking/src/integrationTest/kotlin/lab/banking/core/customer services/core-banking/src/integrationTest/kotlin/lab/banking/core/staff services/core-banking/src/integrationTest/kotlin/lab/banking/core/security`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabAuthorizationFilter.kt`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabRouteAuthorizationManager.kt`
+- `rg -n "CustomerAuth|PasswordEncoder|BCrypt|customer_auth|signup|login|synthetic-auth|dev-simulator-token|simulator-token" services/core-banking/src/main/kotlin services/core-banking/src/integrationTest db/migrations infra/docker-compose docker-compose.yml .github package.json apps/customer-web`
+- `sed -n '1,280p' services/core-banking/src/main/kotlin/lab/banking/core/synthetic/SyntheticDataSeeder.kt`
+- `sed -n '1,220p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountModels.kt`
+- `sed -n '1,260p' services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferModels.kt`
+- `sed -n '1,200p' services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalModels.kt`
+- `sed -n '1,220p' apps/customer-web/e2e/customer-web-parity.spec.ts`
+- `sed -n '1,220p' apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`
+- `node -e "const p=require('./package.json'); console.log(JSON.stringify(p.scripts,null,2))"`
+- `rg -n "customerAccountDetail|requestCustomerTransfer|customerTransactions|customerTransfers|signupCustomer|loginCustomer|listCustomerAccounts|lookupInternalAccountRecipient|requestStaffCustomerOnboarding|requestStaffAccountOpening|accountOpening|onboarding" packages/api-client/src/index.ts`
+- `rg -n "customerAccountDetail|requestCustomerTransfer|customerTransactions|customerTransfers|signupCustomer|loginCustomer|listCustomerAccounts|lookupInternalAccountRecipient|requestStaffCustomerOnboarding|requestStaffAccountOpening|customerAccountList|internalAccount" contracts/openapi/core-banking.yaml`
+- `rg -n "signup|login|account list|account overview|internal transfer|form|workflow shell|demo fallback|hard-coded|SYN-CUS-001|ACC-SYN-001-001" apps/customer-web/src/app apps/customer-web/src/components apps/staff-terminal/src/app apps/staff-terminal/src/components`
+- `rg -n "CST-201|CST-202|ACC-201|ACC-202|CWB-001|CWB-002|CWB-101|CWB-201" screen-manifests docs tests`
+
+Validation commands run after this document was created:
+
+- `npm test`: passed, 174 tests.
+- `npm run validate:manifests`: passed, 109 screen manifests.
+- `npm run packages:typecheck`: passed for `@banking-lab/screen-engine`, `@banking-lab/form-engine`, `@banking-lab/api-client`, and `@banking-lab/auth-client`.
+- `npm run scripts:typecheck`: passed.
+- `npm run test:core-banking:unit`: first sandboxed run failed before tests with Gradle `FileLockContentionHandler` `java.net.SocketException: Operation not permitted`; escalated rerun passed with `:services:core-banking:test` up to date.
+- `npm run test:core-banking:integration`: first sandboxed run failed before tests with Gradle `FileLockContentionHandler` `java.net.SocketException: Operation not permitted`; escalated rerun passed with `:services:core-banking:integrationTest` up to date.
+
+## Commands Not Attempted
+
+Not attempted in Phase 0:
+
+- `npm run contracts:lint`
+- `npm run contracts:check-client`
+- `npm run test:e2e`
+- `docker compose config`
+- `docker compose --profile platform config`
+- Hosted CI
+
+No functional Phase 1-5 implementation commands have been attempted yet.
