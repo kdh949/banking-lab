@@ -14,12 +14,33 @@ const requiredMetrics = [
   "report_artifact_generation_failure_count"
 ];
 
+const requiredRunbooks = [
+  "docs/operations/runbooks/ledger-drift.md",
+  "docs/operations/runbooks/outbox-dead-letter.md",
+  "docs/operations/runbooks/authz-denial-spike.md",
+  "docs/operations/runbooks/eod-failure.md",
+  "docs/operations/runbooks/postgres-restore.md"
+];
+
+const requiredRunbookSections = [
+  "## Symptoms",
+  "## Detection",
+  "## Immediate Containment",
+  "## Diagnosis Queries",
+  "## Recovery Steps",
+  "## Evidence To Capture",
+  "## Rollback",
+  "## Escalation",
+  "## Post-incident Review"
+];
+
 const requiredFiles = [
   "infra/observability/prometheus-rules.yaml",
   "infra/observability/grafana-dashboard-core-banking.json",
   "infra/observability/grafana-dashboard-outbox.json",
   "docs/operations/slo.md",
-  "docs/operations/observability.md"
+  "docs/operations/observability.md",
+  ...requiredRunbooks
 ];
 
 const errors: string[] = [];
@@ -75,16 +96,16 @@ for (const alert of [
   }
 }
 
-for (const runbook of [
-  "docs/operations/runbooks/ledger-drift.md",
-  "docs/operations/runbooks/outbox-dead-letter.md",
-  "docs/operations/runbooks/authz-denial-spike.md",
-  "docs/operations/runbooks/eod-failure.md",
-  "docs/operations/runbooks/postgres-restore.md"
-]) {
+for (const runbook of requiredRunbooks) {
   const referenceFound = prometheusRules.includes(runbook) || combined.includes(path.basename(runbook));
   if (!referenceFound) {
     errors.push(`Observability assets do not reference ${runbook}.`);
+  }
+  const runbookContent = contents.get(runbook) ?? "";
+  for (const section of requiredRunbookSections) {
+    if (!runbookContent.includes(section)) {
+      errors.push(`${runbook} missing section ${section}.`);
+    }
   }
 }
 
