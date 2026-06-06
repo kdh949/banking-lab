@@ -49,6 +49,7 @@ npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts
 npm run test:e2e -- apps/audit-console/e2e/audit-console-parity.spec.ts
 npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts
 npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks
+npm run test:parameter-command-e2e-compose
 ```
 
 ## Result
@@ -73,6 +74,7 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - `npm run test:e2e -- apps/admin-console/e2e/admin-console-parity.spec.ts`: passed with 2 shell tests and 5 API/Reporting/Keycloak tests, including the new ADM-201 and ADM-301 parameter command smokes, skipped because `BANKING_LAB_E2E_API_BASE_URL`, `BANKING_LAB_E2E_REPORTING_API_BASE_URL`, and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: approved escalated rerun passed.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.parameters.ParameterAdminIntegrationTest --rerun-tasks`: approved escalated rerun passed after adding server-side `ADM-301` value validation; compile warnings are limited to pre-existing analytics evidence code.
+- `npm run test:parameter-command-e2e-compose`: approved escalated run passed with 5 Playwright tests against a live Docker Compose Spring API after adding authenticated role-specific parameter endpoint preflight. Earlier attempts exposed an `ADM-301` transient readiness failure and an OPS preflight route-role mismatch; the final wrapper uses `FDS_REVIEWER`, `OPS_MANAGER`, `AUDITOR`, and `COMPLIANCE_MANAGER` simulator tokens while keeping Spring security and step-up enforcement enabled.
 
 ## Invariants Verified
 
@@ -91,7 +93,8 @@ npm run test:core-banking:integration -- --tests lab.banking.core.parameters.Par
 - The admin console now keeps `ADM-301` authorization parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day menu/role policy during local shell rendering.
 - The FDS/AML console now keeps `FDS-301` parameter operation behind a configured Spring API URL and creates only a future-effective browser smoke request, so the panel does not mutate current-day FDS behavior during local shell rendering.
 - `ADM-301` authorization parameter changes are validated before approval creation, including screen ID shape, high-risk approval business type membership, non-empty role maps, and duplicate screen/value rejection.
+- The live compose wrapper now executes all five FDS/OPS/AUD/ADM parameter command browser paths against a running Spring API with synthetic seed data, security enabled, simulator tokens explicitly enabled only for this dev smoke, and fresh step-up claims on high-risk parameter change requests.
 
 ## Remaining Risk
 
-This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, audit retention, admin security policy, admin menu-role browser wiring, and server-side `ADM-301` structured value validation. The FDS/AML, ops, audit, admin security, and admin authorization panels are conditional, but local browser runs do not execute the API-backed parameter commands unless a Spring API URL is configured. Future hardening should execute the FDS/OPS/AUD/ADM parameter command paths against a live Spring API URL when available, and add Temporal/activity evidence if parameter application is later delegated to scheduled workers.
+This slice proves the common parameter workflow plus the FDS high-amount, OPS reconciliation tolerance, audit retention, admin security policy, admin menu-role browser wiring, server-side `ADM-301` structured value validation, and live Spring API browser execution for all five parameter command paths. Future hardening should add Temporal/activity evidence if parameter application is later delegated to scheduled workers.
