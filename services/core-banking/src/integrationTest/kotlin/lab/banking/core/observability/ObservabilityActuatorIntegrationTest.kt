@@ -3,6 +3,8 @@ package lab.banking.core.observability
 import java.nio.file.Paths
 import lab.banking.core.eventing.KafkaOutboxPublishBatchResult
 import lab.banking.core.eventing.OutboxWorkerMetrics
+import lab.banking.core.ledger.application.LedgerCommandMetrics
+import lab.banking.core.security.AuthorizationMetrics
 import lab.banking.core.temporal.TemporalWorkerMetrics
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsString
@@ -39,6 +41,12 @@ class ObservabilityActuatorIntegrationTest {
     @Autowired
     lateinit var outboxWorkerMetrics: OutboxWorkerMetrics
 
+    @Autowired
+    lateinit var ledgerCommandMetrics: LedgerCommandMetrics
+
+    @Autowired
+    lateinit var authorizationMetrics: AuthorizationMetrics
+
     @Test
     fun `Prometheus actuator exposes Temporal worker control metrics`() {
         temporalWorkerMetrics.recordStarted()
@@ -73,6 +81,33 @@ class ObservabilityActuatorIntegrationTest {
             .andExpect(content().string(containsString("topic=\"banking.lab.domain-events\"")))
             .andExpect(content().string(containsString("client_id=\"core-banking-outbox-worker\"")))
     }
+
+    @Test
+    fun `Prometheus actuator exposes core control metrics required by runbooks`() {
+        ledgerCommandMetrics.record("DEPOSIT") { "ok" }
+        runCatching {
+            ledgerCommandMetrics.record("WITHDRAWAL") {
+                throw IllegalStateException("synthetic metrics error")
+            }
+        }
+        ledgerCommandMetrics.recordIdempotencyReplay("DEPOSIT")
+        authorizationMetrics.recordDenied(
+            code = "STEP_UP_REQUIRED",
+            policy = "STEP_UP_REAUTHENTICATION_REQUIRED",
+            routeFamily = "AUD-501"
+        )
+
+        mockMvc.perform(get("/actuator/prometheus"))
+            .andExpect(status().isOk)
+            .andExpect(content().string(containsString("banking_lab_ledger_command_latency_seconds")))
+            .andExpect(content().string(containsString("banking_lab_ledger_command_errors_total")))
+            .andExpect(content().string(containsString("banking_lab_idempotency_replay_count_total")))
+            .andExpect(content().string(containsString("banking_lab_outbox_pending_count")))
+            .andExpect(content().string(containsString("banking_lab_outbox_dead_letter_count")))
+            .andExpect(content().string(containsString("banking_lab_authorization_denied_count_total")))
+            .andExpect(content().string(containsString("banking_lab_audit_append_failure_count_total")))
+    }
+
 
     @Test
     fun `HTTP access log carries request trace and span correlation ids`(output: CapturedOutput) {
