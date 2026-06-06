@@ -1962,6 +1962,70 @@ export interface AuditEventDto {
   readonly createdAt: string;
 }
 
+export interface AuditExportRequestCommand {
+  readonly requestedBy: string;
+  readonly requestedRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+  readonly exportFormat?: "NDJSON";
+}
+
+export interface AuditExportApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly reason: string;
+}
+
+export interface AuditExportRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly reason: string;
+}
+
+export interface AuditExportJobResponse {
+  readonly item: AuditExportJobDto;
+  readonly replayed: boolean;
+}
+
+export interface AuditExportJobDto {
+  readonly exportId: string;
+  readonly status: string;
+  readonly requestedBy: string;
+  readonly requestedRole: string;
+  readonly reason: string;
+  readonly exportFormat: string;
+  readonly approvalId: string;
+  readonly requestedAt: string;
+  readonly approvedBy?: string | null;
+  readonly approvedRole?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedRole?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly fromAuditEventId?: string | null;
+  readonly throughAuditEventId?: string | null;
+  readonly rowCount: number;
+  readonly hashChainStart?: string | null;
+  readonly hashChainEnd?: string | null;
+  readonly payloadSha256?: string | null;
+  readonly storageUri?: string | null;
+  readonly ledgerRowsMutated: boolean;
+  readonly syntheticOnly: boolean;
+  readonly file?: AuditExportFileDto | null;
+}
+
+export interface AuditExportFileDto {
+  readonly fileId: string;
+  readonly fileName: string;
+  readonly format: string;
+  readonly rowCount: number;
+  readonly sha256: string;
+  readonly storageUri: string;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
 export interface AdminPlatformControlDto {
   readonly controlId: string;
   readonly status: string;
@@ -3378,6 +3442,49 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         "/api/audit/events",
         {},
         options.bearerToken
+      );
+    },
+
+    requestAuditExport(command: AuditExportRequestCommand) {
+      return request<AuditExportJobResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/audit/exports",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    auditExport(exportId: string, actorId: string, actorRole: string, reason: string) {
+      return request<AuditExportJobResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/audit/exports/${encodeURIComponent(exportId)}`,
+        { actorId, actorRole, reason },
+        options.bearerToken
+      );
+    },
+
+    approveAuditExport(exportId: string, command: AuditExportApproveCommand) {
+      return request<AuditExportJobResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/audit/exports/${encodeURIComponent(exportId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectAuditExport(exportId: string, command: AuditExportRejectCommand) {
+      return request<AuditExportJobResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/audit/exports/${encodeURIComponent(exportId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
       );
     },
 

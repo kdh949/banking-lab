@@ -235,6 +235,7 @@ class BankingLabAuthorizationFilter(
             path == "/api/fds/analytics" -> "FDS-301"
             path.startsWith("/api/aml/governance") -> "AML-301"
             path.startsWith("/api/ops/security") -> "OPS-SEC-101"
+            path.startsWith("/api/audit/exports") -> "AUD-501"
             path.startsWith("/api/admin/platform/security-parameters") -> "ADM-201"
             path.startsWith("/api/admin/platform/authorization-parameters") -> "ADM-301"
             path.startsWith("/api/admin/platform/evidence-coverage") -> "ADM-501"

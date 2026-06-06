@@ -531,6 +531,35 @@ paths:
     get:
       operationId: auditEvents
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/audit/exports:
+    post:
+      operationId: requestAuditExport
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/audit/exports/{exportId}:
+    get:
+      operationId: auditExport
+      x-reason-required: true
+      parameters:
+        - { name: actorId, in: query, required: true, schema: { type: string } }
+        - { name: actorRole, in: query, required: true, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/audit/exports/{exportId}/approve:
+    post:
+      operationId: approveAuditExport
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/audit/exports/{exportId}/reject:
+    post:
+      operationId: rejectAuditExport
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/admin/platform/summary:
     get:
       operationId: adminPlatformSummary

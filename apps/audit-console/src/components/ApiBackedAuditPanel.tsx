@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
+  BankingApiError,
   createBankingApiClient,
+  type AuditExportJobDto,
   type AuditEventDto,
   type NotificationDeliveryDto,
   type ParameterChangeRequestResponse,
@@ -64,6 +66,23 @@ type AuditParameterCommandState =
     }
   | { readonly status: "failed"; readonly message: string };
 
+type AuditExportCommandState =
+  | { readonly status: "idle" }
+  | { readonly status: "running" }
+  | {
+      readonly status: "exported";
+      readonly exportId: string;
+      readonly approvalId: string;
+      readonly pendingStatus: string;
+      readonly replayed: boolean;
+      readonly rowCount: number;
+      readonly sha256: string;
+      readonly storageUri: string;
+      readonly authorizationFailure: string;
+      readonly validationFailure: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const notificationApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL || apiBaseUrl;
 const reportingApiBaseUrl = process.env.NEXT_PUBLIC_BANKING_REPORTING_API_BASE_URL ?? "";
@@ -84,6 +103,7 @@ export function ApiBackedAuditPanel() {
     apiBaseUrl ? { status: "loading" } : { status: "offline" }
   );
   const [auditParameterCommandState, setAuditParameterCommandState] = useState<AuditParameterCommandState>({ status: "idle" });
+  const [auditExportCommandState, setAuditExportCommandState] = useState<AuditExportCommandState>({ status: "idle" });
   const [keycloakAuditState, setKeycloakAuditState] = useState<KeycloakAuditState>(() =>
     apiBaseUrl && keycloakBaseUrl ? { status: "idle" } : { status: "offline" }
   );
@@ -357,6 +377,56 @@ export function ApiBackedAuditPanel() {
     }
   };
 
+  const runAuditExportSmoke = async () => {
+    if (!apiBaseUrl || auditExportCommandState.status === "running") {
+      return;
+    }
+    setAuditExportCommandState({ status: "running" });
+    const idempotencyKey = `AUD-EXPORT-${globalThis.crypto.randomUUID()}`;
+    try {
+      const authorizationFailure = await captureStructuredFailure(async () => {
+        await auditExportClient("auditor01", ["AUDITOR"], false).requestAuditExport({
+          requestedBy: "auditor01",
+          requestedRole: "AUDITOR",
+          reason: "Browser AUD-501 step-up denial smoke",
+          idempotencyKey,
+          exportFormat: "NDJSON"
+        });
+      });
+      const validationFailure = await captureStructuredFailure(async () => {
+        await auditExportClient("auditor01", ["AUDITOR"], true).requestAuditExport({
+          requestedBy: "auditor01",
+          requestedRole: "AUDITOR",
+          reason: "",
+          idempotencyKey: `${idempotencyKey}-VALIDATION`,
+          exportFormat: "NDJSON"
+        });
+      });
+      const requested = await auditExportClient("auditor01", ["AUDITOR"], true).requestAuditExport({
+        requestedBy: "auditor01",
+        requestedRole: "AUDITOR",
+        reason: "Browser AUD-501 audit export smoke",
+        idempotencyKey,
+        exportFormat: "NDJSON"
+      });
+      const replayed = await auditExportClient("auditor01", ["AUDITOR"], true).requestAuditExport({
+        requestedBy: "auditor01",
+        requestedRole: "AUDITOR",
+        reason: "Browser AUD-501 audit export smoke",
+        idempotencyKey,
+        exportFormat: "NDJSON"
+      });
+      const approved = await auditExportClient("compliance01", ["COMPLIANCE_MANAGER"], true).approveAuditExport(requested.item.exportId, {
+        approvedBy: "compliance01",
+        approvedByRole: "COMPLIANCE_MANAGER",
+        reason: "Browser AUD-501 compliance approval smoke"
+      });
+      setAuditExportCommandState(toAuditExportCommandState(approved.item, requested.item.status, replayed.replayed, authorizationFailure, validationFailure));
+    } catch (error: unknown) {
+      setAuditExportCommandState({ status: "failed", message: error instanceof Error ? error.message : "Unknown audit export failure" });
+    }
+  };
+
   return (
     <section className="api-panel" aria-label="API-backed audit hash chain">
       <h2>API-backed Audit</h2>
@@ -567,6 +637,67 @@ export function ApiBackedAuditPanel() {
           ) : null}
         </dl>
       </div>
+      <div className="api-actions" data-testid="api-backed-audit-export">
+        <button
+          type="button"
+          onClick={runAuditExportSmoke}
+          disabled={!apiBaseUrl || auditExportCommandState.status === "running"}
+        >
+          Run audit export smoke
+        </button>
+        <dl>
+          <div>
+            <dt>Export</dt>
+            <dd>{auditExportCommandLabel(auditExportCommandState)}</dd>
+          </div>
+          {auditExportCommandState.status === "exported" ? (
+            <>
+              <div>
+                <dt>Export ID</dt>
+                <dd>{auditExportCommandState.exportId}</dd>
+              </div>
+              <div>
+                <dt>Approval</dt>
+                <dd>{auditExportCommandState.approvalId}</dd>
+              </div>
+              <div>
+                <dt>Pending</dt>
+                <dd>{auditExportCommandState.pendingStatus}</dd>
+              </div>
+              <div>
+                <dt>Replay</dt>
+                <dd>{auditExportCommandState.replayed ? "replayed" : "not replayed"}</dd>
+              </div>
+              <div>
+                <dt>Rows</dt>
+                <dd>{auditExportCommandState.rowCount}</dd>
+              </div>
+              <div>
+                <dt>SHA-256</dt>
+                <dd>{auditExportCommandState.sha256.slice(0, 12)}</dd>
+              </div>
+              <div>
+                <dt>Artifact</dt>
+                <dd>{auditExportCommandState.storageUri}</dd>
+              </div>
+              <div>
+                <dt>Authorization</dt>
+                <dd>{auditExportCommandState.authorizationFailure}</dd>
+              </div>
+              <div>
+                <dt>Validation</dt>
+                <dd>{auditExportCommandState.validationFailure}</dd>
+              </div>
+            </>
+          ) : null}
+          {auditExportCommandState.status === "failed" ? (
+            <div>
+              <dt>Export error</dt>
+              <dd>{auditExportCommandState.message}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
       <div className="api-actions" data-testid="api-backed-audit-keycloak-login">
         <button
           type="button"
@@ -701,6 +832,19 @@ function auditParameterCommandLabel(state: AuditParameterCommandState): string {
   return "failed";
 }
 
+function auditExportCommandLabel(state: AuditExportCommandState): string {
+  if (state.status === "idle") {
+    return "ready";
+  }
+  if (state.status === "running") {
+    return "running";
+  }
+  if (state.status === "exported") {
+    return "exported";
+  }
+  return "failed";
+}
+
 function toAuditParameterState(response: ParameterListResponse): AuditParameterState {
   const parameter = response.items.find((item) => item.parameterKey === "retentionYears");
   if (!parameter) {
@@ -725,6 +869,27 @@ function toAuditParameterCommandState(response: ParameterChangeRequestResponse):
     requestedValue: response.item.requestedValue,
     effectiveFrom: response.item.effectiveFrom,
     requestStatus: response.item.status
+  };
+}
+
+function toAuditExportCommandState(
+  item: AuditExportJobDto,
+  pendingStatus: string,
+  replayed: boolean,
+  authorizationFailure: string,
+  validationFailure: string
+): AuditExportCommandState {
+  return {
+    status: "exported",
+    exportId: item.exportId,
+    approvalId: item.approvalId,
+    pendingStatus,
+    replayed,
+    rowCount: item.rowCount,
+    sha256: item.payloadSha256 ?? item.file?.sha256 ?? "missing",
+    storageUri: item.storageUri ?? item.file?.storageUri ?? "missing",
+    authorizationFailure,
+    validationFailure
   };
 }
 
@@ -759,6 +924,46 @@ function auditParameterClient(stepUp = false) {
         : {})
     })
   });
+}
+
+function auditExportClient(subject: string, roles: string[], stepUp: boolean) {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  return createBankingApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject,
+      roles,
+      ...(stepUp
+        ? {
+            authTimeEpochSeconds: nowEpochSeconds,
+            issuedAtEpochSeconds: nowEpochSeconds,
+            authenticationMethods: ["mfa"],
+            assuranceLevel: "banking-lab-step-up"
+          }
+        : {})
+    })
+  });
+}
+
+async function captureStructuredFailure(operation: () => Promise<unknown>): Promise<string> {
+  try {
+    await operation();
+    return "not triggered";
+  } catch (error: unknown) {
+    if (error instanceof BankingApiError) {
+      return `HTTP ${error.status} ${structuredErrorCode(error.body)}`;
+    }
+    return error instanceof Error ? error.message : "unknown failure";
+  }
+}
+
+function structuredErrorCode(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { readonly error?: { readonly code?: string } };
+    return parsed.error?.code ?? "STRUCTURED_ERROR";
+  } catch {
+    return "STRUCTURED_ERROR";
+  }
 }
 
 function clearOidcSession(): void {

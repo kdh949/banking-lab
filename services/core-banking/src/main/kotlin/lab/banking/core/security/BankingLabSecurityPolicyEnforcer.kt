@@ -157,6 +157,7 @@ class BankingLabSecurityPolicyEnforcer(
             return false
         }
         return path == "/api/staff/pii/unmask" ||
+            path.startsWith("/api/audit/exports") ||
             path.startsWith("/api/ops/security/") ||
             path.startsWith("/api/ops/ledger/projection-rebuild-requests") ||
             path.startsWith("/api/aml/governance/") ||
