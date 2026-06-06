@@ -1,4 +1,4 @@
-import { CustomerWorkflowRoutePage } from "../../../components/workflow-routes";
+import { CustomerAccountDetailView } from "../../../components/CustomerSelfService";
 
 type AccountDetailPageProps = {
   readonly params: Promise<{ readonly accountId: string }>;
@@ -6,5 +6,5 @@ type AccountDetailPageProps = {
 
 export default async function AccountDetailPage({ params }: AccountDetailPageProps) {
   const { accountId } = await params;
-  return CustomerWorkflowRoutePage({ routeKey: "accountDetail", routeParam: accountId });
+  return <CustomerAccountDetailView accountId={accountId} />;
 }

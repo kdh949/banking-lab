@@ -196,3 +196,51 @@ test("Phase 3 synthetic customer auth implementation is guarded hashed and unaut
   assert.match(authFilter, /path == "\/api\/auth\/customer\/login"/);
   assert.match(guard, /synthetic customer auth token issuance is dev\/test only/);
 });
+
+test("Phase 4 customer account list recipient lookup and form routes are wired", async () => {
+  const [contract, client, accountService, transferService, selfService, signupPage, loginPage, accountsPage, accountDetailPage, transferPage, resultPage] = await Promise.all([
+    read("contracts/openapi/core-banking.yaml"),
+    read("packages/api-client/src/index.ts"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferService.kt"),
+    read("apps/customer-web/src/components/CustomerSelfService.tsx"),
+    read("apps/customer-web/src/app/signup/page.tsx"),
+    read("apps/customer-web/src/app/login/page.tsx"),
+    read("apps/customer-web/src/app/accounts/page.tsx"),
+    read("apps/customer-web/src/app/accounts/[accountId]/page.tsx"),
+    read("apps/customer-web/src/app/transfers/new/page.tsx"),
+    read("apps/customer-web/src/app/transfers/[resultId]/page.tsx")
+  ]);
+
+  for (const operationId of ["customerAccounts", "internalRecipientLookup"]) {
+    assert.match(contract, new RegExp(`operationId: ${operationId}`));
+    assert.match(client, new RegExp(`${operationId}\\(`));
+  }
+  assert.match(contract, /\/api\/customer\/accounts/);
+  assert.match(contract, /\/api\/customer\/recipients\/internal-account-lookup/);
+  assert.match(contract, /x-internal-recipient-only: true/);
+  assert.match(client, /interface CustomerAccountListResponse/);
+  assert.match(client, /interface InternalRecipientLookupResponse/);
+
+  assert.match(accountService, /ACCOUNT_LIST_VIEW/);
+  assert.match(accountService, /INTERNAL_RECIPIENT_LOOKUP/);
+  assert.match(accountService, /synthetic_system_account = FALSE/);
+  assert.match(accountService, /maskAccountNo/);
+  assert.doesNotMatch(accountService, /"accountNo" to/);
+  assert.match(transferService, /ensureActiveInternalRecipient/);
+  assert.match(transferService, /recipient must be an active internal synthetic account/);
+
+  assert.match(signupPage, /CustomerSignupForm/);
+  assert.match(loginPage, /CustomerLoginForm/);
+  assert.match(accountsPage, /CustomerAccountsView/);
+  assert.match(accountDetailPage, /CustomerAccountDetailView/);
+  assert.match(transferPage, /CustomerTransferForm/);
+  assert.match(resultPage, /CustomerTransferResultView/);
+  assert.match(selfService, /NEXT_PUBLIC_BANKING_API_BASE_URL/);
+  assert.match(selfService, /localStorage/);
+  assert.match(selfService, /DEMO_FALLBACK_API_NOT_CONFIGURED/);
+  assert.match(selfService, /CUSTOMER_SESSION_REQUIRED/);
+  assert.match(selfService, /RECIPIENT_LOOKUP_REQUIRED/);
+  assert.doesNotMatch(selfService, /SYN-CUS-001/);
+  assert.doesNotMatch(selfService, /ACC-SYN-001-001/);
+});

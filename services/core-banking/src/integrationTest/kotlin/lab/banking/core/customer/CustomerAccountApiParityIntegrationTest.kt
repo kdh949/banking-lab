@@ -109,6 +109,51 @@ class CustomerAccountApiParityIntegrationTest {
         assertEquals(0, countRows("audit_events WHERE event_type = 'ACCOUNT_VIEW'"))
     }
 
+    @Test
+    fun `customer account list returns owned masked accounts and records self service audit`() {
+        mockMvc.perform(
+            get("/api/customer/accounts")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .queryParam("customerId", "SYN-CUS-001")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].customerId").value("SYN-CUS-001"))
+            .andExpect(jsonPath("$.items[0].accountId").value("ACC-SYN-001-001"))
+            .andExpect(jsonPath("$.items[0].maskedAccountNo").value("LAB-***-0001"))
+            .andExpect(jsonPath("$.items[0].availableBalanceMinor").value(100_000_000))
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'ACCOUNT_LIST_VIEW' AND screen_id = 'CWB-101' AND customer_id = 'SYN-CUS-001'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'ACCOUNT_LIST_VIEW' AND payload_json::text LIKE '%LAB-001-000001%'"))
+    }
+
+    @Test
+    fun `internal recipient lookup returns masked active synthetic account without PII`() {
+        mockMvc.perform(
+            get("/api/customer/recipients/internal-account-lookup")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .queryParam("query", "LAB-002-000001")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.syntheticOnly").value(true))
+            .andExpect(jsonPath("$.item.accountId").value("ACC-SYN-002-001"))
+            .andExpect(jsonPath("$.item.maskedAccountNo").value("LAB-***-0001"))
+            .andExpect(jsonPath("$.item.internalOnly").value(true))
+            .andExpect(jsonPath("$.item.recipientLabel").value("Synthetic internal account 02-001"))
+
+        assertEquals(1, countRows("audit_events WHERE event_type = 'INTERNAL_RECIPIENT_LOOKUP' AND screen_id = 'CWB-201' AND customer_id = 'SYN-CUS-001'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'INTERNAL_RECIPIENT_LOOKUP' AND payload_json::text LIKE '%LAB-002-000001%'"))
+
+        mockMvc.perform(
+            get("/api/customer/recipients/internal-account-lookup")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .queryParam("query", "NO-SUCH-ACCOUNT")
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"))
+    }
+
     private fun seedCustomersAndAccounts() {
         jdbc.update(
             """

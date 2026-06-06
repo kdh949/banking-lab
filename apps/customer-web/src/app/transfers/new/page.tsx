@@ -1,5 +1,5 @@
-import { CustomerWorkflowRoutePage } from "../../../components/workflow-routes";
+import { CustomerTransferForm } from "../../../components/CustomerSelfService";
 
-export default async function NewTransferPage() {
-  return CustomerWorkflowRoutePage({ routeKey: "transferNew" });
+export default function NewTransferPage() {
+  return <CustomerTransferForm />;
 }

@@ -20,6 +20,19 @@ paths:
       x-synthetic-only: true
       x-synthetic-auth-dev-test-only: true
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/accounts:
+    get:
+      operationId: customerAccounts
+      x-synthetic-only: true
+      parameters: [{ name: customerId, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/recipients/internal-account-lookup:
+    get:
+      operationId: internalRecipientLookup
+      x-synthetic-only: true
+      x-internal-recipient-only: true
+      parameters: [{ name: query, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/customers/onboarding-requests:
     post:
       operationId: requestStaffCustomerOnboarding

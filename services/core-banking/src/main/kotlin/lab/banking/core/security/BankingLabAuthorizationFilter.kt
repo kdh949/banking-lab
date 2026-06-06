@@ -250,6 +250,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/customer/complaints/") && path.contains("/reopen-requests") -> "CMP-106"
             path.startsWith("/api/customer/complaints/") && path.contains("/confirm") -> "CMP-104"
             path == "/api/customer/complaints" -> "CMP-101"
+            path.startsWith("/api/customer/recipients") -> "CWB-201"
             path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
             path.startsWith("/api/customers/") && path.contains("statements") -> "CWB-103"
             path.startsWith("/api/transactions/") && path.contains("confirmation") -> "LED-102"

@@ -34,6 +34,7 @@ type CustomerWorkflowRoute = {
 };
 
 export type CustomerWorkflowRouteKey =
+  | "signup"
   | "login"
   | "accounts"
   | "accountDetail"
@@ -59,20 +60,36 @@ const commonTransferStates: readonly WorkflowState[] = [
 ];
 
 export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWorkflowRoute> = {
+  signup: {
+    key: "signup",
+    href: "/signup",
+    title: "Signup",
+    eyebrow: "SyntheticAuth",
+    screenIds: ["CWB-001"],
+    apiMethods: ["signupCustomer"],
+    controls: ["SignupForm", "StructuredErrorPanel", "SessionBanner"],
+    states: [
+      { label: "Ready", value: "SIGNUP_READY", detail: "Synthetic customer details can be submitted." },
+      { label: "Created", value: "CUSTOMER_SESSION_ACTIVE", detail: "Synthetic auth identity and customer row created.", tone: "success" },
+      { label: "Replay", value: "REPLAYED", detail: "Duplicate idempotency key returns replay status.", tone: "success" },
+      { label: "Validation", value: "REQUEST_VALIDATION_FAILED", detail: "Weak password or duplicate username is structured.", tone: "critical" },
+      { label: "Disabled", value: "SYNTHETIC_CUSTOMER_AUTH_DISABLED", detail: "Synthetic token issuance is disabled.", tone: "critical" }
+    ],
+    demoSeed: ["no real identity provider", "no real KYC provider"]
+  },
   login: {
     key: "login",
     href: "/login",
-    title: "Login and Session",
-    eyebrow: "AuthBoundary",
-    screenIds: ["CWB-401"],
-    apiMethods: ["createOidcAuthorizationUrl", "keycloak-token exchange", "customerAccessHistory"],
-    controls: ["SessionBanner", "StepUpRequiredPanel", "StructuredErrorPanel"],
+    title: "Login",
+    eyebrow: "SyntheticAuth",
+    screenIds: ["CWB-002"],
+    apiMethods: ["loginCustomer", "authSession"],
+    controls: ["LoginForm", "SessionBanner", "StructuredErrorPanel"],
     states: [
       { label: "Signed out", value: "RELOGIN_REQUIRED", detail: "No active browser token.", tone: "warning" },
-      { label: "Redirect", value: "OIDC_REDIRECTING", detail: "Authorization code flow started." },
-      { label: "Refresh", value: "TOKEN_REFRESH_REQUIRED", detail: "Expired token asks for login restart.", tone: "warning" },
-      { label: "Step-up", value: "STEP_UP_REQUIRED", detail: "MFA/WebAuthn challenge is surfaced.", tone: "critical" },
-      { label: "Authorized", value: "CUSTOMER_SESSION_ACTIVE", detail: "Customer claim supplies customerId.", tone: "success" }
+      { label: "Authorized", value: "CUSTOMER_SESSION_ACTIVE", detail: "Synthetic customer token supplies customerId.", tone: "success" },
+      { label: "Invalid", value: "CUSTOMER_AUTHENTICATION_FAILED", detail: "Bad username or password is structured.", tone: "critical" },
+      { label: "Disabled", value: "SYNTHETIC_CUSTOMER_AUTH_DISABLED", detail: "Synthetic token issuance is disabled.", tone: "critical" }
     ]
   },
   accounts: {
@@ -81,7 +98,7 @@ export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWo
     title: "Accounts",
     eyebrow: "AccountSelector",
     screenIds: ["CWB-101"],
-    apiMethods: ["customerAccountDetail"],
+    apiMethods: ["customerAccounts"],
     controls: ["AccountSelector", "AuditReferencePanel", "StructuredErrorPanel"],
     states: [
       { label: "Loading", value: "ACCOUNTS_LOADING", detail: "Account candidates are loading." },
@@ -113,7 +130,7 @@ export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWo
     title: "New Transfer",
     eyebrow: "Command Template",
     screenIds: ["CWB-201"],
-    apiMethods: ["requestCustomerTransfer"],
+    apiMethods: ["customerAccounts", "internalRecipientLookup", "requestCustomerTransfer"],
     controls: ["MoneyInput", "AccountSelector", "IdempotencyResultPanel", "FdsHoldStatusPanel", "StructuredErrorPanel"],
     states: commonTransferStates,
     demoSeed: ["synthetic demo source account only when no API session is configured"]

@@ -170,6 +170,37 @@ class CustomerTransferApiParityIntegrationTest {
     }
 
     @Test
+    fun `customer transfer rejects synthetic system account recipient before ledger posting`() {
+        mockMvc.perform(
+            post("/api/customer/transfers")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .header("x-request-id", "REQ-CWB-TRANSFER-SYSTEM-RECIPIENT")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "fromAccountId": "ACC-CWB-FROM",
+                      "toAccountId": "BANK-SUSPENSE",
+                      "amountMinor": 1000,
+                      "idempotencyKey": "CWB-TRANSFER-SYSTEM-RECIPIENT-001",
+                      "requestedBy": "SYN-CUS-001",
+                      "reason": "Synthetic customer transfer system recipient rejection"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("REQUEST_VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.message").value("recipient must be an active internal synthetic account"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-CWB-TRANSFER-SYSTEM-RECIPIENT"))
+            .andExpect(jsonPath("$.error.route").value("/api/customer/transfers"))
+
+        assertEquals(0, countRows("ledger_transactions WHERE idempotency_key = 'CWB-TRANSFER-SYSTEM-RECIPIENT-001'"))
+    }
+
+
+    @Test
     fun `customer transaction history shares ledger source with staff history and exposes held FDS statuses`() {
         seedHeldFdsCase()
 
@@ -324,17 +355,22 @@ class CustomerTransferApiParityIntegrationTest {
             INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
             VALUES
               ('SYN-CUS-001', 'Lab Customer Alpha', 'STANDARD', 'LOW'),
-              ('SYN-CUS-002', 'Lab Customer Beta', 'STANDARD', 'LOW')
+              ('SYN-CUS-002', 'Lab Customer Beta', 'STANDARD', 'LOW'),
+              ('BANK', 'Synthetic Bank System Accounts', 'SYSTEM', 'LOW')
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
         jdbc.update(
             """
-            INSERT INTO accounts (account_id, customer_id, account_no, currency, status)
+            INSERT INTO accounts (
+              account_id, customer_id, account_no, currency, status,
+              account_class, system_account_kind, synthetic_system_account
+            )
             VALUES
-              ('ACC-CWB-FROM', 'SYN-CUS-001', 'LAB-001-000101', 'KRW', 'ACTIVE'),
-              ('ACC-CWB-TO', 'SYN-CUS-002', 'LAB-002-000102', 'KRW', 'ACTIVE'),
-              ('ACC-CWB-OTHER', 'SYN-CUS-002', 'LAB-002-000103', 'KRW', 'ACTIVE')
+              ('ACC-CWB-FROM', 'SYN-CUS-001', 'LAB-001-000101', 'KRW', 'ACTIVE', 'LIABILITY', NULL, FALSE),
+              ('ACC-CWB-TO', 'SYN-CUS-002', 'LAB-002-000102', 'KRW', 'ACTIVE', 'LIABILITY', NULL, FALSE),
+              ('ACC-CWB-OTHER', 'SYN-CUS-002', 'LAB-002-000103', 'KRW', 'ACTIVE', 'LIABILITY', NULL, FALSE),
+              ('BANK-SUSPENSE', 'BANK', 'LAB-000-000000', 'KRW', 'ACTIVE', 'LIABILITY', 'SUSPENSE', TRUE)
             """.trimIndent(),
             emptyMap<String, Any?>()
         )
@@ -346,7 +382,8 @@ class CustomerTransferApiParityIntegrationTest {
             VALUES
               ('ACC-CWB-FROM', 'KRW', 100000, 100000, 0),
               ('ACC-CWB-TO', 'KRW', 0, 0, 0),
-              ('ACC-CWB-OTHER', 'KRW', 50000, 50000, 0)
+              ('ACC-CWB-OTHER', 'KRW', 50000, 50000, 0),
+              ('BANK-SUSPENSE', 'KRW', 0, 0, 0)
             """.trimIndent(),
             emptyMap<String, Any?>()
         )

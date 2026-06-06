@@ -112,6 +112,30 @@ export interface CustomerAccountDetailDto {
   readonly holdAmountMinor: number;
 }
 
+export interface CustomerAccountListItemDto extends CustomerAccountDetailDto {
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAccountListResponse {
+  readonly items: readonly CustomerAccountListItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface InternalRecipientAccountDto {
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly status: string;
+  readonly currency: string;
+  readonly recipientLabel: string;
+  readonly internalOnly: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface InternalRecipientLookupResponse {
+  readonly item: InternalRecipientAccountDto;
+  readonly syntheticOnly: boolean;
+}
+
 export interface CustomerTransferCommand {
   readonly customerId?: string;
   readonly fromAccountId: string;
@@ -3580,12 +3604,32 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    customerAccounts(customerId: string) {
+      return request<CustomerAccountListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/accounts",
+        { customerId },
+        options.bearerToken
+      );
+    },
+
     customerAccountDetail(accountId: string, customerId: string) {
       return request<CustomerAccountDetailDto>(
         fetchImpl,
         baseUrl,
         `/api/customer/accounts/${encodeURIComponent(accountId)}/detail`,
         { customerId },
+        options.bearerToken
+      );
+    },
+
+    internalRecipientLookup(query: string) {
+      return request<InternalRecipientLookupResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/recipients/internal-account-lookup",
+        { query },
         options.bearerToken
       );
     },

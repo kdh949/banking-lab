@@ -11,10 +11,24 @@ import org.springframework.web.bind.annotation.RestController
 class CustomerAccountController(
     private val customerAccountService: CustomerAccountService
 ) {
+    @GetMapping
+    fun accounts(@RequestParam customerId: String): CustomerAccountListResponse =
+        customerAccountService.accounts(customerId)
+
     @GetMapping("/{accountId}/detail")
     fun detail(
         @PathVariable accountId: String,
         @RequestParam customerId: String
     ): CustomerAccountDetailDto =
         customerAccountService.detail(customerId, accountId)
+}
+
+@RestController
+@RequestMapping("/api/customer/recipients")
+class CustomerRecipientController(
+    private val customerAccountService: CustomerAccountService
+) {
+    @GetMapping("/internal-account-lookup")
+    fun internalAccountLookup(@RequestParam query: String): InternalRecipientLookupResponse =
+        customerAccountService.internalRecipientLookup(query)
 }

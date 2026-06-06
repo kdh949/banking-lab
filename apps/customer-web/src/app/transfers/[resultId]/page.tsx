@@ -1,4 +1,4 @@
-import { CustomerWorkflowRoutePage } from "../../../components/workflow-routes";
+import { CustomerTransferResultView } from "../../../components/CustomerSelfService";
 
 type TransferResultPageProps = {
   readonly params: Promise<{ readonly resultId: string }>;
@@ -6,5 +6,5 @@ type TransferResultPageProps = {
 
 export default async function TransferResultPage({ params }: TransferResultPageProps) {
   const { resultId } = await params;
-  return CustomerWorkflowRoutePage({ routeKey: "transferResult", routeParam: resultId });
+  return <CustomerTransferResultView resultId={resultId} />;
 }
