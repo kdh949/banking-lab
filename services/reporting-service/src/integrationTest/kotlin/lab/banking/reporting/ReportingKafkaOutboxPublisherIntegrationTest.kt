@@ -18,6 +18,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -103,8 +104,12 @@ class ReportingKafkaOutboxPublisherIntegrationTest {
             assertTrue(envelope.outboxEventId.startsWith("RPO-"))
             assertEquals("REPORT_ARTIFACT", envelope.aggregateType)
             assertEquals(generated.artifactId, envelope.aggregateId)
+            assertNotNull(envelope.occurredAt)
             assertEquals(true, envelope.headers["syntheticOnly"])
             assertEquals("reporting-service", envelope.headers["sourceService"])
+            assertEquals(envelope.eventType, envelope.headers["eventType"])
+            assertEquals(generated.artifactId, envelope.headers["aggregateId"])
+            assertEquals(envelope.occurredAt, envelope.headers["occurredAt"])
             assertEquals(generated.artifactId, envelope.payload["artifactId"])
             assertEquals(true, envelope.payload["syntheticOnly"])
             assertEquals(false, envelope.payload["ledgerRowsMutated"])
@@ -198,6 +203,10 @@ class ReportingKafkaOutboxPublisherIntegrationTest {
                 val records = consumer.poll(Duration.ofMillis(250))
                 for (record in records) {
                     assertTrue(record.headers().any { it.key() == "syntheticOnly" })
+                    assertTrue(record.headers().any { it.key() == "sourceService" })
+                    assertTrue(record.headers().any { it.key() == "eventType" })
+                    assertTrue(record.headers().any { it.key() == "aggregateId" })
+                    assertTrue(record.headers().any { it.key() == "occurredAt" })
                     envelopes += objectMapper.readValue(record.value(), ReportingOutboxKafkaEnvelope::class.java)
                 }
             }

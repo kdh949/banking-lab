@@ -675,7 +675,7 @@ class PaymentRepository(
         jdbc.query(
             """
             SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
-                   payload_json::text AS payload_json, status, retry_count, error_message
+                   payload_json::text AS payload_json, status, retry_count, error_message, created_at
             FROM payment_outbox_events
             WHERE event_type = 'PaymentLedgerPostingRequested'
               AND status IN ('PENDING', 'FAILED')
@@ -695,7 +695,7 @@ class PaymentRepository(
         return jdbc.query(
             """
             SELECT outbox_event_id, aggregate_type, aggregate_id, event_type, idempotency_key,
-                   payload_json::text AS payload_json, status, retry_count, error_message
+                   payload_json::text AS payload_json, status, retry_count, error_message, created_at
             FROM payment_outbox_events
             WHERE event_type IN (:eventTypes)
               AND status IN ('PENDING', 'FAILED')
@@ -841,6 +841,7 @@ class PaymentRepository(
             ),
             status = rs.getString("status"),
             retryCount = rs.getInt("retry_count"),
-            errorMessage = rs.getString("error_message")
+            errorMessage = rs.getString("error_message"),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
         )
 }

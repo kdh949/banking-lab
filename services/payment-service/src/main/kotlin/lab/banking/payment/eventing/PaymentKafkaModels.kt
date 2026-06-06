@@ -5,6 +5,7 @@ data class PaymentOutboxKafkaEnvelope(
     val aggregateType: String,
     val aggregateId: String,
     val eventType: String,
+    val occurredAt: String,
     val idempotencyKey: String,
     val payload: Map<String, Any?>,
     val headers: Map<String, Any?> = emptyMap()
