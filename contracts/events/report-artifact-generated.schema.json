@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/report-artifact-generated.schema.json",
+  "title": "ReportArtifactGenerated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifactId",
+    "reportType",
+    "contentSha256",
+    "retentionPolicy",
+    "syntheticOnly",
+    "ledgerRowsMutated"
+  ],
+  "properties": {
+    "artifactId": { "type": "string", "pattern": "^RPT-" },
+    "reportType": { "type": "string" },
+    "contentSha256": { "type": "string" },
+    "retentionPolicy": { "type": "string" },
+    "syntheticOnly": { "const": true },
+    "ledgerRowsMutated": { "const": false }
+  }
+}

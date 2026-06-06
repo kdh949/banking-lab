@@ -3,7 +3,7 @@
   "$id": "https://banking-lab.synthetic/contracts/events/payment-ledger-posting-settled.schema.json",
   "title": "PaymentLedgerPostingSettled",
   "type": "object",
-  "required": ["value", "replayed"],
+  "required": ["value", "replayed", "syntheticOnly"],
   "properties": {
     "value": {
       "type": "object",
@@ -33,7 +33,8 @@
       },
       "additionalProperties": true
     },
-    "replayed": { "type": "boolean" }
+    "replayed": { "type": "boolean" },
+    "syntheticOnly": { "const": true }
   },
   "additionalProperties": true
 }
