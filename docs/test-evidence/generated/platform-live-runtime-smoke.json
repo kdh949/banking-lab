@@ -1,0 +1,464 @@
+{
+  "command": "npm run platform:live-runtime-smoke",
+  "status": "pass",
+  "note": "Disposable kind Helm install proved live PostgreSQL, Keycloak, Redpanda, Temporal, core-banking, TLS Ingress object, and placeholder TLS secret readiness for the scoped synthetic runtime slice.",
+  "startedAt": "2026-06-06T00:56:03.017Z",
+  "finishedAt": "2026-06-06T00:59:06.660Z",
+  "durationMs": 183643,
+  "syntheticOnly": true,
+  "productionClaim": false,
+  "clusterName": "banking-lab-platform-4452",
+  "helmRelease": "banking-lab",
+  "namespace": "banking-lab",
+  "keepCluster": false,
+  "scope": [
+    "PostgreSQL StatefulSet rollout",
+    "Keycloak Deployment management readiness",
+    "Redpanda Deployment admin readiness",
+    "Temporal Deployment TCP readiness",
+    "core-banking Spring health through Kubernetes service proxy",
+    "TLS Ingress object and synthetic placeholder TLS Secret presence"
+  ],
+  "explicitNonClaims": [
+    "No real customer data, real money, real KYC, real payment network, or real financial institution API is used.",
+    "No production secret manager, real certificate, ingress controller traffic path, canary promotion, multi-node storage, or Argo CD controller sync is proven by this smoke."
+  ],
+  "probes": {
+    "skippedDependencyImageLoads": [],
+    "failedDependencyImageLoads": [
+      "postgres:16-alpine",
+      "quay.io/keycloak/keycloak:26.0",
+      "redpandadata/redpanda:v24.3.7",
+      "temporalio/auto-setup:1.26"
+    ],
+    "coreHealth": {
+      "status": "ok",
+      "syntheticOnly": true,
+      "auditHashChainValid": true,
+      "nodeReferenceRuntimeRetained": true,
+      "migrationTarget": "kotlin-spring-boot"
+    },
+    "keycloakManagementReady": {
+      "status": "UP",
+      "checks": [
+        {
+          "name": "Keycloak database connections async health check",
+          "status": "UP"
+        }
+      ]
+    },
+    "redpandaReady": {
+      "status": "ready"
+    },
+    "temporalEndpoints": {
+      "apiVersion": "v1",
+      "kind": "Endpoints",
+      "metadata": {
+        "annotations": {
+          "endpoints.kubernetes.io/last-change-trigger-time": "2026-06-06T00:58:46Z"
+        },
+        "creationTimestamp": "2026-06-06T00:57:00Z",
+        "labels": {
+          "app.kubernetes.io/managed-by": "Helm",
+          "app.kubernetes.io/name": "banking-lab-temporal",
+          "app.kubernetes.io/part-of": "banking-lab",
+          "endpoints.kubernetes.io/managed-by": "endpoint-controller"
+        },
+        "name": "banking-lab-temporal",
+        "namespace": "banking-lab",
+        "resourceVersion": "902",
+        "uid": "ac96b88e-4ab0-4ef4-b6c6-7a001bd7ccc8"
+      },
+      "subsets": [
+        {
+          "addresses": [
+            {
+              "ip": "10.244.0.7",
+              "nodeName": "banking-lab-platform-4452-control-plane",
+              "targetRef": {
+                "kind": "Pod",
+                "name": "banking-lab-temporal-557c48c7b6-flj9w",
+                "namespace": "banking-lab",
+                "uid": "b902eb4e-6515-4934-af27-a2561eb3f88c"
+              }
+            }
+          ],
+          "ports": [
+            {
+              "name": "grpc",
+              "port": 7233,
+              "protocol": "TCP"
+            }
+          ]
+        }
+      ]
+    },
+    "ingress": {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "Ingress",
+      "metadata": {
+        "annotations": {
+          "meta.helm.sh/release-name": "banking-lab",
+          "meta.helm.sh/release-namespace": "banking-lab",
+          "nginx.ingress.kubernetes.io/backend-protocol": "HTTP",
+          "nginx.ingress.kubernetes.io/ssl-redirect": "true"
+        },
+        "creationTimestamp": "2026-06-06T00:57:00Z",
+        "generation": 1,
+        "labels": {
+          "app.kubernetes.io/managed-by": "Helm",
+          "app.kubernetes.io/part-of": "banking-lab",
+          "banking-lab/synthetic-only": "true"
+        },
+        "name": "banking-lab-ingress",
+        "namespace": "banking-lab",
+        "resourceVersion": "610",
+        "uid": "86c99ed0-b9fb-4543-81f9-bc5dddc0a6f2"
+      },
+      "spec": {
+        "ingressClassName": "nginx",
+        "rules": [
+          {
+            "host": "banking-lab.local",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "banking-lab-core-banking",
+                      "port": {
+                        "number": 8081
+                      }
+                    }
+                  },
+                  "path": "/api",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          },
+          {
+            "host": "auth.banking-lab.local",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "banking-lab-keycloak",
+                      "port": {
+                        "number": 8080
+                      }
+                    }
+                  },
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          },
+          {
+            "host": "reports.banking-lab.local",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "banking-lab-reporting-service",
+                      "port": {
+                        "number": 8090
+                      }
+                    }
+                  },
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          },
+          {
+            "host": "payments.banking-lab.local",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "banking-lab-payment-service",
+                      "port": {
+                        "number": 8088
+                      }
+                    }
+                  },
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          },
+          {
+            "host": "notifications.banking-lab.local",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "banking-lab-notification-service",
+                      "port": {
+                        "number": 8089
+                      }
+                    }
+                  },
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          }
+        ],
+        "tls": [
+          {
+            "hosts": [
+              "banking-lab.local",
+              "auth.banking-lab.local",
+              "reports.banking-lab.local",
+              "payments.banking-lab.local",
+              "notifications.banking-lab.local"
+            ],
+            "secretName": "banking-lab-ingress-tls"
+          }
+        ]
+      },
+      "status": {
+        "loadBalancer": {}
+      }
+    },
+    "tlsSecretType": "kubernetes.io/tls",
+    "argocdSync": "skipped_no_argocd_controller_or_application_crd"
+  },
+  "commands": [
+    {
+      "command": "sh -lc 'command -v docker'",
+      "status": 0,
+      "durationMs": 12,
+      "stdout": "/usr/local/bin/docker\n",
+      "stderr": ""
+    },
+    {
+      "command": "sh -lc 'command -v kind'",
+      "status": 0,
+      "durationMs": 8,
+      "stdout": "/opt/homebrew/bin/kind\n",
+      "stderr": ""
+    },
+    {
+      "command": "sh -lc 'command -v kubectl'",
+      "status": 0,
+      "durationMs": 7,
+      "stdout": "/usr/local/bin/kubectl\n",
+      "stderr": ""
+    },
+    {
+      "command": "sh -lc 'command -v helm'",
+      "status": 0,
+      "durationMs": 7,
+      "stdout": "/opt/homebrew/bin/helm\n",
+      "stderr": ""
+    },
+    {
+      "command": "docker ps",
+      "status": 0,
+      "durationMs": 36,
+      "stdout": "CONTAINER ID   IMAGE                COMMAND                  CREATED       STATUS                  PORTS                      NAMES\nbf908aa4bb36   postgres:16-alpine   \"docker-entrypoint.s…\"   2 weeks ago   Up 42 hours (healthy)   127.0.0.1:5432->5432/tcp   surge-queue-postgres\n601415ba72f4   redis:7-alpine       \"docker-entrypoint.s…\"   2 weeks ago   Up 42 hours (healthy)   127.0.0.1:6379->6379/tcp   surge-queue-redis\n",
+      "stderr": ""
+    },
+    {
+      "command": "scripts/run-core-banking-tests.sh :services:core-banking:bootJar",
+      "status": 0,
+      "durationMs": 4197,
+      "stdout": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home\nGRADLE_USER_HOME=/Users/donghyunkim/Documents/banking-lab/.gradle\nTo honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\nDaemon will be stopped at the end of the build \n> Task :services:core-banking:checkKotlinGradlePluginConfigurationErrors SKIPPED\n> Task :services:core-banking:compileKotlin UP-TO-DATE\n> Task :services:core-banking:compileJava NO-SOURCE\n> Task :services:core-banking:processResources UP-TO-DATE\n> Task :services:core-banking:classes UP-TO-DATE\n> Task :services:core-banking:resolveMainClassName UP-TO-DATE\n> Task :services:core-banking:bootJar UP-TO-DATE\n\nBUILD SUCCESSFUL in 3s\n4 actionable tasks: 4 up-to-date\n",
+      "stderr": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment Homebrew (build 21.0.11)\nOpenJDK 64-Bit Server VM Homebrew (build 21.0.11, mixed mode, sharing)\n"
+    },
+    {
+      "command": "docker build -f infra/docker-compose/core-banking.Dockerfile -t banking-lab/core-banking-service:local .",
+      "status": 0,
+      "durationMs": 2753,
+      "stdout": "",
+      "stderr": "#0 building with \"desktop-linux\" instance using docker driver\n\n#1 [internal] load build definition from core-banking.Dockerfile\n#1 transferring dockerfile: 287B done\n#1 DONE 0.0s\n\n#2 [internal] load metadata for docker.io/library/eclipse-temurin:21-jre\n#2 DONE 0.8s\n\n#3 [internal] load .dockerignore\n#3 transferring context: 2B done\n#3 DONE 0.0s\n\n#4 [1/4] FROM docker.io/library/eclipse-temurin:21-jre@sha256:010e0a06bd4e0184dec58626afb3ba727b42c56c91b977e2f0a9e0837e0fa3fb\n#4 resolve docker.io/library/eclipse-temurin:21-jre@sha256:010e0a06bd4e0184dec58626afb3ba727b42c56c91b977e2f0a9e0837e0fa3fb done\n#4 DONE 0.0s\n\n#5 [internal] load build context\n#5 transferring context: 2.59kB 1.4s done\n#5 DONE 1.4s\n\n#6 [2/4] WORKDIR /app\n#6 CACHED\n\n#7 [3/4] COPY services/core-banking/build/libs/core-banking-*-migration.jar /app/core-banking.jar\n#7 CACHED\n\n#8 [4/4] COPY db/migrations /app/db/migrations\n#8 CACHED\n\n#9 exporting to image\n#9 exporting layers done\n#9 exporting manifest sha256:1da14d0bb94b44322061a0838422d1febf3ccfdb5515d3a8e558a5b330e926a1 done\n#9 exporting config sha256:44a751e7a1857c2f8353f3fd072469669cb26a3765b854c05207fef314119b5b done\n#9 exporting attestation manifest sha256:b3753450875d945c711766153c4d7b7059b5cc23bf7c0ae6ffc0b6891415423a done\n#9 exporting manifest list sha256:aed7a95809b7f1bf6551fd26e183cb59b6e0c44c77fcd724f17e0d5efb630a75 done\n#9 naming to docker.io/banking-lab/core-banking-service:local done\n#9 unpacking to docker.io/banking-lab/core-banking-service:local done\n#9 DONE 0.0s\n"
+    },
+    {
+      "command": "kind create cluster --name banking-lab-platform-4452 --wait 120s",
+      "status": 0,
+      "durationMs": 25838,
+      "stdout": "",
+      "stderr": "Creating cluster \"banking-lab-platform-4452\" ...\n • Ensuring node image (kindest/node:v1.36.1) 🖼  ...\n ✓ Ensuring node image (kindest/node:v1.36.1) 🖼\n • Preparing nodes 📦   ...\n ✓ Preparing nodes 📦 \n • Writing configuration 📜  ...\n ✓ Writing configuration 📜\n • Starting control-plane 🕹️  ...\n ✓ Starting control-plane 🕹️\n • Installing CNI 🔌  ...\n ✓ Installing CNI 🔌\n • Installing StorageClass 💾  ...\n ✓ Installing StorageClass 💾\n • Waiting ≤ 2m0s for control-plane = Ready ⏳  ...\n ✓ Waiting ≤ 2m0s for control-plane = Ready ⏳\n • Ready after 16s 💚\nSet kubectl context to \"kind-banking-lab-platform-4452\"\nYou can now use your cluster with:\n\nkubectl cluster-info --context kind-banking-lab-platform-4452\n\nNot sure what to do next? 😅  Check out https://kind.sigs.k8s.io/docs/user/quick-start/\n"
+    },
+    {
+      "command": "kind load docker-image banking-lab/core-banking-service:local --name banking-lab-platform-4452",
+      "status": 0,
+      "durationMs": 6098,
+      "stdout": "",
+      "stderr": "Image: \"banking-lab/core-banking-service:local\" with ID \"sha256:aed7a95809b7f1bf6551fd26e183cb59b6e0c44c77fcd724f17e0d5efb630a75\" not yet present on node \"banking-lab-platform-4452-control-plane\", loading...\n"
+    },
+    {
+      "command": "docker image inspect postgres:16-alpine",
+      "status": 0,
+      "durationMs": 84,
+      "stdout": "[\n    {\n        \"Id\": \"sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229\",\n        \"RepoTags\": [\n            \"postgres:16-alpine\"\n        ],\n        \"RepoDigests\": [\n            \"postgres@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229\"\n        ],\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-05-14T19:01:17.157686796Z\",\n        \"Config\": {\n            \"ExposedPorts\": {\n                \"5432/tcp\": {}\n            },\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"GOSU_VERSION=1.19\",\n                \"LANG=en_US.utf8\",\n                \"PG_MAJOR=16\",\n                \"PG_VERSION=16.14\",\n                \"PG_SHA256=f6d077142737920858ce958ccdb75c6ee137a63b5b0853c70693d401ac7e3471\",\n                \"DOCKER_PG_LLVM_DEPS=llvm19-dev \\t\\tclang19\",\n                \"PGDATA=/var/lib/postgresql/data\"\n            ],\n            \"Entrypoint\": [\n                \"docker-entrypoint.sh\"\n            ],\n            \"Cmd\": [\n                \"postgres\"\n            ],\n            \"Volumes\": {\n                \"/var/lib/postgresql/data\": {}\n            },\n            \"WorkingDir\": \"/\",\n            \"StopSignal\": \"SIGINT\"\n        },\n        \"Architecture\": \"arm64\",\n        \"Variant\": \"v8\",\n        \"Os\": \"linux\",\n        \"Size\": 108232656,\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:a8d26d037006414043b277ecb95287692d0960219289d9e27b0bcea0ce233b02\",\n                \"sha256:65e635db74003e757253cfa9e7f360361c855a84147314cd7976483c242b3beb\",\n                \"sha256:cad78e4178d5f4c49d5cb808763648b99a1cd9d39f2ee201232f5cb12ecb014b\",\n                \"sha256:cc0ee1e4bc38428bfd2e3479767dd70b5d8ef118dea05ebbbe70bf41724f5a80\",\n                \"sha256:c182a74512acc36c15b82fac7e95d8603249f73778d3634d2351db7981e19fa0\",\n                \"sha256:65cfd0c68e7a049dcf877ceff01e45e9b6bf748896a69ee6771f5d187edf00d5\",\n                \"sha256:1ef08f8e6f80f5d580c2733b9ad1ca11d66789897fb43849d1f368c9b083deee\",\n                \"sha256:ddf0d59d9f7833adacee72c6876a2df0a680c6105774ad044f04f6b674f4bd24\",\n                \"sha256:0b0eda44f9f8cd23a3a66ff44ba984c4bce27d528266508d2f40371b6364921d\",\n                \"sha256:c3a0d1722dd35cc16f87c43b7b25ed48ff7571180c65113107a333da35a75142\",\n                \"sha256:ccbd5f58d7ce05b71b221e5d3efb344bdb1487ab0f01d741bc7409dde42735b2\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-05-20T03:43:59.266746924Z\"\n        },\n        \"Descriptor\": {\n            \"mediaType\": \"application/vnd.oci.image.index.v1+json\",\n            \"digest\": \"sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229\",\n            \"size\": 10301\n        },\n        \"Identity\": {\n            \"Pull\": [\n                {\n                    \"Repository\": \"docker.io/library/postgres\"\n                }\n            ]\n        }\n    }\n]\n",
+      "stderr": ""
+    },
+    {
+      "command": "kind load docker-image postgres:16-alpine --name banking-lab-platform-4452",
+      "status": 1,
+      "durationMs": 2385,
+      "stdout": "",
+      "stderr": "Image: \"postgres:16-alpine\" with ID \"sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229\" not yet present on node \"banking-lab-platform-4452-control-plane\", loading...\nERROR: failed to load image: command \"docker exec --privileged -i banking-lab-platform-4452-control-plane ctr --namespace=k8s.io images import --all-platforms --digests --snapshotter=overlayfs -\" failed with error: exit status 1\n\nCommand Output: ctr: content digest sha256:79950da386bda7fcc9d57aa9aa9be6c6d7407596a9b8f68014b09a778a9ab316: not found\n"
+    },
+    {
+      "command": "docker image inspect quay.io/keycloak/keycloak:26.0",
+      "status": 0,
+      "durationMs": 26,
+      "stdout": "[\n    {\n        \"Id\": \"sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858\",\n        \"RepoTags\": [\n            \"quay.io/keycloak/keycloak:26.0\"\n        ],\n        \"RepoDigests\": [\n            \"quay.io/keycloak/keycloak@sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858\"\n        ],\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2025-02-20T14:49:10.667257931Z\",\n        \"Config\": {\n            \"User\": \"1000\",\n            \"ExposedPorts\": {\n                \"8080/tcp\": {},\n                \"8443/tcp\": {},\n                \"9000/tcp\": {}\n            },\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"LANG=en_US.UTF-8\",\n                \"KC_RUN_IN_CONTAINER=true\"\n            ],\n            \"Entrypoint\": [\n                \"/opt/keycloak/bin/kc.sh\"\n            ],\n            \"WorkingDir\": \"/\",\n            \"Labels\": {\n                \"architecture\": \"aarch64\",\n                \"build-date\": \"2025-02-17T07:21:18Z\",\n                \"com.redhat.build-host\": \"\",\n                \"com.redhat.component\": \"\",\n                \"com.redhat.license_terms\": \"\",\n                \"description\": \"Keycloak Server Image\",\n                \"distribution-scope\": \"public\",\n                \"io.buildah.version\": \"1.39.0-dev\",\n                \"io.k8s.description\": \"Keycloak Server Image\",\n                \"io.k8s.display-name\": \"Keycloak Server\",\n                \"io.openshift.expose-services\": \"\",\n                \"io.openshift.tags\": \"keycloak security identity\",\n                \"maintainer\": \"https://www.keycloak.org/\",\n                \"name\": \"keycloak\",\n                \"org.opencontainers.image.created\": \"2025-02-20T14:46:41.871Z\",\n                \"org.opencontainers.image.description\": \"\",\n                \"org.opencontainers.image.documentation\": \"https://www.keycloak.org/documentation\",\n                \"org.opencontainers.image.licenses\": \"Apache-2.0\",\n                \"org.opencontainers.image.revision\": \"9dc36e6787c902eff4e74369e6a5fd3cd3798e1d\",\n                \"org.opencontainers.image.source\": \"https://github.com/keycloak-rel/keycloak-rel\",\n                \"org.opencontainers.image.title\": \"keycloak-rel\",\n                \"org.opencontainers.image.url\": \"https://github.com/keycloak-rel/keycloak-rel\",\n                \"org.opencontainers.image.version\": \"26.0.8\",\n                \"release\": \"\",\n                \"summary\": \"Keycloak Server Image\",\n                \"url\": \"https://www.keycloak.org/\",\n                \"vcs-ref\": \"\",\n                \"vcs-type\": \"git\",\n                \"vendor\": \"https://www.keycloak.org/\",\n                \"version\": \"26.0.8\"\n            }\n        },\n        \"Architecture\": \"arm64\",\n        \"Os\": \"linux\",\n        \"Size\": 236200541,\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:7e20c0189d7d4e8a11becfd844d55a8d92b208f2e1cb5411a53f2f7362377e87\",\n                \"sha256:626719461f225ce9ecca6e40ae7d840ee2e97ec511f4f93b0cfde4a874e224f7\",\n                \"sha256:532ac9b2bc54e5324e935a46e2bedf2d5c8dbe1f379f5073b05891536d4ee6fb\",\n                \"sha256:67dfefd0eb4d5f54aa36e21b6fc0414ebb864ef23ab05daf6294fd337c69f3cb\",\n                \"sha256:4147f0738dad8708886c1fc6e4fb99eb0df4ebf12a1782bf83ffde1cc70cb330\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-06-02T15:21:58.430307008Z\"\n        },\n        \"Descriptor\": {\n            \"mediaType\": \"application/vnd.oci.image.index.v1+json\",\n            \"digest\": \"sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858\",\n            \"size\": 1609\n        },\n        \"Identity\": {\n            \"Pull\": [\n                {\n                    \"Repository\": \"quay.io/keycloak/keycloak\"\n                }\n            ]\n        }\n    }\n]\n",
+      "stderr": ""
+    },
+    {
+      "command": "kind load docker-image quay.io/keycloak/keycloak:26.0 --name banking-lab-platform-4452",
+      "status": 1,
+      "durationMs": 5278,
+      "stdout": "",
+      "stderr": "Image: \"quay.io/keycloak/keycloak:26.0\" with ID \"sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858\" not yet present on node \"banking-lab-platform-4452-control-plane\", loading...\nERROR: failed to load image: command \"docker exec --privileged -i banking-lab-platform-4452-control-plane ctr --namespace=k8s.io images import --all-platforms --digests --snapshotter=overlayfs -\" failed with error: exit status 1\n\nCommand Output: ctr: content digest sha256:ecd43971114b0c764f8a3288dddab73f98cb473daccc4feaffe4dc14adeaf866: not found\n"
+    },
+    {
+      "command": "docker image inspect redpandadata/redpanda:v24.3.7",
+      "status": 0,
+      "durationMs": 24,
+      "stdout": "[\n    {\n        \"Id\": \"sha256:f3049dcb004ce1ccc0a8b3dc3c7d6ca1f32cb4d6d1da98a47874457dd8cb9907\",\n        \"RepoTags\": [\n            \"redpandadata/redpanda:v24.3.7\",\n            \"docker.redpanda.com/redpandadata/redpanda:v24.3.7\"\n        ],\n        \"RepoDigests\": [\n            \"redpandadata/redpanda@sha256:f3049dcb004ce1ccc0a8b3dc3c7d6ca1f32cb4d6d1da98a47874457dd8cb9907\",\n            \"docker.redpanda.com/redpandadata/redpanda@sha256:f3049dcb004ce1ccc0a8b3dc3c7d6ca1f32cb4d6d1da98a47874457dd8cb9907\"\n        ],\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2025-03-14T22:22:05.011819903Z\",\n        \"Config\": {\n            \"User\": \"redpanda\",\n            \"ExposedPorts\": {\n                \"8081/tcp\": {},\n                \"8082/tcp\": {},\n                \"9092/tcp\": {},\n                \"9644/tcp\": {}\n            },\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"EDITOR=vi\"\n            ],\n            \"Entrypoint\": [\n                \"/entrypoint.sh\"\n            ],\n            \"Cmd\": [\n                \"redpanda\",\n                \"start\",\n                \"--overprovisioned\"\n            ],\n            \"Volumes\": {\n                \"/var/lib/redpanda/data\": {}\n            },\n            \"Labels\": {\n                \"org.opencontainers.image.authors\": \"Redpanda Data <hi@redpanda.com>\"\n            },\n            \"ArgsEscaped\": true\n        },\n        \"Architecture\": \"arm64\",\n        \"Variant\": \"v8\",\n        \"Os\": \"linux\",\n        \"Size\": 182404741,\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:52d51720ba2d06cecaed7505a36dbdf74d33d70a2e064ed714f88fe08fd403de\",\n                \"sha256:e9d0a7ea9b421902123f146eae1f6c84674d9b070c9dd512b1a0039a6eb40687\",\n                \"sha256:05c3d7fe677d5e07e4ff6a586132896d659605fd4c1aeb172fff3d3385118bb5\",\n                \"sha256:5e69e4ef45b9bc9f0136cc9019c3fdd0439c98d74bdbef86e55f5bec6aa4264d\",\n                \"sha256:4a07926e9acc4cc77e71009bc340476d4d927b076a853e09d8f22c527c3ff67b\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-06-02T23:41:43.921532554Z\"\n        },\n        \"Descriptor\": {\n            \"mediaType\": \"application/vnd.docker.distribution.manifest.list.v2+json\",\n            \"digest\": \"sha256:f3049dcb004ce1ccc0a8b3dc3c7d6ca1f32cb4d6d1da98a47874457dd8cb9907\",\n            \"size\": 685\n        },\n        \"Identity\": {\n            \"Pull\": [\n                {\n                    \"Repository\": \"docker.io/redpandadata/redpanda\"\n                },\n                {\n                    \"Repository\": \"docker.redpanda.com/redpandadata/redpanda\"\n                }\n            ]\n        }\n    }\n]\n",
+      "stderr": ""
+    },
+    {
+      "command": "kind load docker-image redpandadata/redpanda:v24.3.7 --name banking-lab-platform-4452",
+      "status": 1,
+      "durationMs": 5658,
+      "stdout": "",
+      "stderr": "Image: \"redpandadata/redpanda:v24.3.7\" with ID \"sha256:f3049dcb004ce1ccc0a8b3dc3c7d6ca1f32cb4d6d1da98a47874457dd8cb9907\" not yet present on node \"banking-lab-platform-4452-control-plane\", loading...\nERROR: failed to load image: command \"docker exec --privileged -i banking-lab-platform-4452-control-plane ctr --namespace=k8s.io images import --all-platforms --digests --snapshotter=overlayfs -\" failed with error: exit status 1\n\nCommand Output: ctr: content digest sha256:cab4be29c87c6bd529aff6fcfe89f1e6d98307d167b3dcf121ab7b57b2cede32: not found\n"
+    },
+    {
+      "command": "docker image inspect temporalio/auto-setup:1.26",
+      "status": 0,
+      "durationMs": 65,
+      "stdout": "[\n    {\n        \"Id\": \"sha256:5606e2ff404293581e80530141ba5a24940a2f8119e15250f90857a8e4c9ccf8\",\n        \"RepoTags\": [\n            \"temporalio/auto-setup:1.26\"\n        ],\n        \"RepoDigests\": [\n            \"temporalio/auto-setup@sha256:5606e2ff404293581e80530141ba5a24940a2f8119e15250f90857a8e4c9ccf8\"\n        ],\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2025-08-20T22:20:58.920590238Z\",\n        \"Config\": {\n            \"User\": \"temporal\",\n            \"ExposedPorts\": {\n                \"6933/tcp\": {},\n                \"6934/tcp\": {},\n                \"6935/tcp\": {},\n                \"6939/tcp\": {},\n                \"7233/tcp\": {},\n                \"7234/tcp\": {},\n                \"7235/tcp\": {},\n                \"7239/tcp\": {}\n            },\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"TEMPORAL_HOME=/etc/temporal\",\n                \"TEMPORAL_SHA=unknown\",\n                \"TCTL_SHA=unknown\"\n            ],\n            \"Entrypoint\": [\n                \"/etc/temporal/entrypoint.sh\"\n            ],\n            \"Cmd\": [\n                \"autosetup\"\n            ],\n            \"WorkingDir\": \"/etc/temporal\",\n            \"Labels\": {\n                \"org.opencontainers.image.created\": \"2024-09-23T23:14:42.475Z\",\n                \"org.opencontainers.image.description\": \"Workflow as Code (TM) to build and operate resilient applications\",\n                \"org.opencontainers.image.licenses\": \"MIT\",\n                \"org.opencontainers.image.revision\": \"018c7fffbabacb4eaa60b00f85aea19d83c0e2f9\",\n                \"org.opencontainers.image.source\": \"https://github.com/temporalio/docker-builds\",\n                \"org.opencontainers.image.title\": \"auto-setup\",\n                \"org.opencontainers.image.url\": \"https://github.com/temporalio/docker-builds\",\n                \"org.opencontainers.image.version\": \"1.15.9\"\n            },\n            \"ArgsEscaped\": true,\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ]\n        },\n        \"Architecture\": \"arm64\",\n        \"Os\": \"linux\",\n        \"Size\": 191781309,\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:16113d51b7181f20135f51e8ffbaead20a7671cd783017601f198748ce8a8ebf\",\n                \"sha256:2fe3d635aefb3312d43ef1b6a80dfb0d8a72b1f0670bfe92277daf31be6a47e9\",\n                \"sha256:403db75d9afbd905184f7ce990edacdb4ba06edf8a8d04f31b383ea9c0c365e6\",\n                \"sha256:f24b0a9477df08efadf4e68b7e2acd043fe1356a7989ded63bc4c0b1cc3ec05c\",\n                \"sha256:6f37666c7efd02d4594e4773e59fbae520e586839ee768750ab75ee00ffa34b4\",\n                \"sha256:e0556d111d87e337158f75a71674757dce15015d3ef2f7eed11c2e44983f50ad\",\n                \"sha256:b19372ac847324db56535f12a6c5e53d29ab050e098bddbc11b031e20cfc4606\",\n                \"sha256:e79fa3be9b76eec24315b937de21acfa47df45a10379332f2ca40efe7f318aa9\",\n                \"sha256:adb5a69deae9068b2e7e5d457c0b59900870dc8abf5455eb138957648817fed6\",\n                \"sha256:43e75a14c0c4a57afdba9e09fffac0761dc077a375f23111f0900ed0f1832110\",\n                \"sha256:33ea05f572a20ba011e1c9d0f69a27f5d83f19b92bbed1762322b47eeeeabe39\",\n                \"sha256:67d51ebaf82ffcbc2ad1a04ded79c52b83245c60926d3cc59b1632f37aa5f8a4\",\n                \"sha256:a48e18abf0926c40f127d76338d868a6e7a4e238b4cb5f892e4d95c057a524d7\",\n                \"sha256:c4be93bb8c0ad9b03ca3aeb743a9d90248e69a5d93fcff1595a99bc06be4e5c7\",\n                \"sha256:93ad9bcae5cf90cc762c7db0ec570791e46e49c65e1c192857cbe8392d2f6369\",\n                \"sha256:110b3dd63d611aed55e00b2566cd912fe17e8c03b9d8eea122abbf35932f7903\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:0f6f1037a8969febf618f02521407b34c072c988dcc6b75691cd1d5940e680fa\",\n                \"sha256:bb02a76fcd7fa5af2cd8dc43064d281c1a3366680d9eac2cdb1bf20efce06365\",\n                \"sha256:352e37e98401370557476cf62c690aa8d69a01fb3b0835bedf249b9dea9c218d\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:e5f805aaacaf42b82529d1405b24ca600ce99a4ec027e20386e9b51e831c5cec\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-06-02T15:01:14.110605418Z\"\n        },\n        \"Descriptor\": {\n            \"mediaType\": \"application/vnd.oci.image.index.v1+json\",\n            \"digest\": \"sha256:5606e2ff404293581e80530141ba5a24940a2f8119e15250f90857a8e4c9ccf8\",\n            \"size\": 1609\n        },\n        \"Identity\": {\n            \"Pull\": [\n                {\n                    \"Repository\": \"docker.io/temporalio/auto-setup\"\n                }\n            ]\n        }\n    }\n]\n",
+      "stderr": ""
+    },
+    {
+      "command": "kind load docker-image temporalio/auto-setup:1.26 --name banking-lab-platform-4452",
+      "status": 1,
+      "durationMs": 4114,
+      "stdout": "",
+      "stderr": "Image: \"temporalio/auto-setup:1.26\" with ID \"sha256:5606e2ff404293581e80530141ba5a24940a2f8119e15250f90857a8e4c9ccf8\" not yet present on node \"banking-lab-platform-4452-control-plane\", loading...\nERROR: failed to load image: command \"docker exec --privileged -i banking-lab-platform-4452-control-plane ctr --namespace=k8s.io images import --all-platforms --digests --snapshotter=overlayfs -\" failed with error: exit status 1\n\nCommand Output: ctr: content digest sha256:525720758ecc44bfb8b1a485ea6fb78e8c6e1c75204e132103e29f4c89cd462a: not found\n"
+    },
+    {
+      "command": "helm install banking-lab infra/helm/banking-lab --namespace banking-lab --create-namespace --wait --timeout 10m --set coreBanking.image=banking-lab/core-banking-service:local --set coreBanking.replicas=1 --set paymentService.replicas=0 --set paymentService.outboxWorkerReplicas=0 --set paymentService.domainEventPublisherReplicas=0 --set reportingService.replicas=0 --set reportingService.domainEventPublisherReplicas=0 --set notificationService.replicas=0 --set notificationService.eventConsumerReplicas=0 --set temporalWorker.replicas=0 --set keycloak.replicas=1 --set redpanda.replicas=1 --set temporalServer.replicas=1",
+      "status": 0,
+      "durationMs": 109581,
+      "stdout": "NAME: banking-lab\nLAST DEPLOYED: Sat Jun  6 09:56:59 2026\nNAMESPACE: banking-lab\nSTATUS: deployed\nREVISION: 1\nDESCRIPTION: Install complete\nTEST SUITE: None\n",
+      "stderr": "I0606 09:57:00.012750    5720 warnings.go:107] \"Warning: tls: failed to find any PEM data in certificate input\"\n"
+    },
+    {
+      "command": "kubectl rollout status statefulset/banking-lab-postgres -n banking-lab --timeout=300s",
+      "status": 0,
+      "durationMs": 193,
+      "stdout": "partitioned roll out complete: 1 new pods have been updated...\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl rollout status deployment/banking-lab-keycloak -n banking-lab --timeout=300s",
+      "status": 0,
+      "durationMs": 51,
+      "stdout": "deployment \"banking-lab-keycloak\" successfully rolled out\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl rollout status deployment/banking-lab-redpanda -n banking-lab --timeout=300s",
+      "status": 0,
+      "durationMs": 42,
+      "stdout": "deployment \"banking-lab-redpanda\" successfully rolled out\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl rollout status deployment/banking-lab-temporal -n banking-lab --timeout=300s",
+      "status": 0,
+      "durationMs": 37,
+      "stdout": "deployment \"banking-lab-temporal\" successfully rolled out\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl rollout status deployment/banking-lab-core-banking -n banking-lab --timeout=300s",
+      "status": 0,
+      "durationMs": 37,
+      "stdout": "deployment \"banking-lab-core-banking\" successfully rolled out\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl get --raw /api/v1/namespaces/banking-lab/services/http:banking-lab-core-banking:8081/proxy/health",
+      "status": 0,
+      "durationMs": 56,
+      "stdout": "{\"status\":\"ok\",\"syntheticOnly\":true,\"auditHashChainValid\":true,\"nodeReferenceRuntimeRetained\":true,\"migrationTarget\":\"kotlin-spring-boot\"}",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl get --raw /api/v1/namespaces/banking-lab/services/http:banking-lab-keycloak:9000/proxy/health/ready",
+      "status": 0,
+      "durationMs": 35,
+      "stdout": "{\n    \"status\": \"UP\",\n    \"checks\": [\n        {\n            \"name\": \"Keycloak database connections async health check\",\n            \"status\": \"UP\"\n        }\n    ]\n}",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl get --raw /api/v1/namespaces/banking-lab/services/http:banking-lab-redpanda:9644/proxy/v1/status/ready",
+      "status": 0,
+      "durationMs": 33,
+      "stdout": "{\"status\":\"ready\"}",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl get endpoints banking-lab-temporal -n banking-lab -o json",
+      "status": 0,
+      "durationMs": 34,
+      "stdout": "{\n    \"apiVersion\": \"v1\",\n    \"kind\": \"Endpoints\",\n    \"metadata\": {\n        \"annotations\": {\n            \"endpoints.kubernetes.io/last-change-trigger-time\": \"2026-06-06T00:58:46Z\"\n        },\n        \"creationTimestamp\": \"2026-06-06T00:57:00Z\",\n        \"labels\": {\n            \"app.kubernetes.io/managed-by\": \"Helm\",\n            \"app.kubernetes.io/name\": \"banking-lab-temporal\",\n            \"app.kubernetes.io/part-of\": \"banking-lab\",\n            \"endpoints.kubernetes.io/managed-by\": \"endpoint-controller\"\n        },\n        \"name\": \"banking-lab-temporal\",\n        \"namespace\": \"banking-lab\",\n        \"resourceVersion\": \"902\",\n        \"uid\": \"ac96b88e-4ab0-4ef4-b6c6-7a001bd7ccc8\"\n    },\n    \"subsets\": [\n        {\n            \"addresses\": [\n                {\n                    \"ip\": \"10.244.0.7\",\n                    \"nodeName\": \"banking-lab-platform-4452-control-plane\",\n                    \"targetRef\": {\n                        \"kind\": \"Pod\",\n                        \"name\": \"banking-lab-temporal-557c48c7b6-flj9w\",\n                        \"namespace\": \"banking-lab\",\n                        \"uid\": \"b902eb4e-6515-4934-af27-a2561eb3f88c\"\n                    }\n                }\n            ],\n            \"ports\": [\n                {\n                    \"name\": \"grpc\",\n                    \"port\": 7233,\n                    \"protocol\": \"TCP\"\n                }\n            ]\n        }\n    ]\n}\n",
+      "stderr": "Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice\n"
+    },
+    {
+      "command": "kubectl get ingress banking-lab-ingress -n banking-lab -o json",
+      "status": 0,
+      "durationMs": 35,
+      "stdout": "{\n    \"apiVersion\": \"networking.k8s.io/v1\",\n    \"kind\": \"Ingress\",\n    \"metadata\": {\n        \"annotations\": {\n            \"meta.helm.sh/release-name\": \"banking-lab\",\n            \"meta.helm.sh/release-namespace\": \"banking-lab\",\n            \"nginx.ingress.kubernetes.io/backend-protocol\": \"HTTP\",\n            \"nginx.ingress.kubernetes.io/ssl-redirect\": \"true\"\n        },\n        \"creationTimestamp\": \"2026-06-06T00:57:00Z\",\n        \"generation\": 1,\n        \"labels\": {\n            \"app.kubernetes.io/managed-by\": \"Helm\",\n            \"app.kubernetes.io/part-of\": \"banking-lab\",\n            \"banking-lab/synthetic-only\": \"true\"\n        },\n        \"name\": \"banking-lab-ingress\",\n        \"namespace\": \"banking-lab\",\n        \"resourceVersion\": \"610\",\n        \"uid\": \"86c99ed0-b9fb-4543-81f9-bc5dddc0a6f2\"\n    },\n    \"spec\": {\n        \"ingressClassName\": \"nginx\",\n        \"rules\": [\n            {\n                \"host\": \"banking-lab.local\",\n                \"http\": {\n                    \"paths\": [\n                        {\n                            \"backend\": {\n                                \"service\": {\n                                    \"name\": \"banking-lab-core-banking\",\n                                    \"port\": {\n                                        \"number\": 8081\n                                    }\n                                }\n                            },\n                            \"path\": \"/api\",\n                            \"pathType\": \"Prefix\"\n                        }\n                    ]\n                }\n            },\n            {\n                \"host\": \"auth.banking-lab.local\",\n                \"http\": {\n                    \"paths\": [\n                        {\n                            \"backend\": {\n                                \"service\": {\n                                    \"name\": \"banking-lab-keycloak\",\n                                    \"port\": {\n                                        \"number\": 8080\n                                    }\n                                }\n                            },\n                            \"path\": \"/\",\n                            \"pathType\": \"Prefix\"\n                        }\n                    ]\n                }\n            },\n            {\n                \"host\": \"reports.banking-lab.local\",\n                \"http\": {\n                    \"paths\": [\n                        {\n                            \"backend\": {\n                                \"service\": {\n                                    \"name\": \"banking-lab-reporting-service\",\n                                    \"port\": {\n                                        \"number\": 8090\n                                    }\n                                }\n                            },\n                            \"path\": \"/\",\n                            \"pathType\": \"Prefix\"\n                        }\n                    ]\n                }\n            },\n            {\n                \"host\": \"payments.banking-lab.local\",\n                \"http\": {\n                    \"paths\": [\n                        {\n                            \"backend\": {\n                                \"service\": {\n                                    \"name\": \"banking-lab-payment-service\",\n                                    \"port\": {\n                                        \"number\": 8088\n                                    }\n                                }\n                            },\n                            \"path\": \"/\",\n                            \"pathType\": \"Prefix\"\n                        }\n                    ]\n                }\n            },\n            {\n                \"host\": \"notifications.banking-lab.local\",\n                \"http\": {\n                    \"paths\": [\n                        {\n                            \"backend\": {\n                                \"service\": {\n                                    \"name\": \"banking-lab-notification-service\",\n                                    \"port\": {\n                                        \"number\": 8089\n                                    }\n                                }\n                            },\n                            \"path\": \"/\",\n                            \"pathType\": \"Prefix\"\n                        }\n                    ]\n                }\n            }\n        ],\n        \"tls\": [\n            {\n                \"hosts\": [\n                    \"banking-lab.local\",\n                    \"auth.banking-lab.local\",\n                    \"reports.banking-lab.local\",\n                    \"payments.banking-lab.local\",\n                    \"notifications.banking-lab.local\"\n                ],\n                \"secretName\": \"banking-lab-ingress-tls\"\n            }\n        ]\n    },\n    \"status\": {\n        \"loadBalancer\": {}\n    }\n}\n",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl get secret banking-lab-ingress-tls -n banking-lab -o 'jsonpath={.type}'",
+      "status": 0,
+      "durationMs": 35,
+      "stdout": "kubernetes.io/tls",
+      "stderr": ""
+    },
+    {
+      "command": "kubectl api-resources --api-group argoproj.io -o name",
+      "status": 0,
+      "durationMs": 39,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "helm uninstall banking-lab -n banking-lab --wait --ignore-not-found",
+      "status": 1,
+      "durationMs": 15470,
+      "stdout": "",
+      "stderr": "Error: uninstallation completed with 1 error(s): uninstall: Failed to purge the release: release: not found\n"
+    },
+    {
+      "command": "kind delete cluster --name banking-lab-platform-4452",
+      "status": 0,
+      "durationMs": 1372,
+      "stdout": "",
+      "stderr": "Deleting cluster \"banking-lab-platform-4452\" ...\nDeleted nodes: [\"banking-lab-platform-4452-control-plane\"]\n"
+    }
+  ],
+  "errors": []
+}

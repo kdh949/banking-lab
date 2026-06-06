@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: banking-lab
     app.kubernetes.io/name: {{ .Release.Name }}-keycloak
 spec:
-  replicas: 1
+  replicas: {{ .Values.keycloak.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ .Release.Name }}-keycloak
@@ -24,19 +24,21 @@ spec:
           ports:
             - containerPort: {{ .Values.keycloak.port }}
               name: http
+            - containerPort: {{ .Values.keycloak.managementPort }}
+              name: management
           envFrom:
             - secretRef:
                 name: {{ .Release.Name }}-secret
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: http
+              port: management
             initialDelaySeconds: 45
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /health/live
-              port: http
+              port: management
             initialDelaySeconds: 60
             periodSeconds: 20
 ---
@@ -56,3 +58,6 @@ spec:
     - name: http
       port: {{ .Values.keycloak.port }}
       targetPort: http
+    - name: management
+      port: {{ .Values.keycloak.managementPort }}
+      targetPort: management

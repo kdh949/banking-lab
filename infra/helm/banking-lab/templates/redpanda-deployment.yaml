@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: banking-lab
     app.kubernetes.io/name: {{ .Release.Name }}-redpanda
 spec:
-  replicas: 1
+  replicas: {{ .Values.redpanda.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ .Release.Name }}-redpanda
