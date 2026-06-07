@@ -13,7 +13,7 @@ test("form engine reads reusable field contracts from command and parameter mani
 
   assert.deepEqual(
     fieldsFromManifest(transfer).map((field) => field.name),
-    ["fromAccountId", "toAccountId", "amountMinor", "idempotencyKey"]
+    ["fromAccountId", "recipientQuery", "toAccountId", "amountMinor", "idempotencyKey"]
   );
   assert.ok(fieldsFromManifest(fdsParameter).some((field) => field.name === "rollbackPlan"));
 });

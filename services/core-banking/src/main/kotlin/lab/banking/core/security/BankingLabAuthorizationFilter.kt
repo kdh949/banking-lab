@@ -69,6 +69,11 @@ class BankingLabAuthorizationFilter(
         if (request.method.equals("OPTIONS", ignoreCase = true)) {
             return false
         }
+        if (request.method.equals("POST", ignoreCase = true) &&
+            (path == "/api/auth/customer/signup" || path == "/api/auth/customer/login")
+        ) {
+            return false
+        }
         return path.startsWith("/api/") && path != "/api/health"
     }
 
@@ -245,6 +250,7 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/customer/complaints/") && path.contains("/reopen-requests") -> "CMP-106"
             path.startsWith("/api/customer/complaints/") && path.contains("/confirm") -> "CMP-104"
             path == "/api/customer/complaints" -> "CMP-101"
+            path.startsWith("/api/customer/recipients") -> "CWB-201"
             path.startsWith("/api/customers/") && path.contains("access-history") -> "CWB-401"
             path.startsWith("/api/customers/") && path.contains("statements") -> "CWB-103"
             path.startsWith("/api/transactions/") && path.contains("confirmation") -> "LED-102"
@@ -252,6 +258,10 @@ class BankingLabAuthorizationFilter(
             path.startsWith("/api/staff/transactions") && path.contains("correction") -> "LED-103"
             path.startsWith("/api/staff/operations/retry-queue") -> "WRK-002"
             path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> "WRK-003"
+            path.startsWith("/api/staff/customers/onboarding-requests") -> "CST-201"
+            path.startsWith("/api/staff/accounts/opening-requests") -> "ACC-201"
+            path.startsWith("/api/auth/customer/signup") -> "CWB-001"
+            path.startsWith("/api/auth/customer/login") -> "CWB-002"
             path.startsWith("/api/staff/accounts") && path.contains("fee-waiver") -> "FEE-102"
             path.startsWith("/api/staff/accounts") && path.contains("limit-change") -> "LIM-102"
             path.startsWith("/api/staff/accounts") && path.contains("hold-release") -> "ACC-104"

@@ -1,0 +1,76 @@
+{
+  "screenId": "CWB-001",
+  "transactionCode": "CWB001",
+  "title": "Customer Signup",
+  "app": "customer-web",
+  "type": "COMMAND",
+  "domain": "auth",
+  "highRisk": false,
+  "requiredRoles": ["PUBLIC_SYNTHETIC_CUSTOMER"],
+  "layout": {
+    "template": "command",
+    "customerContext": false
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_SIGNUP_SUCCEEDED", "CUSTOMER_SIGNUP_FAILED"]
+  },
+  "fields": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "required": true,
+      "mask": "SECRET"
+    },
+    {
+      "name": "syntheticCustomerName",
+      "label": "Synthetic Customer Name",
+      "type": "text",
+      "required": true,
+      "mask": "PII"
+    },
+    {
+      "name": "syntheticPhone",
+      "label": "Synthetic Phone",
+      "type": "text",
+      "required": true,
+      "mask": "PII"
+    },
+    {
+      "name": "syntheticAddress",
+      "label": "Synthetic Address",
+      "type": "textarea",
+      "required": true,
+      "mask": "PII"
+    },
+    {
+      "name": "idempotencyKey",
+      "label": "Idempotency Key",
+      "type": "generated-text",
+      "required": true
+    }
+  ],
+  "api": {
+    "command": "POST /api/auth/customer/signup",
+    "clientMethod": "signupCustomer",
+    "idempotencyPolicy": "body.idempotencyKey",
+    "syntheticOnly": true,
+    "syntheticAuthDevTestOnly": true
+  },
+  "postActions": ["storeSyntheticSession", "showReplayStatus", "showStructuredErrors"]
+}

@@ -23,11 +23,15 @@ test("customer-web Next workspace keeps the Node reference shell outside target 
   assert.equal(await exists("legacy-node-reference/apps/customer-web/public/index.html"), true);
 });
 
-test("customer-web Next page is manifest-driven rather than one-off screen code", async () => {
+test("customer-web Next page is manifest-driven and customer journey routes are form-backed", async () => {
   const page = await readFile("apps/customer-web/src/app/page.tsx", "utf8");
   const loader = await readFile("apps/customer-web/src/lib/manifestLoader.ts", "utf8");
   const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
+  const selfService = await readFile("apps/customer-web/src/components/CustomerSelfService.tsx", "utf8");
   const routes = await readFile("apps/customer-web/src/components/workflow-routes.tsx", "utf8");
+  const signupRoute = await readFile("apps/customer-web/src/app/signup/page.tsx", "utf8");
+  const loginRoute = await readFile("apps/customer-web/src/app/login/page.tsx", "utf8");
+  const accountsRoute = await readFile("apps/customer-web/src/app/accounts/page.tsx", "utf8");
   const transferRoute = await readFile("apps/customer-web/src/app/transfers/new/page.tsx", "utf8");
   const accountRoute = await readFile("apps/customer-web/src/app/accounts/[accountId]/page.tsx", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
@@ -47,8 +51,18 @@ test("customer-web Next page is manifest-driven rather than one-off screen code"
   assert.match(routes, /BLOCKED/);
   assert.match(routes, /STEP_UP_REQUIRED/);
   assert.match(routes, /synthetic demo fallback/);
-  assert.match(transferRoute, /routeKey: "transferNew"/);
-  assert.match(accountRoute, /routeKey: "accountDetail"/);
+  assert.match(signupRoute, /CustomerSignupForm/);
+  assert.match(loginRoute, /CustomerLoginForm/);
+  assert.match(accountsRoute, /CustomerAccountsView/);
+  assert.match(transferRoute, /CustomerTransferForm/);
+  assert.match(accountRoute, /CustomerAccountDetailView/);
+  assert.match(selfService, /signupCustomer/);
+  assert.match(selfService, /loginCustomer/);
+  assert.match(selfService, /customerAccounts/);
+  assert.match(selfService, /internalRecipientLookup/);
+  assert.match(selfService, /requestCustomerTransfer/);
+  assert.doesNotMatch(selfService, /SYN-CUS-001/);
+  assert.doesNotMatch(selfService, /ACC-SYN-001-001/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
   assert.match(panel, /data-testid="api-backed-customer-payment-domain"/);
   assert.match(panel, /createPaymentInstruction/);

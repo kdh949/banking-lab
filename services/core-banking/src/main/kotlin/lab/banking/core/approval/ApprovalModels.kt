@@ -36,6 +36,8 @@ object ApprovalBusinessTypes {
     const val ROLE_GRANT = "ROLE_GRANT"
     const val BULK_UNMASK_APPROVAL = "BULK_UNMASK_APPROVAL"
     const val AUDIT_EXPORT = "AUDIT_EXPORT"
+    const val CUSTOMER_ONBOARDING = "CUSTOMER_ONBOARDING"
+    const val ACCOUNT_OPENING = "ACCOUNT_OPENING"
 
     val highRisk: Set<String> = setOf(
         CUSTOMER_INFO_CHANGE,
@@ -63,7 +65,9 @@ object ApprovalBusinessTypes {
         COMPLAINT_ANSWER_SEND,
         ROLE_GRANT,
         BULK_UNMASK_APPROVAL,
-        AUDIT_EXPORT
+        AUDIT_EXPORT,
+        CUSTOMER_ONBOARDING,
+        ACCOUNT_OPENING
     )
 }
 

@@ -37,10 +37,11 @@ test("customer web renders account, transfer, and complaint controls from manife
   await expect(page.getByText("WAITING_APPROVAL").first()).toBeVisible();
 });
 
-test("customer web exposes route-backed workflow screens through shared route components", async () => {
+test("customer web exposes form-backed self-service routes and shared workflow metadata", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const routeComponent = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "workflow-routes.tsx"), "utf8");
+  const selfService = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "CustomerSelfService.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
   expect(files).toEqual([
@@ -56,12 +57,15 @@ test("customer web exposes route-backed workflow screens through shared route co
     "page.tsx",
     "payments",
     "security",
+    "signup",
     "transfers"
   ]);
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
   expect(pageSource).toContain("loadCustomerWebManifests");
   expect(pageSource).toContain("customerWorkflowRouteSummaries");
   expect(routeComponent).toContain("CustomerWorkflowRoutePage");
+  expect(routeComponent).toContain("CWB-001");
+  expect(routeComponent).toContain("CWB-002");
   expect(routeComponent).toContain("CWB-201");
   expect(routeComponent).toContain("POSTED");
   expect(routeComponent).toContain("HELD");
@@ -69,22 +73,37 @@ test("customer web exposes route-backed workflow screens through shared route co
   expect(routeComponent).toContain("BLOCKED");
   expect(routeComponent).toContain("STEP_UP_REQUIRED");
   expect(routeComponent).toContain("synthetic demo fallback");
+  expect(selfService).toContain("signupCustomer");
+  expect(selfService).toContain("loginCustomer");
+  expect(selfService).toContain("customerAccounts");
+  expect(selfService).toContain("internalRecipientLookup");
+  expect(selfService).toContain("requestCustomerTransfer");
   expect(pageSource).not.toContain("fetch(\"/api/customer/transfers\"");
   expect(pageSource).not.toContain("fetch('/api/customer/transfers'");
 });
 
-test("customer web route pages render transfer and complaint workflow states", async ({ page }) => {
+test("customer web route pages render signup login transfer forms and complaint workflow states", async ({ page }) => {
+  await page.goto(`${baseUrl}/signup`);
+  await expect(page.getByRole("heading", { name: "Customer Signup" }).first()).toBeVisible();
+  await expect(page.getByLabel("Username")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create synthetic customer" })).toBeVisible();
+
+  await page.goto(`${baseUrl}/login`);
+  await expect(page.getByRole("heading", { name: "Customer Login" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+
+  await page.goto(`${baseUrl}/accounts`);
+  await expect(page.getByRole("heading", { name: "Accounts" }).first()).toBeVisible();
+  await expect(page.getByText("DEMO_FALLBACK_API_NOT_CONFIGURED").first()).toBeVisible();
+
   await page.goto(`${baseUrl}/transfers/new`);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "New Transfer" }).first()).toBeVisible();
-  await expect(page.getByText("POSTED").first()).toBeVisible();
-  await expect(page.getByText("REPLAYED").first()).toBeVisible();
-  await expect(page.getByText("HELD").first()).toBeVisible();
-  await expect(page.getByText("FAILED").first()).toBeVisible();
-  await expect(page.getByText("BLOCKED").first()).toBeVisible();
-  await expect(page.getByText("StructuredErrorPanel").first()).toBeVisible();
-  await expect(page.getByText("FdsHoldStatusPanel").first()).toBeVisible();
+  await expect(page.getByLabel("Recipient account number or ID")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lookup recipient" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit transfer" })).toBeVisible();
+  await expect(page.getByText("Recipient Lookup").first()).toBeVisible();
 
   await page.goto(`${baseUrl}/complaints/CMP-ROUTE-001`);
   await expect(page.getByRole("heading", { name: "Complaint Detail: CMP-ROUTE-001" }).first()).toBeVisible();

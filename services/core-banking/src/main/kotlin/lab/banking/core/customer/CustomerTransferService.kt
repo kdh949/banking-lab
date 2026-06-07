@@ -42,6 +42,7 @@ class CustomerTransferService(
             ?: throw WorkflowErrors.validation("customerId is required for customer transfer")
         BankingLabAuthContext.requireCustomerOwnership(customerId)
         ensureActiveSourceAccountOwned(customerId, command.fromAccountId)
+        ensureActiveInternalRecipient(command.toAccountId)
         val commandHash = commandHash(command, customerId)
 
         findTransferResultByIdempotencyKey(command.idempotencyKey)?.let { existing ->
@@ -162,6 +163,23 @@ class CustomerTransferService(
 
     private fun ensureActiveSourceAccountOwned(customerId: String, accountId: String) {
         ensureAccountOwned(customerId, accountId, activeOnly = true)
+    }
+
+    private fun ensureActiveInternalRecipient(accountId: String) {
+        val activeInternal = jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM accounts
+            WHERE account_id = :accountId
+              AND status = 'ACTIVE'
+              AND synthetic_system_account = FALSE
+            """.trimIndent(),
+            mapOf("accountId" to accountId),
+            Int::class.java
+        ) ?: 0
+        if (activeInternal == 0) {
+            throw WorkflowErrors.validation("recipient must be an active internal synthetic account")
+        }
     }
 
     private fun shouldHoldForFds(command: CustomerTransferCommand): Boolean =

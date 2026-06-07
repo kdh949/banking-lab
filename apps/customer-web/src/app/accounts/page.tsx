@@ -1,5 +1,5 @@
-import { CustomerWorkflowRoutePage } from "../../components/workflow-routes";
+import { CustomerAccountsView } from "../../components/CustomerSelfService";
 
-export default async function AccountsPage() {
-  return CustomerWorkflowRoutePage({ routeKey: "accounts" });
+export default function AccountsPage() {
+  return <CustomerAccountsView />;
 }

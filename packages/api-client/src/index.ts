@@ -4,6 +4,53 @@ export interface BankingApiClientOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface CustomerSignupCommand {
+  readonly idempotencyKey: string;
+  readonly username: string;
+  readonly password: string;
+  readonly syntheticCustomerName: string;
+  readonly syntheticPhone?: string;
+  readonly syntheticAddress?: string;
+  readonly customerGrade?: string;
+  readonly riskGrade?: string;
+  readonly sourceOfFundsCode?: string;
+  readonly transactionPurposeCode?: string;
+}
+
+export interface CustomerLoginCommand {
+  readonly username: string;
+  readonly password: string;
+}
+
+export interface CustomerAuthCustomerDto {
+  readonly customerId: string;
+  readonly authSubject: string;
+  readonly username: string;
+  readonly kycStatus: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAuthSessionDto {
+  readonly subject: string;
+  readonly customerId: string;
+  readonly roles: readonly string[];
+  readonly issuer: string;
+  readonly sessionId: string;
+  readonly authTime: string;
+  readonly issuedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAuthResponse {
+  readonly customer: CustomerAuthCustomerDto;
+  readonly session: CustomerAuthSessionDto;
+  readonly bearerToken: string;
+  readonly tokenType: "Bearer" | string;
+  readonly expiresAt: string;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
 export interface StaffAccessItemResponse<T> {
   readonly auditEventId: string;
   readonly item: T;
@@ -63,6 +110,30 @@ export interface CustomerAccountDetailDto {
   readonly ledgerBalanceMinor: number;
   readonly availableBalanceMinor: number;
   readonly holdAmountMinor: number;
+}
+
+export interface CustomerAccountListItemDto extends CustomerAccountDetailDto {
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAccountListResponse {
+  readonly items: readonly CustomerAccountListItemDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface InternalRecipientAccountDto {
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly status: string;
+  readonly currency: string;
+  readonly recipientLabel: string;
+  readonly internalOnly: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface InternalRecipientLookupResponse {
+  readonly item: InternalRecipientAccountDto;
+  readonly syntheticOnly: boolean;
 }
 
 export interface CustomerTransferCommand {
@@ -413,6 +484,203 @@ export interface RejectApprovalCommand {
   readonly rejectedByRole?: string;
   readonly rejectReason: string;
   readonly screenId?: string;
+}
+
+export interface CustomerOnboardingRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey: string;
+  readonly customerName: string;
+  readonly customerPhone: string;
+  readonly customerAddress: string;
+  readonly customerGrade?: string;
+  readonly riskGrade?: string;
+  readonly sourceOfFundsCode?: string;
+  readonly transactionPurposeCode?: string;
+  readonly username: string;
+  readonly temporaryPassword: string;
+}
+
+export interface CustomerOnboardingApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly screenId?: string;
+}
+
+export interface CustomerOnboardingRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
+export interface CustomerOnboardingExecuteCommand {
+  readonly executedBy: string;
+  readonly executedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface CustomerOnboardingRequestDto {
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED" | string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly approvalId: string;
+  readonly requestedCustomerName: string;
+  readonly requestedCustomerPhone: string;
+  readonly requestedCustomerAddress: string;
+  readonly requestedCustomerGrade: string;
+  readonly requestedRiskGrade: string;
+  readonly requestedSourceOfFundsCode: string;
+  readonly requestedTransactionPurposeCode: string;
+  readonly requestedUsername: string;
+  readonly generatedCustomerId?: string | null;
+  readonly generatedAuthSubject?: string | null;
+  readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly executedBy?: string | null;
+  readonly executedByRole?: string | null;
+  readonly executedAt?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreatedSyntheticCustomerDto {
+  readonly customerId: string;
+  readonly authSubject: string;
+  readonly username: string;
+  readonly kycStatus: string;
+}
+
+export interface CustomerOnboardingRequestResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerOnboardingReviewResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerOnboardingExecuteResponse {
+  readonly item: CustomerOnboardingRequestDto;
+  readonly approval: OperatorApproval;
+  readonly customer?: CreatedSyntheticCustomerDto | null;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AccountOpeningRequestCommand {
+  readonly requestedBy?: string;
+  readonly requestedByRole?: string;
+  readonly reason?: string;
+  readonly idempotencyKey: string;
+  readonly customerId: string;
+  readonly productCode?: string;
+  readonly accountAlias?: string | null;
+  readonly currency?: string;
+  readonly dailyTransferLimitMinor?: number;
+  readonly singleTransferLimitMinor?: number;
+  readonly initialDepositAmountMinor?: number;
+  readonly initialDepositIdempotencyKey?: string | null;
+  readonly businessDate?: string | null;
+}
+
+export interface AccountOpeningApproveCommand {
+  readonly approvedBy: string;
+  readonly approvedByRole?: string;
+  readonly screenId?: string;
+}
+
+export interface AccountOpeningRejectCommand {
+  readonly rejectedBy: string;
+  readonly rejectedByRole?: string;
+  readonly rejectReason: string;
+  readonly screenId?: string;
+}
+
+export interface AccountOpeningExecuteCommand {
+  readonly executedBy: string;
+  readonly executedByRole?: string;
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
+
+export interface AccountOpeningRequestDto {
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED" | string;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly approvalId: string;
+  readonly customerId: string;
+  readonly requestedProductCode: string;
+  readonly requestedAccountAlias?: string | null;
+  readonly requestedCurrency: string;
+  readonly requestedDailyTransferLimitMinor: number;
+  readonly requestedSingleTransferLimitMinor: number;
+  readonly requestedInitialDepositAmountMinor: number;
+  readonly requestedInitialDepositIdempotencyKey?: string | null;
+  readonly requestedBusinessDate?: string | null;
+  readonly generatedAccountId?: string | null;
+  readonly generatedMaskedAccountNo?: string | null;
+  readonly approvedBy?: string | null;
+  readonly approvedAt?: string | null;
+  readonly rejectedBy?: string | null;
+  readonly rejectedAt?: string | null;
+  readonly rejectReason?: string | null;
+  readonly executedBy?: string | null;
+  readonly executedByRole?: string | null;
+  readonly executedAt?: string | null;
+  readonly initialDepositLedgerTransactionId?: string | null;
+  readonly syntheticOnly: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CreatedSyntheticAccountDto {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly currency: string;
+  readonly ledgerBalanceMinor: number;
+  readonly availableBalanceMinor: number;
+  readonly initialDepositLedgerTransactionId?: string | null;
+}
+
+export interface AccountOpeningRequestResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AccountOpeningReviewResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface AccountOpeningExecuteResponse {
+  readonly item: AccountOpeningRequestDto;
+  readonly approval: OperatorApproval;
+  readonly account?: CreatedSyntheticAccountDto | null;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
 }
 
 export interface CustomerInfoChangeCommand {
@@ -2222,6 +2490,136 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
     request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
 
   return {
+    signupCustomer(command: CustomerSignupCommand) {
+      return request<CustomerAuthResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/auth/customer/signup",
+        {},
+        undefined,
+        { method: "POST", body: command }
+      );
+    },
+
+    loginCustomer(command: CustomerLoginCommand) {
+      return request<CustomerAuthResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/auth/customer/login",
+        {},
+        undefined,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestStaffCustomerOnboarding(command: CustomerOnboardingRequestCommand) {
+      return request<CustomerOnboardingRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/customers/onboarding-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    staffCustomerOnboardingRequest(requestId: string) {
+      return request<CustomerOnboardingRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingApproveCommand) {
+      return request<CustomerOnboardingReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingRejectCommand) {
+      return request<CustomerOnboardingReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeStaffCustomerOnboardingRequest(requestId: string, command: CustomerOnboardingExecuteCommand) {
+      return request<CustomerOnboardingExecuteResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/customers/onboarding-requests/${encodeURIComponent(requestId)}/execute`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    requestStaffAccountOpening(command: AccountOpeningRequestCommand) {
+      return request<AccountOpeningRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/accounts/opening-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    staffAccountOpeningRequest(requestId: string) {
+      return request<AccountOpeningRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}`,
+        {},
+        options.bearerToken
+      );
+    },
+
+    approveStaffAccountOpeningRequest(requestId: string, command: AccountOpeningApproveCommand) {
+      return request<AccountOpeningReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/approve`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    rejectStaffAccountOpeningRequest(requestId: string, command: AccountOpeningRejectCommand) {
+      return request<AccountOpeningReviewResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/reject`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    executeStaffAccountOpeningRequest(requestId: string, command: AccountOpeningExecuteCommand) {
+      return request<AccountOpeningExecuteResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/accounts/opening-requests/${encodeURIComponent(requestId)}/execute`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
     staffCustomerDetail(customerId: string, reason: string) {
       return request<StaffAccessItemResponse<StaffCustomerDetailDto>>(
         fetchImpl,
@@ -3206,12 +3604,32 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    customerAccounts(customerId: string) {
+      return request<CustomerAccountListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/accounts",
+        { customerId },
+        options.bearerToken
+      );
+    },
+
     customerAccountDetail(accountId: string, customerId: string) {
       return request<CustomerAccountDetailDto>(
         fetchImpl,
         baseUrl,
         `/api/customer/accounts/${encodeURIComponent(accountId)}/detail`,
         { customerId },
+        options.bearerToken
+      );
+    },
+
+    internalRecipientLookup(query: string) {
+      return request<InternalRecipientLookupResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/recipients/internal-account-lookup",
+        { query },
         options.bearerToken
       );
     },
