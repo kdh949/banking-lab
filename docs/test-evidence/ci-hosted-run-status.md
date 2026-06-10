@@ -7,10 +7,13 @@ Run status: blocked
 This document records hosted GitHub Actions status separately from local
 fallback evidence. It does not claim hosted CI is green.
 
-## Latest Hosted Runs Checked
+## Hosted Runs Checked
 
 | Run | Event | Commit | Status | Result | URL |
 | --- | --- | --- | --- | --- | --- |
+| CI | pull_request #59 | `0bd235a557e60acc9380afea955c2b8c6d887736` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269813915 |
+| CI | push to `main` after PR #58 | `ccf65285952a9c1bf229773b03661cb797678a76` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269423897 |
+| CI | pull_request #58 | `f9efb58643eede62ee0e9ee7c70c98a6d89039c2` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269407681 |
 | CI | push to `main` after PR #57 | `9b383b9baf3224f7c65530397b60f018644205ff` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269207643 |
 | CI | pull_request #57 | `f881ba228d774c4f1bd536d799e25416a309f87a` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269197811 |
 | CI | push to `main` after PR #56 | `8b11d45cf020cd6b4c1e9494ad235bdd8cec6686` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27268958633 |
@@ -18,7 +21,7 @@ fallback evidence. It does not claim hosted CI is green.
 
 ## Failure Classification
 
-The latest main push run (`27269207643`) reported every job as failed within a
+The checked PR run (`27269813915`) reported every job as failed within a
 few seconds, with an empty `steps` array for each job. The `Node reference and
 manifests` check annotation says:
 
@@ -65,6 +68,25 @@ Local commands run for PR #57:
 - `npm test`: pass, 181 tests.
 - `npm run validate:manifests`: pass, 67 screen manifests.
 - `npm run evidence:refresh-check`: pass.
+
+Local commands run for PR #58:
+
+- `npm run ci:check-workflow`: pass.
+- `node --test tests/ciHardening.test.mjs`: pass, 2 tests.
+- `npm run scripts:typecheck`: pass.
+- `npm test`: pass, 181 tests.
+- `npm run contracts:lint`: pass.
+- `npm run contracts:check-client`: pass.
+- `npm run contracts:check-events`: pass.
+- `npm run platform:validate`: pass.
+
+Local commands run for PR #59:
+
+- `npm run live-route:evidence`: pass.
+- `node --test tests/liveRouteApiEvidence.test.mjs`: pass, 2 tests.
+- `npm run scripts:typecheck`: pass.
+- `npm run integrated-terminal:boundary-check`: pass.
+- `npm test`: pass, 183 tests.
 
 ## Manual Recovery Checklist
 

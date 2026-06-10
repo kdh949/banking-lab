@@ -1,0 +1,144 @@
+{
+  "reviewDate": "2026-06-10",
+  "syntheticOnly": true,
+  "status": "partial",
+  "statusReason": "customer-web has route-backed live API tests gated by environment; staff-terminal live route-to-API execution is blocked by the current iWorks integrated-terminal boundary.",
+  "skippedPlaywrightIsPassEvidence": false,
+  "applications": [
+    {
+      "app": "customer-web",
+      "status": "route-backed-live-gated",
+      "liveRunEvidence": "source-present-env-gated-not-run-in-this-slice",
+      "routes": [
+        "/signup",
+        "/login",
+        "/accounts",
+        "/accounts/[accountId]",
+        "/transfers/new",
+        "/transfers/[resultId]",
+        "/complaints",
+        "/complaints/[caseId]",
+        "/security",
+        "/api/auth/keycloak-token"
+      ],
+      "requiredEnvironment": [
+        "BANKING_LAB_E2E_API_BASE_URL",
+        "BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN",
+        "BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN",
+        "BANKING_LAB_E2E_KEYCLOAK_BASE_URL"
+      ],
+      "playwrightSpecs": [
+        "apps/customer-web/e2e/customer-onboarding-self-service.spec.ts",
+        "apps/customer-web/e2e/customer-web-parity.spec.ts"
+      ],
+      "apiMethods": [
+        "signupCustomer",
+        "loginCustomer",
+        "requestStaffAccountOpening",
+        "approveStaffAccountOpeningRequest",
+        "executeStaffAccountOpeningRequest",
+        "customerAccounts",
+        "customerAccountDetail",
+        "internalRecipientLookup",
+        "requestCustomerTransfer",
+        "customerTransactions",
+        "customerTransfers",
+        "requestCustomerComplaint",
+        "confirmCustomerComplaint"
+      ],
+      "states": [
+        "POSTED",
+        "HELD",
+        "FAILED",
+        "BLOCKED",
+        "STEP_UP_REQUIRED",
+        "LEDGER_INSUFFICIENT_AVAILABLE_BALANCE",
+        "REQUEST_VALIDATION_FAILED",
+        "AUTHORIZATION_DENIED"
+      ],
+      "controls": [
+        "synthetic signup and login",
+        "staff maker-checker account opening for synthetic E2E accounts",
+        "masked owned-account read",
+        "internal synthetic recipient lookup",
+        "balanced transfer command through Spring API",
+        "idempotency replay assertion",
+        "ledger history and transfer status readback",
+        "Keycloak/JWKS gated browser smoke source coverage"
+      ],
+      "notes": [
+        "The source coverage is present and environment-gated.",
+        "This generated evidence does not claim a live local or hosted run unless the Playwright command is executed with the required environment."
+      ]
+    },
+    {
+      "app": "staff-terminal",
+      "status": "blocked-by-integrated-terminal-boundary",
+      "liveRunEvidence": "not-present",
+      "routes": [
+        "/",
+        "/api/terminal-status"
+      ],
+      "requiredEnvironment": [],
+      "playwrightSpecs": [
+        "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
+      ],
+      "apiMethods": [
+        "terminalStatus"
+      ],
+      "states": [
+        "integrated-terminal",
+        "backend-control-covered"
+      ],
+      "controls": [
+        "iWorks shell rendering",
+        "terminal status route",
+        "source boundary excludes retired staff API-backed routes",
+        "staff Spring control APIs remain backend/security covered outside the current frontend"
+      ],
+      "notes": [
+        "Current staff-terminal source intentionally has no accounts, approvals, audit, customer, transaction, or workflow app routes.",
+        "Do not mark staff-terminal live route-to-API execution as passed until a new operator route or call-center workflow is implemented and exercised."
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "id": "generate-evidence",
+      "command": "npm run live-route:evidence",
+      "purpose": "Regenerate and validate this bounded live route/API evidence artifact."
+    },
+    {
+      "id": "customer-web-live-api",
+      "command": "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN=<maker> BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN=<checker> npm run test:e2e -- apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium",
+      "purpose": "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke."
+    },
+    {
+      "id": "customer-web-keycloak-live-api",
+      "command": "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_KEYCLOAK_BASE_URL=<keycloak> npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts --project=chromium",
+      "purpose": "Execute customer-web Keycloak and API-backed browser smokes when the live synthetic stack is configured."
+    },
+    {
+      "id": "staff-terminal-boundary",
+      "command": "npm run integrated-terminal:boundary-check",
+      "purpose": "Confirm staff-terminal remains the current iWorks integrated shell and does not silently claim retired staff API routes."
+    }
+  ],
+  "checks": [
+    {
+      "id": "customer-web-env-gated-source-coverage",
+      "status": "pass",
+      "details": "Customer-web Playwright specs and route components contain live API, idempotency, history/status, failure-state, and Keycloak-gated browser flow markers."
+    },
+    {
+      "id": "staff-terminal-no-overclaim",
+      "status": "pass",
+      "details": "Staff-terminal source is limited to the integrated shell and terminal-status route; staff live route/API execution remains an explicit gap."
+    },
+    {
+      "id": "synthetic-only-boundary",
+      "status": "pass",
+      "details": "Evidence references only synthetic routes, simulator tokens, local Keycloak/JWKS smoke, and no real customer money, PII, KYC, payment network, card network, or external bank API integration."
+    }
+  ]
+}
