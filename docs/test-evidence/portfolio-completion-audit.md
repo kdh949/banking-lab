@@ -32,9 +32,9 @@ The current audit is intentionally `not complete`:
 - `hosted-ci-evidence` is `blocked` because GitHub Actions jobs still fail
   before runner startup with `runner_id: 0` and `steps: 0`; #83 tracks that
   external blocker.
-- `live-route-api-execution` is `partial` because customer-web and
-  staff-terminal route-to-API evidence is still environment-gated and skipped
-  Playwright is not pass evidence.
+- `live-route-api-execution` is now `pass` because #90 reran and recorded
+  local synthetic Compose route-to-API smokes for customer-web and
+  staff-terminal. skipped Playwright is not pass evidence.
 - `final-command-refresh` is now `pass` because #88 reran and documented the
   required local final command list in
   `docs/test-evidence/final-command-refresh-2026-06-11.md`.

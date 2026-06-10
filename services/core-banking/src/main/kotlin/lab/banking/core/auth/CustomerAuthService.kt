@@ -161,6 +161,7 @@ class CustomerAuthService(
         replayed: Boolean,
         eventType: String
     ): CustomerAuthResponse {
+        ensureSyntheticTrustedDevice(identity)
         val issued = tokenIssuer.issue(
             authSubject = identity.authSubject,
             username = identity.username,
@@ -178,6 +179,36 @@ class CustomerAuthService(
             bearerToken = issued.bearerToken,
             expiresAt = issued.expiresAt,
             replayed = replayed
+        )
+    }
+
+    private fun ensureSyntheticTrustedDevice(identity: CustomerAuthIdentityRecord) {
+        jdbc.update(
+            """
+            INSERT INTO trusted_devices (
+              trusted_device_id, actor_type, actor_id, customer_id,
+              device_fingerprint, status, metadata_json
+            )
+            VALUES (
+              :trustedDeviceId, 'CUSTOMER', :customerId, :customerId,
+              :deviceFingerprint, 'ACTIVE', CAST(:metadataJson AS jsonb)
+            )
+            ON CONFLICT (actor_type, actor_id, device_fingerprint)
+            DO UPDATE SET
+              customer_id = EXCLUDED.customer_id,
+              status = 'ACTIVE',
+              expires_at = NULL,
+              metadata_json = trusted_devices.metadata_json || EXCLUDED.metadata_json
+            """.trimIndent(),
+            mapOf(
+                "trustedDeviceId" to "TD-CUSTOMER-${identity.customerId}-SYNTHETIC",
+                "customerId" to identity.customerId,
+                "deviceFingerprint" to SyntheticCustomerAuthTokenIssuer.syntheticDeviceFingerprint(identity.customerId),
+                "metadataJson" to metadataJson(
+                    "operation" to "customer-synthetic-trusted-device-binding",
+                    "realDeviceIntelligenceCalled" to false
+                )
+            )
         )
     }
 

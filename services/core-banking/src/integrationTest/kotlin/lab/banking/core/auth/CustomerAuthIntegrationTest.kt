@@ -2,6 +2,7 @@ package lab.banking.core.auth
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
+import java.util.Base64
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -32,7 +33,9 @@ import org.testcontainers.junit.jupiter.Testcontainers
         "banking-lab.security.enabled=true",
         "banking-lab.security.simulator-tokens-enabled=true",
         "banking-lab.security.dev-simulator-token-enabled=true",
-        "banking-lab.security.customer-auth.synthetic-token-issuer-enabled=true"
+        "banking-lab.security.customer-auth.synthetic-token-issuer-enabled=true",
+        "banking-lab.security.jwt.issuer=banking-lab-synthetic-customer-auth",
+        "banking-lab.security.jwt.audience=core-banking-api"
     ]
 )
 @AutoConfigureMockMvc
@@ -82,6 +85,8 @@ class CustomerAuthIntegrationTest {
             .andReturn()
         val customerId = created.read("$.customer.customerId")
         val bearerToken = created.read("$.bearerToken")
+        assertEquals("core-banking-api", tokenClaims(bearerToken).at("/aud").asText())
+        assertEquals("SYN-DEVICE-$customerId", tokenClaims(bearerToken).at("/deviceFingerprint").asText())
 
         postSignup(payload)
             .andExpect(status().isOk)
@@ -89,6 +94,7 @@ class CustomerAuthIntegrationTest {
             .andExpect(jsonPath("$.customer.customerId").value(customerId))
         assertEquals(1, countRows("customers"))
         assertEquals(1, countRows("customer_auth_identities"))
+        assertEquals(1, countRows("trusted_devices WHERE actor_type = 'CUSTOMER' AND actor_id = '$customerId' AND status = 'ACTIVE'"))
 
         val changedPayload = payload.toMutableMap()
         changedPayload["syntheticCustomerName"] = "Changed Synthetic Name"
@@ -168,7 +174,8 @@ class CustomerAuthIntegrationTest {
             issuerEnabled = false,
             simulatorTokensEnabled = true,
             devSimulatorTokenEnabled = true,
-            tokenTtlSeconds = 3600
+            tokenTtlSeconds = 3600,
+            expectedAudience = "core-banking-api"
         )
         val error = org.junit.jupiter.api.Assertions.assertThrows(lab.banking.core.common.BankingLabDomainException::class.java) {
             issuer.requireIssuerEnabled()
@@ -206,6 +213,9 @@ class CustomerAuthIntegrationTest {
 
     private fun MvcResult.read(jsonPointer: String): String =
         objectMapper.readTree(response.contentAsString).at(jsonPointer.replace("$.", "/").replace(".", "/")).asText()
+
+    private fun tokenClaims(token: String) =
+        objectMapper.readTree(String(Base64.getUrlDecoder().decode(token.split(".")[1])))
 
     private fun countRows(tableExpression: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM $tableExpression", emptyMap<String, Any?>(), Int::class.java) ?: 0

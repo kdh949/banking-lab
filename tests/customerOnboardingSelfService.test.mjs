@@ -158,9 +158,13 @@ test("Phase 3 synthetic customer auth implementation is guarded hashed and unaut
 
   assert.match(issuer, /customer-auth\.synthetic-token-issuer-enabled:false/);
   assert.match(issuer, /simulatorTokensEnabled && devSimulatorTokenEnabled/);
+  assert.match(issuer, /"aud" to expectedAudience/);
+  assert.match(issuer, /"deviceFingerprint" to syntheticDeviceFingerprint\(customerId\)/);
   assert.match(issuer, /"roles" to listOf\("CUSTOMER"\)/);
   assert.match(issuer, /"customerId" to customerId/);
   assert.match(issuer, /"realKeycloakToken" to false/);
+  assert.match(service, /customer-synthetic-trusted-device-binding/);
+  assert.match(service, /realDeviceIntelligenceCalled" to false/);
 
   assert.match(controller, /\/api\/auth\/customer/);
   assert.match(controller, /@PostMapping\("\/signup"\)/);

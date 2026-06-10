@@ -1,14 +1,15 @@
 {
-  "reviewDate": "2026-06-10",
+  "reviewDate": "2026-06-11",
   "syntheticOnly": true,
-  "status": "partial",
-  "statusReason": "customer-web and staff-terminal have route-backed live API tests gated by environment; skipped Playwright remains non-evidence.",
+  "status": "pass",
+  "statusReason": "customer-web and staff-terminal route-to-API smokes have local synthetic Compose pass evidence; hosted CI remains separate.",
   "skippedPlaywrightIsPassEvidence": false,
   "applications": [
     {
       "app": "customer-web",
-      "status": "route-backed-live-gated",
-      "liveRunEvidence": "source-present-env-gated-not-run-in-this-slice",
+      "status": "route-backed-live-pass",
+      "liveRunEvidence": "local-compose-smoke-pass",
+      "lastRunEvidencePath": "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json",
       "routes": [
         "/signup",
         "/login",
@@ -67,14 +68,15 @@
         "Keycloak/JWKS gated browser smoke source coverage"
       ],
       "notes": [
-        "The source coverage is present and environment-gated.",
-        "This generated evidence does not claim a live local or hosted run unless the Playwright command is executed with the required environment."
+        "The local disposable Compose smoke executed the signup/login/account-opening/accounts/transfer/history route flow.",
+        "This generated evidence does not claim hosted CI green, real-money execution, or real-provider integration."
       ]
     },
     {
       "app": "staff-terminal",
-      "status": "route-backed-live-gated",
-      "liveRunEvidence": "source-present-compose-smoke-script-present",
+      "status": "route-backed-live-pass",
+      "liveRunEvidence": "local-compose-smoke-pass",
+      "lastRunEvidencePath": "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json",
       "routes": [
         "/",
         "/api/terminal-status"
@@ -109,7 +111,7 @@
       "notes": [
         "Current staff-terminal keeps the iWorks shell and does not restore the retired accounts, approvals, audit, customer, transaction, or workflow app route set.",
         "The bounded evidence panel is the only staff-terminal frontend Spring API caller in this slice.",
-        "Use npm run test:staff-terminal:api-e2e-compose to produce local live route-to-API evidence."
+        "The local disposable Compose smoke executed the bounded staff customer detail and approval inbox route/API flow."
       ]
     }
   ],
@@ -117,39 +119,46 @@
     {
       "id": "generate-evidence",
       "command": "npm run live-route:evidence",
+      "status": "pass",
       "purpose": "Regenerate and validate this bounded live route/API evidence artifact."
     },
     {
-      "id": "customer-web-live-api",
-      "command": "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN=<maker> BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN=<checker> npm run test:e2e -- apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium",
-      "purpose": "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke."
+      "id": "customer-web-self-service-api-compose",
+      "command": "npm run test:customer-web:self-service-api-e2e-compose",
+      "status": "pass",
+      "evidencePath": "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json",
+      "purpose": "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke against disposable Compose."
     },
     {
       "id": "customer-web-keycloak-live-api",
       "command": "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_KEYCLOAK_BASE_URL=<keycloak> npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts --project=chromium",
+      "status": "not-run",
       "purpose": "Execute customer-web Keycloak and API-backed browser smokes when the live synthetic stack is configured."
     },
     {
       "id": "staff-terminal-boundary",
       "command": "npm run integrated-terminal:boundary-check",
+      "status": "pass",
       "purpose": "Confirm staff-terminal remains the current iWorks integrated shell and exposes only the bounded Spring API evidence panel, not the retired staff route set."
     },
     {
       "id": "staff-terminal-live-api",
       "command": "npm run test:staff-terminal:api-e2e-compose",
+      "status": "pass",
+      "evidencePath": "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json",
       "purpose": "Execute the iWorks shell plus bounded staff customer detail and approval inbox Spring API evidence smoke against disposable Compose."
     }
   ],
   "checks": [
     {
-      "id": "customer-web-env-gated-source-coverage",
+      "id": "customer-web-compose-route-api-execution",
       "status": "pass",
-      "details": "Customer-web Playwright specs and route components contain live API, idempotency, history/status, failure-state, and Keycloak-gated browser flow markers."
+      "details": "Customer-web local Compose smoke pass evidence exists for signup/login/account-opening/accounts/transfer/history route-to-API execution."
     },
     {
-      "id": "staff-terminal-no-overclaim",
+      "id": "staff-terminal-compose-route-api-execution",
       "status": "pass",
-      "details": "Staff-terminal source keeps the iWorks shell boundary and limits frontend Spring API execution to StaffApiEvidencePanel."
+      "details": "Staff-terminal local Compose smoke pass evidence exists for the bounded Spring API evidence panel."
     },
     {
       "id": "synthetic-only-boundary",

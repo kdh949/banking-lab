@@ -5,6 +5,7 @@ type AppEvidence = {
   readonly app: string;
   readonly status: string;
   readonly liveRunEvidence: string;
+  readonly lastRunEvidencePath?: string;
   readonly routes: readonly string[];
   readonly requiredEnvironment: readonly string[];
   readonly playwrightSpecs: readonly string[];
@@ -14,29 +15,52 @@ type AppEvidence = {
   readonly notes: readonly string[];
 };
 
+type CommandRunEvidence = {
+  readonly status?: unknown;
+  readonly syntheticOnly?: unknown;
+  readonly localOnly?: unknown;
+  readonly hostedCiGreenClaim?: unknown;
+  readonly app?: unknown;
+  readonly command?: unknown;
+};
+
 type EvidenceDocument = {
   readonly reviewDate: string;
   readonly syntheticOnly: true;
-  readonly status: "partial";
+  readonly status: "pass" | "partial";
   readonly statusReason: string;
   readonly skippedPlaywrightIsPassEvidence: false;
   readonly applications: readonly AppEvidence[];
   readonly commands: readonly {
     readonly id: string;
     readonly command: string;
+    readonly status: "pass" | "not-run";
+    readonly evidencePath?: string;
     readonly purpose: string;
   }[];
   readonly checks: readonly {
     readonly id: string;
-    readonly status: "pass";
+    readonly status: "pass" | "partial";
     readonly details: string;
   }[];
 };
 
 const generatedPath = "docs/test-evidence/generated/live-route-api-execution.json";
+const customerWebRunEvidencePath = "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json";
+const staffTerminalRunEvidencePath = "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json";
+const customerWebComposeCommand = "npm run test:customer-web:self-service-api-e2e-compose";
+const staffTerminalComposeCommand = "npm run test:staff-terminal:api-e2e-compose";
 
 async function read(path: string): Promise<string> {
   return readFile(path, "utf8");
+}
+
+async function readJson<T>(path: string): Promise<T | undefined> {
+  try {
+    return JSON.parse(await read(path)) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 async function listFiles(root: string): Promise<string[]> {
@@ -65,6 +89,19 @@ function requireNotIncludes(source: string, needle: string, message: string, err
   }
 }
 
+function isPassingRunEvidence(
+  evidence: CommandRunEvidence | undefined,
+  expectedApp: string,
+  expectedCommand: string
+): boolean {
+  return evidence?.status === "pass"
+    && evidence.syntheticOnly === true
+    && evidence.localOnly === true
+    && evidence.hostedCiGreenClaim === false
+    && evidence.app === expectedApp
+    && evidence.command === expectedCommand;
+}
+
 const errors: string[] = [];
 
 const onboardingSpec = await read("apps/customer-web/e2e/customer-onboarding-self-service.spec.ts");
@@ -77,8 +114,14 @@ const staffBoundaryScript = await read("scripts/check-integrated-terminal-bounda
 const staffPackage = await read("apps/staff-terminal/package.json");
 const staffApiEvidencePanel = await read("apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx");
 const staffApiComposeSmoke = await read("scripts/run-staff-terminal-api-e2e-compose-smoke.sh");
+const customerApiComposeSmoke = await read("scripts/run-customer-web-self-service-api-e2e-compose-smoke.sh");
 const customerAppFiles = (await listFiles("apps/customer-web/src/app")).sort();
 const staffAppFiles = (await listFiles("apps/staff-terminal/src/app")).sort();
+const customerWebRunEvidence = await readJson<CommandRunEvidence>(customerWebRunEvidencePath);
+const staffTerminalRunEvidence = await readJson<CommandRunEvidence>(staffTerminalRunEvidencePath);
+const customerWebLivePass = isPassingRunEvidence(customerWebRunEvidence, "customer-web", customerWebComposeCommand);
+const staffTerminalLivePass = isPassingRunEvidence(staffTerminalRunEvidence, "staff-terminal", staffTerminalComposeCommand);
+const liveRouteStatus = customerWebLivePass && staffTerminalLivePass ? "pass" : "partial";
 
 for (const marker of [
   "BANKING_LAB_E2E_API_BASE_URL",
@@ -242,9 +285,23 @@ for (const marker of [
 }
 
 for (const marker of [
+  "BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN",
+  "BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN",
+  "BANKING_LAB_CUSTOMER_AUTH_SYNTHETIC_TOKEN_ISSUER_ENABLED",
+  "banking-lab-synthetic-customer-auth",
+  "core-banking-api",
+  "customer-web-self-service-api-e2e-compose-smoke.json",
+  "signup -> login -> staff maker-checker account opening",
+  "Simulator tokens are enabled only by explicit dev/test environment variables"
+]) {
+  requireIncludes(customerApiComposeSmoke, marker, `customer-web API compose smoke is missing marker: ${marker}`, errors);
+}
+
+for (const marker of [
   "BANKING_LAB_SECURITY_ISSUER",
   "BANKING_LAB_SECURITY_AUDIENCE",
   "core-banking-api",
+  "staff-terminal-api-e2e-compose-smoke.json",
   "Compose%20staff-terminal%20API%20preflight",
   "Spring staff API evidence"
 ]) {
@@ -260,16 +317,19 @@ if (errors.length > 0) {
 }
 
 const evidence: EvidenceDocument = {
-  reviewDate: "2026-06-10",
+  reviewDate: "2026-06-11",
   syntheticOnly: true,
-  status: "partial",
-  statusReason: "customer-web and staff-terminal have route-backed live API tests gated by environment; skipped Playwright remains non-evidence.",
+  status: liveRouteStatus,
+  statusReason: liveRouteStatus === "pass"
+    ? "customer-web and staff-terminal route-to-API smokes have local synthetic Compose pass evidence; hosted CI remains separate."
+    : "customer-web and staff-terminal have route-backed live API tests gated by environment; skipped Playwright remains non-evidence.",
   skippedPlaywrightIsPassEvidence: false,
   applications: [
     {
       app: "customer-web",
-      status: "route-backed-live-gated",
-      liveRunEvidence: "source-present-env-gated-not-run-in-this-slice",
+      status: customerWebLivePass ? "route-backed-live-pass" : "route-backed-live-gated",
+      liveRunEvidence: customerWebLivePass ? "local-compose-smoke-pass" : "source-present-env-gated-not-run-in-this-slice",
+      lastRunEvidencePath: customerWebLivePass ? customerWebRunEvidencePath : undefined,
       routes: [
         "/signup",
         "/login",
@@ -328,14 +388,17 @@ const evidence: EvidenceDocument = {
         "Keycloak/JWKS gated browser smoke source coverage"
       ],
       notes: [
-        "The source coverage is present and environment-gated.",
-        "This generated evidence does not claim a live local or hosted run unless the Playwright command is executed with the required environment."
+        customerWebLivePass
+          ? "The local disposable Compose smoke executed the signup/login/account-opening/accounts/transfer/history route flow."
+          : "The source coverage is present and environment-gated.",
+        "This generated evidence does not claim hosted CI green, real-money execution, or real-provider integration."
       ]
     },
     {
       app: "staff-terminal",
-      status: "route-backed-live-gated",
-      liveRunEvidence: "source-present-compose-smoke-script-present",
+      status: staffTerminalLivePass ? "route-backed-live-pass" : "route-backed-live-gated",
+      liveRunEvidence: staffTerminalLivePass ? "local-compose-smoke-pass" : "source-present-compose-smoke-script-present",
+      lastRunEvidencePath: staffTerminalLivePass ? staffTerminalRunEvidencePath : undefined,
       routes: [
         "/",
         "/api/terminal-status"
@@ -370,7 +433,9 @@ const evidence: EvidenceDocument = {
       notes: [
         "Current staff-terminal keeps the iWorks shell and does not restore the retired accounts, approvals, audit, customer, transaction, or workflow app route set.",
         "The bounded evidence panel is the only staff-terminal frontend Spring API caller in this slice.",
-        "Use npm run test:staff-terminal:api-e2e-compose to produce local live route-to-API evidence."
+        staffTerminalLivePass
+          ? "The local disposable Compose smoke executed the bounded staff customer detail and approval inbox route/API flow."
+          : "Use npm run test:staff-terminal:api-e2e-compose to produce local live route-to-API evidence."
       ]
     }
   ],
@@ -378,39 +443,50 @@ const evidence: EvidenceDocument = {
     {
       id: "generate-evidence",
       command: "npm run live-route:evidence",
+      status: "pass",
       purpose: "Regenerate and validate this bounded live route/API evidence artifact."
     },
     {
-      id: "customer-web-live-api",
-      command: "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN=<maker> BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN=<checker> npm run test:e2e -- apps/customer-web/e2e/customer-onboarding-self-service.spec.ts --project=chromium",
-      purpose: "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke."
+      id: "customer-web-self-service-api-compose",
+      command: customerWebComposeCommand,
+      status: customerWebLivePass ? "pass" : "not-run",
+      evidencePath: customerWebLivePass ? customerWebRunEvidencePath : undefined,
+      purpose: "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke against disposable Compose."
     },
     {
       id: "customer-web-keycloak-live-api",
       command: "BANKING_LAB_E2E_API_BASE_URL=<spring-api> BANKING_LAB_E2E_KEYCLOAK_BASE_URL=<keycloak> npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts --project=chromium",
+      status: "not-run",
       purpose: "Execute customer-web Keycloak and API-backed browser smokes when the live synthetic stack is configured."
     },
     {
       id: "staff-terminal-boundary",
       command: "npm run integrated-terminal:boundary-check",
+      status: "pass",
       purpose: "Confirm staff-terminal remains the current iWorks integrated shell and exposes only the bounded Spring API evidence panel, not the retired staff route set."
     },
     {
       id: "staff-terminal-live-api",
-      command: "npm run test:staff-terminal:api-e2e-compose",
+      command: staffTerminalComposeCommand,
+      status: staffTerminalLivePass ? "pass" : "not-run",
+      evidencePath: staffTerminalLivePass ? staffTerminalRunEvidencePath : undefined,
       purpose: "Execute the iWorks shell plus bounded staff customer detail and approval inbox Spring API evidence smoke against disposable Compose."
     }
   ],
   checks: [
     {
-      id: "customer-web-env-gated-source-coverage",
-      status: "pass",
-      details: "Customer-web Playwright specs and route components contain live API, idempotency, history/status, failure-state, and Keycloak-gated browser flow markers."
+      id: "customer-web-compose-route-api-execution",
+      status: customerWebLivePass ? "pass" : "partial",
+      details: customerWebLivePass
+        ? "Customer-web local Compose smoke pass evidence exists for signup/login/account-opening/accounts/transfer/history route-to-API execution."
+        : "Customer-web source coverage is present, but local Compose pass evidence has not been recorded."
     },
     {
-      id: "staff-terminal-no-overclaim",
-      status: "pass",
-      details: "Staff-terminal source keeps the iWorks shell boundary and limits frontend Spring API execution to StaffApiEvidencePanel."
+      id: "staff-terminal-compose-route-api-execution",
+      status: staffTerminalLivePass ? "pass" : "partial",
+      details: staffTerminalLivePass
+        ? "Staff-terminal local Compose smoke pass evidence exists for the bounded Spring API evidence panel."
+        : "Staff-terminal source keeps the iWorks shell boundary, but local Compose pass evidence has not been recorded."
     },
     {
       id: "synthetic-only-boundary",
