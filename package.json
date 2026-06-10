@@ -48,6 +48,7 @@
     "contracts:lint": "node --experimental-strip-types scripts/lint-contracts.ts",
     "contracts:check-client": "node --experimental-strip-types scripts/check-api-client-contract.ts",
     "contracts:check-events": "node --experimental-strip-types scripts/check-event-contracts.ts",
+    "contracts:diff-openapi": "node --experimental-strip-types scripts/check-openapi-generated-diff.ts",
     "contracts:runtime-evidence": "node --experimental-strip-types scripts/check-contract-runtime-evidence.ts",
     "parity": "node --experimental-strip-types scripts/run-parity-checks.ts",
     "node:retirement-gate": "node --experimental-strip-types scripts/check-node-retirement-gate.ts",

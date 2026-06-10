@@ -140,6 +140,7 @@ jobs:
       - run: npm run contracts:lint
       - run: npm run contracts:check-client
       - run: npm run contracts:check-events
+      - run: npm run contracts:diff-openapi
       - run: node --test tests/springScaffold.test.mjs tests/nextScaffold.test.mjs tests/stackRetirementAreaAudit.test.mjs
 
   compose-platform-config:
