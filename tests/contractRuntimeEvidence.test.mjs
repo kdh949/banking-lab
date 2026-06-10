@@ -24,7 +24,7 @@ test("contract runtime evidence boundary records structural passes and missing r
   ]);
   assert.equal(evidence.openApi.generatedDtoDiffGate.status, "partial");
   assert.equal(evidence.openApi.generatedDtoDiffGate.expectedScript, "contracts:diff-openapi");
-  assert.match(evidence.openApi.generatedDtoDiffGate.note, /core-banking ledger command and inquiry subsets plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes/);
+  assert.match(evidence.openApi.generatedDtoDiffGate.note, /core-banking ledger command, inquiry, and case workflow subsets plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes/);
 
   assert.ok(evidence.asyncApi.eventSchemaCount >= 17);
   assert.deepEqual(evidence.asyncApi.envelopeFields, [
@@ -56,7 +56,7 @@ test("contract runtime evidence docs avoid DTO and runtime event overclaims", as
 
   assert.match(doc, /Status: partial/);
   assert.match(doc, /Kotlin controller source-to-OpenAPI path\/method diffing is wired through `contracts:diff-openapi`/);
-  assert.match(doc, /Do not claim core-banking ledger command and inquiry subset DTO schema parity is equivalent to full core-banking Spring\/Jackson\/springdoc DTO-level OpenAPI schema parity/);
+  assert.match(doc, /Do not claim core-banking ledger command, inquiry, and case workflow subset DTO schema parity is equivalent to full core-banking Spring\/Jackson\/springdoc DTO-level OpenAPI schema parity/);
   assert.match(doc, /Do not claim this fixture\/schema\/source-marker gate is equivalent to exhaustive live broker producer\/consumer coverage/);
   assert.match(doc, /synthetic-only/);
   assert.ok(packageJson.scripts["contracts:runtime-evidence"]);

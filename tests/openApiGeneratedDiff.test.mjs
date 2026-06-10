@@ -45,6 +45,15 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(coreSchemaNames.has("StaffAccessListResponse_StaffAccountDto"));
   assert.ok(coreSchemaNames.has("StaffAccessListResponse_StaffTransactionDto"));
   assert.ok(coreSchemaNames.has("MaskedCustomerDto"));
+  assert.ok(coreSchemaNames.has("ComplaintCaseDto"));
+  assert.ok(coreSchemaNames.has("ComplaintAnswerDraftResponse"));
+  assert.ok(coreSchemaNames.has("CustomerComplaintMaterialResponse"));
+  assert.ok(coreSchemaNames.has("FdsCaseDto"));
+  assert.ok(coreSchemaNames.has("FdsDecisionRequestResponse"));
+  assert.ok(coreSchemaNames.has("AmlCaseDto"));
+  assert.ok(coreSchemaNames.has("AmlClosureRequestResponse"));
+  assert.ok(coreSchemaNames.has("OperatorApproval"));
+  assert.ok(coreSchemaNames.has("ApprovalStatus"));
 
   const coreContract = await readFile("contracts/openapi/core-banking.yaml", "utf8");
   assert.match(coreContract, /postLedgerDeposit[\s\S]*#\/components\/schemas\/DepositCommand/);
@@ -55,6 +64,10 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.match(coreContract, /searchStaffCustomers[\s\S]*#\/components\/schemas\/StaffAccessListResponse_MaskedCustomerDto/);
   assert.match(coreContract, /searchStaffTransactions[\s\S]*#\/components\/schemas\/StaffAccessListResponse_StaffTransactionDto/);
   assert.match(coreContract, /customerAccountDetail[\s\S]*#\/components\/schemas\/CustomerAccountDetailDto/);
+  assert.match(coreContract, /requestCustomerComplaint[\s\S]*#\/components\/schemas\/CustomerComplaintEntryCommand[\s\S]*#\/components\/schemas\/CustomerComplaintEntryResponse/);
+  assert.match(coreContract, /draftComplaintAnswer[\s\S]*#\/components\/schemas\/ComplaintAnswerDraftCommand[\s\S]*#\/components\/schemas\/ComplaintAnswerDraftResponse/);
+  assert.match(coreContract, /requestFdsRelease[\s\S]*#\/components\/schemas\/FdsDecisionCommand[\s\S]*#\/components\/schemas\/FdsDecisionRequestResponse/);
+  assert.match(coreContract, /requestAmlClosure[\s\S]*#\/components\/schemas\/AmlClosureCommand[\s\S]*#\/components\/schemas\/AmlClosureRequestResponse/);
 
   const payment = JSON.parse(await readFile("docs/test-evidence/generated/openapi/payment-service.generated.json", "utf8"));
   const paymentSchemaNames = new Set(payment.dtoSchemas.map((schema) => schema.name));
