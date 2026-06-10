@@ -4,8 +4,8 @@
   "issue": "https://github.com/kdh949/banking-lab/issues/86",
   "overallStatus": "not-complete",
   "statusCounts": {
-    "pass": 10,
-    "partial": 1,
+    "pass": 11,
+    "partial": 0,
     "blocked": 1,
     "failed": 0
   },
@@ -37,13 +37,15 @@
     {
       "id": "live-route-api-execution",
       "planCondition": "Customer-web and staff-terminal live API route execution evidence exists.",
-      "status": "partial",
+      "status": "pass",
       "evidence": [
         "docs/test-evidence/live-route-api-execution.md",
-        "docs/test-evidence/generated/live-route-api-execution.json"
+        "docs/test-evidence/generated/live-route-api-execution.json",
+        "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json",
+        "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json"
       ],
-      "finding": "Evidence exists, but customer/staff route execution is still environment-gated and partial.",
-      "nextStep": "Rerun customer-web and staff-terminal live API/Keycloak smokes against a fresh synthetic stack."
+      "finding": "Customer-web and staff-terminal route-to-API smokes have local synthetic Compose pass evidence.",
+      "nextStep": "Rerun both local Compose smokes before release recording and keep hosted CI evidence separate."
     },
     {
       "id": "openapi-dto-diff-gate",

@@ -1,0 +1,24 @@
+{
+  "reviewDate": "2026-06-11",
+  "executedAt": "2026-06-10T15:43:53.112Z",
+  "issue": "https://github.com/kdh949/banking-lab/issues/90",
+  "status": "pass",
+  "syntheticOnly": true,
+  "localOnly": true,
+  "hostedCiGreenClaim": false,
+  "app": "staff-terminal",
+  "command": "npm run test:staff-terminal:api-e2e-compose",
+  "scenario": "iWorks integrated terminal shell -> bounded Spring API evidence panel",
+  "controls": [
+    "iWorks shell rendering",
+    "terminal status route",
+    "bounded Spring API evidence panel",
+    "reason-required staff customer detail",
+    "approval inbox read"
+  ],
+  "notes": [
+    "Executed against disposable PostgreSQL and Spring Boot core-banking Compose services.",
+    "Simulator tokens are enabled only by explicit dev/test environment variables in this wrapper.",
+    "This evidence does not restore retired staff route pages or use real customer money, real PII, real KYC/AML providers, real card networks, real payment networks, or external financial institution APIs."
+  ]
+}

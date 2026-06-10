@@ -1,0 +1,26 @@
+{
+  "reviewDate": "2026-06-11",
+  "executedAt": "2026-06-10T15:42:57.717Z",
+  "issue": "https://github.com/kdh949/banking-lab/issues/90",
+  "status": "pass",
+  "syntheticOnly": true,
+  "localOnly": true,
+  "hostedCiGreenClaim": false,
+  "app": "customer-web",
+  "command": "npm run test:customer-web:self-service-api-e2e-compose",
+  "scenario": "signup -> login -> staff maker-checker account opening -> accounts -> transfer -> history/status routes",
+  "controls": [
+    "synthetic signup and login",
+    "explicit dev/test synthetic customer auth issuer opt-in",
+    "staff maker-checker account opening",
+    "masked owned-account route rendering",
+    "internal recipient lookup",
+    "idempotent transfer replay",
+    "ledger transaction history readback"
+  ],
+  "notes": [
+    "Executed against disposable PostgreSQL and Spring Boot core-banking Compose services.",
+    "Simulator tokens are enabled only by explicit dev/test environment variables in this wrapper.",
+    "This evidence does not use real customer money, real PII, real KYC/AML providers, real card networks, real payment networks, or external financial institution APIs."
+  ]
+}

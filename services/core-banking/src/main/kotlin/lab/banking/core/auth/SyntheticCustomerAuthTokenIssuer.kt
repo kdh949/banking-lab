@@ -21,7 +21,9 @@ class SyntheticCustomerAuthTokenIssuer(
     @param:Value("\${banking-lab.security.dev-simulator-token-enabled:false}")
     private val devSimulatorTokenEnabled: Boolean,
     @param:Value("\${banking-lab.security.customer-auth.token-ttl-seconds:3600}")
-    private val tokenTtlSeconds: Long
+    private val tokenTtlSeconds: Long,
+    @param:Value("\${banking-lab.security.jwt.audience:}")
+    private val expectedAudience: String
 ) {
     fun issue(authSubject: String, username: String, customerId: String): IssuedSyntheticCustomerToken {
         requireIssuerEnabled()
@@ -31,10 +33,12 @@ class SyntheticCustomerAuthTokenIssuer(
         val payload = linkedMapOf<String, Any?>(
             "iss" to ISSUER,
             "sub" to authSubject,
+            "aud" to expectedAudience.takeIf { it.isNotBlank() },
             "preferred_username" to username,
             "roles" to listOf("CUSTOMER"),
             "customerId" to customerId,
             "sid" to sessionId,
+            "deviceFingerprint" to syntheticDeviceFingerprint(customerId),
             "auth_time" to issuedAt.toEpochSecond(),
             "iat" to issuedAt.toEpochSecond(),
             "exp" to expiresAt.toEpochSecond(),
@@ -79,6 +83,9 @@ class SyntheticCustomerAuthTokenIssuer(
 
     companion object {
         const val ISSUER = "banking-lab-synthetic-customer-auth"
+
+        fun syntheticDeviceFingerprint(customerId: String): String =
+            "SYN-DEVICE-$customerId"
     }
 }
 

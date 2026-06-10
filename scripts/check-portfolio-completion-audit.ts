@@ -30,6 +30,7 @@ type LiveRouteEvidence = {
   readonly syntheticOnly?: unknown;
   readonly status?: unknown;
   readonly skippedPlaywrightIsPassEvidence?: unknown;
+  readonly commands?: unknown;
 };
 
 type ContractRuntimeEvidence = {
@@ -189,7 +190,7 @@ const documentationAligned = includesAll(matrix, [
 ]) && includesAll(gapReport, [
   "Recommended Next Evidence Slice",
   "hosted GitHub Actions run URLs",
-  "live route-to-API execution evidence"
+  "live route-to-API Compose wrappers"
 ]);
 requirements.push(requirement(
   "documentation-status-alignment",
@@ -224,6 +225,17 @@ requirements.push(requirement(
   "Resolve #83, rerun hosted CI, and replace blocked status only after jobs execute runner steps."
 ));
 
+const liveRouteCommands = objectArray<CommandEvidence>(liveRoute?.commands);
+const liveRouteCommandPassed = (command: string): boolean =>
+  liveRouteCommands.some((item) => item.command === command && item.status === "pass");
+const liveRoutePass = liveRoute?.syntheticOnly === true
+  && liveRoute.status === "pass"
+  && liveRoute.skippedPlaywrightIsPassEvidence === false
+  && liveRouteDoc.includes("Status: pass")
+  && liveRouteDoc.includes("npm run test:customer-web:self-service-api-e2e-compose")
+  && liveRouteDoc.includes("npm run test:staff-terminal:api-e2e-compose")
+  && liveRouteCommandPassed("npm run test:customer-web:self-service-api-e2e-compose")
+  && liveRouteCommandPassed("npm run test:staff-terminal:api-e2e-compose");
 const liveRoutePartial = liveRoute?.syntheticOnly === true
   && liveRoute.status === "partial"
   && liveRoute.skippedPlaywrightIsPassEvidence === false
@@ -231,15 +243,21 @@ const liveRoutePartial = liveRoute?.syntheticOnly === true
 requirements.push(requirement(
   "live-route-api-execution",
   "Customer-web and staff-terminal live API route execution evidence exists.",
-  liveRoutePartial ? "partial" : "failed",
+  liveRoutePass ? "pass" : liveRoutePartial ? "partial" : "failed",
   [
     "docs/test-evidence/live-route-api-execution.md",
-    "docs/test-evidence/generated/live-route-api-execution.json"
+    "docs/test-evidence/generated/live-route-api-execution.json",
+    "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json",
+    "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json"
   ],
-  liveRoutePartial
+  liveRoutePass
+    ? "Customer-web and staff-terminal route-to-API smokes have local synthetic Compose pass evidence."
+    : liveRoutePartial
     ? "Evidence exists, but customer/staff route execution is still environment-gated and partial."
     : "Live route/API evidence is missing or overclaims skipped Playwright as pass evidence.",
-  "Rerun customer-web and staff-terminal live API/Keycloak smokes against a fresh synthetic stack."
+  liveRoutePass
+    ? "Rerun both local Compose smokes before release recording and keep hosted CI evidence separate."
+    : "Rerun customer-web and staff-terminal live API/Keycloak smokes against a fresh synthetic stack."
 ));
 
 const openApiDiffPresent = packageScripts["contracts:diff-openapi"] === "node --experimental-strip-types scripts/check-openapi-generated-diff.ts"

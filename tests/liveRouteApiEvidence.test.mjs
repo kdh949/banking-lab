@@ -18,14 +18,15 @@ test("live route API evidence generator records current customer and staff bound
 
   const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
   assert.equal(evidence.syntheticOnly, true);
-  assert.equal(evidence.status, "partial");
+  assert.equal(evidence.status, "pass");
   assert.equal(evidence.skippedPlaywrightIsPassEvidence, false);
-  assert.match(evidence.statusReason, /customer-web and staff-terminal have route-backed live API tests gated by environment/);
+  assert.match(evidence.statusReason, /local synthetic Compose pass evidence/);
 
   const customerWeb = evidence.applications.find((item) => item.app === "customer-web");
   assert.ok(customerWeb, "customer-web evidence is required");
-  assert.equal(customerWeb.status, "route-backed-live-gated");
-  assert.equal(customerWeb.liveRunEvidence, "source-present-env-gated-not-run-in-this-slice");
+  assert.equal(customerWeb.status, "route-backed-live-pass");
+  assert.equal(customerWeb.liveRunEvidence, "local-compose-smoke-pass");
+  assert.equal(customerWeb.lastRunEvidencePath, "docs/test-evidence/generated/customer-web-self-service-api-e2e-compose-smoke.json");
   assert.ok(customerWeb.routes.includes("/transfers/new"));
   assert.ok(customerWeb.routes.includes("/transfers/[resultId]"));
   assert.ok(customerWeb.requiredEnvironment.includes("BANKING_LAB_E2E_API_BASE_URL"));
@@ -37,8 +38,9 @@ test("live route API evidence generator records current customer and staff bound
 
   const staffTerminal = evidence.applications.find((item) => item.app === "staff-terminal");
   assert.ok(staffTerminal, "staff-terminal evidence is required");
-  assert.equal(staffTerminal.status, "route-backed-live-gated");
-  assert.equal(staffTerminal.liveRunEvidence, "source-present-compose-smoke-script-present");
+  assert.equal(staffTerminal.status, "route-backed-live-pass");
+  assert.equal(staffTerminal.liveRunEvidence, "local-compose-smoke-pass");
+  assert.equal(staffTerminal.lastRunEvidencePath, "docs/test-evidence/generated/staff-terminal-api-e2e-compose-smoke.json");
   assert.deepEqual(staffTerminal.routes, ["/", "/api/terminal-status"]);
   assert.ok(staffTerminal.requiredEnvironment.includes("BANKING_LAB_E2E_API_BASE_URL"));
   assert.ok(staffTerminal.apiMethods.includes("staffCustomerDetail"));
@@ -50,10 +52,10 @@ test("live route API evidence generator records current customer and staff bound
 test("live route API evidence document does not overclaim skipped or blocked work", async () => {
   const doc = await readFile(docPath, "utf8");
 
-  assert.match(doc, /Status: partial/);
+  assert.match(doc, /Status: pass/);
   assert.match(doc, /A skipped Playwright test is not pass evidence/);
   assert.match(doc, /bounded Spring API evidence panel/);
-  assert.match(doc, /route-backed-live-gated/);
+  assert.match(doc, /route-backed-live-pass/);
   assert.match(doc, /synthetic-only/);
   assert.match(doc, /real customer money, real personal data, real KYC\/AML providers, real payment or card networks, or external financial institution APIs/i);
   assert.doesNotMatch(doc, /staff-terminal.*hosted.*green/i);

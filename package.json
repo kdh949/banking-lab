@@ -37,6 +37,7 @@
     "test:reporting-service:keycloak-service-token": "bash scripts/run-reporting-keycloak-service-token-smoke.sh",
     "test:parameter-command-e2e-compose": "bash scripts/run-parameter-command-e2e-compose-smoke.sh",
     "test:call-center-console:keycloak-e2e-compose": "bash scripts/run-call-center-keycloak-e2e-compose-smoke.sh",
+    "test:customer-web:self-service-api-e2e-compose": "bash scripts/run-customer-web-self-service-api-e2e-compose-smoke.sh",
     "test:staff-terminal:api-e2e-compose": "bash scripts/run-staff-terminal-api-e2e-compose-smoke.sh",
     "ledger:integrity-check": "npm run test:core-banking:integration -- --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --rerun-tasks",
     "ledger:large-dataset-smoke": "node --experimental-strip-types scripts/generate-large-ledger-dataset.ts",
