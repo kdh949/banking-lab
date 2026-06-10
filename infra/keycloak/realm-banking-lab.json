@@ -18,6 +18,12 @@
         "name": "CALL_CENTER"
       },
       {
+        "name": "CALL_CENTER_AGENT"
+      },
+      {
+        "name": "CALL_CENTER_MANAGER"
+      },
+      {
         "name": "COMPLAINT_HANDLER"
       },
       {
@@ -317,6 +323,32 @@
       ]
     },
     {
+      "clientId": "call-center-console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:3008/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3008"
+      ],
+      "protocolMappers": [
+        {
+          "name": "core-banking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "core-banking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "payment-service-api",
       "enabled": true,
       "publicClient": false,
@@ -519,6 +551,40 @@
       ],
       "realmRoles": [
         "COMPLAINT_HANDLER"
+      ]
+    },
+    {
+      "username": "call-agent01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "CallAgent",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "call-agent01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CALL_CENTER_AGENT"
+      ]
+    },
+    {
+      "username": "call-manager01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Synthetic",
+      "lastName": "CallManager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "call-manager01-pass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CALL_CENTER_MANAGER"
       ]
     },
     {

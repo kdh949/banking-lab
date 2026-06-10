@@ -353,8 +353,10 @@ test("call-center-console Next workspace renders manifests and API-backed workfl
   const appPackage = JSON.parse(await readFile("apps/call-center-console/package.json", "utf8"));
   const page = await readFile("apps/call-center-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
+  const tokenRoute = await readFile("apps/call-center-console/src/app/api/auth/keycloak-token/route.ts", "utf8");
   const loader = await readFile("apps/call-center-console/src/lib/manifestLoader.ts", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const keycloakRealm = await readFile("infra/keycloak/realm-banking-lab.json", "utf8");
   const noteManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-103.note-entry.json", "utf8"));
   const escalationManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-106.escalation.json", "utf8"));
 
@@ -365,8 +367,10 @@ test("call-center-console Next workspace renders manifests and API-backed workfl
   assert.match(page, /ApiBackedCallCenterPanel/);
   assert.match(page, /call-center-console/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_API_BASE_URL/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL/);
   assert.match(panel, /data-testid="api-backed-call-center-search"/);
   assert.match(panel, /data-testid="api-backed-call-center-workflow"/);
+  assert.match(panel, /data-testid="api-backed-call-center-keycloak-login"/);
   assert.match(panel, /searchCallCenterCustomers/);
   assert.match(panel, /startCallCenterInteraction/);
   assert.match(panel, /addCallCenterNote/);
@@ -375,12 +379,23 @@ test("call-center-console Next workspace renders manifests and API-backed workfl
   assert.match(panel, /closeCallCenterInteraction/);
   assert.match(panel, /callCenterCustomerHistory/);
   assert.match(panel, /createSimulatorBearerToken/);
+  assert.match(panel, /createOidcAuthorizationUrl/);
+  assert.match(panel, /createPkcePair/);
+  assert.match(panel, /call-agent01/);
+  assert.match(panel, /call-manager01/);
   assert.match(panel, /CALL_CENTER_AGENT/);
   assert.match(panel, /CALL_CENTER_MANAGER/);
+  assert.match(tokenRoute, /client_id: "call-center-console"/);
+  assert.match(tokenRoute, /AUTHORIZATION_POLICY_VIOLATION/);
   assert.match(loader, /screen-manifests/);
   assert.match(loader, /call-center-console/);
   assert.match(loader, /manifest\.app === appId/);
   assert.match(client, /searchCallCenterCustomers/);
+  assert.match(keycloakRealm, /"clientId": "call-center-console"/);
+  assert.match(keycloakRealm, /"username": "call-agent01"/);
+  assert.match(keycloakRealm, /"username": "call-manager01"/);
+  assert.match(keycloakRealm, /"CALL_CENTER_AGENT"/);
+  assert.match(keycloakRealm, /"CALL_CENTER_MANAGER"/);
   assert.equal(noteManifest.validation.redactionRequired, true);
   assert.equal(noteManifest.validation.rawNoteAuditCopyForbidden, true);
   assert.equal(escalationManifest.audit.reasonRequired, true);
