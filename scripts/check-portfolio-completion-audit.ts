@@ -405,9 +405,12 @@ const finalDocsCurrent = includesAll(scorecard, [
   "Verification Commands To Refresh Before Recording"
 ]) && includesAll(demoScript, [
   "hosted CI blocked status, not green",
+  "live customer/staff route-to-API Compose evidence from #90",
+  "pass: 11 / partial: 0 / blocked: 1 / failed: 0",
   "dedicated Next.js call-center shell",
   "runtime event envelope fixture/source-marker gate"
-]);
+]) && !demoScript.includes("live route/final-command refresh rows still partial")
+  && !demoScript.includes("remaining live route evidence row");
 requirements.push(requirement(
   "final-scorecard-demo-current",
   "Final scorecard and demo script are current.",
