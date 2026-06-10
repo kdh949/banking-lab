@@ -184,12 +184,12 @@ Show:
 - current partial status
 - dedicated Next.js call-center shell using `CALL-101..CALL-106` manifests
 - API-backed workflow slice: masked customer search, 상담 세션, redacted 상담 메모, 후처리 task, escalation, close, history, authorization, audit
-- Keycloak route readiness: `call-center-console` token exchange route plus synthetic `call-agent01` and `call-manager01` realm users
-- remaining future work: live full-stack API browser run and live Keycloak/JWKS browser execution evidence
+- live Keycloak route evidence: `call-center-console` token exchange route plus synthetic `call-agent01` and `call-manager01` realm users exercised through the local Compose wrapper
+- remaining future work: decide whether escalation needs maker-checker before the row can move beyond partial
 
 Narration:
 
-The lab now has a Spring/PostgreSQL call-center workflow, a dedicated manifest-rendered Next.js shell, redacted notes, access audit, and a Keycloak-ready browser path. This remains partial because the live API browser workflow and live Keycloak/JWKS execution have not been recorded.
+The lab now has a Spring/PostgreSQL call-center workflow, a dedicated manifest-rendered Next.js shell, redacted notes, access audit, and a local live Keycloak/JWKS browser smoke for agent and manager tokens with simulator tokens disabled. This remains partial because escalation is role-gated rather than maker-checker and the evidence is local synthetic Compose evidence, not hosted CI or production identity evidence.
 
 ## Scene 13: Evidence Pack, CI, Contract, And Formal Gates
 

@@ -22,7 +22,8 @@ test("final hardening baseline reflects current implementation without overclaim
   assert.match(baseline, /manifests `CALL-101` through `CALL-106`/);
   assert.match(baseline, /reason-required access audit/);
   assert.match(baseline, /Keycloak public client, synthetic\s+call-center agent\/manager users, a Next token exchange route/);
-  assert.match(baseline, /live\s+Keycloak\/JWKS execution for the call-center route remain unrecorded/);
+  assert.match(baseline, /local\s+disposable Compose evidence for live Keycloak\/JWKS agent\/manager propagation/);
+  assert.match(baseline, /maker-checker escalation remains open/);
   assert.doesNotMatch(baseline, /call-center agent workflow is missing/i);
 
   assert.match(baseline, /DTO-level OpenAPI diffing and runtime event-envelope validation now exist/);
