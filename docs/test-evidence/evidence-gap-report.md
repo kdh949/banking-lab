@@ -1,6 +1,6 @@
 # Evidence Gap Report
 
-Review date: 2026-06-05
+Review date: 2026-06-10
 
 ## Verdict
 
@@ -75,9 +75,13 @@ The Node retirement gate remains ready for the previous migration objective. The
 
 ## Recommended Next Evidence Slice
 
-The next smallest safe evidence slices are live-environment hardening items that are not claimed by the current generated artifacts:
+The next smallest safe evidence slices are the PLAN-driven portfolio-completion gaps that are not claimed by the current generated artifacts:
 
-1. Extend the live platform hardening slice from object/readiness smoke to ingress-controller traffic, real TLS termination, Argo CD controller sync health, production-like secret handling, canary promotion, and multi-node storage behavior.
-2. Keep using the JDK 21 path (`JAVA_HOME=/opt/homebrew/opt/openjdk@21`) for Gradle/Kotlin DSL commands on this workstation; the default JDK 26.0.1 still fails before task execution.
+1. Keep README, `docs/implementation-coverage-matrix.md`, and evidence/status documents aligned with the normalized status vocabulary.
+2. Record hosted GitHub Actions run URLs and job conclusions separately from local fallback commands; if hosted jobs are blocked before runner startup, record `blocked`, not `pass`.
+3. Add customer-web and staff-terminal live route-to-API execution evidence for the main demo flows without counting skipped env-gated tests as passes.
+4. Add generated OpenAPI DTO diffing and runtime event-envelope validation beyond the existing structural contract gates.
+5. Add a synthetic-only call-center workflow with reason-required access, masked notes, after-call tasks, escalation, authorization, and audit evidence.
+6. Keep using the JDK 21 path (`JAVA_HOME=/opt/homebrew/opt/openjdk@21`) for Gradle/Kotlin DSL commands on this workstation when Gradle is required; the default JDK 26.0.1 still fails before task execution.
 
 Node is retired only from target-path dependency for the current synthetic lab scope; the archived oracle/reference boundary remains available for regression comparison.

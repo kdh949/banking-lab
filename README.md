@@ -16,7 +16,7 @@ The lab models a simulated digital bank with:
 - audit console
 - core banking ledger service
 - workflow and maker-checker control
-- transaction-code staff workstation with reusable manifest renderers
+- iWorks-style staff terminal shell plus manifest-driven channel screens
 - evidence documents and generated test reports
 
 ## 2. Why This Is Not a Simple Bank Clone
@@ -45,7 +45,7 @@ analytics/aml-fds-python  Python/DuckDB/scikit-learn synthetic AML/FDS analytics
 packages/*                TypeScript API, auth, channel UI, screen, and form packages
 screen-manifests          manifest-driven channel and operations screens
 contracts                 OpenAPI, AsyncAPI, event, and Temporal contracts
-db/migrations             Flyway PostgreSQL schema V001-V036
+db/migrations             Flyway PostgreSQL schema V001-V039
 infra                     Docker Compose, Kubernetes, Helm, Terraform, Argo CD, observability, and security assets
 legacy-node-reference     archived Node oracle modules and static reference shells
 runtime                   local Node reference HTTP runtime for parity/oracle comparison
@@ -67,19 +67,22 @@ Implemented controls:
 
 ## 5. Staff Integrated Terminal
 
-The staff terminal includes:
+The current target staff-terminal frontend is the iWorks integrated terminal
+shell. It includes:
 
 - transaction code input
-- transaction code and screen-name search results
-- tabbed manifest screens
-- customer context panel
-- masked PII by default
-- reason-required customer/account/transaction lookup
-- reusable inquiry, command, case, parameter, and dashboard rendering
-- declared-only status for screens without target API backing
-- approval inbox
-- audit log panel
-- customer information change through maker-checker approval
+- module and work-menu navigation
+- shared screen components for the current terminal workspace
+- unavailable-work modal behavior for unimplemented modules
+- lookup modal behavior
+- digit-only operator input
+- status bar client IP and server time from `/api/terminal-status`
+
+The retired staff manifest routes and API-backed staff panel are not part of
+the current frontend. Spring staff-control APIs remain target-stack backend
+coverage for reason-required lookup, privileged unmask, approvals, account
+hold/release, limit changes, KYC review, fee waiver, transaction correction,
+complaint/FDS/AML/reconciliation controls, audit, and maker-checker behavior.
 
 ## 6. Customer Web Banking
 
@@ -172,15 +175,26 @@ docker compose config
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
 
-The current manifest catalog contains 109 synthetic screens across customer web, staff terminal, complaint portal, FDS/AML, ops, audit, and admin consoles. The staff terminal renders transaction-code search, tabs, reason-required controls, masked customer context, maker-checker panels, audit timelines, and structured error surfaces from manifests.
+The current manifest catalog contains 67 synthetic screens across customer web,
+complaint portal, FDS/AML, ops, audit, and admin consoles. Staff-terminal
+manifests are intentionally absent from the current iWorks shell model.
 
 `npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC through a local `tlc` command, `BANKING_LAB_TLC_CMD`, `BANKING_LAB_TLC_JAR`, a repo-local TLC jar, or `~/Downloads/tla2tools.jar`, resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback when a TLC jar is used, and then runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
 
-CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, Gradle core-banking tests, Playwright manifest E2E, security evidence, and formal model checks.
+CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, all Spring service unit/integration jobs, platform/contract validation, Compose profile rendering, Playwright manifest E2E, security evidence, and formal model checks.
 
 ## 11.1 Current Coverage And Gaps
 
 The current implementation coverage is tracked in `docs/implementation-coverage-matrix.md`.
+
+The coverage matrix uses explicit status values to avoid mixing structural
+coverage with live execution evidence. `api-backed-read` and
+`api-backed-command` mean a target API path exists for the stated scope.
+`browser-e2e-backed` and `live-keycloak-backed` are stronger browser/runtime
+claims. `route-backed-live-gated`, `integrated-terminal`,
+`backend-control-covered`, `manifest-only`, and `partial` are not completion
+claims for live route execution. A skipped env-gated Playwright smoke is not
+counted as a live API pass.
 
 Important current gaps are intentionally not marked complete:
 
@@ -248,6 +262,8 @@ Covered drills include:
 
 ## 13. Run Locally
 
+Reference/oracle runtime only:
+
 ```bash
 npm start
 ```
@@ -266,6 +282,9 @@ Docker Compose:
 ```bash
 docker compose up --build
 ```
+
+Target Next.js channel apps use their workspace scripts, for example
+`npm run next:customer-web` and `npm run next:staff-terminal`.
 
 ## 14. Demo Scenario
 
@@ -295,10 +314,15 @@ This is a local simulation:
 
 The target Spring services use PostgreSQL/Flyway-backed state for ledger, audit, approvals, workflows, FDS/AML, reconciliation, payment, notification, and reporting slices covered by current evidence. The local `npm start` Node runtime remains an in-memory archived reference/oracle path only.
 
-## 16. Future Improvements
+## 16. Remaining Hardening Work
 
 Next engineering slices:
 
+- normalize docs and evidence after each hardening phase so README, the coverage matrix, and evidence reports describe the same implementation state
+- add hosted GitHub Actions run evidence or explicit blocked evidence without treating local commands as hosted green
+- add customer-web and staff-terminal live route-to-API execution evidence for the major demo flows
+- add generated OpenAPI DTO diffing and runtime event-envelope validation beyond the current structural contract gates
+- add a synthetic-only call-center workflow with reason-required access, masked notes, after-call tasks, escalation, and audit
 - broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
 - extend high-contention retry or operator-visible failure policy to every future financial command path
 - add live browser evidence for broader session/device UX and authorization exception paths
