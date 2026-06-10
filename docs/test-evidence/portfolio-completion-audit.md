@@ -35,9 +35,9 @@ The current audit is intentionally `not complete`:
 - `live-route-api-execution` is `partial` because customer-web and
   staff-terminal route-to-API evidence is still environment-gated and skipped
   Playwright is not pass evidence.
-- `final-command-refresh` is `partial` because the final command list is
-  documented, but this audit does not prove every command was freshly rerun on
-  this branch.
+- `final-command-refresh` is now `pass` because #88 reran and documented the
+  required local final command list in
+  `docs/test-evidence/final-command-refresh-2026-06-11.md`.
 
 ## Evidence Sources
 
@@ -51,6 +51,7 @@ The current audit is intentionally `not complete`:
 - `docs/test-evidence/final-hardening-scorecard.md`
 - `docs/demo-scenarios/demo-video-script.md`
 - `docs/test-evidence/evidence-gap-report.md`
+- `docs/test-evidence/final-command-refresh-2026-06-11.md`
 
 ## Non-Overclaim Rule
 

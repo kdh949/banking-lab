@@ -4,8 +4,8 @@
   "issue": "https://github.com/kdh949/banking-lab/issues/86",
   "overallStatus": "not-complete",
   "statusCounts": {
-    "pass": 9,
-    "partial": 2,
+    "pass": 10,
+    "partial": 1,
     "blocked": 1,
     "failed": 0
   },
@@ -128,12 +128,14 @@
     {
       "id": "final-command-refresh",
       "planCondition": "Required final commands pass or have explicit blocked evidence.",
-      "status": "partial",
+      "status": "pass",
       "evidence": [
-        "docs/test-evidence/final-hardening-scorecard.md"
+        "docs/test-evidence/final-hardening-scorecard.md",
+        "docs/test-evidence/final-command-refresh-2026-06-11.md",
+        "docs/test-evidence/generated/final-command-refresh-2026-06-11.json"
       ],
-      "finding": "Final command list is documented, but this audit does not prove all commands were freshly rerun in the current branch.",
-      "nextStep": "Run the full local refresh list and record command results in the next release evidence pack."
+      "finding": "Final local command refresh evidence exists for the required PLAN command list.",
+      "nextStep": "Keep this evidence current after material hardening changes."
     },
     {
       "id": "limitations-preserved",
