@@ -1,10 +1,25 @@
 # Implementation Coverage Matrix
 
-Review date: 2026-06-06
+Review date: 2026-06-10
 
 Scope: target-stack Banking Lab implementation only. The synthetic runtime helper is retained for bounded scenario evidence and is not counted as target-path implementation coverage.
 
-Status values are limited to `complete`, `api-backed-read`, `api-backed-command`, `browser-e2e-backed`, `live-keycloak-backed`, `manifest-only`, `partial`, `missing`, and `not-applicable`.
+Status values are limited to `complete`, `api-backed-read`, `api-backed-command`, `browser-e2e-backed`, `live-keycloak-backed`, `route-backed-live-gated`, `integrated-terminal`, `backend-control-covered`, `manifest-only`, `partial`, `missing`, and `not-applicable`.
+
+Status meanings:
+
+- `complete`: implemented and verified for the stated synthetic lab scope.
+- `api-backed-read`: read path calls a target Spring or bounded-context API.
+- `api-backed-command`: command path calls a target API and preserves the stated controls.
+- `browser-e2e-backed`: browser route exercised the target behavior end to end.
+- `live-keycloak-backed`: browser/API path was verified with live Keycloak/JWKS propagation.
+- `route-backed-live-gated`: route exists and live execution is gated by environment variables or a running stack.
+- `integrated-terminal`: staff-terminal frontend is the iWorks shell and terminal-status API only; staff control APIs are tracked separately.
+- `backend-control-covered`: backend controls are implemented and tested, but the current iWorks staff frontend does not expose a dedicated route.
+- `manifest-only`: structural manifest coverage only.
+- `partial`: meaningful target implementation exists, but the row still has unclosed evidence or feature depth gaps.
+- `missing`: no target implementation is present.
+- `not-applicable`: the control or layer does not apply to the row.
 
 ## Phase 0 Remaining Hardening Baseline
 
