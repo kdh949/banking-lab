@@ -2,7 +2,9 @@
 
 Review date: 2026-06-10
 
-Branch: `codex/final-hardening-baseline`
+Baseline lineage: originally created on `codex/final-hardening-baseline` and
+refreshed on `codex/final-hardening-baseline-refresh` after PR #69 through
+PR #73.
 
 Scope: PLAN Phase 0 baseline for making the synthetic banking lab verifiable,
 document-consistent, and demo-ready. This document is an inventory and scope
@@ -44,19 +46,25 @@ The target-stack shape is present and broad:
 - Keycloak/JWKS-style resource server support exists across Spring services,
   with simulator-token paths intended for explicit dev/test use only.
 - Next.js channel apps exist for customer web, staff terminal, complaint portal,
-  ops console, audit console, FDS/AML console, and admin console.
+  ops console, audit console, FDS/AML console, admin console, and
+  call-center console.
 - `customer-web` includes route pages for signup, login, accounts, transfers,
   complaints, security, cards, loans, payments, and notifications.
 - `staff-terminal` is currently an iWorks-style integrated terminal shell with
   `/` and `/api/terminal-status`; Spring staff-control APIs remain backend
   covered but are not exposed as the previous staff manifest route set.
+- `call-center-console` now has a dedicated Next.js shell on port 3008,
+  manifests `CALL-101` through `CALL-106`, shared API-client methods, and a
+  Spring/PostgreSQL workflow for masked customer search, interaction start and
+  detail, redacted notes, aftercall tasks, escalation, close, history, and
+  reason-required access audit.
 - Shared TypeScript packages include screen engine, form engine, API client,
   and auth client support.
 - OpenAPI files exist for core banking, payment, notification, and reporting.
 - AsyncAPI and event JSON schemas exist for the current event envelope catalog.
-- Screen manifests remain for customer, complaint, ops, audit, FDS/AML, and
-  admin channels; staff-terminal manifests are not present in the current
-  target UI model.
+- Screen manifests remain for customer, complaint, ops, audit, FDS/AML, admin,
+  and call-center channels; staff-terminal manifests are not present in the
+  current target UI model.
 - Python/DuckDB/scikit-learn AML/FDS analytics and data-quality evidence
   tooling exist under `analytics/aml-fds-python`.
 - Docker Compose, Kubernetes, Helm, Terraform, Argo CD, observability, security,
@@ -64,15 +72,17 @@ The target-stack shape is present and broad:
 
 ## Current Documentation And Evidence Tensions
 
-The repository is advanced, but documentation is not fully normalized against
-the current PLAN.
+The repository is advanced, but documentation and evidence still need active
+maintenance against the current PLAN.
 
-- `README.md` still mixes broad completed claims, historical Node-oracle
-  wording, and current target-stack claims that need sharper separation.
-- `docs/implementation-coverage-matrix.md` declares a limited status enum, but
-  rows also use values such as `route-backed-live-gated`,
-  `integrated-terminal`, and `backend-control-covered`. Phase 1 must normalize
-  this before the matrix can be used as a reliable status source.
+- `README.md`, `docs/implementation-coverage-matrix.md`, this baseline,
+  `docs/test-evidence/final-hardening-scorecard.md`, and
+  `docs/demo-scenarios/demo-video-script.md` now use explicit status boundaries,
+  but they must be refreshed after each hardening PR.
+- `docs/implementation-coverage-matrix.md` now declares the current status
+  vocabulary, including `route-backed-live-gated`, `integrated-terminal`, and
+  `backend-control-covered`; tests guard that every table row uses a declared
+  value.
 - Existing evidence documents contain long historical command logs from earlier
   branches. They are useful as prior evidence, but they must not be presented
   as commands rerun for this branch.
@@ -81,8 +91,13 @@ the current PLAN.
   not a green CI result.
 - Several Playwright live API flows are env-gated. A skipped live API test is
   not proof of route-to-live-API execution.
-- Current contract gates are structural. PLAN Phase 4 still requires DTO-level
-  generated OpenAPI diffing and runtime event-envelope validation.
+- DTO-level OpenAPI diffing and runtime event-envelope validation now exist for
+  the current checked subsets and runtime fixtures. Full core-banking
+  Spring/Jackson/springdoc DTO parity and exhaustive live broker envelope
+  coverage remain open.
+- `call-center-console` has a dedicated shell, backend workflow, OpenAPI/API
+  client coverage, and manifest Playwright smoke. Live API browser execution and
+  live Keycloak/JWKS propagation for the call-center route remain unrecorded.
 
 ## Remaining Hardening Gaps
 
@@ -92,31 +107,36 @@ The active PLAN identifies these portfolio-completion gaps:
    cleanup without inflating implementation status.
 2. Hosted CI evidence must be separated from local evidence, and blocked hosted
    CI must remain explicitly blocked rather than marked green.
-3. `customer-web` and `staff-terminal` need live API route execution evidence
-   for the major flows, not only manifest, shell, or fixture coverage.
+3. `customer-web` route evidence should be refreshed against a running
+   synthetic stack before demo recording. The current `staff-terminal` is an
+   integrated-terminal shell, so staff route-to-API claims must use backend
+   control evidence or a new operator workflow rather than the retired manifest
+   routes.
 4. OpenAPI DTO-level generated diffing and runtime event-envelope validation
-   are still missing.
-5. A call-center agent workflow is missing as a dedicated app or staff-terminal
-   API-backed workflow slice.
-6. Final scorecard and demo script must be regenerated from actual verified
-   capabilities and residual limitations.
+   need broader coverage beyond the current checked subsets and fixtures.
+5. The call-center workflow is implemented, but live full-stack API browser
+   evidence, live Keycloak/JWKS propagation, and maker-checker escalation remain
+   open.
+6. Final scorecard and demo script exist, but must be regenerated from actual
+   verified capabilities and residual limitations after each major hardening PR.
 
 ## Scope For This Workstream
 
 This workstream should proceed in small, commit-sized branches:
 
-- Phase 0: create this baseline and rerun the local baseline commands.
-- Phase 1: normalize README, coverage matrix status values, and related
-  evidence/status docs; add a matrix/status consistency test if none exists.
-- Phase 2: strengthen CI self-check and add hosted CI status evidence that
-  clearly distinguishes green, failed, and externally blocked runs.
-- Phase 3: add env-gated live API route execution evidence for customer-web and
-  staff-terminal without treating skips as passes.
-- Phase 4: add DTO-level OpenAPI diffing and runtime event-envelope validation.
-- Phase 5: implement call-center workflow with reason-required audit, masking,
-  escalation, after-call tasks, authorization, and synthetic-only controls.
-- Phase 6: generate final scorecard and demo script only after the prior gates
-  are accurate.
+- Maintain the baseline, coverage matrix, README, scorecard, and demo script as
+  one evidence set.
+- Keep hosted CI status separate from local fallback commands until GitHub
+  Actions actually starts and finishes runner jobs.
+- Refresh customer-web live route evidence against a disposable synthetic stack
+  before demo recording.
+- Treat the current staff-terminal as an integrated-terminal boundary; keep
+  staff-control API evidence in backend/control rows unless a new operator UI
+  route is intentionally added.
+- Broaden DTO diffing and runtime envelope validation without weakening the
+  existing structural gates.
+- Add call-center live API/Keycloak evidence and decide whether escalation
+  should become maker-checker before raising its status.
 
 ## Explicitly Out Of Scope For Phase 0
 
@@ -126,7 +146,6 @@ This baseline does not:
 - change ledger postings, balance projection, or idempotency semantics;
 - add new customer, staff, payment, reporting, notification, FDS/AML, or
   call-center functionality;
-- rewrite README or the coverage matrix yet;
 - mark hosted CI as green;
 - regenerate generated evidence artifacts;
 - claim live API route execution where env-gated tests are skipped.
@@ -179,9 +198,9 @@ Hosted CI evidence must include:
 If GitHub billing/spending limits or runner allocation issues block jobs before
 startup, the status is `blocked`, not `pass`.
 
-## Current Phase 0 Command Evidence
+## Historical Phase 0 Command Evidence
 
-Commands already used for inventory in this branch:
+Commands already used for the original Phase 0 inventory:
 
 - `git status --short --branch`
 - `rg --files`
@@ -203,6 +222,20 @@ Verification commands run for this Phase 0 baseline:
 
 - `npm test`: pass, 178 tests.
 - `npm run validate:manifests`: pass, 67 screen manifests.
+- `npm run packages:typecheck`: pass for screen-engine, form-engine,
+  api-client, and auth-client.
+- `npm run scripts:typecheck`: pass.
+
+## Current Baseline Refresh Evidence
+
+This refresh is documentation and structural-test only. It does not regenerate
+runtime evidence, alter generated JSON artifacts, or claim fresh hosted CI.
+
+Commands run for this refresh:
+
+- `node --test tests/finalHardeningBaseline.test.mjs`: pass, 1 test.
+- `npm test`: pass, 191 tests.
+- `npm run validate:manifests`: pass, 73 screen manifests.
 - `npm run packages:typecheck`: pass for screen-engine, form-engine,
   api-client, and auth-client.
 - `npm run scripts:typecheck`: pass.
