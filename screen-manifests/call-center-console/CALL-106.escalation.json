@@ -5,35 +5,46 @@
   "app": "call-center-console",
   "type": "CASE",
   "domain": "call-center",
-  "requiredRoles": ["CALL_CENTER_MANAGER", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER"],
+  "requiredRoles": ["CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER"],
   "layout": {
     "template": "case",
     "customerContext": true
   },
   "workflow": {
     "name": "callCenterEscalationWorkflow",
-    "states": ["CREATED", "ACCEPTED", "REJECTED", "CLOSED"]
+    "states": ["PENDING_APPROVAL", "CREATED", "ACCEPTED", "REJECTED", "CLOSED"]
   },
   "approval": {
-    "required": false,
-    "makerChecker": false,
-    "businessTypes": []
+    "required": true,
+    "makerChecker": true,
+    "businessTypes": ["CALL_CENTER_ESCALATION"]
   },
   "audit": {
     "enabled": true,
     "reasonRequired": true,
     "piiAccess": true,
     "maskingPolicy": "CALL_CENTER_ESCALATION_REDACTION",
-    "eventTypes": ["CALL_CENTER_ESCALATED"]
+    "eventTypes": ["CALL_CENTER_ESCALATION_REQUESTED", "CALL_CENTER_ESCALATED", "CALL_CENTER_ESCALATION_REJECTED"]
   },
   "sections": ["caseSummary", "customerContext", "complaintConversion", "workflowTimeline", "auditPanel"],
   "actions": [
     {
       "id": "escalate",
-      "label": "Escalate",
+      "label": "Request escalation",
       "type": "command",
       "target": "POST /api/staff/call-center/interactions/{interactionId}/escalations"
+    },
+    {
+      "id": "approveEscalation",
+      "label": "Approve escalation",
+      "type": "command",
+      "target": "POST /api/staff/approvals/{approvalId}/approve"
+    },
+    {
+      "id": "rejectEscalation",
+      "label": "Reject escalation",
+      "type": "command",
+      "target": "POST /api/staff/approvals/{approvalId}/reject"
     }
   ]
 }
-

@@ -13,6 +13,7 @@ import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
 import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
+import lab.banking.core.callcenter.CallCenterService
 import lab.banking.core.complaint.ComplaintCaseService
 import lab.banking.core.eod.EodClosingService
 import lab.banking.core.fds.FdsCaseService
@@ -53,6 +54,7 @@ class StaffAccessService(
     private val feePolicyService: FeePolicyService,
     private val parameterAdminService: ParameterAdminService,
     private val eodClosingService: EodClosingService,
+    private val callCenterService: CallCenterService,
     private val transactionManager: PlatformTransactionManager
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -955,6 +957,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val callCenterEscalation = if (approval.businessType == ApprovalBusinessTypes.CALL_CENTER_ESCALATION) {
+            callCenterService.applyApprovedEscalation(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalExecutionResponse(
             item = approval,
             executed = customerExecuted ||
@@ -970,7 +977,8 @@ class StaffAccessService(
                 depositRateChangeExecution != null ||
                 feePolicyChangeExecution != null ||
                 loanExecution != null ||
-                parameterChangeExecution != null,
+                parameterChangeExecution != null ||
+                callCenterEscalation != null,
             customer = customer,
             account = accountHoldExecution?.second ?: feeWaiverExecution?.second ?: transactionCorrectionExecution?.second,
             accountHoldRequest = accountHoldExecution?.first,
@@ -989,6 +997,7 @@ class StaffAccessService(
             eodClosing = null,
             loanExecution = loanExecution,
             parameterChangeRequest = parameterChangeExecution,
+            callCenterEscalation = callCenterEscalation?.escalation,
             ledgerTransaction = fdsExecution?.ledgerTransaction
                 ?: reconciliationExecution?.ledgerTransaction
                 ?: transactionCorrectionExecution?.third
@@ -1017,6 +1026,7 @@ class StaffAccessService(
             pendingApproval.businessType != ApprovalBusinessTypes.FEE_POLICY_PARAMETER_CHANGE &&
             pendingApproval.businessType != ApprovalBusinessTypes.EOD_CLOSING &&
             pendingApproval.businessType != ApprovalBusinessTypes.LOAN_EXECUTION &&
+            pendingApproval.businessType != ApprovalBusinessTypes.CALL_CENTER_ESCALATION &&
             pendingApproval.businessType !in PARAMETER_CHANGE_BUSINESS_TYPES
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
@@ -1068,6 +1078,11 @@ class StaffAccessService(
         } else {
             null
         }
+        val callCenterEscalation = if (pendingApproval.businessType == ApprovalBusinessTypes.CALL_CENTER_ESCALATION) {
+            callCenterService.rejectEscalation(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
@@ -1076,7 +1091,8 @@ class StaffAccessService(
             loanApplication = loanApplication,
             depositRateChangeRequest = depositRateChangeRequest,
             feePolicyChangeRequest = feePolicyChangeRequest,
-            parameterChangeRequest = parameterChangeRequest
+            parameterChangeRequest = parameterChangeRequest,
+            callCenterEscalation = callCenterEscalation
         )
     }
 
@@ -1166,6 +1182,7 @@ class StaffAccessService(
             ApprovalBusinessTypes.AUTHORIZATION_PARAMETER_CHANGE -> AUTHORIZATION_PARAMETER_CHANGE_CHECKER_ROLES
             ApprovalBusinessTypes.EOD_CLOSING -> EOD_CLOSING_CHECKER_ROLES
             ApprovalBusinessTypes.LOAN_EXECUTION -> LOAN_EXECUTION_CHECKER_ROLES
+            ApprovalBusinessTypes.CALL_CENTER_ESCALATION -> CALL_CENTER_ESCALATION_CHECKER_ROLES
             else -> return
         }
         requireRole(approvedByRole, allowedRoles, "checker role cannot approve $businessType")
@@ -2956,5 +2973,6 @@ class StaffAccessService(
         val OPERATIONAL_RETRY_QUEUE_STATUSES = setOf("FAILED", "DEAD_LETTER", "PENDING")
         val EOD_CLOSING_CHECKER_ROLES = setOf("OPS_MANAGER", "COMPLIANCE_MANAGER")
         val LOAN_EXECUTION_CHECKER_ROLES = setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
+        val CALL_CENTER_ESCALATION_CHECKER_ROLES = setOf("CALL_CENTER_MANAGER", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER")
     }
 }

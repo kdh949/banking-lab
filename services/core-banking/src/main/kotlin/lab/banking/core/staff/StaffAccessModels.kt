@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import lab.banking.core.aml.AmlCaseDto
 import lab.banking.core.approval.OperatorApproval
+import lab.banking.core.callcenter.CallCenterEscalationDto
 import lab.banking.core.complaint.ComplaintCaseDto
 import lab.banking.core.eod.EodClosingMonitorDto
 import lab.banking.core.fds.FdsCaseDto
@@ -327,6 +328,7 @@ data class StaffApprovalExecutionResponse(
     val eodClosing: EodClosingMonitorDto?,
     val loanExecution: LoanExecutionResponse?,
     val parameterChangeRequest: ParameterChangeRequestDto?,
+    val callCenterEscalation: CallCenterEscalationDto?,
     val ledgerTransaction: LedgerCommandResult?
 )
 
@@ -338,7 +340,8 @@ data class StaffApprovalRejectionResponse(
     val loanApplication: LoanApplicationDto?,
     val depositRateChangeRequest: DepositRateChangeRequestDto?,
     val feePolicyChangeRequest: FeePolicyChangeRequestDto?,
-    val parameterChangeRequest: ParameterChangeRequestDto?
+    val parameterChangeRequest: ParameterChangeRequestDto?,
+    val callCenterEscalation: CallCenterEscalationDto?
 )
 
 data class StaffCustomerRecord(

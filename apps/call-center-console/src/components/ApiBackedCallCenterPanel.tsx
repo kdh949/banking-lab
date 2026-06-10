@@ -276,9 +276,9 @@ export function ApiBackedCallCenterPanel() {
           syntheticOnly: true
         }
       });
-      const escalation = await managerClient.escalateCallCenterInteraction(started.item.interactionId, {
-        requestedBy: "call-manager01",
-        requestedByRole: "CALL_CENTER_MANAGER",
+      const escalationRequest = await agentClient.escalateCallCenterInteraction(started.item.interactionId, {
+        requestedBy: "call-agent01",
+        requestedByRole: "CALL_CENTER_AGENT",
         reason: "Browser CALL-106 synthetic complaint escalation smoke",
         escalationType: "COMPLAINT",
         complaintCategory: "ACCOUNT_ACCESS",
@@ -287,6 +287,16 @@ export function ApiBackedCallCenterPanel() {
           syntheticOnly: true
         }
       });
+      const approvalId = escalationRequest.approval?.approvalId ?? escalationRequest.escalation.approvalId;
+      if (!approvalId) {
+        throw new Error("Call-center escalation did not return a maker-checker approval id");
+      }
+      const approved = await managerClient.approveStaffApproval(approvalId, {
+        approvedBy: "call-manager01",
+        approvedByRole: "CALL_CENTER_MANAGER",
+        screenId: "CALL-106"
+      });
+      const approvedEscalation = approved.callCenterEscalation ?? escalationRequest.escalation;
       await agentClient.closeCallCenterInteraction(started.item.interactionId, {
         requestedBy: "call-agent01",
         requestedByRole: "CALL_CENTER_AGENT",
@@ -301,8 +311,8 @@ export function ApiBackedCallCenterPanel() {
         noteRedactionApplied: note.note.redactionApplied,
         notePiiPatternCount: note.note.piiPatternCount,
         aftercallTaskStatus: aftercall.task.status,
-        escalationType: escalation.escalation.escalationType,
-        complaintCaseId: escalation.escalation.complaintCaseId ?? "none",
+        escalationType: approvedEscalation.escalationType,
+        complaintCaseId: approvedEscalation.complaintCaseId ?? "none",
         historyCount: history.items.length
       });
     } catch (error: unknown) {
@@ -355,9 +365,9 @@ export function ApiBackedCallCenterPanel() {
           authPath: "keycloak"
         }
       });
-      const escalation = await managerClient.escalateCallCenterInteraction(started.item.interactionId, {
-        requestedBy: "call-manager01",
-        requestedByRole: "CALL_CENTER_MANAGER",
+      const escalationRequest = await agentClient.escalateCallCenterInteraction(started.item.interactionId, {
+        requestedBy: "call-agent01",
+        requestedByRole: "CALL_CENTER_AGENT",
         reason: "Browser CALL-106 live Keycloak complaint escalation smoke",
         escalationType: "COMPLAINT",
         complaintCategory: "ACCOUNT_ACCESS",
@@ -367,6 +377,16 @@ export function ApiBackedCallCenterPanel() {
           authPath: "keycloak"
         }
       });
+      const approvalId = escalationRequest.approval?.approvalId ?? escalationRequest.escalation.approvalId;
+      if (!approvalId) {
+        throw new Error("Call-center Keycloak escalation did not return a maker-checker approval id");
+      }
+      const approved = await managerClient.approveStaffApproval(approvalId, {
+        approvedBy: "call-manager01",
+        approvedByRole: "CALL_CENTER_MANAGER",
+        screenId: "CALL-106"
+      });
+      const approvedEscalation = approved.callCenterEscalation ?? escalationRequest.escalation;
       await agentClient.closeCallCenterInteraction(started.item.interactionId, {
         requestedBy: "call-agent01",
         requestedByRole: "CALL_CENTER_AGENT",
@@ -381,8 +401,8 @@ export function ApiBackedCallCenterPanel() {
         noteRedactionApplied: note.note.redactionApplied,
         notePiiPatternCount: note.note.piiPatternCount,
         aftercallTaskStatus: aftercall.task.status,
-        escalationType: escalation.escalation.escalationType,
-        complaintCaseId: escalation.escalation.complaintCaseId ?? "none",
+        escalationType: approvedEscalation.escalationType,
+        complaintCaseId: approvedEscalation.complaintCaseId ?? "none",
         historyCount: history.items.length
       });
     } catch (error: unknown) {

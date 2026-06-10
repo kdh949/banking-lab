@@ -324,7 +324,7 @@ Next engineering slices:
 - add hosted GitHub Actions run evidence or explicit blocked evidence without treating local commands as hosted green
 - refresh customer-web live route-to-API evidence for the major demo flows, and keep staff-control API evidence separate from the current iWorks terminal boundary unless a new operator route is added
 - extend springdoc/Jackson DTO schema generation beyond the core-banking ledger command, inquiry, and case workflow subsets plus payment-service, notification-service, and reporting-service, and broaden live broker-backed event-envelope coverage beyond the current contract gates
-- decide whether call-center escalation should become maker-checker, and rerun the live synthetic API/Keycloak browser wrapper before demo or release evidence refreshes
+- rerun the call-center live synthetic API/Keycloak browser wrapper before demo or release evidence refreshes, keeping the local-only Compose evidence boundary explicit
 - broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
 - extend high-contention retry or operator-visible failure policy to every future financial command path
 - add live browser evidence for broader session/device UX and authorization exception paths
