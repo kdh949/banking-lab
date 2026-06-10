@@ -900,6 +900,78 @@
   color: #d33d2d;
 }
 
+.staff-api-evidence {
+  display: grid;
+  border: 1px solid #9dbdd0;
+  background: #ffffff;
+}
+
+.staff-api-evidence__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  background: linear-gradient(180deg, #275a9a, #173e72);
+  color: #ffffff;
+  gap: 8px;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.staff-api-evidence__header span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+}
+
+.staff-api-evidence__header .iworks-icon {
+  font-size: 17px;
+}
+
+.staff-api-evidence__header button {
+  min-width: 42px;
+  height: 22px;
+  border: 1px solid #c0d3e9;
+  border-radius: 3px;
+  background: #f6fbff;
+  color: #173e72;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.staff-api-evidence dl {
+  display: grid;
+  margin: 0;
+  padding: 8px;
+  gap: 4px;
+}
+
+.staff-api-evidence dl div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.staff-api-evidence dt {
+  color: #4f5965;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.staff-api-evidence dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #0b1c30;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .progress-row {
   display: grid;
   grid-template-columns: 72px 1fr 36px;

@@ -75,6 +75,8 @@ const customerWorkflowRoutes = await read("apps/customer-web/src/components/work
 const staffE2eSpec = await read("apps/staff-terminal/e2e/integrated-terminal.spec.ts");
 const staffBoundaryScript = await read("scripts/check-integrated-terminal-boundary.ts");
 const staffPackage = await read("apps/staff-terminal/package.json");
+const staffApiEvidencePanel = await read("apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx");
+const staffApiComposeSmoke = await read("scripts/run-staff-terminal-api-e2e-compose-smoke.sh");
 const customerAppFiles = (await listFiles("apps/customer-web/src/app")).sort();
 const staffAppFiles = (await listFiles("apps/staff-terminal/src/app")).sort();
 
@@ -195,6 +197,9 @@ if (JSON.stringify(staffAppFiles) !== JSON.stringify(expectedStaffAppFiles)) {
 for (const marker of [
   "IntegratedTerminalApp",
   "/api/terminal-status",
+  "staff-terminal Spring API evidence smoke",
+  "staff-terminal-api-evidence",
+  "SYN-CUS-001",
   "clientIp",
   "serverTimeIso",
   "iWorks integrated terminal"
@@ -209,14 +214,42 @@ for (const marker of [
   "apps/staff-terminal/src/app/customers",
   "apps/staff-terminal/src/app/tx",
   "apps/staff-terminal/src/app/workflows",
-  "@banking-lab/api-client",
-  "@banking-lab/auth-client"
+  "StaffApiEvidencePanel",
+  "staffCustomerDetail",
+  "staffApprovals"
 ]) {
   requireIncludes(staffBoundaryScript, marker, `integrated terminal boundary script is missing marker: ${marker}`, errors);
 }
 
-requireNotIncludes(staffPackage, "@banking-lab/api-client", "staff-terminal package must not depend on api-client while it is the iWorks shell", errors);
-requireNotIncludes(staffPackage, "@banking-lab/auth-client", "staff-terminal package must not depend on auth-client while it is the iWorks shell", errors);
+for (const marker of [
+  "@banking-lab/api-client",
+  "@banking-lab/auth-client"
+]) {
+  requireIncludes(staffPackage, marker, `staff-terminal package is missing bounded API evidence dependency: ${marker}`, errors);
+}
+
+for (const marker of [
+  "NEXT_PUBLIC_BANKING_API_BASE_URL",
+  "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED",
+  "staffCustomerDetail",
+  "staffApprovals",
+  "createSimulatorBearerToken",
+  "Browser staff-terminal Spring API evidence smoke",
+  "core-banking-api",
+  "SYN-CUS-001"
+]) {
+  requireIncludes(staffApiEvidencePanel, marker, `StaffApiEvidencePanel is missing API evidence marker: ${marker}`, errors);
+}
+
+for (const marker of [
+  "BANKING_LAB_SECURITY_ISSUER",
+  "BANKING_LAB_SECURITY_AUDIENCE",
+  "core-banking-api",
+  "Compose%20staff-terminal%20API%20preflight",
+  "Spring staff API evidence"
+]) {
+  requireIncludes(staffApiComposeSmoke, marker, `staff-terminal API compose smoke is missing marker: ${marker}`, errors);
+}
 
 if (errors.length > 0) {
   console.error("Live route API evidence check failed");
@@ -230,7 +263,7 @@ const evidence: EvidenceDocument = {
   reviewDate: "2026-06-10",
   syntheticOnly: true,
   status: "partial",
-  statusReason: "customer-web has route-backed live API tests gated by environment; staff-terminal live route-to-API execution is blocked by the current iWorks integrated-terminal boundary.",
+  statusReason: "customer-web and staff-terminal have route-backed live API tests gated by environment; skipped Playwright remains non-evidence.",
   skippedPlaywrightIsPassEvidence: false,
   applications: [
     {
@@ -301,32 +334,43 @@ const evidence: EvidenceDocument = {
     },
     {
       app: "staff-terminal",
-      status: "blocked-by-integrated-terminal-boundary",
-      liveRunEvidence: "not-present",
+      status: "route-backed-live-gated",
+      liveRunEvidence: "source-present-compose-smoke-script-present",
       routes: [
         "/",
         "/api/terminal-status"
       ],
-      requiredEnvironment: [],
+      requiredEnvironment: [
+        "BANKING_LAB_E2E_API_BASE_URL",
+        "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED"
+      ],
       playwrightSpecs: [
         "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
       ],
       apiMethods: [
-        "terminalStatus"
+        "terminalStatus",
+        "staffCustomerDetail",
+        "staffApprovals"
       ],
       states: [
         "integrated-terminal",
-        "backend-control-covered"
+        "route-backed-live-gated",
+        "reason-required audit",
+        "masked staff customer read"
       ],
       controls: [
         "iWorks shell rendering",
         "terminal status route",
-        "source boundary excludes retired staff API-backed routes",
-        "staff Spring control APIs remain backend/security covered outside the current frontend"
+        "source boundary excludes retired staff route set",
+        "bounded Spring API evidence panel",
+        "simulator token opt-in required",
+        "reason-required staff customer detail",
+        "approval inbox read through Spring API"
       ],
       notes: [
-        "Current staff-terminal source intentionally has no accounts, approvals, audit, customer, transaction, or workflow app routes.",
-        "Do not mark staff-terminal live route-to-API execution as passed until a new operator route or call-center workflow is implemented and exercised."
+        "Current staff-terminal keeps the iWorks shell and does not restore the retired accounts, approvals, audit, customer, transaction, or workflow app route set.",
+        "The bounded evidence panel is the only staff-terminal frontend Spring API caller in this slice.",
+        "Use npm run test:staff-terminal:api-e2e-compose to produce local live route-to-API evidence."
       ]
     }
   ],
@@ -349,7 +393,12 @@ const evidence: EvidenceDocument = {
     {
       id: "staff-terminal-boundary",
       command: "npm run integrated-terminal:boundary-check",
-      purpose: "Confirm staff-terminal remains the current iWorks integrated shell and does not silently claim retired staff API routes."
+      purpose: "Confirm staff-terminal remains the current iWorks integrated shell and exposes only the bounded Spring API evidence panel, not the retired staff route set."
+    },
+    {
+      id: "staff-terminal-live-api",
+      command: "npm run test:staff-terminal:api-e2e-compose",
+      purpose: "Execute the iWorks shell plus bounded staff customer detail and approval inbox Spring API evidence smoke against disposable Compose."
     }
   ],
   checks: [
@@ -361,7 +410,7 @@ const evidence: EvidenceDocument = {
     {
       id: "staff-terminal-no-overclaim",
       status: "pass",
-      details: "Staff-terminal source is limited to the integrated shell and terminal-status route; staff live route/API execution remains an explicit gap."
+      details: "Staff-terminal source keeps the iWorks shell boundary and limits frontend Spring API execution to StaffApiEvidencePanel."
     },
     {
       id: "synthetic-only-boundary",

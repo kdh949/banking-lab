@@ -137,9 +137,10 @@ This workstream should proceed in small, commit-sized branches:
   Actions actually starts and finishes runner jobs.
 - Refresh customer-web live route evidence against a disposable synthetic stack
   before demo recording.
-- Treat the current staff-terminal as an integrated-terminal boundary; keep
-  staff-control API evidence in backend/control rows unless a new operator UI
-  route is intentionally added.
+- Treat the current staff-terminal as an integrated-terminal boundary with a
+  bounded Spring API evidence panel; keep broader staff-control command
+  evidence in backend/control rows unless a dedicated operator workflow is
+  intentionally added.
 - Broaden DTO diffing and runtime envelope validation without weakening the
   existing structural gates.
 - Rerun call-center live API/Keycloak evidence before demo or release evidence

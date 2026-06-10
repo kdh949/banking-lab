@@ -8,7 +8,6 @@ const allowedStatuses = [
   "backend-control-covered",
   "browser-e2e-backed",
   "complete",
-  "integrated-terminal",
   "live-keycloak-backed",
   "manifest-only",
   "missing",
@@ -52,7 +51,6 @@ test("implementation coverage matrix declares every status it uses", async () =>
     "api-backed-read",
     "backend-control-covered",
     "complete",
-    "integrated-terminal",
     "live-keycloak-backed",
     "partial",
     "route-backed-live-gated"
