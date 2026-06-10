@@ -74,7 +74,7 @@ const services: ServiceConfig[] = [
     generatedPath: "docs/test-evidence/generated/openapi/reporting-service.generated.json"
   }
 ];
-const dtoSchemaServiceIds = new Set<ServiceId>(["payment-service", "reporting-service"]);
+const dtoSchemaServiceIds = new Set<ServiceId>(["payment-service", "notification-service", "reporting-service"]);
 
 const errors: string[] = [];
 const snapshots: GeneratedOpenApiSnapshot[] = [];
