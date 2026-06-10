@@ -134,5 +134,936 @@
       "responseDto": "NotificationPreferenceDto"
     }
   ],
-  "dtoSchemas": []
+  "dtoSchemas": [
+    {
+      "name": "ApproveNotificationTemplateChangeRequest",
+      "kind": "object",
+      "required": [
+        "approvedBy",
+        "approvedByRole",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "approvedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvedByRole",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ConsumeNotificationEventRequest",
+      "kind": "object",
+      "required": [
+        "sourceEventId",
+        "eventType",
+        "recipientId",
+        "payload"
+      ],
+      "properties": [
+        {
+          "name": "sourceEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "recipientId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "payload",
+          "kotlinType": "Map<String, Any?>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CreateNotificationTemplateChangeRequest",
+      "kind": "object",
+      "required": [
+        "eventType",
+        "channel",
+        "version",
+        "bodyTemplate",
+        "providerKind",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "version",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "bodyTemplate",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "providerKind",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "MarkNotificationDeliveredRequest",
+      "kind": "object",
+      "required": [
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationDeliveryDto",
+      "kind": "object",
+      "required": [
+        "deliveryRequestId",
+        "sourceEventId",
+        "eventType",
+        "recipientId",
+        "channel",
+        "providerKind",
+        "status",
+        "maskedMessage",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "deliveryRequestId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "recipientId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "providerKind",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "NotificationDeliveryStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "NotificationDeliveryStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "maskedMessage",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationDeliveryResponse",
+      "kind": "object",
+      "required": [
+        "items",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<NotificationDeliveryDto>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationDeliveryStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "PENDING",
+        "DELIVERED",
+        "FAILED",
+        "DEAD_LETTER"
+      ]
+    },
+    {
+      "name": "NotificationPreferenceDto",
+      "kind": "object",
+      "required": [
+        "preferenceId",
+        "recipientId",
+        "channel",
+        "eventType",
+        "enabled",
+        "requestedBy",
+        "reason",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "preferenceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "recipientId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "enabled",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationTemplateChangeRequestDto",
+      "kind": "object",
+      "required": [
+        "changeRequestId",
+        "eventType",
+        "channel",
+        "requestedVersion",
+        "bodyTemplate",
+        "providerKind",
+        "status",
+        "requestedBy",
+        "requestReason",
+        "requestedAt",
+        "workflowInstanceId",
+        "workflowStatus",
+        "workflowTimeline",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "changeRequestId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedVersion",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "bodyTemplate",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "providerKind",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "NotificationTemplateChangeStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "NotificationTemplateChangeStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestReason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reviewedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reviewedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reviewedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reviewReason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvedTemplateId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "workflowInstanceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "workflowStatus",
+          "kotlinType": "NotificationWorkflowStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "NotificationWorkflowStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "workflowTimeline",
+          "kotlinType": "List<NotificationWorkflowTimelineEntryDto>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationTemplateChangeStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    {
+      "name": "NotificationTemplateDto",
+      "kind": "object",
+      "required": [
+        "templateId",
+        "eventType",
+        "channel",
+        "version",
+        "status",
+        "bodyTemplate",
+        "providerKind",
+        "syntheticOnly",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "templateId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "version",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "bodyTemplate",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "providerKind",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "NotificationWorkflowStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "PENDING_REVIEW",
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    {
+      "name": "RecordNotificationFailureRequest",
+      "kind": "object",
+      "required": [
+        "errorMessage",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "errorMessage",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "deadLetterThreshold",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "RejectNotificationTemplateChangeRequest",
+      "kind": "object",
+      "required": [
+        "rejectedBy",
+        "rejectedByRole",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "rejectedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "rejectedByRole",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "UpsertCustomerNotificationPreferenceRequest",
+      "kind": "object",
+      "required": [
+        "channel",
+        "enabled"
+      ],
+      "properties": [
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "enabled",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "UpsertNotificationPreferenceRequest",
+      "kind": "object",
+      "required": [
+        "recipientId",
+        "channel",
+        "enabled",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "recipientId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "channel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "enabled",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    }
+  ]
 }

@@ -42,6 +42,18 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.match(paymentContract, /PaymentInstruction:/);
   assert.match(paymentContract, /enum: \[PENDING, APPROVED, REJECTED\]/);
 
+  const notification = JSON.parse(await readFile("docs/test-evidence/generated/openapi/notification-service.generated.json", "utf8"));
+  const notificationSchemaNames = new Set(notification.dtoSchemas.map((schema) => schema.name));
+  assert.ok(notificationSchemaNames.has("ConsumeNotificationEventRequest"));
+  assert.ok(notificationSchemaNames.has("NotificationDeliveryDto"));
+  assert.ok(notificationSchemaNames.has("NotificationTemplateChangeRequestDto"));
+  assert.ok(notificationSchemaNames.has("NotificationWorkflowStatus"));
+
+  const notificationContract = await readFile("contracts/openapi/notification-service.yaml", "utf8");
+  assert.doesNotMatch(notificationContract, /AnyJsonResponse/);
+  assert.match(notificationContract, /NotificationTemplateChangeRequest:/);
+  assert.match(notificationContract, /enum: \[PENDING_REVIEW, APPROVED, REJECTED\]/);
+
   const reporting = JSON.parse(await readFile("docs/test-evidence/generated/openapi/reporting-service.generated.json", "utf8"));
   const reportingSchemaNames = new Set(reporting.dtoSchemas.map((schema) => schema.name));
   assert.ok(reportingSchemaNames.has("GenerateReportCommand"));
