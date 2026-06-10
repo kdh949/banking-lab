@@ -1,0 +1,150 @@
+{
+  "reviewDate": "2026-06-11",
+  "syntheticOnly": true,
+  "issue": "https://github.com/kdh949/banking-lab/issues/86",
+  "overallStatus": "not-complete",
+  "statusCounts": {
+    "pass": 9,
+    "partial": 2,
+    "blocked": 1,
+    "failed": 0
+  },
+  "requireCompleteCommand": "npm run portfolio:completion-audit -- --require-complete",
+  "requirements": [
+    {
+      "id": "documentation-status-alignment",
+      "planCondition": "README, coverage matrix, and evidence/status documents have no stale status mismatch.",
+      "status": "pass",
+      "evidence": [
+        "README.md",
+        "docs/implementation-coverage-matrix.md",
+        "docs/test-evidence/evidence-gap-report.md"
+      ],
+      "finding": "Status vocabulary and remaining evidence slices are explicitly documented without production-readiness claims.",
+      "nextStep": "Keep README, coverage matrix, and evidence gap report updated after every hardening PR."
+    },
+    {
+      "id": "hosted-ci-evidence",
+      "planCondition": "Hosted GitHub Actions is green or the external blocker is clearly documented.",
+      "status": "blocked",
+      "evidence": [
+        "docs/test-evidence/ci-hosted-run-status.md",
+        "https://github.com/kdh949/banking-lab/issues/83"
+      ],
+      "finding": "Hosted CI remains blocked before runner startup and is separated from local fallback evidence.",
+      "nextStep": "Resolve #83, rerun hosted CI, and replace blocked status only after jobs execute runner steps."
+    },
+    {
+      "id": "live-route-api-execution",
+      "planCondition": "Customer-web and staff-terminal live API route execution evidence exists.",
+      "status": "partial",
+      "evidence": [
+        "docs/test-evidence/live-route-api-execution.md",
+        "docs/test-evidence/generated/live-route-api-execution.json"
+      ],
+      "finding": "Evidence exists, but customer/staff route execution is still environment-gated and partial.",
+      "nextStep": "Rerun customer-web and staff-terminal live API/Keycloak smokes against a fresh synthetic stack."
+    },
+    {
+      "id": "openapi-dto-diff-gate",
+      "planCondition": "OpenAPI DTO-level diffing gate exists.",
+      "status": "pass",
+      "evidence": [
+        "scripts/check-openapi-generated-diff.ts",
+        "docs/test-evidence/generated/openapi/*.generated.json",
+        "docs/test-evidence/contract-runtime-evidence-boundary.md"
+      ],
+      "finding": "Kotlin controller source diffing and generated DTO snapshots are wired, with documented core-banking scope limits.",
+      "nextStep": "Extend generated DTO parity to the remaining core-banking API subsets."
+    },
+    {
+      "id": "event-envelope-runtime-gate",
+      "planCondition": "Event envelope runtime validation gate exists.",
+      "status": "pass",
+      "evidence": [
+        "scripts/validate-event-envelope-runtime.ts",
+        "docs/test-evidence/generated/event-envelope-runtime-validation.json",
+        "docs/test-evidence/contract-runtime-evidence-boundary.md"
+      ],
+      "finding": "Runtime envelope fixture validation and source-marker checks are wired without claiming exhaustive live broker coverage.",
+      "nextStep": "Broaden live broker producer/consumer envelope validation in service integration tests."
+    },
+    {
+      "id": "call-center-api-backed-workflow",
+      "planCondition": "Customer-service call-center console is API-backed.",
+      "status": "pass",
+      "evidence": [
+        "docs/test-evidence/call-center-console.md",
+        "docs/test-evidence/generated/call-center-console.json",
+        "apps/call-center-console"
+      ],
+      "finding": "Dedicated call-center shell, Spring API routes, API client, and local Keycloak evidence are documented.",
+      "nextStep": "Keep the call-center live Compose wrapper fresh before demo or release evidence."
+    },
+    {
+      "id": "call-center-controls",
+      "planCondition": "Call-center history, notes, aftercall, escalation, and audit are implemented.",
+      "status": "pass",
+      "evidence": [
+        "docs/test-evidence/call-center-console.md",
+        "services/core-banking/src/main/kotlin"
+      ],
+      "finding": "Call-center notes are redacted, history and aftercall tasks are present, and escalation is maker-checker protected.",
+      "nextStep": "Add targeted failure-state tests only when they close a demo or control gap."
+    },
+    {
+      "id": "synthetic-only-boundary",
+      "planCondition": "All new features preserve the synthetic-only boundary.",
+      "status": "pass",
+      "evidence": [
+        "docs/test-evidence/final-hardening-scorecard.md",
+        "docs/demo-scenarios/demo-video-script.md"
+      ],
+      "finding": "Final portfolio evidence explicitly excludes real money, real PII, real providers, and real financial networks.",
+      "nextStep": "Keep real-provider adapters and real data out of this repository."
+    },
+    {
+      "id": "high-risk-control-consistency",
+      "planCondition": "New high-risk commands have reason, authorization, maker-checker, audit, and structured error controls.",
+      "status": "pass",
+      "evidence": [
+        "docs/implementation-coverage-matrix.md",
+        "docs/test-evidence/final-hardening-scorecard.md"
+      ],
+      "finding": "High-risk controls are represented across backend controls and call-center escalation evidence.",
+      "nextStep": "Keep adding control evidence with every new high-risk command."
+    },
+    {
+      "id": "final-scorecard-demo-current",
+      "planCondition": "Final scorecard and demo script are current.",
+      "status": "pass",
+      "evidence": [
+        "docs/test-evidence/final-hardening-scorecard.md",
+        "docs/demo-scenarios/demo-video-script.md"
+      ],
+      "finding": "Final scorecard and demo script disclose hosted CI, call-center, and contract/runtime boundaries.",
+      "nextStep": "Refresh both documents after each portfolio-hardening merge."
+    },
+    {
+      "id": "final-command-refresh",
+      "planCondition": "Required final commands pass or have explicit blocked evidence.",
+      "status": "partial",
+      "evidence": [
+        "docs/test-evidence/final-hardening-scorecard.md"
+      ],
+      "finding": "Final command list is documented, but this audit does not prove all commands were freshly rerun in the current branch.",
+      "nextStep": "Run the full local refresh list and record command results in the next release evidence pack."
+    },
+    {
+      "id": "limitations-preserved",
+      "planCondition": "Remaining limitations are documented instead of deleted.",
+      "status": "pass",
+      "evidence": [
+        "docs/test-evidence/final-hardening-scorecard.md",
+        "docs/test-evidence/evidence-gap-report.md"
+      ],
+      "finding": "Remaining risks and evidence-quality limits are preserved in the final portfolio documents.",
+      "nextStep": "Keep limitation rows specific and update them when evidence improves."
+    }
+  ]
+}

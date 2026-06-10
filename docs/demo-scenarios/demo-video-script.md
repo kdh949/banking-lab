@@ -201,6 +201,7 @@ Open:
 - `docs/test-evidence/contract-validation-hardening.md`
 - `docs/test-evidence/contract-runtime-evidence-boundary.md`
 - `docs/test-evidence/formal-ledger-verification.md`
+- `docs/test-evidence/portfolio-completion-audit.md`
 
 Show:
 
@@ -209,10 +210,13 @@ Show:
 - OpenAPI/AsyncAPI gates
 - runtime event envelope fixture/source-marker gate
 - formal ledger/idempotency evidence
+- PLAN completion audit status: `not-complete`, with hosted CI blocked and live route/final-command refresh rows still partial
 
 Narration:
 
 The portfolio separates local pass evidence from hosted CI. GitHub Actions is currently blocked before runner startup by an external runner allocation or billing/spending-limit issue. PR #82 and the post-merge main push both show `runner_id: 0` and `steps: 0`, so #83 tracks the infrastructure blocker and the status remains blocked, not green.
+
+`npm run portfolio:completion-audit` is the current PLAN-level audit. It is separate from the older Node retirement gate and must remain `not-complete` until hosted CI and the remaining partial evidence rows are resolved.
 
 ## Closing
 
