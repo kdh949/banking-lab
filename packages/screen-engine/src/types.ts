@@ -3,6 +3,7 @@ export type ScreenType = "INQUIRY" | "COMMAND" | "CASE" | "PARAMETER" | "DASHBOA
 export type ChannelAppId =
   | "admin-console"
   | "audit-console"
+  | "call-center-console"
   | "complaint-portal"
   | "customer-web"
   | "fds-aml-console"
@@ -51,6 +52,11 @@ export type ScreenManifest = {
   };
   resultTable?: {
     columns?: string[];
+  };
+  validation?: {
+    syntheticOnly?: boolean;
+    redactionRequired?: boolean;
+    rawNoteAuditCopyForbidden?: boolean;
   };
   fields?: ManifestField[];
   parameter?: {

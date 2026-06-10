@@ -4,6 +4,7 @@ export type ChannelAppId =
   | "customer-web"
   | "staff-terminal"
   | "complaint-portal"
+  | "call-center-console"
   | "ops-console"
   | "audit-console"
   | "fds-aml-console"

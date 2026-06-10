@@ -348,6 +348,46 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   assert.equal(evidenceManifest.workflow.name, "ledgerProjectionRebuildWorkflow");
 });
 
+test("call-center-console Next workspace renders manifests and API-backed workflow smoke", async () => {
+  const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+  const appPackage = JSON.parse(await readFile("apps/call-center-console/package.json", "utf8"));
+  const page = await readFile("apps/call-center-console/src/app/page.tsx", "utf8");
+  const panel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
+  const loader = await readFile("apps/call-center-console/src/lib/manifestLoader.ts", "utf8");
+  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const noteManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-103.note-entry.json", "utf8"));
+  const escalationManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-106.escalation.json", "utf8"));
+
+  assert.equal(appPackage.name, "@banking-lab/call-center-console");
+  assert.match(appPackage.scripts.dev, /3008/);
+  assert.equal(rootPackage.scripts["next:call-center-console:typecheck"], "npm --workspace @banking-lab/call-center-console run typecheck");
+  assert.match(page, /loadChannelManifests/);
+  assert.match(page, /ApiBackedCallCenterPanel/);
+  assert.match(page, /call-center-console/);
+  assert.match(panel, /NEXT_PUBLIC_BANKING_API_BASE_URL/);
+  assert.match(panel, /data-testid="api-backed-call-center-search"/);
+  assert.match(panel, /data-testid="api-backed-call-center-workflow"/);
+  assert.match(panel, /searchCallCenterCustomers/);
+  assert.match(panel, /startCallCenterInteraction/);
+  assert.match(panel, /addCallCenterNote/);
+  assert.match(panel, /createCallCenterAftercallTask/);
+  assert.match(panel, /escalateCallCenterInteraction/);
+  assert.match(panel, /closeCallCenterInteraction/);
+  assert.match(panel, /callCenterCustomerHistory/);
+  assert.match(panel, /createSimulatorBearerToken/);
+  assert.match(panel, /CALL_CENTER_AGENT/);
+  assert.match(panel, /CALL_CENTER_MANAGER/);
+  assert.match(loader, /screen-manifests/);
+  assert.match(loader, /call-center-console/);
+  assert.match(loader, /manifest\.app === appId/);
+  assert.match(client, /searchCallCenterCustomers/);
+  assert.equal(noteManifest.validation.redactionRequired, true);
+  assert.equal(noteManifest.validation.rawNoteAuditCopyForbidden, true);
+  assert.equal(escalationManifest.audit.reasonRequired, true);
+  assert.equal(await exists("apps/call-center-console/public/index.html"), false);
+  assert.equal(await exists("runtime/synthetic-reference/apps/call-center-console/public/index.html"), false);
+});
+
 test("fds-aml-console exposes generated analytics evidence through the Spring analytics API", async () => {
   const page = await readFile("apps/fds-aml-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/fds-aml-console/src/components/AnalyticsEvidencePanel.tsx", "utf8");
@@ -373,6 +413,7 @@ test("target Next app directories do not contain legacy static shells", async ()
   const apps = [
     "admin-console",
     "audit-console",
+    "call-center-console",
     "complaint-portal",
     "customer-web",
     "fds-aml-console",

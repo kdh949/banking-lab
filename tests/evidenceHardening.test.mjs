@@ -97,15 +97,15 @@ test("final hardening scorecard and demo script disclose limits without overclai
     assert.match(scorecard, new RegExp(requiredArea.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 
-  assert.match(scorecard, /Call-center 상담 전산 \| 5\/10 \| partial/);
+  assert.match(scorecard, /Call-center 상담 전산 \| 6\/10 \| partial/);
   assert.match(scorecard, /Hosted CI \| 3\/10 \| blocked/);
   assert.match(scorecard, /not as green/);
   assert.match(scorecard, /no real customer money, real PII, real KYC\/AML provider/);
   assert.doesNotMatch(scorecard, /production-ready|real banking ready|actual payment network ready/i);
 
   assert.match(demo, /Scene 12: Call-Center Workflow Boundary/);
-  assert.match(demo, /API-backed first slice/);
-  assert.match(demo, /not demonstrated as complete/);
+  assert.match(demo, /dedicated Next\.js call-center shell/);
+  assert.match(demo, /live Keycloak\/JWKS propagation have not been recorded/);
   assert.match(demo, /GitHub Actions is currently blocked before runner startup/);
   assert.doesNotMatch(demo, /PostgreSQL backup\/restore drill gap remains/);
 });
