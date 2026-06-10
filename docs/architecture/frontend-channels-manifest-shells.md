@@ -51,7 +51,7 @@ The FDS/AML console exposes held-transfer review, release/block approval, AML ST
 
 The admin console exposes platform control status and privileged security-policy parameter manifests, including maker-checker approval metadata for passkey recovery and simulator-token policy changes.
 
-The call-center console exposes `CALL-101..CALL-106` customer search, interaction detail, redacted note entry, aftercall task, history, and escalation manifests. Its backend workflow and manifest browser smoke are covered, while live full-stack API and Keycloak/JWKS browser evidence remain explicitly open.
+The call-center console exposes `CALL-101..CALL-106` customer search, interaction detail, redacted note entry, aftercall task, history, and escalation manifests. Its backend workflow, manifest browser smoke, Keycloak realm client, token exchange route, and env-gated Keycloak smoke path are covered structurally, while live full-stack API and Keycloak/JWKS browser execution evidence remain explicitly open.
 
 ## Coordinator Integration
 
@@ -71,7 +71,8 @@ The first API-backed slice covered read-model calls:
 - `audit-console` calls the Spring audit API and renders hash-chain validity plus `AUD-SYN-SEED-001`.
 - `fds-aml-console` calls the Spring FDS and AML APIs and renders `FDS-SYN-001` and `AML-SYN-001`.
 - `admin-console` calls the Spring admin platform API and renders synthetic-only, migration-target, and Node reference boundary controls.
-- `call-center-console` can call the Spring call-center APIs for masked search, interaction start/detail, redacted note entry, aftercall task, escalation, close, and history when a seeded synthetic API URL is configured; the live API/Keycloak browser run is still unrecorded.
+- `call-center-console` can call the Spring call-center APIs for masked search, interaction start/detail, redacted note entry, aftercall task, escalation, close, and history when a seeded synthetic API URL is configured.
+- `call-center-console` also has an Authorization Code + PKCE token exchange route and an env-gated Playwright smoke for `call-agent01` and `call-manager01`; the live API/Keycloak browser run is still unrecorded.
 - Shared packages `@banking-lab/api-client` and `@banking-lab/auth-client` isolate API/auth concerns from the App Router page files.
 - The broad FDS-AML smoke still keeps simulator-token smoke coverage for local repeatability, and customer-web now has live Keycloak Authorization Code + PKCE smoke for all current API-backed customer paths through the Next BFF token exchange route.
 - Staff-terminal also has live Keycloak Authorization Code + PKCE smoke for masked lookup and branch-maker/manager-checker customer-change approval.
@@ -80,7 +81,7 @@ The first API-backed slice covered read-model calls:
 - Audit-console also has live Keycloak Authorization Code + PKCE smoke for auditor hash-chain read-model evidence through its Next BFF token exchange route.
 - FDS/AML-console also has live Keycloak Authorization Code + PKCE smoke for risk read-model access, FDS release/block approval, AML closure approval, and duplicate workflow failure-state rendering through its Next BFF token exchange route.
 - Admin-console also has live Keycloak Authorization Code + PKCE smoke for `security-admin01` platform-control summary access through its Next BFF token exchange route.
-- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, FDS/AML-console, admin-console, and call-center-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review. Call-center live API/Keycloak evidence is a separate remaining gap.
+- These customer-web, staff-terminal, complaint-portal, ops-console, audit-console, FDS/AML-console, admin-console, and call-center-console smokes include a synthetic staff-terminal WebAuthn required-action smoke plus local WebAuthn policy/recovery role segregation evidence, but they are not a substitute for non-synthetic passkey operations, operational failure drills, or final retirement review. Call-center live API/Keycloak execution evidence remains a separate gap.
 
 Command-oriented browser smoke now runs in `customer-web`, `staff-terminal`, `complaint-portal`, `fds-aml-console`, and `ops-console`:
 

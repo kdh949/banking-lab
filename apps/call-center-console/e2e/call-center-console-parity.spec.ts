@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,17 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const app = "call-center-console";
 const baseUrl = "http://localhost:3008";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const keycloakBaseUrl = process.env.BANKING_LAB_E2E_KEYCLOAK_BASE_URL ?? "";
+
+async function signInWithKeycloak(page: Page, username: string, password: string) {
+  const restartLogin = page.getByRole("button", { name: "Restart login" });
+  if (await restartLogin.isVisible().catch(() => false)) {
+    await restartLogin.click();
+  }
+  await page.locator("input[name='username']").fill(username);
+  await page.locator("input[name='password']").fill(password);
+  await page.getByRole("button", { name: "Sign In" }).click();
+}
 
 function manifests() {
   const dir = path.join(repoRoot, "screen-manifests", app);
@@ -41,10 +53,11 @@ test("call-center console shell has no app-router one-off business screens", asy
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
-  expect(files).toEqual(["globals.css", "layout.tsx", "page.tsx"]);
+  expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
   expect(pageSource).toContain("loadChannelManifests");
   expect(pageSource).not.toContain("fetch(\"/api/staff/call-center");
   expect(pageSource).not.toContain("fetch('/api/staff/call-center");
+  expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
 });
 
 test("call-center console executes Spring API-backed synthetic workflow when configured", async ({ page }) => {
@@ -63,4 +76,33 @@ test("call-center console executes Spring API-backed synthetic workflow when con
   await expect(workflowPanel).toContainText("CLOSED");
   await expect(workflowPanel).toContainText("applied");
   await expect(workflowPanel).toContainText("COMPLAINT CMP-");
+});
+
+test("call-center console propagates live Keycloak agent and manager tokens when configured", async ({ page }) => {
+  test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live call-center Keycloak browser smoke.");
+
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "Sign in call-center agent with Keycloak" }).click();
+  await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
+  await signInWithKeycloak(page, "call-agent01", "call-agent01-pass");
+
+  const panel = page.getByTestId("api-backed-call-center-keycloak-login");
+  await expect(panel).toContainText("Keycloak call-center agent loaded", { timeout: 20_000 });
+  await expect(panel).toContainText("Bearer");
+  await expect(panel).toContainText("SYN-CUS");
+
+  await page.getByRole("button", { name: "Sign in call-center manager with Keycloak" }).click();
+  await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
+  await signInWithKeycloak(page, "call-manager01", "call-manager01-pass");
+
+  await expect(panel).toContainText("Keycloak call-center manager loaded", { timeout: 20_000 });
+  await expect(panel).toContainText("call-manager01");
+
+  await page.getByRole("button", { name: "Run Keycloak call-center workflow smoke" }).click();
+  await expect(panel).toContainText("Keycloak call-center workflow completed", { timeout: 20_000 });
+  await expect(panel).toContainText("CALL-");
+  await expect(panel).toContainText("CLOSED");
+  await expect(panel).toContainText("applied");
+  await expect(panel).toContainText("COMPLAINT CMP-");
 });

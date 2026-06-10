@@ -31,7 +31,13 @@
     ],
     "nextShell": "@banking-lab/call-center-console",
     "nextPort": 3008,
-    "browserSpec": "apps/call-center-console/e2e/call-center-console-parity.spec.ts"
+    "browserSpec": "apps/call-center-console/e2e/call-center-console-parity.spec.ts",
+    "keycloakClient": "call-center-console",
+    "keycloakUsers": [
+      "call-agent01",
+      "call-manager01"
+    ],
+    "keycloakTokenRoute": "apps/call-center-console/src/app/api/auth/keycloak-token/route.ts"
   },
   "controls": {
     "reasonRequired": true,
@@ -76,13 +82,22 @@
       "status": "pass"
     },
     {
+      "command": "node --test tests/callCenterConsole.test.mjs tests/nextScaffold.test.mjs",
+      "status": "pass"
+    },
+    {
+      "command": "scripts/run-core-banking-tests.sh :services:core-banking:test --tests lab.banking.core.security.KeycloakRealmPolicyTest",
+      "status": "pass_after_sandbox_escalation",
+      "sandboxFailure": "Gradle file-lock socket Operation not permitted"
+    },
+    {
       "command": "npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts",
-      "status": "pass_with_api_live_test_skipped",
-      "skipReason": "BANKING_LAB_E2E_API_BASE_URL was not set"
+      "status": "pass_with_api_and_keycloak_live_tests_skipped",
+      "skipReason": "BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL were not set"
     }
   ],
   "remainingLimits": [
-    "No live Keycloak/JWKS propagation evidence for call-center routes yet",
+    "Keycloak client, token exchange route, and env-gated browser smoke are implemented, but no live Keycloak/JWKS execution evidence has been recorded yet",
     "No live full-stack call-center browser run has been recorded yet",
     "No real telephony, call recording, PII, KYC/AML provider, payment network, or regulator integration"
   ]

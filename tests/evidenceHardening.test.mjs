@@ -105,7 +105,8 @@ test("final hardening scorecard and demo script disclose limits without overclai
 
   assert.match(demo, /Scene 12: Call-Center Workflow Boundary/);
   assert.match(demo, /dedicated Next\.js call-center shell/);
-  assert.match(demo, /live Keycloak\/JWKS propagation have not been recorded/);
+  assert.match(demo, /Keycloak-ready browser path/);
+  assert.match(demo, /live Keycloak\/JWKS execution have not been recorded/);
   assert.match(demo, /GitHub Actions is currently blocked before runner startup/);
   assert.doesNotMatch(demo, /PostgreSQL backup\/restore drill gap remains/);
 });

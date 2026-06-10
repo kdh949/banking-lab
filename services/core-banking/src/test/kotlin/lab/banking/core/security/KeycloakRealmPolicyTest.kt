@@ -33,6 +33,8 @@ class KeycloakRealmPolicyTest {
         assertTrue(roles.contains("PAYMENT_SERVICE"))
         assertTrue(roles.contains("NOTIFICATION_SERVICE"))
         assertTrue(roles.contains("REPORTING_ANALYST"))
+        assertTrue(roles.contains("CALL_CENTER_AGENT"))
+        assertTrue(roles.contains("CALL_CENTER_MANAGER"))
 
         val users = listMap(realm["users"])
         val paymentServiceAccount = users.single { it["username"] == "service-account-payment-service-api" }
@@ -57,10 +59,21 @@ class KeycloakRealmPolicyTest {
         assertFalse(recoveryRoles.contains("BRANCH_STAFF"))
         assertFalse(recoveryRoles.contains("BRANCH_MANAGER"))
 
+        val callCenterAgent = users.single { it["username"] == "call-agent01" }
+        assertTrue(listValue(callCenterAgent["realmRoles"]).contains("CALL_CENTER_AGENT"))
+        val callCenterManager = users.single { it["username"] == "call-manager01" }
+        assertTrue(listValue(callCenterManager["realmRoles"]).contains("CALL_CENTER_MANAGER"))
+
         val clients = listMap(realm["clients"])
         val adminClient = clients.single { it["clientId"] == "admin-console" }
         assertTrue(listValue(adminClient["redirectUris"]).contains("http://localhost:3007/*"))
         assertTrue(listValue(adminClient["webOrigins"]).contains("http://localhost:3007"))
+        val callCenterClient = clients.single { it["clientId"] == "call-center-console" }
+        assertTrue(listValue(callCenterClient["redirectUris"]).contains("http://localhost:3008/*"))
+        assertTrue(listValue(callCenterClient["webOrigins"]).contains("http://localhost:3008"))
+        assertTrue(mapperNames(callCenterClient).contains("core-banking-api-audience"))
+        assertFalse(mapperNames(callCenterClient).contains("payment-service-api-audience"))
+        assertFalse(mapperNames(callCenterClient).contains("notification-service-api-audience"))
 
         val paymentFacingClients = setOf("customer-web", "staff-terminal", "ops-console")
         paymentFacingClients.forEach { clientId ->
@@ -78,7 +91,7 @@ class KeycloakRealmPolicyTest {
                 "$clientId must carry notification-service-api audience"
             )
         }
-        val nonNotificationClients = setOf("staff-terminal", "complaint-portal", "ops-console", "fds-aml-console")
+        val nonNotificationClients = setOf("staff-terminal", "complaint-portal", "ops-console", "fds-aml-console", "call-center-console")
         nonNotificationClients.forEach { clientId ->
             val client = clients.single { it["clientId"] == clientId }
             assertFalse(

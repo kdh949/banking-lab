@@ -57,7 +57,9 @@ The target-stack shape is present and broad:
   manifests `CALL-101` through `CALL-106`, shared API-client methods, and a
   Spring/PostgreSQL workflow for masked customer search, interaction start and
   detail, redacted notes, aftercall tasks, escalation, close, history, and
-  reason-required access audit.
+  reason-required access audit. It also has a Keycloak public client, synthetic
+  call-center agent/manager users, a Next token exchange route, and an
+  env-gated Playwright source path for signed agent/manager workflow smoke.
 - Shared TypeScript packages include screen engine, form engine, API client,
   and auth client support.
 - OpenAPI files exist for core banking, payment, notification, and reporting.
@@ -96,8 +98,9 @@ maintenance against the current PLAN.
   Spring/Jackson/springdoc DTO parity and exhaustive live broker envelope
   coverage remain open.
 - `call-center-console` has a dedicated shell, backend workflow, OpenAPI/API
-  client coverage, and manifest Playwright smoke. Live API browser execution and
-  live Keycloak/JWKS propagation for the call-center route remain unrecorded.
+  client coverage, manifest Playwright smoke, Keycloak realm/client coverage,
+  and token exchange route coverage. Live API browser execution and live
+  Keycloak/JWKS execution for the call-center route remain unrecorded.
 
 ## Remaining Hardening Gaps
 
@@ -114,9 +117,9 @@ The active PLAN identifies these portfolio-completion gaps:
    routes.
 4. OpenAPI DTO-level generated diffing and runtime event-envelope validation
    need broader coverage beyond the current checked subsets and fixtures.
-5. The call-center workflow is implemented, but live full-stack API browser
-   evidence, live Keycloak/JWKS propagation, and maker-checker escalation remain
-   open.
+5. The call-center workflow and Keycloak route readiness are implemented, but
+   live full-stack API browser evidence, live Keycloak/JWKS browser execution,
+   and maker-checker escalation remain open.
 6. Final scorecard and demo script exist, but must be regenerated from actual
    verified capabilities and residual limitations after each major hardening PR.
 
