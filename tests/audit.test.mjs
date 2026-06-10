@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AuditLog, maskAccountNo, maskCustomer, maskPhone } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
+import { AuditLog, maskAccountNo, maskCustomer, maskPhone } from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
 
 test("sensitive staff access requires business reason", () => {
   const auditLog = new AuditLog();

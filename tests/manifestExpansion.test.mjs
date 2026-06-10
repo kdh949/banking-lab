@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
   TEMPLATE_CONVENTIONS,
   loadExpandedManifests
-} from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
+} from "../runtime/synthetic-reference/packages/screen-engine/src/index.mjs";
 
 test("template conventions define reusable banking screen contracts", () => {
   for (const type of ["INQUIRY", "COMMAND", "CASE", "PARAMETER"]) {
@@ -27,9 +27,10 @@ test("expanded manifests cover reusable templates across bank channels", async (
   const apps = new Set(manifests.map((manifest) => manifest.app));
   const types = new Set(manifests.map((manifest) => manifest.type));
 
-  for (const app of ["staff-terminal", "customer-web", "complaint-portal", "ops-console", "audit-console", "fds-aml-console"]) {
+  for (const app of ["customer-web", "complaint-portal", "ops-console", "audit-console", "fds-aml-console"]) {
     assert.ok(apps.has(app), `${app} manifest coverage is missing`);
   }
+  assert.equal(apps.has("staff-terminal"), false);
   for (const type of ["INQUIRY", "COMMAND", "CASE", "PARAMETER"]) {
     assert.ok(types.has(type), `${type} template coverage is missing`);
   }
@@ -88,7 +89,7 @@ test("manifest expansion covers parity control scenarios for screen factory doma
   assert.ok(complaintSuite.controls.includes("workflow"));
   assert.ok(fdsAmlSuite.controls.includes("reconciliation"));
 
-  assert.ok(manifests.some((manifest) => manifest.app === "staff-terminal" && manifest.controlMetadata.audit.reasonRequired));
+  assert.ok(manifests.some((manifest) => manifest.controlMetadata.audit.reasonRequired));
   assert.ok(manifests.some((manifest) => manifest.controlMetadata.approval.makerChecker));
   assert.ok(manifests.some((manifest) => manifest.controlMetadata.masking.defaultMasked));
   assert.ok(manifests.some((manifest) => manifest.domain === "complaint" && manifest.controlMetadata.workflow.required));

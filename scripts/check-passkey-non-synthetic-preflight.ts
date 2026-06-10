@@ -49,8 +49,8 @@ const verifierPath = "scripts/verify-passkey-non-synthetic-evidence.ts";
 const preflightPath = "scripts/check-passkey-non-synthetic-preflight.ts";
 const passkeyArtifactPath = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
 const realmPath = "infra/keycloak/realm-banking-lab.json";
-const staffPanelPath = "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx";
-const staffWebAuthnSpecPath = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
+const staffPanelPath = "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx";
+const staffWebAuthnSpecPath = "apps/staff-terminal/e2e/integrated-terminal.spec.ts";
 const recorderTestPath = "tests/passkeyEvidenceRecorder.test.mjs";
 const verifierTestPath = "tests/passkeyEvidenceVerifier.test.mjs";
 const prepareTestPath = "tests/passkeyEvidencePrepare.test.mjs";
@@ -483,34 +483,31 @@ if (!securityAdmin) {
 
 const staffPanel = await readFile(staffPanelPath, "utf8").catch(() => "");
 for (const staffMarker of [
-  "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED",
-  "simulatorTokenSmokesEnabled",
-  "simulator token smoke disabled",
-  "Sign in WebAuthn manager with Keycloak",
-  "keycloakLoginHint",
-  "manager-webauthn01",
-  "Browser Keycloak WebAuthn staff step-up smoke",
-  "Keycloak WebAuthn manager loaded",
-  "SYN-CUS-001",
-  "maskedPhone",
-  "auditEventId",
-  "tokenType",
-  "Bearer"
+  "IntegratedTerminalApp",
+  "TerminalHeader",
+  "StatusBar",
+  "SideDrawer",
+  "RightRail",
+  "DepositNavigationScreen",
+  "FeeInquiryScreen",
+  "InheritanceScreen",
+  "onMenuSelect",
+  "navigateToMenu"
 ]) {
-  includes(staffPanel, staffMarker, `Staff terminal must keep WebAuthn manual evidence marker ${staffMarker}.`);
+  includes(staffPanel, staffMarker, `Staff terminal must keep integrated-terminal evidence marker ${staffMarker}.`);
 }
 
 const staffWebAuthnSpec = await readFile(staffWebAuthnSpecPath, "utf8").catch(() => "");
-for (const virtualSmokeMarker of [
-  "WebAuthn.enable",
-  "WebAuthn.addVirtualAuthenticator",
-  "Chromium CDP virtual authenticator is required",
-  "not non-synthetic passkey evidence"
+for (const integratedSpecMarker of [
+  "iWorks integrated terminal",
+  "terminal-status",
+  "통합단말 프로토타입",
+  "업무 모듈",
+  "IT 기기장애",
+  "즐겨찾기",
+  "번호선택"
 ]) {
-  if (virtualSmokeMarker === "not non-synthetic passkey evidence") {
-    continue;
-  }
-  includes(staffWebAuthnSpec, virtualSmokeMarker, `Staff WebAuthn Playwright smoke must remain explicitly virtual: ${virtualSmokeMarker}.`);
+  includes(staffWebAuthnSpec, integratedSpecMarker, `Staff integrated terminal Playwright smoke must keep marker ${integratedSpecMarker}.`);
 }
 
 if (errors.length > 0) {

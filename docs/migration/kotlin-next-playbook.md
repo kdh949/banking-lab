@@ -52,11 +52,11 @@ npm run parity
 Expected current result:
 
 ```text
-Parity scenario map covers 43 Node reference scenarios.
+Parity scenario map covers 43 synthetic runtime scenarios.
 Validated screen manifests.
-Node reference tests passed.
+Synthetic runtime tests passed.
 Evidence pack generated.
-Node reference runtime remains archived oracle/reference material.
+Node-based helpers remain isolated under runtime/synthetic-reference.
 ```
 
 Node retirement gate:
@@ -70,7 +70,7 @@ Gate metadata source of truth: `docs/migration/node-retirement-gate.json`.
 Expected current result:
 
 ```text
-Node reference retirement gate: ready
+Runtime retirement gate: ready
 All required retirement gates have passing evidence.
 ```
 
@@ -112,16 +112,16 @@ npm audit --omit=dev
 
 ## Migration Sequence
 
-1. Keep `runtime`, Node oracle helper modules under `legacy-node-reference/packages`, legacy static app shells under `legacy-node-reference/apps`, and current Node tests intact.
-2. Add Spring Boot/Kotlin scaffold under `services/core-banking` while preserving the Node reference entrypoint.
+1. Keep `runtime/server.mjs`, `runtime/labApp.mjs`, and the synthetic helper modules under `runtime/synthetic-reference` intact for local test/runtime compatibility; do not recreate deleted legacy static app shells.
+2. Add Spring Boot/Kotlin scaffold under `services/core-banking` while preserving the local synthetic runtime entrypoint until its tests are replaced.
 3. Wire Flyway to `db/migrations/V001__foundation.sql` and following `V...` migrations; use Testcontainers for integration tests.
 4. Port domain behavior in order: ledger, idempotency, audit/masking, maker-checker, workflow, complaint, FDS/AML, reconciliation.
 5. Preserve current route semantics first; publish OpenAPI from Spring after route parity stabilizes.
-6. Add Next.js app shells that render from existing screen manifests instead of hand-coded business screens.
+6. Keep channel-specific Next.js surfaces target-backed. Customer, complaint, ops, audit, FDS/AML, and admin channels continue to use manifests where appropriate; `staff-terminal` is the iWorks integrated terminal and must not reintroduce staff-terminal manifests.
 7. Generate or hand-maintain a typed TypeScript API client only after the OpenAPI contract stabilizes.
 8. Run `npm run parity` plus target Kotlin/Next tests side by side so all mapped scenarios stay passing.
 9. Update evidence, ADRs, architecture notes, threat/control mappings, reconciliation reports, and demos.
-10. Keep Node as archived oracle/reference material unless a fresh deletion plan reruns `npm run node:retirement-gate`, parity, evidence refresh, and boundary audits without losing regression coverage.
+10. Keep synthetic runtime helpers isolated from target `apps/`, `services/`, and `packages/` source unless a fresh deletion plan reruns `npm run node:retirement-gate`, parity, evidence refresh, and boundary audits without losing regression coverage.
 
 ## First Vertical Slice
 
@@ -134,9 +134,9 @@ Backend:
 
 Frontend:
 
-- Seven Next.js channel apps render manifest metadata and API-backed panels.
+- Six manifest-oriented Next.js channel apps render manifest metadata and API-backed panels; `staff-terminal` renders the iWorks integrated terminal.
 - Shared API/auth/screen/form packages stay the target channel integration path.
-- Legacy static shells remain under `legacy-node-reference/apps` only as archived reference assets.
+- Legacy static shells are removed from both target apps and synthetic runtime helpers. The staff terminal official screen is `apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx`.
 
 Parity:
 
@@ -145,14 +145,13 @@ Parity:
 
 ## Do Not Delete Yet
 
-Do not remove or rewrite these reference assets without a dedicated retirement-deletion plan and fresh passing evidence:
+Do not remove or rewrite these synthetic runtime/test support assets without a dedicated deletion plan and fresh passing evidence:
 
 - `runtime/server.mjs`
 - `runtime/labApp.mjs`
-- Node oracle helper modules under `legacy-node-reference/packages`
-- static app shells under `legacy-node-reference/apps`
-- legacy static UI assets under `legacy-node-reference/ui/public`
+- synthetic helper modules under `runtime/synthetic-reference/packages`
+- synthetic helper modules under `runtime/synthetic-reference/services`
 - `tests/*.test.mjs`
 - evidence scripts under `scripts/generate-*.mjs`
 
-The current gate is ready, but these assets still provide regression comparison. Deletion should be treated as a separate controlled change, not a routine documentation or feature cleanup.
+The current gate is ready, but these assets still support local regression checks. Deletion should be treated as a separate controlled change, not a routine documentation or feature cleanup.

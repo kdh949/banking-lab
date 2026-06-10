@@ -2,7 +2,7 @@
 
 ## Scope
 
-The target screen platform now treats `screen-manifests/**` as the catalog for reusable banking screen rendering instead of a card-only index.
+The target screen platform treats `screen-manifests/**` as the catalog for reusable banking screen rendering instead of a card-only index. `staff-terminal` is intentionally excluded from this catalog because its official UI is the iWorks integrated terminal.
 
 The repository validates:
 
@@ -14,7 +14,7 @@ The repository validates:
 
 ## Renderer Templates
 
-`apps/staff-terminal/src/components/manifest-renderer.tsx` implements the first full workstation renderer:
+The reusable renderer capability applies to manifest-backed channel apps such as customer web, complaint portal, operations, audit, FDS/AML, and admin. Staff-terminal screens must not reintroduce the removed staff manifest renderer.
 
 - `ScreenRenderer`
 - `InquiryScreenRenderer`
@@ -34,11 +34,11 @@ The repository validates:
 - `MaskedValue`
 - `StructuredErrorView`
 
-The renderer uses manifest metadata for reason-required lookup, masking state, maker-checker approval, workflow timelines, and structured error surfaces.
+Manifest-backed channel renderers use manifest metadata for reason-required lookup, masking state, maker-checker approval, workflow timelines, and structured error surfaces.
 
 ## API-backed Boundary
 
-Screens with existing Spring API routes are labeled as API-backed and retain connectivity through the existing `@banking-lab/api-client` smoke panel. Screens without a current target API are shown as `declared-only / not API-backed yet`; the renderer does not show fake success for those screens.
+Screens with existing Spring API routes are labeled as API-backed and retain connectivity through the existing `@banking-lab/api-client` smoke panels in the manifest-backed channels. Screens without a current target API are shown as `declared-only / not API-backed yet`; renderers do not show fake success for those screens.
 
 ## Synthetic Boundary
 

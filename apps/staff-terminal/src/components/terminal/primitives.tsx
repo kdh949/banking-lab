@@ -140,7 +140,7 @@ function LookupDialog({ label, onClose }: { readonly label: string; readonly onC
       <section className="terminal-dialog lookup-dialog" role="dialog" aria-modal="true" aria-labelledby="lookup-dialog-title">
         <header>
           <strong id="lookup-dialog-title">{label} 추가 조회</strong>
-          <button type="button" aria-label="닫기" onClick={onClose}>
+          <button type="button" aria-label="조회창 닫기" onClick={onClose}>
             <MaterialIcon name="close" />
           </button>
         </header>
@@ -179,9 +179,9 @@ function LookupDialog({ label, onClose }: { readonly label: string; readonly onC
 function lookupRowsForField(label: string) {
   if (label.includes("고객")) {
     return [
-      { code: "C-102391", name: "김우리", detail: "개인 / 생년월일 마스킹" },
-      { code: "C-384020", name: "한상대", detail: "개인 / 실명확인 완료" },
-      { code: "B-029410", name: "우리상사", detail: "법인 / 사업자번호 마스킹" }
+      { code: "SYN-CUS-001", name: "김우리", detail: "개인 / 생년월일 마스킹" },
+      { code: "SYN-CUS-002", name: "한상대", detail: "개인 / 실명확인 완료" },
+      { code: "SYN-BIZ-001", name: "우리상사", detail: "법인 / 사업자번호 마스킹" }
     ];
   }
   if (label.includes("계좌") || label.includes("계약")) {

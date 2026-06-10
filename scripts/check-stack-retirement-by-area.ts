@@ -43,7 +43,7 @@ const ignoredDirs = new Set([
 ]);
 
 const legacyDependencyPatterns = [
-  /legacy-node-reference/u,
+  new RegExp("runtime/synthetic-reference", "u"),
   /runtime\/(?:labApp|server)\.mjs/u,
   /(?:\.\.\/)+runtime\/(?:labApp|server)\.mjs/u,
   /\.mjs["']/u
@@ -75,7 +75,8 @@ const areas: Area[] = [
       "apps/customer-web/src/app/page.tsx",
       "apps/customer-web/src/components/ApiBackedCustomerPanel.tsx",
       "apps/staff-terminal/src/app/page.tsx",
-      "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx",
+      "apps/staff-terminal/src/components/integrated-terminal.tsx",
+      "apps/staff-terminal/src/app/api/terminal-status/route.ts",
       "apps/complaint-portal/src/app/page.tsx",
       "apps/complaint-portal/src/components/ApiBackedComplaintPanel.tsx",
       "apps/ops-console/src/app/page.tsx",

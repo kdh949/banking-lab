@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { generateSyntheticDataset } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
-import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
+import { generateSyntheticDataset } from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
+import { LedgerCore } from "../runtime/synthetic-reference/services/core-banking/src/index.mjs";
 
 const outputDir = "docs/test-evidence/generated";
 const outputFile = `${outputDir}/phase-2-ledger-core.json`;

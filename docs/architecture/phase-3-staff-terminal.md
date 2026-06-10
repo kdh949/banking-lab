@@ -1,34 +1,51 @@
-# Phase 3 Staff Terminal Architecture
+# iWorks Integrated Staff Terminal Architecture
 
-## Staff Runtime Flow
+## Official Boundary
+
+`apps/staff-terminal` now has one official UI: the iWorks integrated terminal.
+
+Official runtime files:
+
+- `apps/staff-terminal/src/app/page.tsx`
+- `apps/staff-terminal/src/app/layout.tsx`
+- `apps/staff-terminal/src/app/api/terminal-status/route.ts`
+- `apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx`
+- `apps/staff-terminal/src/components/terminal/**`
+- `apps/staff-terminal/src/components/integrated-terminal.css`
+- `apps/staff-terminal/e2e/integrated-terminal.spec.ts`
+
+The app exposes `/` and `/api/terminal-status` only. Staff-terminal manifests,
+old route pages, old API-backed panels, and old manifest renderer components are
+removed.
+
+## Runtime Flow
 
 ```text
-Staff terminal
-  -> transaction code
-  -> manifest metadata
-  -> reason-required runtime API
-  -> audit event
-  -> masked response or approval request
+Browser
+  -> Next.js staff-terminal /
+  -> IntegratedTerminalApp
+  -> reusable terminal shell/components
+  -> /api/terminal-status for client IP and connected server time
 ```
 
-## Implemented Transaction Codes
-
-- `CST-001`: customer integrated search
-- `CST-002`: customer detail
-- `ACC-101`: account inquiry
-- `LED-101`: ledger transaction history
-- `CST-103`: customer information change request
-- `APR-001`: maker-checker approval inbox
-- `AUD-001`: audit event viewer
+Operator actions inside the terminal either navigate to implemented synthetic
+screens or show an unavailable-work modal with an X mark. Flowchart process
+nodes and menu rows use the same navigation registry so future screens can be
+added through shared terminal primitives instead of page-route copy-paste.
 
 ## Control Rules
 
-- Customer, account, and transaction inquiry require a business reason.
-- Staff PII responses are masked by default.
-- Unmask requires a privileged role and reason, and returns a timeboxed exposure.
-- Customer information change only creates an approval request.
-- Manager approval applies the change and creates execution audit evidence.
+- All data is synthetic.
+- The UI must not expose real PII, real money, real bank APIs, real KYC, or real payment networks.
+- Implemented module selection and hover state are visually distinct.
+- Only one module can be selected at a time.
+- Number-entry fields restrict input to digits.
+- Lookup icons open modal lookup surfaces rather than inert decoration.
+- The bottom status bar reads current client IP and server time from `/api/terminal-status`.
 
-## Current Boundary
+## Verification
 
-The UI is still a lightweight static runtime shell. The important Phase 3 behavior is enforced in runtime APIs and tests, and the screens are declared in `screen-manifests/staff-terminal`.
+- `npm run next:staff-terminal:typecheck`
+- `npm run next:staff-terminal:build`
+- `npm run integrated-terminal:boundary-check`
+- `npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts`

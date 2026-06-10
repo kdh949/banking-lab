@@ -4,7 +4,7 @@ Review date: 2026-06-03
 
 ## Purpose
 
-The existing drill set covers the Node reference flows well. These additions focus on target-stack gaps that must be drilled before Node retirement.
+The existing drill set covers the synthetic runtime flows well. These additions focus on target-stack gaps that must be drilled before Node retirement.
 
 ## Drill 1: Spring API Or Outbox Worker Crash Around Publish
 
@@ -69,7 +69,7 @@ Required commands:
 
 ```bash
 ./gradlew :services:core-banking:integrationTest --tests '*Authorization*'
-npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts
+npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts
 ```
 
 Current status: Planned. Keycloak realm configuration exists, but resource-server enforcement is not proven.
@@ -140,7 +140,7 @@ Failure injected:
 Expected evidence:
 
 - Evidence pack marks the target-stack sections as missing or blocked.
-- Node oracle success is not presented as target parity success.
+- synthetic runtime success is not presented as target parity success.
 - Retirement recommendation remains blocked.
 
 Required commands:

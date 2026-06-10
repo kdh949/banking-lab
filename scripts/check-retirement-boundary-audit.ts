@@ -48,7 +48,7 @@ const scanRoots = [
   "scripts",
   "tests",
   "packages",
-  "legacy-node-reference",
+  "runtime/synthetic-reference",
   "services",
   "apps",
   "analytics",
@@ -61,18 +61,16 @@ const allowedMjsPrefixes = [
   "runtime/",
   "scripts/",
   "tests/",
-  "legacy-node-reference/"
+  "runtime/synthetic-reference/"
 ];
 
 const requiredReferencePaths = [
   "runtime/server.mjs",
   "runtime/labApp.mjs",
-  "legacy-node-reference/services",
-  "legacy-node-reference/packages/banking-domain/src",
-  "legacy-node-reference/packages/screen-engine/src",
-  "legacy-node-reference/packages/form-engine/src",
-  "legacy-node-reference/apps",
-  "legacy-node-reference/ui/public",
+  "runtime/synthetic-reference/services",
+  "runtime/synthetic-reference/packages/banking-domain/src",
+  "runtime/synthetic-reference/packages/screen-engine/src",
+  "runtime/synthetic-reference/packages/form-engine/src",
   "tests"
 ];
 
@@ -118,7 +116,14 @@ const disallowedTargetSourceExtensions = [
   ".html"
 ];
 
-const targetSourceDependencyPattern = /legacy-node-reference|(?:\.\.\/)+runtime\/(?:labApp|server)\.mjs|runtime\/(?:labApp|server)\.mjs|\.mjs["']/;
+const targetSourceDependencyPattern = new RegExp(
+  [
+    "runtime/synthetic-reference",
+    "(?:\\.\\.\\/)+runtime\\/(?:labApp|server)\\.mjs",
+    "runtime\\/(?:labApp|server)\\.mjs",
+    "\\.mjs[\"']"
+  ].join("|")
+);
 
 const targetAnchors = [
   "services/core-banking/build.gradle.kts",
@@ -142,7 +147,8 @@ const targetAnchors = [
   "apps/customer-web/src/app/page.tsx",
   "apps/customer-web/src/components/ApiBackedCustomerPanel.tsx",
   "apps/staff-terminal/src/app/page.tsx",
-  "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx",
+  "apps/staff-terminal/src/components/integrated-terminal.tsx",
+  "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/complaint-portal/src/app/page.tsx",
   "apps/complaint-portal/src/components/ApiBackedComplaintPanel.tsx",
   "apps/ops-console/src/app/page.tsx",

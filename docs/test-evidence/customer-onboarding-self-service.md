@@ -70,10 +70,7 @@ The local CI-equivalent matrix is recorded in `docs/test-evidence/ci.md`. Node r
 - `docs/codex/customer-onboarding-self-service-status.md`
 - `contracts/openapi/core-banking.yaml`
 - `packages/api-client/src/index.ts`
-- `screen-manifests/staff-terminal/CST-201.customer-onboarding-request.json`
-- `screen-manifests/staff-terminal/CST-202.customer-onboarding-approval.json`
-- `screen-manifests/staff-terminal/ACC-201.account-opening-request.json`
-- `screen-manifests/staff-terminal/ACC-202.account-opening-approval.json`
+- Spring staff-control coverage for `CST-201`, `CST-202`, `ACC-201`, and `ACC-202` remains backend-backed; the current iWorks staff terminal no longer uses staff screen manifests.
 - `screen-manifests/customer-web/CWB-001.customer-signup.json`
 - `screen-manifests/customer-web/CWB-002.customer-login.json`
 - `screen-manifests/customer-web/CWB-101.account-overview.json`

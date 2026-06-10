@@ -91,7 +91,7 @@ const textDirectoriesToScan = [
 ];
 
 const textFilesToScan = [
-  "legacy-node-reference/README.md"
+  "runtime/synthetic-reference/README.md"
 ];
 
 const ignoredDirs = new Set(["generated"]);

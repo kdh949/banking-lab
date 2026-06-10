@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
+import { loadManifests } from "../runtime/synthetic-reference/packages/screen-engine/src/index.mjs";
 
 test("screen manifests validate and cover Phase 1 app shells", async () => {
   const manifests = await loadManifests("screen-manifests");
   const apps = new Set(manifests.map((manifest) => manifest.app));
 
   assert.ok(apps.has("customer-web"));
-  assert.ok(apps.has("staff-terminal"));
   assert.ok(apps.has("complaint-portal"));
+  assert.equal(apps.has("staff-terminal"), false);
   assert.ok(manifests.length >= 8);
 });
 
-test("high-risk staff commands require maker-checker approval", async () => {
+test("high-risk command manifests require maker-checker approval", async () => {
   const manifests = await loadManifests("screen-manifests");
-  const highRiskCommands = manifests.filter((manifest) => manifest.app === "staff-terminal" && manifest.highRisk === true);
+  const highRiskCommands = manifests.filter((manifest) => manifest.highRisk === true);
 
   assert.ok(highRiskCommands.length >= 1);
   for (const manifest of highRiskCommands) {
@@ -25,13 +25,13 @@ test("high-risk staff commands require maker-checker approval", async () => {
   }
 });
 
-test("staff PII inquiry manifests require reason and masking policy", async () => {
+test("PII inquiry manifests require reason or self-service masking policy", async () => {
   const manifests = await loadManifests("screen-manifests");
-  const staffPiiScreens = manifests.filter((manifest) => manifest.app === "staff-terminal" && manifest.audit.piiAccess === true);
+  const piiScreens = manifests.filter((manifest) => manifest.audit.piiAccess === true);
 
-  assert.ok(staffPiiScreens.length >= 2);
-  for (const manifest of staffPiiScreens) {
-    assert.equal(manifest.audit.reasonRequired, true);
+  assert.ok(piiScreens.length >= 2);
+  for (const manifest of piiScreens) {
+    assert.equal(manifest.audit.reasonRequired === true || manifest.audit.selfService === true, true);
     assert.notEqual(manifest.audit.maskingPolicy, "NONE");
   }
 });

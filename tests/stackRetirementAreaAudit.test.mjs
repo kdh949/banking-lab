@@ -50,7 +50,7 @@ test("stack retirement area audit is wired into scripts and retirement evidence"
   assert.match(source, /analytics/);
   assert.match(source, /platform-infra/);
   assert.match(source, /contracts-and-data/);
-  assert.match(source, /legacy-node-reference/);
+  assert.ok(source.includes("runtime/synthetic-reference"));
   assert.match(evidenceDoc, /Status:\s+pass/i);
   assert.match(evidenceDoc, /Status:\s+pass/i);
 });
@@ -65,8 +65,8 @@ test("node retirement gate rejects a planted target-path Node dependency", async
         BANKING_LAB_STACK_AUDIT_CANARY_AREA: "frontend-channels",
         BANKING_LAB_STACK_AUDIT_CANARY_PATH: plantedImportPath,
         BANKING_LAB_STACK_AUDIT_CANARY_SOURCE: [
-          "import legacyRuntime from '../../../legacy-node-reference/runtime/server.mjs';",
-          "export const canary = legacyRuntime;"
+          "import syntheticRuntime from '../../../runtime/synthetic-reference/runtime/server.mjs';",
+          "export const canary = syntheticRuntime;"
         ].join("\n")
       },
       maxBuffer: 1024 * 1024 * 2

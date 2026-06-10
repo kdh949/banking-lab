@@ -6,12 +6,10 @@ async function read(path) {
   return readFile(path, "utf8");
 }
 
-test("Phase 1 synthetic customer onboarding contract, client, and manifests are wired", async () => {
-  const [contract, client, requestManifest, approvalManifest] = await Promise.all([
+test("Phase 1 synthetic customer onboarding contract and client are wired without staff-terminal manifests", async () => {
+  const [contract, client] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts"),
-    read("screen-manifests/staff-terminal/CST-201.customer-onboarding-request.json"),
-    read("screen-manifests/staff-terminal/CST-202.customer-onboarding-approval.json")
+    read("packages/api-client/src/index.ts")
   ]);
 
   for (const operationId of [
@@ -30,17 +28,6 @@ test("Phase 1 synthetic customer onboarding contract, client, and manifests are 
   assert.match(contract, /x-maker-checker-required: true/);
   assert.match(client, /interface CustomerOnboardingRequestCommand/);
   assert.match(client, /interface CustomerOnboardingExecuteResponse/);
-
-  const request = JSON.parse(requestManifest);
-  const approval = JSON.parse(approvalManifest);
-  assert.equal(request.screenId, "CST-201");
-  assert.equal(request.approval.businessTypes.includes("CUSTOMER_ONBOARDING"), true);
-  assert.equal(request.approval.makerChecker, true);
-  assert.equal(request.audit.reasonRequired, true);
-  assert.equal(request.fields.some((field) => field.name === "temporaryPassword" && field.type === "password"), true);
-  assert.equal(approval.screenId, "CST-202");
-  assert.equal(approval.workflow.states.includes("EXECUTED"), true);
-  assert.equal(approval.postActions.includes("createSyntheticAuthIdentity"), true);
 });
 
 test("Phase 1 synthetic customer onboarding persistence and controller enforce controls", async () => {
@@ -71,12 +58,10 @@ test("Phase 1 synthetic customer onboarding persistence and controller enforce c
   assert.match(controller, /hasAnyRole\('BRANCH_MANAGER','COMPLIANCE_MANAGER'\)/);
 });
 
-test("Phase 2 synthetic account opening contract, client, and manifests are wired", async () => {
-  const [contract, client, requestManifest, approvalManifest] = await Promise.all([
+test("Phase 2 synthetic account opening contract and client are wired without staff-terminal manifests", async () => {
+  const [contract, client] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts"),
-    read("screen-manifests/staff-terminal/ACC-201.account-opening-request.json"),
-    read("screen-manifests/staff-terminal/ACC-202.account-opening-approval.json")
+    read("packages/api-client/src/index.ts")
   ]);
 
   for (const operationId of [
@@ -95,17 +80,6 @@ test("Phase 2 synthetic account opening contract, client, and manifests are wire
   assert.match(contract, /x-maker-checker-required: true/);
   assert.match(client, /interface AccountOpeningRequestCommand/);
   assert.match(client, /interface AccountOpeningExecuteResponse/);
-
-  const request = JSON.parse(requestManifest);
-  const approval = JSON.parse(approvalManifest);
-  assert.equal(request.screenId, "ACC-201");
-  assert.equal(request.approval.businessTypes.includes("ACCOUNT_OPENING"), true);
-  assert.equal(request.approval.makerChecker, true);
-  assert.equal(request.audit.reasonRequired, true);
-  assert.equal(request.postActions.includes("postOpeningDepositThroughLedger"), true);
-  assert.equal(approval.screenId, "ACC-202");
-  assert.equal(approval.workflow.states.includes("EXECUTED"), true);
-  assert.equal(approval.postActions.includes("createSyntheticAccount"), true);
 });
 
 test("Phase 2 synthetic account opening persistence and service preserve ledger boundaries", async () => {

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { depositMenu, depositMenuTargets, detailColumns, feeColumns, fundGroups, inheritanceColumns, newScreenRows, notices } from "./registry";
 import { DataTable, Field, MaterialIcon, Panel, RadioGroup, SearchBox } from "./primitives";
 import type { MenuTarget, ScreenControlMetadata } from "./types";
@@ -99,6 +99,8 @@ export function PortalScreen() {
 }
 
 export function DepositNavigationScreen({ onMenuSelect }: { readonly onMenuSelect: (target: MenuTarget) => void }) {
+  const [selectedNumber, setSelectedNumber] = useState("");
+
   return (
     <div className="deposit-screen">
       <section className="deposit-top-grid">
@@ -118,10 +120,10 @@ export function DepositNavigationScreen({ onMenuSelect }: { readonly onMenuSelec
             <input
               aria-label="번호선택"
               inputMode="numeric"
-              maxLength={4}
               pattern="[0-9]*"
+              value={selectedNumber}
               onChange={(event) => {
-                event.currentTarget.value = event.currentTarget.value.replace(/\D/gu, "");
+                setSelectedNumber(event.target.value.replace(/\D/gu, "").slice(0, 4));
               }}
             />
           </label>

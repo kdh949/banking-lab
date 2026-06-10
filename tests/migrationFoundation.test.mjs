@@ -98,7 +98,7 @@ test("target service directories do not contain Node business modules", async ()
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
 
   assert.deepEqual(mjsFiles, []);
-  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/services"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("runtime/synthetic-reference/services"), true);
 });
 
 test("target source directories do not contain Node or static shell source files", async () => {
@@ -107,10 +107,10 @@ test("target source directories do not contain Node or static shell source files
   const gate = JSON.parse(await readFile("docs/migration/node-retirement-gate.json", "utf8"));
 
   assert.deepEqual(disallowedSourceFiles, []);
-  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/apps"), true);
-  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/banking-domain/src"), true);
-  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/screen-engine/src"), true);
-  assert.equal(gate.nodeReferenceRuntime.paths.includes("legacy-node-reference/packages/form-engine/src"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("runtime/synthetic-reference/apps"), false);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("runtime/synthetic-reference/packages/banking-domain/src"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("runtime/synthetic-reference/packages/screen-engine/src"), true);
+  assert.equal(gate.nodeReferenceRuntime.paths.includes("runtime/synthetic-reference/packages/form-engine/src"), true);
 });
 
 test("target source directories do not import legacy Node reference runtime", async () => {
@@ -119,7 +119,13 @@ test("target source directories do not import legacy Node reference runtime", as
   const offenders = [];
   for (const filePath of sourceFiles) {
     const source = await readFile(filePath, "utf8");
-    if (/legacy-node-reference|(?:\.\.\/)+runtime\/(?:labApp|server)\.mjs|runtime\/(?:labApp|server)\.mjs|\.mjs["']/.test(source)) {
+    const forbiddenRuntimePattern = new RegExp([
+      "runtime/synthetic-reference",
+      "(?:\\.\\.\\/)+runtime\\/(?:labApp|server)\\.mjs",
+      "runtime\\/(?:labApp|server)\\.mjs",
+      "\\.mjs[\"']"
+    ].join("|"));
+    if (forbiddenRuntimePattern.test(source)) {
       offenders.push(filePath);
     }
   }
