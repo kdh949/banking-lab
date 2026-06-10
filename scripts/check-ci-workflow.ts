@@ -47,6 +47,17 @@ const requiredScripts = [
   "formal:ledger"
 ];
 
+const requiredNextApps = [
+  "customer-web",
+  "staff-terminal",
+  "complaint-portal",
+  "ops-console",
+  "audit-console",
+  "fds-aml-console",
+  "admin-console",
+  "call-center-console"
+];
+
 for (const jobId of requiredJobs) {
   if (!jobSection(jobId)) {
     errors.push(`Missing CI job: ${jobId}`);
@@ -56,6 +67,18 @@ for (const jobId of requiredJobs) {
 for (const scriptName of requiredScripts) {
   if (!packageJson.scripts?.[scriptName]) {
     errors.push(`Missing package.json script: ${scriptName}`);
+  }
+}
+
+for (const app of requiredNextApps) {
+  if (!jobSection("next-builds")?.includes(`- ${app}`)) {
+    errors.push(`Next.js build matrix is missing app: ${app}`);
+  }
+  for (const suffix of ["", ":typecheck", ":build"]) {
+    const scriptName = `next:${app}${suffix}`;
+    if (!packageJson.scripts?.[scriptName]) {
+      errors.push(`Missing package.json script: ${scriptName}`);
+    }
   }
 }
 
