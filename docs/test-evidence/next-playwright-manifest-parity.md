@@ -1,6 +1,6 @@
 # Next Playwright Manifest Parity
 
-Review date: 2026-06-03
+Review date: 2026-06-10
 
 ## Scope
 
@@ -13,12 +13,13 @@ This evidence note covers the frontend parity scaffolding for the current Node r
 - `audit-console`
 - `fds-aml-console`
 - `admin-console`
+- `call-center-console`
 
-`admin-console` is now included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. The gate remains blocked; the admin shell does not remove the non-synthetic passkey or final retirement-review blockers.
+`admin-console` is included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. `call-center-console` is included on port 3008 with `CALL-101..CALL-106` manifests and a synthetic API-backed smoke panel. The call-center live full-stack API browser run and live Keycloak/JWKS propagation remain unrecorded.
 
 ## Added Playwright Coverage
 
-The root `playwright.config.ts` starts all seven Next workspace dev servers through `webServer` entries and runs app-local specs under `apps/*/e2e`.
+The root `playwright.config.ts` starts all eight Next workspace dev servers through `webServer` entries and runs app-local specs under `apps/*/e2e`.
 
 The default specs validate manifest-rendered metadata for manifest-backed channels and the iWorks shell contract for `staff-terminal`:
 
@@ -40,6 +41,7 @@ When `BANKING_LAB_E2E_API_BASE_URL` is set, the specs additionally prove a read-
 - `audit-console` loads audit event hash-chain evidence from Spring.
 - `fds-aml-console` loads synthetic FDS and AML cases from Spring.
 - `admin-console` loads a synthetic platform-control summary from Spring and keeps synthetic-only runtime boundary controls visible.
+- `call-center-console` can run a synthetic call-center workflow through Spring when `BANKING_LAB_E2E_API_BASE_URL` points at a seeded synthetic stack.
 
 These tests do not by themselves claim full backend parity, workflow durability, non-synthetic WebAuthn, or Node retirement readiness. The admin console now has live browser proof for `security-admin01` Keycloak token propagation into the Spring admin platform summary route, and the broader retirement gate is now ready through separate parity, passkey, evidence-refresh, and final-review artifacts.
 
@@ -47,6 +49,7 @@ These tests do not by themselves claim full backend parity, workflow durability,
 
 ```bash
 npm run test:e2e
+npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18081 npm run test:e2e
 scripts/run-core-banking-tests.sh :services:core-banking:bootJar
 env COMPOSE_PROJECT_NAME=banking-lab-admin-smoke BANKING_LAB_POSTGRES_PORT=15449 BANKING_LAB_CORE_BANKING_PORT=18090 BANKING_LAB_KEYCLOAK_PORT=18091 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18091/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_CORS_ALLOWED_ORIGINS=http://localhost:3007,http://127.0.0.1:3007 docker compose --profile platform up -d --build postgres keycloak core-banking
