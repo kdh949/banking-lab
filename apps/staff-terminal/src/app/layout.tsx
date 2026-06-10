@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import "../components/terminal-ui.css";
+import "../components/integrated-terminal.css";
 
 export const metadata: Metadata = {
-  title: "Banking Lab Staff Terminal",
-  description: "Manifest-rendered synthetic staff terminal shell"
+  title: "Banking Lab Integrated Terminal",
+  description: "Synthetic iWorks integrated staff terminal"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
