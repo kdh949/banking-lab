@@ -875,21 +875,78 @@ paths:
       x-api-client-required: false
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositCommand'
+      responses:
+        '201':
+          description: Deposit posted as balanced double-entry ledger transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same deposit command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/withdrawals:
     post:
       operationId: postLedgerWithdrawal
       x-api-client-required: false
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalCommand'
+      responses:
+        '201':
+          description: Withdrawal posted as balanced double-entry ledger transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same withdrawal command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/transfers:
     post:
       operationId: postLedgerTransfer
       x-api-client-required: false
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalTransferCommand'
+      responses:
+        '201':
+          description: Internal transfer posted as one balanced double-entry ledger transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same transfer command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/reversals:
     post:
       operationId: postLedgerReversal
@@ -898,7 +955,26 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReversalCommand'
+      responses:
+        '201':
+          description: Reversal posted as append-only balanced counter-transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same reversal command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/adjustments:
     post:
       operationId: postLedgerAdjustment
@@ -907,14 +983,52 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustmentCommand'
+      responses:
+        '201':
+          description: Adjustment posted as approved balanced ledger transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same adjustment command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/payment-postings:
     post:
       operationId: postPaymentLedgerPosting
       x-api-client-required: false
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillPaymentCommand'
+      responses:
+        '201':
+          description: Synthetic bill payment posted through the core ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        '200':
+          description: Idempotent replay of the same bill payment posting command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerCommandResult'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ops/daily-closings:
     post:
       operationId: closeBusinessDay
@@ -923,7 +1037,26 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconciliationDailyClosingCommand'
+      responses:
+        '201':
+          description: Business date closed with reconciliation evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationClosingResponse'
+        '200':
+          description: Idempotent replay of the same closing command
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationClosingResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/aml/governance/screen/customers/{customerId}:
     post:
       operationId: screenCustomerAgainstSyntheticSanctions
@@ -995,3 +1128,377 @@ components:
             additionalProperties: true
         syntheticOnly:
           const: true
+    PostingDirection:
+      type: string
+      enum: [DEBIT, CREDIT]
+    DepositCommand:
+      type: object
+      required: [accountId, amountMinor, idempotencyKey]
+      properties:
+        accountId: { type: string }
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          default: SYSTEM
+        requestedChannel:
+          type: string
+          default: CORE_BANKING
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: KRW
+        businessReferenceId:
+          type: string
+          nullable: true
+    WithdrawalCommand:
+      type: object
+      required: [accountId, amountMinor, idempotencyKey]
+      properties:
+        accountId: { type: string }
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          default: SYSTEM
+        requestedChannel:
+          type: string
+          default: CORE_BANKING
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: KRW
+        businessReferenceId:
+          type: string
+          nullable: true
+    InternalTransferCommand:
+      type: object
+      required: [fromAccountId, toAccountId, amountMinor, idempotencyKey]
+      properties:
+        fromAccountId: { type: string }
+        toAccountId: { type: string }
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          default: SYSTEM
+        requestedChannel:
+          type: string
+          default: CORE_BANKING
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: KRW
+        businessReferenceId:
+          type: string
+          nullable: true
+    ReversalCommand:
+      type: object
+      required: [originalTransactionId, idempotencyKey]
+      properties:
+        originalTransactionId: { type: string }
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          default: SYSTEM
+        requestedChannel:
+          type: string
+          default: CORE_BANKING
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        businessReferenceId:
+          type: string
+          nullable: true
+    AdjustmentCommand:
+      type: object
+      required: [accountId, amountMinor, idempotencyKey]
+      properties:
+        accountId: { type: string }
+        direction:
+          $ref: '#/components/schemas/PostingDirection'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          default: SYSTEM
+        requestedChannel:
+          type: string
+          default: CORE_BANKING
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: KRW
+        businessReferenceId:
+          type: string
+          nullable: true
+        approvalId:
+          type: string
+          nullable: true
+    BillPaymentCommand:
+      type: object
+      required: [paymentInstructionId, debitAccountId, syntheticBillerId, amountMinor, idempotencyKey, requestedBy, reason]
+      properties:
+        paymentInstructionId: { type: string }
+        debitAccountId: { type: string }
+        syntheticBillerId: { type: string }
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        idempotencyKey: { type: string }
+        requestedBy: { type: string }
+        requestedChannel:
+          type: string
+          default: PAYMENT_SERVICE
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        reason: { type: string }
+        currency:
+          type: string
+          default: KRW
+    ReconciliationDailyClosingCommand:
+      type: object
+      properties:
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        idempotencyKey:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+          nullable: true
+        actorRole:
+          type: string
+          nullable: true
+        externalMode:
+          type: string
+          nullable: true
+    LedgerCommandResult:
+      type: object
+      required: [value, replayed]
+      properties:
+        value:
+          $ref: '#/components/schemas/LedgerTransactionDto'
+        replayed:
+          type: boolean
+    LedgerTransactionDto:
+      type: object
+      required: [id, transactionType, businessReferenceId, idempotencyKey, businessDate, status, requestedBy, requestedChannel, postings]
+      properties:
+        id: { type: string }
+        transactionType: { type: string }
+        businessReferenceId: { type: string }
+        idempotencyKey: { type: string }
+        businessDate:
+          type: string
+          format: date
+        status: { type: string }
+        requestedBy: { type: string }
+        requestedChannel: { type: string }
+        postedAt:
+          type: string
+          format: date-time
+          nullable: true
+        originalTransactionId:
+          type: string
+          nullable: true
+        postings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerPostingDto'
+    LedgerPostingDto:
+      type: object
+      required: [id, ledgerTransactionId, accountId, currency, direction, amountMinor, postingType]
+      properties:
+        id: { type: string }
+        ledgerTransactionId: { type: string }
+        accountId: { type: string }
+        currency: { type: string }
+        direction:
+          $ref: '#/components/schemas/PostingDirection'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        postingType: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+    ReconciliationClosingResponse:
+      type: object
+      required: [item, externalFile, reconciliationItems, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/ReconciliationClosingDto'
+        externalFile:
+          $ref: '#/components/schemas/ReconciliationExternalFileDto'
+        reconciliationItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReconciliationItemDto'
+        replayed:
+          type: boolean
+    ReconciliationClosingDto:
+      type: object
+      required: [closingId, businessDate, status, ledgerInvariantValid, internalEntryCount, externalEntryCount, unmatchedItemCount, internalTotalMinor, externalTotalMinor]
+      properties:
+        closingId: { type: string }
+        businessDate:
+          type: string
+          format: date
+        status: { type: string }
+        ledgerInvariantValid: { type: boolean }
+        internalEntryCount: { type: integer }
+        externalEntryCount: { type: integer }
+        unmatchedItemCount: { type: integer }
+        internalTotalMinor: { type: integer }
+        externalTotalMinor: { type: integer }
+    ReconciliationExternalFileDto:
+      type: object
+      required: [fileId, businessDate, entries]
+      properties:
+        fileId: { type: string }
+        businessDate:
+          type: string
+          format: date
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReconciliationExternalEntryDto'
+    ReconciliationExternalEntryDto:
+      type: object
+      required: [referenceId, businessDate, amountMinor, status]
+      properties:
+        referenceId: { type: string }
+        businessDate:
+          type: string
+          format: date
+        amountMinor: { type: integer }
+        status: { type: string }
+        provider:
+          type: string
+          default: OPENBANKING-SIM
+    ReconciliationItemDto:
+      type: object
+      required: [itemId, businessDate, sourceSystem, mismatchType, amountMinor, detectedReason, currency, status, createdAt]
+      properties:
+        itemId: { type: string }
+        businessDate:
+          type: string
+          format: date
+        sourceSystem: { type: string }
+        internalReferenceId:
+          type: string
+          nullable: true
+        externalReferenceId:
+          type: string
+          nullable: true
+        mismatchType: { type: string }
+        amountMinor: { type: integer }
+        internalAmountMinor:
+          type: integer
+          nullable: true
+        externalAmountMinor:
+          type: integer
+          nullable: true
+        externalStatus:
+          type: string
+          nullable: true
+        feedFileId:
+          type: string
+          nullable: true
+        detectedReason: { type: string }
+        currency: { type: string }
+        status: { type: string }
+        owner:
+          type: string
+          nullable: true
+        approvalId:
+          type: string
+          nullable: true
+        adjustmentTransactionId:
+          type: string
+          nullable: true
+        adjustmentRequest:
+          $ref: '#/components/schemas/ReconciliationAdjustmentRequestDto'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ReconciliationAdjustmentRequestDto:
+      type: object
+      required: [requestId, approvalId, accountId, direction, amountMinor, businessDate, idempotencyKey, reason, requestedBy, status, createdAt, updatedAt]
+      properties:
+        requestId: { type: string }
+        approvalId: { type: string }
+        accountId: { type: string }
+        direction:
+          $ref: '#/components/schemas/PostingDirection'
+        amountMinor: { type: integer }
+        businessDate:
+          type: string
+          format: date
+        idempotencyKey: { type: string }
+        reason: { type: string }
+        requestedBy: { type: string }
+        status: { type: string }
+        ledgerTransactionId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        temporalWorkflow:
+          $ref: '#/components/schemas/TemporalWorkflowReference'
+          nullable: true
+    TemporalWorkflowReference:
+      type: object
+      required: [workflowId]
+      properties:
+        workflowId: { type: string }
+        runId:
+          type: string
+          nullable: true

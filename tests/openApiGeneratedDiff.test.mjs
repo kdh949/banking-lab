@@ -29,6 +29,20 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(coreKeys.has("GET /api/auth/session"));
   assert.ok(coreKeys.has("POST /api/ops/security/break-glass"));
   assert.ok(coreKeys.has("GET /api/parity/structured-errors/{code}"));
+  const coreSchemaNames = new Set(core.dtoSchemas.map((schema) => schema.name));
+  assert.ok(coreSchemaNames.has("DepositCommand"));
+  assert.ok(coreSchemaNames.has("InternalTransferCommand"));
+  assert.ok(coreSchemaNames.has("LedgerCommandResult"));
+  assert.ok(coreSchemaNames.has("PostingDirection"));
+  assert.ok(coreSchemaNames.has("ReconciliationClosingResponse"));
+  assert.ok(coreSchemaNames.has("ReconciliationItemDto"));
+  assert.ok(coreSchemaNames.has("TemporalWorkflowReference"));
+
+  const coreContract = await readFile("contracts/openapi/core-banking.yaml", "utf8");
+  assert.match(coreContract, /postLedgerDeposit[\s\S]*#\/components\/schemas\/DepositCommand/);
+  assert.match(coreContract, /postLedgerTransfer[\s\S]*#\/components\/schemas\/InternalTransferCommand/);
+  assert.match(coreContract, /postLedgerAdjustment[\s\S]*#\/components\/schemas\/AdjustmentCommand/);
+  assert.match(coreContract, /closeBusinessDay[\s\S]*#\/components\/schemas\/ReconciliationClosingResponse/);
 
   const payment = JSON.parse(await readFile("docs/test-evidence/generated/openapi/payment-service.generated.json", "utf8"));
   const paymentSchemaNames = new Set(payment.dtoSchemas.map((schema) => schema.name));
@@ -48,6 +62,7 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(notificationSchemaNames.has("NotificationDeliveryDto"));
   assert.ok(notificationSchemaNames.has("NotificationTemplateChangeRequestDto"));
   assert.ok(notificationSchemaNames.has("NotificationWorkflowStatus"));
+  assert.ok(notificationSchemaNames.has("NotificationWorkflowTimelineEntryDto"));
 
   const notificationContract = await readFile("contracts/openapi/notification-service.yaml", "utf8");
   assert.doesNotMatch(notificationContract, /AnyJsonResponse/);
@@ -59,6 +74,7 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(reportingSchemaNames.has("GenerateReportCommand"));
   assert.ok(reportingSchemaNames.has("ReportArtifactDto"));
   assert.ok(reportingSchemaNames.has("ReportRetentionSweepResponse"));
+  assert.ok(reportingSchemaNames.has("ReportingWorkflowTimelineEntryDto"));
 
   const reportingContract = await readFile("contracts/openapi/reporting-service.yaml", "utf8");
   assert.doesNotMatch(reportingContract, /AnyJsonResponse/);

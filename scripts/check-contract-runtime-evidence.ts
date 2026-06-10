@@ -78,9 +78,9 @@ if (!scripts["contracts:diff-openapi"]) {
 }
 
 for (const requiredDocMarker of [
-  "extend springdoc/Jackson DTO schema generation beyond payment-service, notification-service, and reporting-service",
+  "extend springdoc/Jackson DTO schema generation beyond the core-banking ledger command subset plus payment-service, notification-service, and reporting-service",
   "Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`",
-  "payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes",
+  "core-banking ledger command subset plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes",
   "`contracts:validate-runtime-events` now validates deterministic runtime envelope fixtures"
 ]) {
   if (!readme.includes(requiredDocMarker) && !contractDoc.includes(requiredDocMarker)) {
@@ -187,7 +187,7 @@ const evidence: ContractRuntimeEvidence = {
   syntheticOnly: true,
   status: "partial",
   statusReason:
-    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, payment-service, notification-service, and reporting-service DTO schema parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Core-banking springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
+    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, core-banking ledger command subset DTO schema parity, payment-service, notification-service, and reporting-service DTO schema parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Full core-banking springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
   openApi: {
     checkedInFiles: [...openApiContractFiles],
     operationCount: operations.length,
@@ -197,7 +197,7 @@ const evidence: ContractRuntimeEvidence = {
       status: "partial",
       expectedScript: "contracts:diff-openapi",
       note:
-        "Kotlin controller source-to-OpenAPI path/method diffing is wired, payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes, and core-banking still needs full springdoc/Jackson DTO schema parity."
+        "Kotlin controller source-to-OpenAPI path/method diffing is wired, core-banking ledger command subset plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes, and core-banking still needs full springdoc/Jackson DTO schema parity."
     }
   },
   asyncApi: {
@@ -218,7 +218,7 @@ const evidence: ContractRuntimeEvidence = {
     {
       id: "generated-openapi-diff-not-overclaimed",
       status: "pass",
-      details: "README and contract evidence distinguish payment-service, notification-service, and reporting-service DTO schema parity from remaining core-banking springdoc/Jackson DTO schema generation."
+      details: "README and contract evidence distinguish core-banking ledger command subset plus payment-service, notification-service, and reporting-service DTO schema parity from remaining full core-banking springdoc/Jackson DTO schema generation."
     },
     {
       id: "runtime-event-validation-not-overclaimed",
