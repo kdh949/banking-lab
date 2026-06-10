@@ -641,45 +641,127 @@ paths:
       operationId: requestCustomerComplaint
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerComplaintEntryCommand'
+      responses:
+        '201':
+          description: Synthetic customer complaint case opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerComplaintEntryResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
     get:
       operationId: customerComplaints
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic customer complaint cases
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerComplaintListResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/complaints/{caseId}/confirm:
     post:
       operationId: confirmCustomerComplaint
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerComplaintConfirmCommand'
+      responses:
+        '200':
+          description: Synthetic customer complaint confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerComplaintConfirmResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/complaints/{caseId}/materials:
     post:
       operationId: submitCustomerComplaintMaterial
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerComplaintMaterialCommand'
+      responses:
+        '200':
+          description: Synthetic customer complaint material accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerComplaintMaterialResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/complaints/{caseId}/reopen-requests:
     post:
       operationId: reopenCustomerComplaint
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerComplaintReopenCommand'
+      responses:
+        '200':
+          description: Synthetic customer complaint reopen request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerComplaintReopenResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/complaint-types:
     get:
       operationId: complaintTypeGuide
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic complaint type guide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplaintTypeGuideResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/complaints:
     get:
       operationId: complaintCases
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic staff complaint case list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComplaintCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/complaints/{caseId}:
     get:
       operationId: staffComplaintCase
       x-api-client-required: false
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic staff complaint case detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplaintCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/complaints/{caseId}/answer-drafts:
     post:
       operationId: draftComplaintAnswer
@@ -687,7 +769,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplaintAnswerDraftCommand'
+      responses:
+        '200':
+          description: Synthetic complaint answer draft approval request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplaintAnswerDraftResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/approvals:
     get:
       operationId: staffApprovals
@@ -850,14 +945,30 @@ paths:
       operationId: fdsCases
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic FDS case list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FdsCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/fds-cases/{caseId}:
     get:
       operationId: fdsCase
       x-api-client-required: false
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic FDS case detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdsCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/fds-cases/{caseId}/assign:
     post:
       operationId: assignFdsCase
@@ -865,7 +976,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FdsAssignCommand'
+      responses:
+        '200':
+          description: Synthetic FDS case assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdsCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/fds-cases/{caseId}/release-requests:
     post:
       operationId: requestFdsRelease
@@ -873,7 +997,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FdsDecisionCommand'
+      responses:
+        '200':
+          description: Synthetic FDS release approval request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdsDecisionRequestResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/fds-cases/{caseId}/block-requests:
     post:
       operationId: requestFdsBlock
@@ -881,20 +1018,49 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FdsDecisionCommand'
+      responses:
+        '200':
+          description: Synthetic FDS block approval request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FdsDecisionRequestResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/aml-cases:
     get:
       operationId: amlCases
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic AML case list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AmlCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/aml-cases/{caseId}:
     get:
       operationId: amlCase
       x-api-client-required: false
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic AML case detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmlCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/aml-cases/{caseId}/assign:
     post:
       operationId: assignAmlCase
@@ -903,7 +1069,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmlAssignCommand'
+      responses:
+        '200':
+          description: Synthetic AML case assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmlCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/aml-cases/{caseId}/comments:
     post:
       operationId: addAmlCaseComment
@@ -912,7 +1091,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmlCommentCommand'
+      responses:
+        '200':
+          description: Synthetic AML case comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmlCaseDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/aml-cases/{caseId}/closure-requests:
     post:
       operationId: requestAmlClosure
@@ -920,7 +1112,20 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmlClosureCommand'
+      responses:
+        '200':
+          description: Synthetic AML closure approval request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmlClosureRequestResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/ledger/deposits:
     post:
       operationId: postLedgerDeposit
@@ -1350,6 +1555,532 @@ components:
         reason:
           type: string
           nullable: true
+    ApprovalStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, CANCELLED]
+    OperatorApproval:
+      type: object
+      required: [approvalId, businessType, businessReferenceId, requestedBy, requestedAt, requestReason, beforeSnapshot, afterSnapshot, status]
+      properties:
+        approvalId: { type: string }
+        businessType: { type: string }
+        businessReferenceId: { type: string }
+        requestedBy: { type: string }
+        requestedAt:
+          type: string
+          format: date-time
+        requestReason: { type: string }
+        beforeSnapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        afterSnapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectedBy:
+          type: string
+          nullable: true
+        rejectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectReason:
+          type: string
+          nullable: true
+        auditEventId:
+          type: string
+          nullable: true
+    ComplaintCaseDto:
+      type: object
+      required: [caseId, customerId, category, description, status, slaDueAt, timeline]
+      properties:
+        caseId: { type: string }
+        customerId: { type: string }
+        category: { type: string }
+        description: { type: string }
+        status: { type: string }
+        slaDueAt:
+          type: string
+          format: date-time
+        classification:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        answer:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ComplaintAnswerDto'
+        answerDraft:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ComplaintAnswerDraftDto'
+        approvalId:
+          type: string
+          nullable: true
+        customerConfirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplaintTimelineEntryDto'
+        sourceReference:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ComplaintSourceReferenceDto'
+        temporalWorkflow:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/TemporalWorkflowReference'
+    ComplaintTimelineEntryDto:
+      type: object
+      required: [type, to, at]
+      properties:
+        type: { type: string }
+        from:
+          type: string
+          nullable: true
+        to: { type: string }
+        note:
+          type: string
+          nullable: true
+        at:
+          type: string
+          format: date-time
+    ComplaintAnswerDto:
+      type: object
+      required: [body, answeredBy, answeredAt]
+      properties:
+        body: { type: string }
+        answeredBy: { type: string }
+        answeredAt:
+          type: string
+          format: date-time
+    ComplaintAnswerDraftDto:
+      type: object
+      required: [body, draftedBy, draftedAt]
+      properties:
+        body: { type: string }
+        draftedBy: { type: string }
+        draftedAt:
+          type: string
+          format: date-time
+    ComplaintAnswerDraftCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        requestedByRole:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+    ComplaintAnswerDraftResponse:
+      type: object
+      required: [item, approval]
+      properties:
+        item:
+          $ref: '#/components/schemas/ComplaintCaseDto'
+        approval:
+          $ref: '#/components/schemas/OperatorApproval'
+    CustomerComplaintEntryCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        sourceReference:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ComplaintSourceReferenceDto'
+        requestedBy:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    CustomerComplaintEntryResponse:
+      type: object
+      required: [item]
+      properties:
+        item:
+          $ref: '#/components/schemas/ComplaintCaseDto'
+    CustomerComplaintListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplaintCaseDto'
+    CustomerComplaintConfirmCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    CustomerComplaintConfirmResponse:
+      type: object
+      required: [item]
+      properties:
+        item:
+          $ref: '#/components/schemas/ComplaintCaseDto'
+    CustomerComplaintMaterialCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          nullable: true
+        materialType:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        syntheticStorageRef:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    ComplaintMaterialDto:
+      type: object
+      required: [materialId, caseId, customerId, materialType, fileName, syntheticStorageRef, submittedBy, createdAt]
+      properties:
+        materialId: { type: string }
+        caseId: { type: string }
+        customerId: { type: string }
+        materialType: { type: string }
+        fileName: { type: string }
+        description:
+          type: string
+          nullable: true
+        syntheticStorageRef: { type: string }
+        submittedBy: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+    CustomerComplaintMaterialResponse:
+      type: object
+      required: [item, material]
+      properties:
+        item:
+          $ref: '#/components/schemas/ComplaintCaseDto'
+        material:
+          $ref: '#/components/schemas/ComplaintMaterialDto'
+    CustomerComplaintReopenCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          nullable: true
+        reopenReason:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    ComplaintReopenRequestDto:
+      type: object
+      required: [reopenRequestId, caseId, customerId, reopenReason, status, requestedBy, createdAt]
+      properties:
+        reopenRequestId: { type: string }
+        caseId: { type: string }
+        customerId: { type: string }
+        reopenReason: { type: string }
+        status: { type: string }
+        requestedBy: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+    CustomerComplaintReopenResponse:
+      type: object
+      required: [item, reopenRequest]
+      properties:
+        item:
+          $ref: '#/components/schemas/ComplaintCaseDto'
+        reopenRequest:
+          $ref: '#/components/schemas/ComplaintReopenRequestDto'
+    ComplaintTypeGuideDto:
+      type: object
+      required: [category, description, slaHours, requiredMaterials]
+      properties:
+        category: { type: string }
+        description: { type: string }
+        slaHours: { type: integer }
+        requiredMaterials:
+          type: array
+          items: { type: string }
+        sourceReferenceTypes:
+          type: array
+          items: { type: string }
+    ComplaintTypeGuideResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplaintTypeGuideDto'
+    ComplaintSourceReferenceDto:
+      type: object
+      required: [sourceType, sourceId]
+      properties:
+        sourceType: { type: string }
+        sourceId: { type: string }
+        accountId:
+          type: string
+          nullable: true
+        cardId:
+          type: string
+          nullable: true
+        ledgerTransactionId:
+          type: string
+          nullable: true
+        amountMinor:
+          type: integer
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+          default: KRW
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        syntheticOnly:
+          const: true
+          default: true
+    FdsAlert:
+      type: object
+      required: [ruleId, message]
+      properties:
+        ruleId: { type: string }
+        message: { type: string }
+    FdsCaseDto:
+      type: object
+      required: [caseId, transferReferenceId, customerId, status, riskScore, alerts, createdAt, updatedAt]
+      properties:
+        caseId: { type: string }
+        transferReferenceId: { type: string }
+        customerId: { type: string }
+        status: { type: string }
+        riskScore: { type: integer }
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FdsAlert'
+        owner:
+          type: string
+          nullable: true
+        approvalId:
+          type: string
+          nullable: true
+        fromAccountId:
+          type: string
+          nullable: true
+        toAccountId:
+          type: string
+          nullable: true
+        amountMinor:
+          type: integer
+          nullable: true
+        transferIdempotencyKey:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+          nullable: true
+        businessDate:
+          type: string
+          format: date
+          nullable: true
+        transferStatus:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        temporalWorkflow:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/TemporalWorkflowReference'
+    FdsDecisionCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        requestedByRole:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    FdsAssignCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        actorRole:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    FdsDecisionRequestResponse:
+      type: object
+      required: [item, approval]
+      properties:
+        item:
+          $ref: '#/components/schemas/FdsCaseDto'
+        approval:
+          $ref: '#/components/schemas/OperatorApproval'
+    AmlAlert:
+      type: object
+      required: [ruleId, message]
+      properties:
+        ruleId: { type: string }
+        message: { type: string }
+    AmlCaseDto:
+      type: object
+      required: [caseId, customerId, status, riskScore, alerts, comments, strSimulation, createdAt, updatedAt]
+      properties:
+        caseId: { type: string }
+        customerId: { type: string }
+        status: { type: string }
+        riskScore: { type: integer }
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AmlAlert'
+        owner:
+          type: string
+          nullable: true
+        approvalId:
+          type: string
+          nullable: true
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AmlCommentDto'
+        strSimulation:
+          $ref: '#/components/schemas/AmlStrSimulationDto'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        temporalWorkflow:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/TemporalWorkflowReference'
+    AmlCommentDto:
+      type: object
+      required: [actorId, body, createdAt]
+      properties:
+        actorId: { type: string }
+        body: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+    AmlStrSimulationDto:
+      type: object
+      properties:
+        reported:
+          type: boolean
+          default: false
+        disposition:
+          type: string
+          nullable: true
+        reportReferenceId:
+          type: string
+          nullable: true
+    AmlAssignCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+    AmlCommentCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+    AmlClosureCommand:
+      type: object
+      properties:
+        actorId:
+          type: string
+          nullable: true
+        requestedByRole:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        disposition:
+          type: string
+          nullable: true
+        reportReferenceId:
+          type: string
+          nullable: true
+    AmlClosureRequestResponse:
+      type: object
+      required: [item, approval]
+      properties:
+        item:
+          $ref: '#/components/schemas/AmlCaseDto'
+        approval:
+          $ref: '#/components/schemas/OperatorApproval'
     PostingDirection:
       type: string
       enum: [DEBIT, CREDIT]

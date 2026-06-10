@@ -1244,6 +1244,350 @@
       "enumValues": []
     },
     {
+      "name": "AmlAlert",
+      "kind": "object",
+      "required": [
+        "ruleId",
+        "message"
+      ],
+      "properties": [
+        {
+          "name": "ruleId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "message",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlAssignCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "owner",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlCaseDto",
+      "kind": "object",
+      "required": [
+        "caseId",
+        "customerId",
+        "status",
+        "riskScore",
+        "alerts",
+        "comments",
+        "strSimulation",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "caseId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "riskScore",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "alerts",
+          "kotlinType": "List<AmlAlert>",
+          "required": true,
+          "nullable": false,
+          "ref": "AmlAlert",
+          "itemsRef": "AmlAlert"
+        },
+        {
+          "name": "owner",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvalId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "comments",
+          "kotlinType": "List<AmlCommentDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "AmlCommentDto",
+          "itemsRef": "AmlCommentDto"
+        },
+        {
+          "name": "strSimulation",
+          "kotlinType": "AmlStrSimulationDto",
+          "required": true,
+          "nullable": false,
+          "ref": "AmlStrSimulationDto",
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "temporalWorkflow",
+          "kotlinType": "TemporalWorkflowReference?",
+          "required": false,
+          "nullable": true,
+          "ref": "TemporalWorkflowReference",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlClosureCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "disposition",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reportReferenceId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlClosureRequestResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "approval"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "AmlCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "AmlCaseDto",
+          "itemsRef": null
+        },
+        {
+          "name": "approval",
+          "kotlinType": "OperatorApproval",
+          "required": true,
+          "nullable": false,
+          "ref": "OperatorApproval",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlCommentCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "body",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlCommentDto",
+      "kind": "object",
+      "required": [
+        "actorId",
+        "body",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "body",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "AmlStrSimulationDto",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "reported",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "disposition",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reportReferenceId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ApprovalStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "CANCELLED"
+      ]
+    },
+    {
       "name": "BillPaymentCommand",
       "kind": "object",
       "required": [
@@ -1335,6 +1679,648 @@
           "nullable": false,
           "ref": null,
           "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintAnswerDraftCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "body",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintAnswerDraftDto",
+      "kind": "object",
+      "required": [
+        "body",
+        "draftedBy",
+        "draftedAt"
+      ],
+      "properties": [
+        {
+          "name": "body",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "draftedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "draftedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintAnswerDraftResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "approval"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ComplaintCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": null
+        },
+        {
+          "name": "approval",
+          "kotlinType": "OperatorApproval",
+          "required": true,
+          "nullable": false,
+          "ref": "OperatorApproval",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintAnswerDto",
+      "kind": "object",
+      "required": [
+        "body",
+        "answeredBy",
+        "answeredAt"
+      ],
+      "properties": [
+        {
+          "name": "body",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "answeredBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "answeredAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintCaseDto",
+      "kind": "object",
+      "required": [
+        "caseId",
+        "customerId",
+        "category",
+        "description",
+        "status",
+        "slaDueAt",
+        "timeline"
+      ],
+      "properties": [
+        {
+          "name": "caseId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "category",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "description",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "slaDueAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "classification",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "owner",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "answer",
+          "kotlinType": "ComplaintAnswerDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "ComplaintAnswerDto",
+          "itemsRef": null
+        },
+        {
+          "name": "answerDraft",
+          "kotlinType": "ComplaintAnswerDraftDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "ComplaintAnswerDraftDto",
+          "itemsRef": null
+        },
+        {
+          "name": "approvalId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerConfirmedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "timeline",
+          "kotlinType": "List<ComplaintTimelineEntryDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintTimelineEntryDto",
+          "itemsRef": "ComplaintTimelineEntryDto"
+        },
+        {
+          "name": "sourceReference",
+          "kotlinType": "ComplaintSourceReferenceDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "ComplaintSourceReferenceDto",
+          "itemsRef": null
+        },
+        {
+          "name": "temporalWorkflow",
+          "kotlinType": "TemporalWorkflowReference?",
+          "required": false,
+          "nullable": true,
+          "ref": "TemporalWorkflowReference",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintMaterialDto",
+      "kind": "object",
+      "required": [
+        "materialId",
+        "caseId",
+        "customerId",
+        "materialType",
+        "fileName",
+        "syntheticStorageRef",
+        "submittedBy",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "materialId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "caseId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "materialType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fileName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "description",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticStorageRef",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "submittedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintReopenRequestDto",
+      "kind": "object",
+      "required": [
+        "reopenRequestId",
+        "caseId",
+        "customerId",
+        "reopenReason",
+        "status",
+        "requestedBy",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "reopenRequestId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "caseId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reopenReason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintSourceReferenceDto",
+      "kind": "object",
+      "required": [
+        "sourceType",
+        "sourceId"
+      ],
+      "properties": [
+        {
+          "name": "sourceType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "cardId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintTimelineEntryDto",
+      "kind": "object",
+      "required": [
+        "type",
+        "to",
+        "at"
+      ],
+      "properties": [
+        {
+          "name": "type",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "from",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "to",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "note",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "at",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintTypeGuideDto",
+      "kind": "object",
+      "required": [
+        "category",
+        "description",
+        "slaHours",
+        "requiredMaterials"
+      ],
+      "properties": [
+        {
+          "name": "category",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "description",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "slaHours",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requiredMaterials",
+          "kotlinType": "List<String>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceReferenceTypes",
+          "kotlinType": "List<String>",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ComplaintTypeGuideResponse",
+      "kind": "object",
+      "required": [
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<ComplaintTypeGuideDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintTypeGuideDto",
+          "itemsRef": "ComplaintTypeGuideDto"
         }
       ],
       "enumValues": []
@@ -1536,6 +2522,290 @@
       "enumValues": []
     },
     {
+      "name": "CustomerComplaintConfirmCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "note",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintConfirmResponse",
+      "kind": "object",
+      "required": [
+        "item"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ComplaintCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintEntryCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "category",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "description",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceReference",
+          "kotlinType": "ComplaintSourceReferenceDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "ComplaintSourceReferenceDto",
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintEntryResponse",
+      "kind": "object",
+      "required": [
+        "item"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ComplaintCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintListResponse",
+      "kind": "object",
+      "required": [
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<ComplaintCaseDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": "ComplaintCaseDto"
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintMaterialCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "materialType",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fileName",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "description",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticStorageRef",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintMaterialResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "material"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ComplaintCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": null
+        },
+        {
+          "name": "material",
+          "kotlinType": "ComplaintMaterialDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintMaterialDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintReopenCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reopenReason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerComplaintReopenResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "reopenRequest"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ComplaintCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintCaseDto",
+          "itemsRef": null
+        },
+        {
+          "name": "reopenRequest",
+          "kotlinType": "ComplaintReopenRequestDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ComplaintReopenRequestDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
       "name": "DepositCommand",
       "kind": "object",
       "required": [
@@ -1614,6 +2884,293 @@
           "required": false,
           "nullable": true,
           "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "FdsAlert",
+      "kind": "object",
+      "required": [
+        "ruleId",
+        "message"
+      ],
+      "properties": [
+        {
+          "name": "ruleId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "message",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "FdsAssignCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "actorRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "owner",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "FdsCaseDto",
+      "kind": "object",
+      "required": [
+        "caseId",
+        "transferReferenceId",
+        "customerId",
+        "status",
+        "riskScore",
+        "alerts",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "caseId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transferReferenceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "riskScore",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "alerts",
+          "kotlinType": "List<FdsAlert>",
+          "required": true,
+          "nullable": false,
+          "ref": "FdsAlert",
+          "itemsRef": "FdsAlert"
+        },
+        {
+          "name": "owner",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvalId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fromAccountId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "toAccountId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transferIdempotencyKey",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transferStatus",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "temporalWorkflow",
+          "kotlinType": "TemporalWorkflowReference?",
+          "required": false,
+          "nullable": true,
+          "ref": "TemporalWorkflowReference",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "FdsDecisionCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "actorId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "FdsDecisionRequestResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "approval"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "FdsCaseDto",
+          "required": true,
+          "nullable": false,
+          "ref": "FdsCaseDto",
+          "itemsRef": null
+        },
+        {
+          "name": "approval",
+          "kotlinType": "OperatorApproval",
+          "required": true,
+          "nullable": false,
+          "ref": "OperatorApproval",
           "itemsRef": null
         }
       ],
@@ -2076,6 +3633,142 @@
           "kotlinType": "String",
           "required": true,
           "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "OperatorApproval",
+      "kind": "object",
+      "required": [
+        "approvalId",
+        "businessType",
+        "businessReferenceId",
+        "requestedBy",
+        "requestedAt",
+        "requestReason",
+        "status"
+      ],
+      "properties": [
+        {
+          "name": "approvalId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessReferenceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestReason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "beforeSnapshot",
+          "kotlinType": "Map<String, Any?>?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "afterSnapshot",
+          "kotlinType": "Map<String, Any?>?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "ApprovalStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "ApprovalStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "approvedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "rejectedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "rejectedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "rejectReason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "auditEventId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
           "ref": null,
           "itemsRef": null
         }
