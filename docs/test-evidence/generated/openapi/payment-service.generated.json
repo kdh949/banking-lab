@@ -118,5 +118,1253 @@
       "responseDto": "PaymentOutboxDispatchResponse"
     }
   ],
-  "dtoSchemas": []
+  "dtoSchemas": [
+    {
+      "name": "CancelAutopayAgreementRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CancelPaymentInstructionRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CreateAutopayAgreementRequest",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "debitAccountId",
+        "billerId",
+        "amountMinor",
+        "frequency",
+        "nextRunOn",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "debitAccountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "frequency",
+          "kotlinType": "PaymentAutopayFrequency",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentAutopayFrequency",
+          "itemsRef": null
+        },
+        {
+          "name": "nextRunOn",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedChannel",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CreatePaymentInstructionRequest",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "debitAccountId",
+        "billerId",
+        "amountMinor",
+        "idempotencyKey",
+        "requestedBy"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "debitAccountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedChannel",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "DispatchPaymentLedgerPostingRequest",
+      "kind": "object",
+      "required": [
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "deadLetterThreshold",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExecuteDueAutopayRequest",
+      "kind": "object",
+      "required": [
+        "businessDate",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "limit",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExecuteDueAutopayResponse",
+      "kind": "object",
+      "required": [
+        "items",
+        "executedCount",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<PaymentAutopayExecutionDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentAutopayExecutionDto",
+          "itemsRef": "PaymentAutopayExecutionDto"
+        },
+        {
+          "name": "executedCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PauseAutopayAgreementRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentAutopayAgreementDto",
+      "kind": "object",
+      "required": [
+        "autopayAgreementId",
+        "customerId",
+        "debitAccountId",
+        "billerId",
+        "billerName",
+        "amountMinor",
+        "currency",
+        "frequency",
+        "status",
+        "nextRunOn",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "autopayAgreementId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "debitAccountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "frequency",
+          "kotlinType": "PaymentAutopayFrequency",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentAutopayFrequency",
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "PaymentAutopayStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentAutopayStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "nextRunOn",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "lastRunOn",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "lastPaymentInstructionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentAutopayAgreementResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "PaymentAutopayAgreementDto",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentAutopayAgreementDto",
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentAutopayExecutionDto",
+      "kind": "object",
+      "required": [
+        "autopayExecutionId",
+        "autopayAgreementId",
+        "scheduledRunOn",
+        "paymentInstructionId",
+        "status",
+        "syntheticOnly",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "autopayExecutionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "autopayAgreementId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "scheduledRunOn",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentAutopayFrequency",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "DAILY",
+        "WEEKLY",
+        "MONTHLY"
+      ]
+    },
+    {
+      "name": "PaymentAutopayStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "ACTIVE",
+        "PAUSED",
+        "CANCELED"
+      ]
+    },
+    {
+      "name": "PaymentCancellationRequestDto",
+      "kind": "object",
+      "required": [
+        "cancellationRequestId",
+        "paymentInstructionId",
+        "status",
+        "makerId",
+        "makerRole",
+        "makerReason",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "cancellationRequestId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "PaymentCancellationRequestStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentCancellationRequestStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "makerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "makerRole",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "makerReason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "checkerId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "checkerRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "checkerReason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "decidedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentCancellationRequestResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "PaymentCancellationRequestDto",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentCancellationRequestDto",
+          "itemsRef": null
+        },
+        {
+          "name": "instruction",
+          "kotlinType": "PaymentInstructionDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "PaymentInstructionDto",
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentCancellationRequestStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    {
+      "name": "PaymentInstructionDto",
+      "kind": "object",
+      "required": [
+        "paymentInstructionId",
+        "customerId",
+        "debitAccountId",
+        "billerId",
+        "billerName",
+        "amountMinor",
+        "currency",
+        "status",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "debitAccountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "PaymentInstructionStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentInstructionStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "lastOutboxEventId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentInstructionResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "PaymentInstructionDto",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentInstructionDto",
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "auditEventId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentInstructionStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "POSTING_REQUESTED",
+        "SETTLED",
+        "CANCELED",
+        "FAILED"
+      ]
+    },
+    {
+      "name": "PaymentOutboxDispatchResponse",
+      "kind": "object",
+      "required": [
+        "status",
+        "retryCount"
+      ],
+      "properties": [
+        {
+          "name": "outboxEventId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "retryCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "RecordPaymentSettlementRequest",
+      "kind": "object",
+      "required": [
+        "ledgerTransactionId",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "RequestPaymentCancellationApprovalRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ResumeAutopayAgreementRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "nextRunOn",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReviewPaymentCancellationRequest",
+      "kind": "object",
+      "required": [
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    }
+  ]
 }

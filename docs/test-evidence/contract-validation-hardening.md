@@ -46,7 +46,7 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 
 ## Residual Risk
 
-- Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`, and reporting-service DTO schemas are generated from Kotlin data classes. Full core-banking springdoc/Jackson DTO schema generation remains a future improvement.
+- Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`, and payment-service and reporting-service DTO schemas are generated from Kotlin data classes. Full core-banking springdoc/Jackson DTO schema generation remains a future improvement.
 - AsyncAPI models a shared outbox/envelope contract plus payload schemas. `contracts:validate-runtime-events` now validates deterministic runtime envelope fixtures, header/body consistency, and producer ack/source markers; full live broker behavior remains covered by service integration tests.
 
 ## 2026-06-10 Runtime Boundary Evidence
@@ -71,7 +71,7 @@ runtime envelope gate.
   path/methods with no controller route, structured error metadata gaps, and
   request/response DTO name mismatches where checked-in OpenAPI declares a DTO
   schema reference.
-- For reporting-service, the gate also fails if a runtime request/response DTO
+- For payment-service and reporting-service, the gate also fails if a runtime request/response DTO
   falls back to `AnyJson`, if a generated Kotlin DTO component schema is missing,
   or if component properties drift from the Kotlin data class fields.
 - This is still not a full core-banking springdoc/Jackson schema export.
@@ -82,7 +82,7 @@ Current local validation:
 
 | Command | Result | Notes |
 | --- | --- | --- |
-| `npm run contracts:diff-openapi` | pass | Matched 142 core-banking, 14 payment-service, 16 notification-service, and 6 reporting-service controller operations to checked-in OpenAPI, and generated 11 reporting-service DTO/enum schemas from Kotlin data classes. |
+| `npm run contracts:diff-openapi` | pass | Matched 142 core-banking, 14 payment-service, 16 notification-service, and 6 reporting-service controller operations to checked-in OpenAPI, and generated 24 payment-service plus 11 reporting-service DTO/enum schemas from Kotlin data classes. |
 | `npm run contracts:lint` | pass | Revalidated 4 OpenAPI files and 1 AsyncAPI file after adding the source diff gate. |
 | `npm run contracts:check-client` | pass | Validated 178 OpenAPI operation IDs against 146 shared API client methods/exemptions. |
 | `npm run contracts:check-events` | pass | Revalidated 17 AsyncAPI event schema references. |
