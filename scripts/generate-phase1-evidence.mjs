@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { readFile } from "node:fs/promises";
 import { createLabState } from "../runtime/labApp.mjs";
-import { assertTransactionBalanced, projectBalances } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
-import { loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
+import { assertTransactionBalanced, projectBalances } from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
+import { loadManifests } from "../runtime/synthetic-reference/packages/screen-engine/src/index.mjs";
 
 const outputDir = "docs/test-evidence/generated";
 const outputFile = `${outputDir}/phase-1-foundation.json`;

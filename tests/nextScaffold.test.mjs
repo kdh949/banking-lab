@@ -11,7 +11,7 @@ async function exists(filePath) {
   }
 }
 
-test("customer-web Next workspace keeps the Node reference shell outside target app", async () => {
+test("customer-web Next workspace keeps legacy static shell out of target app", async () => {
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const appPackage = JSON.parse(await readFile("apps/customer-web/package.json", "utf8"));
 
@@ -20,7 +20,7 @@ test("customer-web Next workspace keeps the Node reference shell outside target 
   assert.match(appPackage.scripts.build, /next build/);
   assert.equal(rootPackage.scripts["next:customer-web:typecheck"], "npm --workspace @banking-lab/customer-web run typecheck");
   assert.equal(await exists("apps/customer-web/public/index.html"), false);
-  assert.equal(await exists("legacy-node-reference/apps/customer-web/public/index.html"), true);
+  assert.equal(await exists("runtime/synthetic-reference/apps/customer-web/public/index.html"), false);
 });
 
 test("customer-web Next page is manifest-driven and customer journey routes are form-backed", async () => {
@@ -179,7 +179,7 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   assert.equal(reportingManifest.actions[4].target, "POST /api/reports/retention/sweeps");
   assert.equal(reportingManifest.actions[0].target, "GET /api/reports/catalog");
   assert.equal(await exists("apps/admin-console/public/index.html"), false);
-  assert.equal(await exists("legacy-node-reference/apps/admin-console/public/index.html"), true);
+  assert.equal(await exists("runtime/synthetic-reference/apps/admin-console/public/index.html"), false);
 });
 
 test("audit-console exposes notification delivery history through manifests and API client", async () => {
@@ -252,45 +252,46 @@ test("complaint-portal exposes self-service complaint extensions through manifes
   assert.equal(typeGuideManifest.query.endpoint, "GET /api/customer/complaint-types");
 });
 
-test("staff-terminal exposes PAY101 audited payment inquiry through the payment service client", async () => {
-  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
-  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/PAY-101.payment-instruction-inquiry.json", "utf8"));
+test("staff-terminal is the iWorks integrated terminal with only official routes", async () => {
+  const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+  const appPackage = JSON.parse(await readFile("apps/staff-terminal/package.json", "utf8"));
+  const page = await readFile("apps/staff-terminal/src/app/page.tsx", "utf8");
+  const layout = await readFile("apps/staff-terminal/src/app/layout.tsx", "utf8");
+  const app = await readFile("apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx", "utf8");
+  const shell = await readFile("apps/staff-terminal/src/components/terminal/shell.tsx", "utf8");
+  const screens = await readFile("apps/staff-terminal/src/components/terminal/screens.tsx", "utf8");
+  const statusRoute = await readFile("apps/staff-terminal/src/app/api/terminal-status/route.ts", "utf8");
 
-  assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
-  assert.match(panel, /data-testid="api-backed-staff-payment-inquiry"/);
-  assert.match(panel, /Run payment inquiry smoke/);
-  assert.match(panel, /getPaymentInstruction\(created\.item\.paymentInstructionId, lookupReason\)/);
-  assert.match(client, /getPaymentInstruction\(instructionId: string, reason\?: string\)/);
-  assert.equal(manifest.audit.reasonRequired, true);
-  assert.equal(manifest.audit.eventTypes[0], "PAYMENT_INSTRUCTION_VIEW");
-});
+  assert.equal(appPackage.name, "@banking-lab/staff-terminal");
+  assert.equal(rootPackage.scripts["next:staff-terminal:typecheck"], "npm --workspace @banking-lab/staff-terminal run typecheck");
+  assert.equal(rootPackage.scripts["integrated-terminal:boundary-check"], "node --experimental-strip-types scripts/check-integrated-terminal-boundary.ts");
+  assert.match(page, /IntegratedTerminalApp/);
+  assert.match(layout, /integrated-terminal\.css/);
+  assert.match(app, /TerminalHeader/);
+  assert.match(app, /SideDrawer/);
+  assert.match(app, /StatusBar/);
+  assert.match(shell, /\/api\/terminal-status/);
+  assert.match(shell, /clientIp/);
+  assert.match(shell, /serverTime/);
+  assert.match(shell, /즐겨찾기/);
+  assert.match(screens, /inputMode="numeric"/);
+  assert.match(screens, /replace\(\/\\D\/gu, ""\)/);
+  assert.match(statusRoute, /serverTimeIso/);
+  assert.match(statusRoute, /clientIp/);
 
-test("staff-terminal exposes PAY102 payment cancellation approval through the payment service client", async () => {
-  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
-  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/PAY-102.payment-cancellation-approval.json", "utf8"));
-
-  assert.match(panel, /data-testid="api-backed-staff-payment-cancellation"/);
-  assert.match(panel, /Run payment cancellation approval smoke/);
-  assert.match(panel, /requestPaymentCancellationApproval\(created\.item\.paymentInstructionId/);
-  assert.match(panel, /PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED/);
-  assert.match(panel, /approvePaymentCancellationRequest\(requested\.item\.cancellationRequestId/);
-  assert.match(panel, /paymentCancellationState\.requested\.item\.makerId/);
-  assert.match(panel, /paymentCancellationState\.approved\.item\.checkerId/);
-  assert.match(client, /requestPaymentCancellationApproval\(instructionId: string/);
-  assert.match(client, /approvePaymentCancellationRequest\(requestId: string/);
-  assert.match(client, /rejectPaymentCancellationRequest\(requestId: string/);
-  assert.equal(manifest.type, "COMMAND");
-  assert.equal(manifest.highRisk, true);
-  assert.equal(manifest.approval.required, true);
-  assert.equal(manifest.approval.makerChecker, true);
-  assert.equal(manifest.audit.reasonRequired, true);
-  assert.equal(manifest.api.command, "POST /api/payments/instructions/{instructionId}/cancellation-requests");
-  assert.equal(manifest.actions.some((action) => action.target === "POST /api/payments/cancellation-requests/{requestId}/approve"), true);
-  assert.equal(manifest.actions.some((action) => action.target === "POST /api/payments/cancellation-requests/{requestId}/reject"), true);
-  assert.equal(manifest.requiredRoles.includes("OPS_MANAGER"), true);
-  assert.equal(manifest.audit.eventTypes.includes("PAYMENT_CANCELLATION_REJECTED"), true);
+  for (const removedPath of [
+    "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx",
+    "apps/staff-terminal/src/components/manifest-renderer.tsx",
+    "apps/staff-terminal/src/components/terminal-ui.tsx",
+    "apps/staff-terminal/src/components/workflow-routes.tsx",
+    "apps/staff-terminal/src/lib/manifestLoader.ts",
+    "apps/staff-terminal/src/app/api/auth/keycloak-token/route.ts",
+    "apps/staff-terminal/src/app/customers/[customerId]/page.tsx",
+    "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts",
+    "screen-manifests/staff-terminal"
+  ]) {
+    assert.equal(await exists(removedPath), false, `${removedPath} should be removed`);
+  }
 });
 
 test("payment service contract exposes staff cancellation maker-checker APIs", async () => {
@@ -307,58 +308,6 @@ test("payment service contract exposes staff cancellation maker-checker APIs", a
   assert.match(client, /requestPaymentCancellationApproval\(instructionId: string/);
   assert.match(client, /approvePaymentCancellationRequest\(requestId: string/);
   assert.match(client, /rejectPaymentCancellationRequest\(requestId: string/);
-});
-
-test("staff-terminal exposes WRK002 operational retry queue through the Spring API client", async () => {
-  const panel = await readFile("apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
-  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-002.operational-retry-queue.json", "utf8"));
-
-  assert.match(panel, /data-testid="api-backed-operational-retry-queue"/);
-  assert.match(panel, /staffOperationalRetryQueue/);
-  assert.match(panel, /First event/);
-  assert.match(client, /OperationalRetryQueueItemDto/);
-  assert.match(client, /staffOperationalRetryQueue\(reason: string, status\?: string\)/);
-  assert.equal(manifest.query.endpoint, "GET /api/staff/operations/retry-queue");
-  assert.equal(manifest.audit.reasonRequired, true);
-  assert.equal(manifest.audit.eventTypes[0], "OPERATIONAL_RETRY_QUEUE_VIEW");
-});
-
-test("staff-terminal exposes WRK003 workflow timeline through the Spring API client", async () => {
-  const renderer = await readFile("apps/staff-terminal/src/components/manifest-renderer.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
-  const dashboard = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-001.integrated-workstation-dashboard.json", "utf8"));
-  const manifest = JSON.parse(await readFile("screen-manifests/staff-terminal/WRK-003.workflow-timeline.json", "utf8"));
-
-  assert.match(renderer, /data-testid="manifest-workflow-timeline-api-panel"/);
-  assert.match(renderer, /staffWorkflowTimeline/);
-  assert.match(renderer, /TX-SYN-CORR-001/);
-  assert.match(client, /StaffWorkflowTimelineEntryDto/);
-  assert.match(client, /staffWorkflowTimeline\(businessReferenceId: string, reason: string\)/);
-  assert.equal(manifest.query.endpoint, "GET /api/staff/workflows/{businessReferenceId}/timeline");
-  assert.equal(manifest.audit.reasonRequired, true);
-  assert.equal(manifest.audit.eventTypes[0], "WORKFLOW_TIMELINE_VIEW");
-  assert.equal(dashboard.actions.some((action) => action.target === "WRK-003"), true);
-});
-
-test("staff-terminal exposes route-backed reason and approval workflow pages", async () => {
-  const routes = await readFile("apps/staff-terminal/src/components/workflow-routes.tsx", "utf8");
-  const dashboard = await readFile("apps/staff-terminal/src/components/terminal-screens.tsx", "utf8");
-  const customerRoute = await readFile("apps/staff-terminal/src/app/customers/[customerId]/page.tsx", "utf8");
-  const approvalRoute = await readFile("apps/staff-terminal/src/app/approvals/page.tsx", "utf8");
-  const txRoute = await readFile("apps/staff-terminal/src/app/tx/[transactionCode]/page.tsx", "utf8");
-
-  assert.match(routes, /StaffWorkflowRoutePage/);
-  assert.match(routes, /POLICY_REASON_REQUIRED/);
-  assert.match(routes, /MAKER_CHECKER_SEPARATION_REQUIRED/);
-  assert.match(routes, /AUTHORIZATION_DENIED/);
-  assert.match(routes, /staffCustomerDetail/);
-  assert.match(routes, /approveStaffApproval/);
-  assert.match(routes, /staffWorkflowTimeline/);
-  assert.match(dashboard, /staffWorkflowRouteSummaries/);
-  assert.match(customerRoute, /routeKey: "customers"/);
-  assert.match(approvalRoute, /routeKey: "approvals"/);
-  assert.match(txRoute, /routeKey: "tx"/);
 });
 
 test("ops-console exposes OPS404 payment outbox dispatch through the payment service client", async () => {
@@ -433,6 +382,6 @@ test("target Next app directories do not contain legacy static shells", async ()
 
   for (const app of apps) {
     assert.equal(await exists(`apps/${app}/public/index.html`), false, `${app} should not keep legacy HTML under apps/`);
-    assert.equal(await exists(`legacy-node-reference/apps/${app}/public/index.html`), true, `${app} should preserve its legacy shell under legacy-node-reference/`);
+    assert.equal(await exists(`runtime/synthetic-reference/apps/${app}/public/index.html`), false, `${app} should not keep retired legacy HTML under runtime/synthetic-reference/`);
   }
 });

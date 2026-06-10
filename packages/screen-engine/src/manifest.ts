@@ -13,8 +13,7 @@ export const MINIMUM_MANIFEST_COUNTS = Object.freeze({
     "complaint-portal": 8,
     "customer-web": 10,
     "fds-aml-console": 6,
-    "ops-console": 3,
-    "staff-terminal": 30
+    "ops-console": 3
   })
 });
 

@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { generateSyntheticDataset } from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
+import { generateSyntheticDataset } from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
 
 const outputDir = "var/generated";
 const outputFile = `${outputDir}/synthetic-seed.json`;

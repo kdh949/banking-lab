@@ -146,12 +146,12 @@ test("customer can confirm an answered complaint and close the case", async () =
   });
 });
 
-test("complaint workflow manifests cover staff and customer views", async () => {
+test("complaint workflow manifests cover customer portal views without staff-terminal manifests", async () => {
   await withServer(async ({ baseUrl }) => {
     const staffScreens = await (await fetch(`${baseUrl}/api/screens?app=staff-terminal`)).json();
     const portalScreens = await (await fetch(`${baseUrl}/api/screens?app=complaint-portal`)).json();
 
-    assert.equal(staffScreens.items.some((screen) => screen.screenId === "CMP-201"), true);
+    assert.deepEqual(staffScreens.items, []);
     assert.equal(portalScreens.items.some((screen) => screen.screenId === "CMP-101"), true);
     assert.equal(portalScreens.items.some((screen) => screen.screenId === "CMP-102"), true);
   });

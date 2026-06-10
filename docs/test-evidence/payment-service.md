@@ -124,7 +124,7 @@ npm run next:customer-web:typecheck
 npm run next:staff-terminal:typecheck
 npm run next:ops-console:typecheck
 npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts
-npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts
+npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts
 npm run test:e2e -- apps/ops-console/e2e/ops-console-parity.spec.ts
 docker compose --profile platform config
 npm run k8s:validate
@@ -220,7 +220,7 @@ need local file-lock socket and Docker access.
   idempotent replay, structured API access, and service-role denial.
 - `npm run test:core-banking:unit -- --rerun-tasks`: pass; Kotlin unit suite
   compiled and ran after sandbox escalation.
-- `npm test`: pass; 165 Node oracle and evidence tests passed.
+- `npm test`: pass; 165 synthetic runtime and evidence tests passed.
 - `npm run node:retirement-gate`: pass; gate remains ready from existing
   verified passkey/final-review evidence.
 - `npm run evidence:refresh-check`: pass.
@@ -240,7 +240,7 @@ need local file-lock socket and Docker access.
 - `npm run test:e2e -- apps/customer-web/e2e/customer-web-parity.spec.ts`: pass;
   local shell and API-gated customer E2E coverage ran, with payment-service
   smoke skipped unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is configured.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts`:
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts`:
   pass; 5 local shell tests passed and 18 API/Keycloak/payment-service smokes
   were skipped because E2E base URLs were not configured, including PAY-101 and
   PAY-102 unless `BANKING_LAB_E2E_PAYMENT_API_BASE_URL` is set.

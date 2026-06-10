@@ -20,7 +20,7 @@ No real credit bureau, real KYC, real PII enrichment, external financial network
 - `LedgerCommandService` now posts loan disbursement and repayment/prepayment through append-only balanced ledger transactions and durable outbox events.
 - `LoanService` exposes application, approval-backed execution, detail, repayment, prepayment, and accrual workflows.
 - `StaffAccessService` executes `LOAN_EXECUTION` only after maker-checker approval and supports rejection.
-- `screen-manifests/customer-web/CWB-501..504` and `screen-manifests/staff-terminal/LON-101..103` model the reusable command/inquiry/case screens.
+- `screen-manifests/customer-web/CWB-501..504` model the reusable customer loan screens; staff `LON-101..103` control coverage remains Spring/backend-backed because the current iWorks staff terminal no longer uses staff screen manifests.
 - `packages/api-client` and the customer web API-backed smoke panel include the loan API path.
 
 ## Commands Run

@@ -32,8 +32,8 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   const readinessTest = "tests/passkeyManualReadiness.test.mjs";
   const liveReadinessScript = "scripts/check-passkey-live-platform-readiness.ts";
   const liveReadinessTest = "tests/passkeyLivePlatformReadiness.test.mjs";
-  const staffPanel = "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx";
-  const staffWebAuthnSpec = "apps/staff-terminal/e2e/staff-terminal-parity.spec.ts";
+  const staffPanel = "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx";
+  const staffWebAuthnSpec = "apps/staff-terminal/e2e/integrated-terminal.spec.ts";
   const verifierScript = "scripts/verify-passkey-non-synthetic-evidence.ts";
   const verifierTest = "tests/passkeyEvidenceVerifier.test.mjs";
   const artifact = "docs/test-evidence/generated/passkey-non-synthetic-evidence.json";
@@ -72,7 +72,7 @@ test("passkey evidence preflight is wired into scripts and retirement evidence",
   assert.match(preflight, /manager-webauthn01/);
   assert.match(preflight, /security-admin01/);
   assert.match(preflight, /PASSKEY_RECOVERY_ADMIN/);
-  assert.match(preflight, /NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED/);
-  assert.match(preflight, /simulator token smoke disabled/);
-  assert.match(preflight, /Sign in WebAuthn manager with Keycloak/);
+  assert.match(preflight, /IntegratedTerminalApp/);
+  assert.match(preflight, /terminal-status/);
+  assert.match(preflight, /통합단말 프로토타입/);
 });

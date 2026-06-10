@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ApprovalStore,
@@ -12,8 +11,8 @@ import {
   loginMockUser,
   maskAccount,
   maskCustomer
-} from "../legacy-node-reference/packages/banking-domain/src/index.mjs";
-import { LedgerCore } from "../legacy-node-reference/services/core-banking/src/index.mjs";
+} from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
+import { LedgerCore } from "../runtime/synthetic-reference/services/core-banking/src/index.mjs";
 import {
   assignComplaint,
   classifyComplaint,
@@ -22,7 +21,7 @@ import {
   markComplaintAnswered,
   receiveComplaint,
   startComplaintReview
-} from "../legacy-node-reference/services/complaint-service/src/index.mjs";
+} from "../runtime/synthetic-reference/services/complaint-service/src/index.mjs";
 import {
   assignFdsCase,
   createFdsCase,
@@ -30,7 +29,7 @@ import {
   markFdsBlocked,
   markFdsReleased,
   requestFdsDecision
-} from "../legacy-node-reference/services/fds-service/src/index.mjs";
+} from "../runtime/synthetic-reference/services/fds-service/src/index.mjs";
 import {
   addAmlComment,
   assignAmlCase,
@@ -39,24 +38,17 @@ import {
   deriveAmlRisk,
   evaluateAmlRules,
   requestAmlClosure
-} from "../legacy-node-reference/services/aml-service/src/index.mjs";
+} from "../runtime/synthetic-reference/services/aml-service/src/index.mjs";
 import {
   markReconciliationAdjusted,
   requestReconciliationAdjustment,
   runDailyReconciliation
-} from "../legacy-node-reference/services/reconciliation-service/src/index.mjs";
-import { simulateExternalInstitutionFile } from "../legacy-node-reference/services/external-simulators/src/index.mjs";
-import { filterManifestsByApp, loadManifests } from "../legacy-node-reference/packages/screen-engine/src/index.mjs";
+} from "../runtime/synthetic-reference/services/reconciliation-service/src/index.mjs";
+import { simulateExternalInstitutionFile } from "../runtime/synthetic-reference/services/external-simulators/src/index.mjs";
+import { filterManifestsByApp, loadManifests } from "../runtime/synthetic-reference/packages/screen-engine/src/index.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = join(__dirname, "..");
-
-const MIME_TYPES = new Map([
-  [".html", "text/html; charset=utf-8"],
-  [".js", "text/javascript; charset=utf-8"],
-  [".css", "text/css; charset=utf-8"],
-  [".json", "application/json; charset=utf-8"]
-]);
 
 let requestSequence = 0;
 
@@ -672,17 +664,36 @@ export async function createLabHandler(state) {
 
       if (pathname === "/assets/app.js" || pathname === "/assets/lab.css") {
         const fileName = pathname.endsWith(".js") ? "app.js" : "lab.css";
-        const content = await readFile(join(repoRoot, "legacy-node-reference", "ui", "public", fileName), "utf8");
-        response.writeHead(200, { "content-type": MIME_TYPES.get(extname(fileName)) });
+        const content = fileName === "app.js"
+          ? "document.documentElement.dataset.syntheticRuntime = 'true';\n"
+          : "body{font-family:system-ui,sans-serif;margin:2rem;color:#172033}.synthetic-shell{max-width:48rem}\n";
+        response.writeHead(200, {
+          "content-type": fileName === "app.js" ? "text/javascript; charset=utf-8" : "text/css; charset=utf-8"
+        });
         response.end(content);
         return;
       }
 
       const app = routeAppPath(pathname);
       if (app) {
-        const content = await readFile(join(repoRoot, "legacy-node-reference", "apps", app, "public", "index.html"), "utf8");
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-        response.end(content);
+        response.end([
+          "<!doctype html>",
+          "<html lang=\"en\">",
+          "<head>",
+          "  <meta charset=\"utf-8\">",
+          `  <title>${app} synthetic runtime</title>`,
+          "  <link rel=\"stylesheet\" href=\"/assets/lab.css\">",
+          "</head>",
+          "<body>",
+          `  <main class=\"synthetic-shell\" data-app=\"${app}\">`,
+          `    <h1>${app}</h1>`,
+          "    <p>Current synthetic runtime shell. Target UI lives in Next.js apps.</p>",
+          "  </main>",
+          "  <script src=\"/assets/app.js\"></script>",
+          "</body>",
+          "</html>"
+        ].join("\n"));
         return;
       }
 

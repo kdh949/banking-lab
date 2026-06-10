@@ -237,7 +237,8 @@ banking-lab/
 │  ├─ failure-drills/
 │  └─ demo-scenarios/
 │
-├─ legacy-node-reference/           # 선택: Node reference 보관 위치
+├─ runtime/
+│  └─ synthetic-reference/          # 테스트용 합성 helper 모듈, 공식 앱/백엔드 구현 아님
 ├─ AGENTS.md
 ├─ README.md
 └─ docker-compose.yml
@@ -898,12 +899,12 @@ Temporal workflow timeout
 
 ## 17. 마이그레이션/재작성 단계
 
-### Phase 0 — Freeze Node Reference
+### Phase 0 — Freeze Synthetic Runtime Helpers
 
 목표:
 
 ```text
-현재 Node 구현을 reference oracle로 고정한다.
+현재 Node 기반 테스트 helper를 runtime/synthetic-reference로 격리하고, target 앱/서비스 구현과 분리한다.
 ```
 
 작업:
@@ -912,14 +913,14 @@ Temporal workflow timeout
 npm test 통과 확인
 npm run validate:manifests 통과 확인
 npm run evidence:pack 통과 확인
-Node reference behavior 문서화
+합성 runtime helper 경계 문서화
 ```
 
 산출물:
 
 ```text
-docs/migration/node-reference-freeze.md
-legacy-node-reference/ 또는 기존 경로 유지
+docs/migration/node-retirement-gate.json
+runtime/synthetic-reference/
 ```
 
 ### Phase 1 — Target Platform Foundation
@@ -1129,8 +1130,8 @@ evidence pack
 먼저 Phase 0과 Phase 1을 구현해라.
 
 작업:
-1. 현재 Node reference의 테스트와 문서를 freeze하는 문서를 작성한다.
-2. Node runtime은 삭제하지 않는다.
+1. 현재 synthetic runtime helper의 테스트 경계를 문서화한다.
+2. `runtime/server.mjs`, `runtime/labApp.mjs`, `runtime/synthetic-reference`는 target 구현이 아님을 명확히 분리한다.
 3. Gradle wrapper를 추가한다.
 4. Spring Boot multi-module 구조를 정리한다.
 5. core-banking Spring Boot 서비스가 JDK 21, Kotlin, Spring Boot, Flyway, PostgreSQL, Testcontainers 기반으로 실행 가능하게 만든다.
@@ -1140,7 +1141,7 @@ evidence pack
 9. 기존 infra/db/migrations/001_foundation.sql과 새 migration의 관계를 문서화한다.
 10. docs/architecture/target-stack-architecture.md를 작성한다.
 11. docs/migration/full-rewrite-roadmap.md를 작성한다.
-12. README에 현재 Node reference와 target stack rewrite 방향을 명확히 분리해서 설명한다.
+12. README에 synthetic runtime helper와 target stack rewrite 방향을 명확히 분리해서 설명한다.
 
 완료 후 보고:
 - 변경 파일
@@ -1152,7 +1153,7 @@ evidence pack
 주의:
 - 실제 고객정보, 실제 송금, 실제 금융 API는 절대 사용하지 않는다.
 - 테스트가 통과하지 않았는데 통과했다고 쓰지 않는다.
-- Node reference를 삭제하지 않는다.
+- synthetic runtime helper를 target 앱/서비스 구현으로 확장하지 않는다.
 - 최종 구현체는 Node가 아니라 Kotlin/Spring Boot + PostgreSQL 중심이다.
 ```
 
@@ -1186,7 +1187,7 @@ Phase 2를 구현해라. Kotlin/Spring Boot + PostgreSQL 기반 계정계 원장
 - closed business date에는 직접 posting 불가
 - adjustment는 open business date에 balanced ADJUSTMENT posting 생성
 
-Node reference와 의미가 다르면 ADR을 작성한다.
+기존 synthetic runtime helper와 target Spring 의미가 다르면 ADR을 작성한다.
 ```
 
 ---

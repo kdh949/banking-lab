@@ -31,7 +31,7 @@ test("retirement boundary audit is wired into the package scripts and gate evide
   assert.equal(packageJson.scripts["retirement:audit"], "node --experimental-strip-types scripts/check-retirement-boundary-audit.ts");
   assert.ok(evidenceRefresh?.evidence?.includes("scripts/check-retirement-boundary-audit.ts"));
   assert.ok(evidenceRefresh?.evidence?.includes("tests/retirementBoundaryAudit.test.mjs"));
-  assert.match(script, /legacy-node-reference\/services/);
+  assert.ok(script.includes("runtime/synthetic-reference/services"));
   assert.match(script, /services\/core-banking\/src\/main\/kotlin/);
   assert.ok(script.includes("(?:\\.\\.\\/)+services\\/[^\"']+\\.mjs"));
   assert.match(script, /targetSourceRoots/);

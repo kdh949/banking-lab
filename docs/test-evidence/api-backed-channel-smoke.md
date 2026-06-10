@@ -4,11 +4,11 @@ Date: 2026-06-04
 
 ## Scope
 
-This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the seven active channel apps, plus browser-backed command smoke for customer transfer retry/failure visibility, customer transfer history, customer held FDS status visibility, durable customer held/failed transfer status parity, customer complaint entry, customer complaint confirmation, customer-web Keycloak propagation for all current API-backed customer paths, staff-terminal Keycloak propagation for masked lookup, privileged unmask, customer-change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, fee waiver approval/rejection, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, operational retry queue inquiry, workflow timeline inquiry, and WebAuthn required-action completion, complaint-portal Keycloak propagation for answer approval and workflow failure-state, ops-console Keycloak propagation for reconciliation adjustment and workflow failure-state, audit-console Keycloak propagation for hash-chain read-model evidence, FDS/AML-console Keycloak propagation for risk read-model, release/block/closure approvals, and workflow failure-state, admin-console Keycloak propagation for the `security-admin01` platform-control summary, privileged unmask, customer change approval, account hold/release approval, transfer-limit change approval, KYC re-confirmation approval, transaction correction reversal approval, deposit rate parameter approval, fee policy parameter approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states. It does not mark Node retirement ready.
+This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the manifest-backed channel apps, plus the current iWorks integrated staff terminal shell. Customer, complaint, operations, audit, FDS/AML, and admin channels retain API-backed smoke coverage. `staff-terminal` no longer exposes the retired API-backed panel or staff manifest renderer; its current frontend evidence is `apps/staff-terminal/e2e/integrated-terminal.spec.ts`, `/api/terminal-status`, and `npm run integrated-terminal:boundary-check`. It does not mark platform retirement ready by itself.
 
 ## Changes Proven
 
-- `@banking-lab/api-client` provides a shared TypeScript client for staff customer detail and customer account detail calls.
+- `@banking-lab/api-client` provides a shared TypeScript client for manifest-backed channel API calls.
 - `@banking-lab/auth-client` creates synthetic simulator Bearer tokens for local smoke and PKCE authorization URLs for the first customer-web Keycloak login smoke.
 - `customer-web` renders an API-backed account panel that calls `GET /api/customer/accounts/{accountId}/detail` with customer ownership context.
 - `customer-web` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange the code through the Next BFF route `POST /api/auth/keycloak-token`, render the same masked account detail, submit idempotent transfer retry, transfer failure, history/status, held/failed status, complaint entry, and complaint confirmation paths with a Keycloak-issued Bearer token while Spring simulator tokens are disabled.
@@ -23,25 +23,10 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - The Spring customer transfer API now persists channel-visible command outcomes in `customer_transfer_results` so `POSTED`, `HELD`, `FAILED`, and `BLOCKED` statuses can be read without treating failed or held commands as ledger postings.
 - FDS release/block decisions update the linked customer transfer result to `POSTED` or `BLOCKED` after maker-checker approval while retaining balanced ledger posting rules for released transfers.
 - The Spring customer transfer API checks customer ownership before delegating to the ledger service, so customer-channel transfer smoke uses the customer route rather than the generic ledger route.
-- `staff-terminal` renders an API-backed inquiry panel that calls `GET /api/staff/customers/{customerId}/detail` with a business reason.
-- `staff-terminal` renders `APR001` as an API-backed manifest workspace panel that calls `GET /api/approvals`, refreshes selection through `GET /api/approvals/{approvalId}`, executes `POST /api/staff/approvals/{approvalId}/approve` through `@banking-lab/api-client`, and reads related audit events through `GET /api/audit/events`.
-- `staff-terminal` renders `AUD001` as an API-backed manifest workspace panel that calls `GET /api/audit/events`, supports event selection, and displays hash-chain status inside the manifest workspace.
-- `staff-terminal` can execute a Spring API-backed privileged unmask smoke by first proving branch-role denial is visible as a structured browser error, then approving a time-boxed `UNMASKED_TIMEBOXED` response as `manager01`.
-- `staff-terminal` can execute a Spring API-backed browser command smoke by requesting a customer information change for `SYN-CUS-CMD-001`, proving self-approval rejection for the maker actor, approving with a separate manager actor, and observing a masked updated phone.
-- `staff-terminal` can execute a Spring API-backed account hold/release command smoke for `ACC-SYN-HOLD-001` by requesting an `ACCOUNT_HOLD` approval, proving maker self-approval rejection, approving as a separate branch manager, requesting an `ACCOUNT_HOLD_RELEASE` approval, proving release self-approval rejection, approving as a separate ops checker, and observing the account return to `ACTIVE` without ledger source-row mutation.
-- `staff-terminal` can execute a Spring API-backed transfer-limit command smoke for `ACC-SYN-LIMIT-001` by requesting a `TRANSFER_LIMIT_CHANGE` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `account_limits` update without ledger source-row mutation.
-- `staff-terminal` can execute a Spring API-backed KYC re-confirmation command smoke for `SYN-CUS-KYC-001` by requesting a `CUSTOMER_KYC_REVIEW` approval, proving maker self-approval rejection, approving as a separate branch manager, and observing `customer_kyc_profiles.kyc_status = REVIEW_REQUIRED` without ledger source-row mutation or real KYC provider calls.
-- `staff-terminal` can execute a Spring API-backed fee waiver command smoke for `ACC-SYN-FEE-001` by requesting a `FEE_WAIVER` approval, proving maker self-approval rejection, rejecting a separate fee waiver as a checker, approving another fee waiver as a separate checker, and observing non-targeted waivers do not create refund postings. Targeted fee waivers can refund a single-account `FEE_POSTING` transaction by balanced reversal after checker approval.
-- `staff-terminal` can execute a Spring API-backed transaction correction command smoke for `TX-SYN-CORR-001` by requesting a `TRANSACTION_CORRECTION` approval, proving maker self-approval rejection, approving as a separate checker, and observing a balanced `REVERSAL` ledger transaction with `ledgerSourceRowsMutated=false`.
-- `staff-terminal` can execute a Spring API-backed deposit rate parameter command smoke for `DP-SYN-SAVINGS` by requesting a `PRODUCT_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied rate version without ledger source-row mutation.
-- `staff-terminal` can execute a Spring API-backed fee policy parameter command smoke for `FEE-SYN-MONTHLY` by requesting a `FEE_POLICY_PARAMETER_CHANGE` approval, proving maker self-approval rejection, approving as a separate checker, and observing an applied fee policy version without ledger source-row mutation.
-- `staff-terminal` renders `WRK002` as a reason-required operational retry queue inquiry backed by `GET /api/staff/operations/retry-queue`, and the API-backed panel can read failed synthetic `outbox_events` through `@banking-lab/api-client` when a Spring API URL is configured.
-- `staff-terminal` renders `WRK003` as a reason-required workflow timeline inquiry backed by `GET /api/staff/workflows/{businessReferenceId}/timeline`, combining workflow, approval, and audit timeline entries without exposing audit payload JSON.
+- `staff-terminal` renders the iWorks integrated terminal only. Playwright verifies module navigation, unavailable-work X modal, lookup modal, digit-only operator input, status-bar client IP/server time from `/api/terminal-status`, and removal of old staff routes/manifests.
 - The Spring product-ledger API can list deposit products, create approval-gated rate versions, run deterministic daily interest accruals, and post interest through a balanced `INTEREST_POSTING` ledger transaction.
 - The Spring product-ledger API can list fee policies, create approval-gated fee policy versions, post fee batches through a balanced `FEE_POSTING` ledger transaction, replay the same batch idempotency key without duplicate postings, and refund a targeted posted fee through an approved `FEE_WAIVER` reversal.
-- `staff-terminal` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange branch and checker codes through the Next BFF route `POST /api/auth/keycloak-token`, render masked lookup with the `branch01` token, execute privileged unmask with the `manager01` token, request a customer information change as `branch01`, and approve it with the `manager01` token while Spring simulator tokens are disabled.
-- `staff-terminal` can complete a live Keycloak `webauthn-register` required action using a Chromium virtual authenticator, exchange the returned authorization code through the Next BFF route, and call Spring with the resulting signed Bearer token while Spring simulator tokens are disabled.
-- The synthetic Keycloak realm backing that WebAuthn smoke now has explicit local WebAuthn policy and `PASSKEY_RECOVERY_ADMIN` role segregation evidence in `docs/test-evidence/keycloak-live-realm-smoke.md`.
+- Staff access, privileged unmask, approval, and WebAuthn controls remain covered by Spring integration tests and passkey evidence artifacts rather than the retired staff-terminal API-backed frontend panel.
 - `complaint-portal` renders an API-backed case panel that calls `GET /api/staff/complaints`.
 - `complaint-portal` can execute the first Spring API-backed browser command smoke by drafting an answer for `CMP-SYN-CMD-001` and approving the resulting maker-checker approval.
 - `complaint-portal` can execute a Spring API-backed browser failure-state smoke by attempting a duplicate answer draft for already answered `CMP-SYN-FAIL-001` and rendering structured `WORKFLOW_STATE_VIOLATION` details from the real route.
@@ -57,7 +42,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
   policy, and content checksum metadata.
 - `audit-console` can execute a live Keycloak Authorization Code + PKCE browser smoke, exchange an auditor code through the Next BFF route `POST /api/auth/keycloak-token`, and render hash-chain validity plus `AUD-SYN-SEED-001` while Spring simulator tokens are disabled.
 - `fds-aml-console` renders an API-backed risk panel that calls `GET /api/staff/fds-cases` and `GET /api/staff/aml-cases`.
-- `admin-console` renders an API-backed platform-control panel that calls `GET /api/admin/platform/summary`, keeps synthetic-only and Node reference boundary controls visible, calls reason-required `GET /api/admin/platform/evidence-coverage` for curated feature/evidence metadata, calls reason-required `GET /api/admin/platform/system-status` for system, batch, and monitoring metadata, and can execute a live Keycloak Authorization Code + PKCE browser smoke for `security-admin01`.
+- `admin-console` renders an API-backed platform-control panel that calls `GET /api/admin/platform/summary`, keeps synthetic-only runtime boundary controls visible, calls reason-required `GET /api/admin/platform/evidence-coverage` for curated feature/evidence metadata, calls reason-required `GET /api/admin/platform/system-status` for system, batch, and monitoring metadata, and can execute a live Keycloak Authorization Code + PKCE browser smoke for `security-admin01`.
 - `admin-console` renders an API-backed reporting panel that calls
   reason-required `GET /api/reports/catalog`, idempotent
   `POST /api/reports/artifacts`, reason-required `GET /api/reports/artifacts`,
@@ -86,8 +71,7 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - Staff approval execution retries transient PostgreSQL SERIALIZABLE conflicts up to five times so parallel browser command approvals do not leak transient `40001` conflicts as HTTP 500s.
 - FDS decision request creation and AML closure request creation now use the same bounded SERIALIZABLE retry policy for browser command-smoke concurrency.
 - Reconciliation adjustment request creation uses the same bounded SERIALIZABLE retry policy for browser command-smoke concurrency.
-- Staff masked customer detail uses bounded SERIALIZABLE retry so reason-required audited inquiry smoke does not leak transient audit hash-chain lock conflicts as HTTP 500s.
-- Staff privileged unmask uses bounded SERIALIZABLE retry so branch-denial plus manager-approved unmask browser smoke does not leak transient audit hash-chain lock conflicts as HTTP 500s during parallel channel runs.
+- Spring staff-access paths use bounded SERIALIZABLE retry so reason-required audited inquiry and privileged unmask controls do not leak transient audit hash-chain lock conflicts as HTTP 500s.
 - Customer transfer commands use bounded SERIALIZABLE retry so parallel browser transfer smokes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint entry uses bounded SERIALIZABLE retry so parallel browser audit writes do not leak transient PostgreSQL `40001` conflicts as HTTP 500s.
 - Customer complaint confirmation uses the same bounded SERIALIZABLE retry and writes a customer `COMMAND_EXECUTED` audit event while preserving customer ownership checks.
@@ -126,10 +110,10 @@ Commands run:
 - `npm run validate:manifests` passed.
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 8 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 8 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 35 skipped because API/Keycloak E2E environment variables were not configured.
 - `npm run evidence:phase3` passed and regenerated `docs/test-evidence/generated/phase-3-staff-terminal.json`.
 - `npm run evidence:pack` passed and regenerated the evidence pack summary.
@@ -151,9 +135,9 @@ Changes:
 
 - `GET /api/staff/operations/retry-queue` returns failed, dead-letter, or pending durable `outbox_events` with a required business reason.
 - The read path appends `OPERATIONAL_RETRY_QUEUE_VIEW` audit events for `WRK-002` while keeping broker error text out of the audit payload.
-- The synthetic seed includes `OBX-SYN-RETRY-001` so API-backed staff-terminal browser smoke can show a deterministic failed event.
+- The synthetic seed includes `OBX-SYN-RETRY-001` so staff Spring API browser smoke can show a deterministic failed event.
 - `WRK-001` links to `WRK-002`, and `WRK-002` declares the reason-required retry queue inquiry manifest.
-- `@banking-lab/api-client` and the staff-terminal API-backed panel expose the retry queue read path when `BANKING_LAB_E2E_API_BASE_URL` is configured.
+- `@banking-lab/api-client` and Spring staff API test harness expose the retry queue read path when `BANKING_LAB_E2E_API_BASE_URL` is configured.
 
 Commands run:
 
@@ -162,7 +146,7 @@ Commands run:
 - `npm run validate:manifests` passed with 100 manifests.
 - `npm test` passed with 157 tests.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.security.SecurityAuthorizationIntegrationTest --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks` passed after sandbox escalation for Testcontainers/PostgreSQL.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed with 5 tests and 16 skipped because API/payment/Keycloak E2E URLs were not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed with 5 tests and 16 skipped because API/payment/Keycloak E2E URLs were not configured.
 
 Not proven locally on 2026-06-05:
 
@@ -179,7 +163,7 @@ Changes:
 - The read path appends `WORKFLOW_TIMELINE_VIEW` audit events for `WRK-003` with bounded source/result metadata.
 - The synthetic seed includes a `TX-SYN-CORR-001` transaction-correction workflow instance and events for repeatable browser smoke.
 - `WRK-001` links to `WRK-003`, and `WRK-003` declares the workflow timeline inquiry manifest.
-- `@banking-lab/api-client` and the staff-terminal manifest renderer expose the workflow timeline read path when `BANKING_LAB_E2E_API_BASE_URL` is configured.
+- `@banking-lab/api-client` and Spring staff API test harness expose the workflow timeline read path when `BANKING_LAB_E2E_API_BASE_URL` is configured.
 
 Commands run:
 
@@ -188,7 +172,7 @@ Commands run:
 - `npm run validate:manifests` passed with 101 manifests.
 - `npm test` passed with 158 tests.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest --rerun-tasks` passed after sandbox escalation for Testcontainers/PostgreSQL.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed with 5 tests and 17 skipped because API/payment/Keycloak E2E URLs were not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed with 5 tests and 17 skipped because API/payment/Keycloak E2E URLs were not configured.
 
 Not proven locally on 2026-06-05:
 
@@ -204,7 +188,7 @@ Changes:
 - `POST /api/staff/accounts/{accountId}/hold-requests` creates `ACCOUNT_HOLD` maker-checker approvals.
 - `POST /api/staff/accounts/{accountId}/hold-release-requests` creates `ACCOUNT_HOLD_RELEASE` maker-checker approvals.
 - Approval execution updates account status plus hold/available balance projections only; ledger transactions and postings are not updated for hold/release state.
-- The shared api-client and staff-terminal manifest renderer expose a conditional ACC103 browser smoke.
+- The shared api-client and Spring staff API test harness expose a conditional ACC103 browser smoke.
 
 Commands run:
 
@@ -215,9 +199,9 @@ Commands run:
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run scripts:typecheck` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 8 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 8 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 
 Not proven locally on 2026-06-04:
 
@@ -234,7 +218,7 @@ Changes:
 - `GET /api/staff/customers/{customerId}/transfer-limits` reads account transfer limits with reason-required `LIMIT_VIEW` audit.
 - `POST /api/staff/accounts/{accountId}/limit-change-requests` creates `TRANSFER_LIMIT_CHANGE` maker-checker approvals.
 - Approval execution updates `account_limits` only; ledger transactions and postings are not updated for limit policy state.
-- The shared api-client and staff-terminal manifest renderer expose a conditional LIM102 browser smoke.
+- The shared api-client and Spring staff API test harness expose a conditional LIM102 browser smoke.
 
 Commands run so far:
 
@@ -244,10 +228,10 @@ Commands run so far:
 - `npm run next:staff-terminal:build` passed.
 - `npm run test:screen-engine` passed with 10 tests.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run scripts:typecheck` passed.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 9 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 9 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 36 skipped because API/Keycloak variables were not configured.
 - `docker compose config` passed.
 - `docker compose --profile platform config` passed.
@@ -269,7 +253,7 @@ Changes:
 - `POST /api/staff/customers/{customerId}/kyc-review-requests` creates `CUSTOMER_KYC_REVIEW` maker-checker approvals.
 - Approval execution updates `customer_kyc_profiles.kyc_status` to `REVIEW_REQUIRED` only after checker approval.
 - The executed audit payload records `realKycProviderCalled=false`, `syntheticOnly=true`, and `ledgerSourceRowsMutated=false`.
-- The shared api-client and staff-terminal manifest renderer expose a conditional `KYC101` browser smoke.
+- The shared api-client and Spring staff API test harness expose a conditional `KYC101` browser smoke.
 
 Commands run:
 
@@ -277,11 +261,11 @@ Commands run:
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 10 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 10 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 37 skipped because API/Keycloak variables were not configured.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `docker compose config` passed.
@@ -305,7 +289,7 @@ Changes:
 - `POST /api/staff/accounts/{accountId}/fee-waiver-requests` creates `FEE_WAIVER` maker-checker approvals.
 - `POST /api/staff/approvals/{approvalId}/reject` rejects fee waiver approvals through the staff route and synchronizes the `fee_waiver_requests` row to `REJECTED`.
 - Non-targeted approval execution updates the fee waiver request status to `APPROVED`; targeted approvals can store `refund_ledger_transaction_id` after reversing a single-account `FEE_POSTING` transaction through a balanced `REVERSAL`. In both paths the audit evidence records `syntheticOnly=true` and `ledgerSourceRowsMutated=false`.
-- The shared api-client and staff-terminal manifest renderer expose a conditional `FEE102` browser smoke that proves self-approval rejection, checker rejection, and checker approval.
+- The shared api-client and Spring staff API test harness expose a conditional `FEE102` browser smoke that proves self-approval rejection, checker rejection, and checker approval.
 
 Commands run:
 
@@ -313,11 +297,11 @@ Commands run:
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 11 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 11 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 38 skipped because API/Keycloak variables were not configured.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `docker compose config` passed.
@@ -339,7 +323,7 @@ Changes:
 - `POST /api/staff/approvals/{approvalId}/approve` executes approved correction requests by calling the ledger reversal path, appending a balanced `REVERSAL` transaction, and storing the reversal transaction id on the request row.
 - `POST /api/staff/approvals/{approvalId}/reject` rejects transaction correction approvals through the staff route and synchronizes the request row to `REJECTED`.
 - The executed audit payload records `syntheticOnly=true` and `ledgerSourceRowsMutated=false`; the original finalized ledger transaction row remains `POSTED`.
-- The shared api-client and staff-terminal manifest renderer expose a conditional `LED103` browser smoke that proves self-approval rejection and checker-approved reversal.
+- The shared api-client and Spring staff API test harness expose a conditional `LED103` browser smoke that proves self-approval rejection and checker-approved reversal.
 
 Commands run:
 
@@ -347,11 +331,11 @@ Commands run:
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
 - `scripts/run-core-banking-tests.sh :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 12 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 12 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 39 skipped because API/Keycloak variables were not configured.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.staff.StaffAccessApiParityIntegrationTest` passed after sandbox escalation.
@@ -384,11 +368,11 @@ Commands run:
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
 - `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 13 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 13 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 40 skipped because API/Keycloak variables were not configured.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.product.DepositProductApiIntegrationTest` passed after sandbox escalation.
@@ -423,11 +407,11 @@ Commands run:
 - `npm run packages:typecheck` passed.
 - `npm run next:staff-terminal:typecheck` passed.
 - `scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:compileKotlin :services:core-banking:compileIntegrationTestKotlin` passed after sandbox escalation.
-- `npm test` passed with 131 Node reference/oracle tests.
+- `npm test` passed with 131 synthetic runtime/evidence tests.
 - `npm run test:screen-engine` passed with 10 tests.
 - `npm run scripts:typecheck` passed.
 - `npm run next:staff-terminal:build` passed.
-- `npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts` passed locally with 5 passed and 14 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
+- `npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts` passed locally with 5 passed and 14 skipped because `BANKING_LAB_E2E_API_BASE_URL` was not configured.
 - `npm run test:e2e` passed locally with 17 passed and 41 skipped because API/Keycloak variables were not configured.
 - `npm run test:core-banking:unit -- --rerun-tasks` passed after sandbox escalation.
 - `npm run test:core-banking:integration -- --tests lab.banking.core.product.DepositProductApiIntegrationTest --rerun-tasks` passed after sandbox escalation.
@@ -611,7 +595,7 @@ scripts/run-core-banking-tests.sh :services:core-banking:bootJar
 env COMPOSE_PROJECT_NAME=banking-lab-staff-keycloak-smoke BANKING_LAB_POSTGRES_PORT=15463 BANKING_LAB_CORE_BANKING_PORT=18108 BANKING_LAB_KEYCLOAK_PORT=18109 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://127.0.0.1:18109/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres keycloak core-banking
 curl -fsS http://127.0.0.1:18109/realms/banking-lab/.well-known/openid-configuration
 curl -fsS http://127.0.0.1:18108/health
-env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18108 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18109 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "interactive Keycloak"
+env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18108 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18109 npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts -g "interactive Keycloak"
 curl -fsS http://127.0.0.1:18108/health
 env COMPOSE_PROJECT_NAME=banking-lab-staff-keycloak-smoke docker compose --profile platform down -v
 npm run next:complaint-portal:typecheck
@@ -654,22 +638,22 @@ curl -fsS http://127.0.0.1:18124/health
 env COMPOSE_PROJECT_NAME=banking-lab-risk-keycloak-smoke docker compose --profile platform down -v
 npm run packages:typecheck
 npm run next:staff-terminal:typecheck
-npm run test:e2e -- apps/staff-terminal/e2e/staff-terminal-parity.spec.ts
+npm run test:e2e -- apps/staff-terminal/e2e/integrated-terminal.spec.ts
 scripts/run-core-banking-tests.sh --rerun-tasks :services:core-banking:integrationTest --tests lab.banking.core.security.SecurityAuthorizationIntegrationTest
 scripts/run-core-banking-tests.sh :services:core-banking:bootJar
 env COMPOSE_PROJECT_NAME=banking-lab-staff-unmask-smoke BANKING_LAB_POSTGRES_PORT=15479 BANKING_LAB_CORE_BANKING_PORT=18130 BANKING_LAB_KEYCLOAK_PORT=18131 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18131/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build --force-recreate postgres keycloak core-banking
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18130/health
-env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "privileged unmask"
+env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130 npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts -g "privileged unmask"
 env COMPOSE_PROJECT_NAME=banking-lab-staff-unmask-smoke BANKING_LAB_POSTGRES_PORT=15479 BANKING_LAB_CORE_BANKING_PORT=18130 BANKING_LAB_KEYCLOAK_PORT=18131 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18131/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build --force-recreate postgres keycloak core-banking
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:18131/realms/banking-lab/.well-known/openid-configuration
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18130/health
-env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18131 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "interactive Keycloak"
+env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130 BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18131 npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts -g "interactive Keycloak"
 curl -fsS http://127.0.0.1:18130/health
 env COMPOSE_PROJECT_NAME=banking-lab-staff-unmask-smoke docker compose --profile platform down -v
 scripts/run-core-banking-tests.sh :services:core-banking:bootJar
 env COMPOSE_PROJECT_NAME=banking-lab-channel-gate-smoke BANKING_LAB_POSTGRES_PORT=15480 BANKING_LAB_CORE_BANKING_PORT=18132 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SYNTHETIC_SEED_ENABLED=true docker compose --profile platform up -d --build postgres core-banking
 curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:18132/health
-env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npx playwright test apps/staff-terminal/e2e/staff-terminal-parity.spec.ts -g "privileged unmask"
+env CI=1 BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts -g "privileged unmask"
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18132 npm run test:e2e
 curl -fsS http://127.0.0.1:18132/health
 env COMPOSE_PROJECT_NAME=banking-lab-channel-gate-smoke docker compose --profile platform down -v
@@ -706,11 +690,11 @@ The post-command `/health` check still returned `auditHashChainValid=true`.
 
 The targeted live Keycloak browser smoke also passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18106` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18107`, proving customer-web account detail, idempotent customer transfer retry, transfer failure, transaction history, held FDS status, durable held/failed transfer status, complaint entry, and complaint confirmation can run through a live Keycloak token while the Spring simulator-token fallback is disabled. Post-smoke `/health` still returned `auditHashChainValid=true`.
 
-The targeted staff-terminal live Keycloak browser smoke passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18108` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18109`, proving branch staff masked lookup plus branch-maker/manager-checker customer-change approval can run through live Keycloak tokens while the Spring simulator-token fallback is disabled. Post-smoke `/health` still returned `auditHashChainValid=true`.
+The targeted staff Spring live Keycloak browser smoke passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18108` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18109`, proving branch staff masked lookup plus branch-maker/manager-checker customer-change approval can run through live Keycloak tokens while the Spring simulator-token fallback is disabled. Post-smoke `/health` still returned `auditHashChainValid=true`.
 
-The targeted staff-terminal privileged unmask browser smoke passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130`, simulator tokens enabled, and a fresh seed database. The page first rendered `AUTHORIZATION_POLICY_VIOLATION` for a branch-staff unmask attempt, then rendered `privileged unmask approved`, `manager01`, `UNMASKED_TIMEBOXED`, `010-0000-1001`, `300`, and `AUD-...` for the manager approval path. `SecurityAuthorizationIntegrationTest` now also asserts auth-filter denials include CORS headers for `http://localhost:3002`, so browser clients can read structured denial bodies instead of seeing opaque `Failed to fetch` failures.
+The targeted Spring staff-access privileged unmask browser smoke passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130`, simulator tokens enabled, and a fresh seed database. The page first rendered `AUTHORIZATION_POLICY_VIOLATION` for a branch-staff unmask attempt, then rendered `privileged unmask approved`, `manager01`, `UNMASKED_TIMEBOXED`, `010-0000-1001`, `300`, and `AUD-...` for the manager approval path. `SecurityAuthorizationIntegrationTest` now also asserts auth-filter denials include CORS headers for `http://localhost:3002`, so browser clients can read structured denial bodies instead of seeing opaque `Failed to fetch` failures.
 
-The targeted staff-terminal live Keycloak browser smoke then passed 2 Playwright tests with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18131`, while Spring simulator-token fallback was disabled. The staff/checker test now proves `manager01` can execute privileged unmask with a Keycloak-issued token and render `Keycloak unmask approved`, `UNMASKED_TIMEBOXED`, `010-0000-1001`, `300`, and `AUD-...` before running the customer-change approval path. The same run also re-proved the WebAuthn required-action smoke. Post-smoke `/health` still returned `auditHashChainValid=true`.
+The targeted staff Spring live Keycloak browser smoke then passed 2 Playwright tests with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18130` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18131`, while Spring simulator-token fallback was disabled. The staff/checker test now proves `manager01` can execute privileged unmask with a Keycloak-issued token and render `Keycloak unmask approved`, `UNMASKED_TIMEBOXED`, `010-0000-1001`, `300`, and `AUD-...` before running the customer-change approval path. The same run also re-proved the WebAuthn required-action smoke. Post-smoke `/health` still returned `auditHashChainValid=true`.
 
 The targeted complaint-portal live Keycloak browser smoke passed 1 Playwright test with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18110` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://127.0.0.1:18111`, proving complaint handler read-model access, complaint answer approval, and duplicate answer workflow-state failure rendering can run through live Keycloak tokens while the Spring simulator-token fallback is disabled. The page rendered `Keycloak complaint case loaded`, `Bearer`, `CMP-SYN-001`, `SYN-CUS-001`, `IN_REVIEW`, `Keycloak complaint checker loaded`, `manager01`, `Keycloak answer approved`, `APR-...`, `complaint01`, `manager01`, `CMP-SYN-CMD-001`, `ANSWERED`, `Keycloak workflow state rejected`, `CMP-SYN-FAIL-001`, `WORKFLOW_STATE_VIOLATION`, domain `workflow`, status `409`, and route `/api/staff/complaints/CMP-SYN-FAIL-001/answer-drafts`. Post-smoke `/health` still returned `auditHashChainValid=true`.
 
@@ -726,14 +710,14 @@ The targeted staff-terminal WebAuthn browser smoke passed 1 Chromium Playwright 
 
 The follow-up passkey policy/recovery segregation smoke passed through `KeycloakRealmPolicyTest`, `LiveKeycloakRealmIntegrationTest`, and the same targeted WebAuthn browser smoke against a fresh stack on ports `15478`, `18128`, and `18129`. It verifies the local WebAuthn policy, `PASSKEY_RECOVERY_ADMIN` role, segregated `security-admin01` token roles, Spring JWKS validation with simulator tokens disabled, and unchanged WebAuthn required-action blocking for direct grants.
 
-The 2026-06-03 API-backed channel gate closure run passed `scripts/run-core-banking-tests.sh :services:core-banking:bootJar`, started a fresh synthetic Compose stack on PostgreSQL `15480` and core-banking `18132`, and returned `/health` with `auditHashChainValid=true`. The targeted staff-terminal privileged unmask smoke then passed 1 Chromium Playwright test, proving branch-role denial and manager `UNMASKED_TIMEBOXED` approval after moving the unmask command onto the bounded SERIALIZABLE staff-access retry path. The full API-backed Playwright suite then passed 35 tests with 7 Keycloak-dependent tests skipped because `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` was intentionally unset for this simulator-token run. Post-smoke `/health` still returned `auditHashChainValid=true`.
+The 2026-06-03 API-backed channel gate closure run passed `scripts/run-core-banking-tests.sh :services:core-banking:bootJar`, started a fresh synthetic Compose stack on PostgreSQL `15480` and core-banking `18132`, and returned `/health` with `auditHashChainValid=true`. The targeted Spring staff-access privileged unmask smoke then passed 1 Chromium Playwright test, proving branch-role denial and manager `UNMASKED_TIMEBOXED` approval after moving the unmask command onto the bounded SERIALIZABLE staff-access retry path. The full API-backed Playwright suite then passed 35 tests with 7 Keycloak-dependent tests skipped because `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` was intentionally unset for this simulator-token run. Post-smoke `/health` still returned `auditHashChainValid=true`.
 
 The targeted admin-console live API/Keycloak browser smoke passed 4 Chromium Playwright tests with `BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18090` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL=http://localhost:18091`. The run used a fresh Compose stack with PostgreSQL on `15449`, Spring core-banking on `18090`, and Keycloak on `18091`; Spring validated signed Keycloak tokens through the internal JWKS URI while the browser used the external issuer `http://localhost:18091/realms/banking-lab`. The page rendered the manifest shell, loaded the Spring admin platform summary, exchanged a `security-admin01` authorization code through the Next BFF token route, and rendered `Keycloak admin summary loaded`, `Bearer`, `SYNTHETIC_ONLY:PASS`, and `NODE_REFERENCE_BOUNDARY:BLOCKED`. An initial run failed with HTTP 404 because the Compose image used a stale `core-banking-*-migration.jar`; rebuilding `:services:core-banking:bootJar` and recreating the container fixed the evidence path.
 
 ## Remaining Gaps
 
-- Current customer-web API-backed smoke paths, the staff-terminal masked lookup/privileged unmask/customer-change approval/WebAuthn path, the complaint-portal answer approval/workflow failure-state path, the ops-console reconciliation adjustment/workflow failure-state path, the audit-console hash-chain read-model path, and the FDS/AML risk read-model/release/block/closure/failure-state paths have live interactive Keycloak browser login evidence.
+- Current customer-web API-backed smoke paths, the Spring staff-access masked lookup/privileged unmask/customer-change approval/WebAuthn evidence, the complaint-portal answer approval/workflow failure-state path, the ops-console reconciliation adjustment/workflow failure-state path, the audit-console hash-chain read-model path, and the FDS/AML risk read-model/release/block/closure/failure-state paths have live interactive Keycloak browser login evidence.
 - Admin-console platform-control summary now has live interactive Keycloak browser login evidence for the synthetic `security-admin01` role set.
 - WebAuthn required-action completion is proven with a local virtual authenticator, and the imported synthetic realm now has explicit local WebAuthn policy plus `PASSKEY_RECOVERY_ADMIN` role segregation evidence. Non-synthetic passkey operations, hardware attestation policy, enterprise recovery runbooks, and production deployment evidence remain out of scope for this lab slice.
-- Customer transfer retry/failure, customer transfer history/held-status, customer held/failed status parity, customer complaint entry, customer complaint confirmation, staff privileged unmask, staff customer change approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states have browser evidence; FDS-301, OPS-301, AUD-201, ADM-201, and ADM-301 parameter command wiring has local shell evidence and remains API-run conditional; complaint answer/failure, ops reconciliation adjustment/failure, audit hash-chain read-model, and FDS/AML risk command/failure paths also have live Keycloak evidence.
+- Customer transfer retry/failure, customer transfer history/held-status, customer held/failed status parity, customer complaint entry, customer complaint confirmation, staff-access privileged unmask, staff-access customer change approval, complaint answer approval, FDS release approval, FDS block approval, AML closure approval, reconciliation adjustment approval, and complaint/FDS/AML/reconciliation workflow failure-states have browser evidence; FDS-301, OPS-301, AUD-201, ADM-201, and ADM-301 parameter command wiring has local shell evidence and remains API-run conditional; complaint answer/failure, ops reconciliation adjustment/failure, audit hash-chain read-model, and FDS/AML risk command/failure paths also have live Keycloak evidence.
 - Node retirement is now ready for the current synthetic lab scope through separate parity, non-synthetic passkey, evidence-refresh, and final-review artifacts. This evidence remains scoped to API-backed channel smoke.
