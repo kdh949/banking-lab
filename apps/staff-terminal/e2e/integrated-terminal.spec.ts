@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const specDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..");
 const baseUrl = "http://localhost:3002";
+const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
+const simulatorTokensEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED === "true";
 
 test("iWorks integrated terminal renders the shell and terminal-status data", async ({ page, request }) => {
   const terminalStatus = await request.get(`${baseUrl}/api/terminal-status`);
@@ -27,6 +29,27 @@ test("iWorks integrated terminal renders the shell and terminal-status data", as
   await expect(page.getByRole("button", { name: /IT 기기장애/u })).toBeVisible();
   await expect(page.getByText(/프린터\s+핀패드\s+즐겨찾기/u)).toBeVisible();
   await expect(page.locator(".iworks-statusbar time")).not.toHaveText("2019-08-01 13:37:45");
+
+  await page.getByRole("button", { name: "여신", exact: true }).click();
+  await expect(page.getByTestId("staff-terminal-api-evidence")).toBeVisible();
+  await expect(page.getByText("Spring API").first()).toBeVisible();
+});
+
+test("iWorks integrated terminal executes Spring staff API evidence when configured", async ({ page }) => {
+  test.skip(
+    !apiBaseUrl || !simulatorTokensEnabled,
+    "Set BANKING_LAB_E2E_API_BASE_URL and NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=true to run the staff-terminal Spring API evidence smoke."
+  );
+
+  await page.goto(baseUrl);
+  await page.getByRole("button", { name: "여신", exact: true }).click();
+  const evidence = page.getByTestId("staff-terminal-api-evidence");
+  await evidence.getByRole("button", { name: "조회" }).click();
+
+  await expect(evidence).toContainText("API-backed", { timeout: 15_000 });
+  await expect(evidence).toContainText("SYN-CUS-001");
+  await expect(evidence).toContainText(/010-\*\*\*\*/u);
+  await expect(evidence).toContainText(/건/u);
 });
 
 test("iWorks integrated terminal handles implemented navigation and unavailable module dialogs", async ({ page }) => {

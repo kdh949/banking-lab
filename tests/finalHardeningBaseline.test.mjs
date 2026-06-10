@@ -34,6 +34,8 @@ test("final hardening baseline reflects current implementation without overclaim
   assert.match(baseline, /Hosted GitHub Actions/);
   assert.match(baseline, /blocked hosted-CI condition,\s+not a green CI result/);
   assert.match(baseline, /A skipped live API test is\s+not proof of route-to-live-API execution/);
+  assert.match(baseline, /bounded Spring API evidence panel/);
+  assert.match(baseline, /broader staff-control command\s+evidence in backend\/control rows/);
 
   assert.match(baseline, /no real customer money/);
   assert.match(baseline, /no real personal data/);

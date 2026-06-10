@@ -1,6 +1,7 @@
 export interface SimulatorTokenClaims {
   readonly subject: string;
   readonly roles: readonly string[];
+  readonly audience?: string | readonly string[];
   readonly customerId?: string;
   readonly issuer?: string;
   readonly active?: boolean;
@@ -16,6 +17,7 @@ export function createSimulatorBearerToken(claims: SimulatorTokenClaims): string
   const payload = {
     iss: claims.issuer ?? "http://keycloak.local/realms/banking-lab",
     sub: claims.subject,
+    aud: claims.audience,
     roles: claims.roles,
     customerId: claims.customerId,
     active: claims.active ?? true,

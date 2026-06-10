@@ -11,6 +11,7 @@ const requiredPaths = [
   "apps/staff-terminal/src/components/integrated-terminal.tsx",
   "apps/staff-terminal/src/components/integrated-terminal.css",
   "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx",
+  "apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx",
   "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
 ];
 
@@ -52,9 +53,7 @@ const forbiddenStaffSourceNeedles = [
   "workflow-routes",
   "workflow-route-summaries",
   "manifestLoader",
-  "staff-terminal-parity",
-  "@banking-lab/api-client",
-  "@banking-lab/auth-client"
+  "staff-terminal-parity"
 ];
 
 async function exists(path: string): Promise<boolean> {
@@ -127,8 +126,8 @@ const packageJson = JSON.parse(await readFile("apps/staff-terminal/package.json"
   devDependencies?: Record<string, string>;
 };
 for (const dependency of ["@banking-lab/api-client", "@banking-lab/auth-client"]) {
-  if (packageJson.dependencies?.[dependency] || packageJson.devDependencies?.[dependency]) {
-    errors.push(`apps/staff-terminal/package.json still depends on removed staff API/auth package: ${dependency}`);
+  if (!packageJson.dependencies?.[dependency]) {
+    errors.push(`apps/staff-terminal/package.json must declare the bounded staff API evidence dependency: ${dependency}`);
   }
 }
 
@@ -146,6 +145,23 @@ const terminalStatusSource = await readFile("apps/staff-terminal/src/app/api/ter
 for (const marker of ["clientIp", "serverTimeIso", "NextRequest"]) {
   if (!terminalStatusSource.includes(marker)) {
     errors.push(`terminal-status route must expose ${marker}.`);
+  }
+}
+
+const apiEvidenceSource = await readFile("apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx", "utf8");
+for (const marker of [
+  "@banking-lab/api-client",
+  "@banking-lab/auth-client",
+  "NEXT_PUBLIC_BANKING_API_BASE_URL",
+  "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED",
+  "staffCustomerDetail",
+  "staffApprovals",
+  "Browser staff-terminal Spring API evidence smoke",
+  "core-banking-api",
+  "SYN-CUS-001"
+]) {
+  if (!apiEvidenceSource.includes(marker)) {
+    errors.push(`StaffApiEvidencePanel must keep bounded Spring API evidence marker: ${marker}`);
   }
 }
 
