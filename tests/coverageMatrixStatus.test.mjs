@@ -78,7 +78,7 @@ test("README avoids outdated or production-readiness claims", async () => {
   assert.doesNotMatch(readme, /add a synthetic-only call-center workflow/i);
   assert.match(readme, /Node runtime remains an in-memory archived reference\/oracle path only/);
   assert.match(readme, /current manifest catalog contains 73 synthetic screens/);
-  assert.match(readme, /record live synthetic API and Keycloak browser evidence for the call-center workflow/);
+  assert.match(readme, /decide whether call-center escalation should become maker-checker/);
   assert.match(readme, /A skipped env-gated Playwright smoke is not\s+counted as a live API pass/);
   assert.match(readme, /no real customer PII/);
 });

@@ -94,11 +94,16 @@
       "command": "npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts",
       "status": "pass_with_api_and_keycloak_live_tests_skipped",
       "skipReason": "BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL were not set"
+    },
+    {
+      "command": "npm run test:call-center-console:keycloak-e2e-compose",
+      "status": "pass_after_sandbox_escalation",
+      "evidence": "Gradle bootJar passed; disposable PostgreSQL, Keycloak, and core-banking started through Docker Compose with simulator tokens disabled; call-agent01 and call-manager01 direct-grant preflight checks reached Spring call-center search; Playwright live Keycloak smoke reported 1 passed (20.8s)"
     }
   ],
   "remainingLimits": [
-    "Keycloak client, token exchange route, and env-gated browser smoke are implemented, but no live Keycloak/JWKS execution evidence has been recorded yet",
-    "No live full-stack call-center browser run has been recorded yet",
+    "Escalation is role-gated but not maker-checker in this first slice",
+    "Live evidence is local disposable Compose evidence, not hosted CI evidence or a production identity deployment",
     "No real telephony, call recording, PII, KYC/AML provider, payment network, or regulator integration"
   ]
 }

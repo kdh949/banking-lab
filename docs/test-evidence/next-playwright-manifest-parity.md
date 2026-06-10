@@ -15,7 +15,7 @@ This evidence note covers the frontend parity scaffolding for the current Node r
 - `admin-console`
 - `call-center-console`
 
-`admin-console` is included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. `call-center-console` is included on port 3008 with `CALL-101..CALL-106` manifests, a synthetic API-backed smoke panel, a Keycloak Authorization Code + PKCE token route, and an env-gated agent/manager Keycloak smoke path. The call-center live full-stack API browser run and live Keycloak/JWKS execution remain unrecorded.
+`admin-console` is included as a target-stack surface on port 3007 with manifest-rendered platform control and privileged security-parameter screens. `call-center-console` is included on port 3008 with `CALL-101..CALL-106` manifests, a synthetic API-backed smoke panel, a Keycloak Authorization Code + PKCE token route, and a Compose-backed agent/manager Keycloak smoke path. The latest local call-center live full-stack API and Keycloak/JWKS browser run passed with simulator tokens disabled.
 
 ## Added Playwright Coverage
 
@@ -52,6 +52,7 @@ These tests do not by themselves claim full backend parity, workflow durability,
 npm run test:e2e
 npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts
 node --test tests/callCenterConsole.test.mjs tests/nextScaffold.test.mjs
+npm run test:call-center-console:keycloak-e2e-compose
 env BANKING_LAB_E2E_API_BASE_URL=http://127.0.0.1:18081 npm run test:e2e
 scripts/run-core-banking-tests.sh :services:core-banking:bootJar
 env COMPOSE_PROJECT_NAME=banking-lab-admin-smoke BANKING_LAB_POSTGRES_PORT=15449 BANKING_LAB_CORE_BANKING_PORT=18090 BANKING_LAB_KEYCLOAK_PORT=18091 BANKING_LAB_SECURITY_ENABLED=true BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true BANKING_LAB_SECURITY_JWKS_URI=http://keycloak:8080/realms/banking-lab/protocol/openid-connect/certs BANKING_LAB_SECURITY_ISSUER=http://localhost:18091/realms/banking-lab BANKING_LAB_SECURITY_AUDIENCE=core-banking-api BANKING_LAB_CORS_ALLOWED_ORIGINS=http://localhost:3007,http://127.0.0.1:3007 docker compose --profile platform up -d --build postgres keycloak core-banking

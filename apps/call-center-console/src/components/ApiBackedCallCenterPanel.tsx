@@ -46,6 +46,7 @@ type KeycloakLoginState =
       readonly subject: string;
       readonly tokenType: string;
       readonly bearerToken: string;
+      readonly expiresAtEpochMillis?: number;
       readonly auditEventId?: string;
       readonly customer?: CallCenterCustomerSummaryDto;
     }
@@ -61,6 +62,8 @@ const oidcStateKey = "bankingLab.callCenter.oidcState";
 const oidcVerifierKey = "bankingLab.callCenter.oidcCodeVerifier";
 const oidcRedirectKey = "bankingLab.callCenter.oidcRedirectUri";
 const oidcIntentKey = "bankingLab.callCenter.oidcIntent";
+const keycloakAgentStorageKey = "bankingLab.callCenter.keycloakAgent";
+const keycloakManagerStorageKey = "bankingLab.callCenter.keycloakManager";
 
 export function ApiBackedCallCenterPanel() {
   const [searchState, setSearchState] = useState<SearchState>(() => (apiBaseUrl ? { status: "loading" } : { status: "offline" }));
@@ -111,6 +114,15 @@ export function ApiBackedCallCenterPanel() {
     if (!apiBaseUrl || !keycloakBaseUrl) {
       return;
     }
+    const storedAgent = readStoredKeycloakLoginState("agent");
+    const storedManager = readStoredKeycloakLoginState("manager");
+    if (storedAgent) {
+      setKeycloakAgentState(storedAgent);
+    }
+    if (storedManager) {
+      setKeycloakManagerState(storedManager);
+    }
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const returnedState = params.get("state");
@@ -145,6 +157,7 @@ export function ApiBackedCallCenterPanel() {
         const body = await response.json() as {
           accessToken?: string;
           tokenType?: string;
+          expiresIn?: number | null;
           error?: { message?: string };
         };
         if (!response.ok || !body.accessToken) {
@@ -152,6 +165,8 @@ export function ApiBackedCallCenterPanel() {
         }
         const tokenType = body.tokenType ?? "Bearer";
         const bearerToken = `${tokenType} ${body.accessToken}`;
+        const expiresAtEpochMillis =
+          typeof body.expiresIn === "number" ? Date.now() + Math.max(body.expiresIn, 0) * 1000 : undefined;
         const client = createBankingApiClient({ baseUrl: apiBaseUrl, bearerToken });
         const responseReason = intent === "agent" ? keycloakAgentSearchReason : keycloakManagerSearchReason;
         const search = await client.searchCallCenterCustomers("SYN-CUS", responseReason);
@@ -160,14 +175,17 @@ export function ApiBackedCallCenterPanel() {
           throw new Error("No synthetic call-center customer returned for Keycloak smoke");
         }
         if (!cancelled) {
-          setKeycloakLoginState(intent, {
+          const loadedState: KeycloakLoginState = {
             status: "loaded",
             subject: intent === "agent" ? "call-agent01" : "call-manager01",
             tokenType,
             bearerToken,
+            expiresAtEpochMillis,
             auditEventId: search.auditEventId,
             customer
-          });
+          };
+          setKeycloakLoginState(intent, loadedState);
+          storeKeycloakLoginState(intent, loadedState);
           clearOidcSession();
           window.history.replaceState(null, "", window.location.pathname);
         }
@@ -192,6 +210,7 @@ export function ApiBackedCallCenterPanel() {
     if (currentState.status === "redirecting" || currentState.status === "exchanging") {
       return;
     }
+    clearStoredKeycloakLoginState(intent);
     setKeycloakLoginState(intent, { status: "redirecting" });
     try {
       const redirectUri = `${window.location.origin}${window.location.pathname}`;
@@ -576,6 +595,57 @@ function keycloakWorkflowStatusText(state: WorkflowState): string {
 
 function isOidcIntent(value: string | null): value is OidcIntent {
   return value === "agent" || value === "manager";
+}
+
+type LoadedKeycloakLoginState = Extract<KeycloakLoginState, { readonly status: "loaded" }>;
+
+function readStoredKeycloakLoginState(intent: OidcIntent): LoadedKeycloakLoginState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const storageKey = keycloakLoginStorageKey(intent);
+  const raw = window.sessionStorage.getItem(storageKey);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<LoadedKeycloakLoginState>;
+    if (
+      parsed.status !== "loaded" ||
+      typeof parsed.subject !== "string" ||
+      typeof parsed.tokenType !== "string" ||
+      typeof parsed.bearerToken !== "string"
+    ) {
+      clearStoredKeycloakLoginState(intent);
+      return null;
+    }
+    if (typeof parsed.expiresAtEpochMillis === "number" && parsed.expiresAtEpochMillis <= Date.now()) {
+      clearStoredKeycloakLoginState(intent);
+      return null;
+    }
+    return parsed as LoadedKeycloakLoginState;
+  } catch {
+    clearStoredKeycloakLoginState(intent);
+    return null;
+  }
+}
+
+function storeKeycloakLoginState(intent: OidcIntent, state: KeycloakLoginState) {
+  if (typeof window === "undefined" || state.status !== "loaded") {
+    return;
+  }
+  window.sessionStorage.setItem(keycloakLoginStorageKey(intent), JSON.stringify(state));
+}
+
+function clearStoredKeycloakLoginState(intent: OidcIntent) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.removeItem(keycloakLoginStorageKey(intent));
+}
+
+function keycloakLoginStorageKey(intent: OidcIntent): string {
+  return intent === "agent" ? keycloakAgentStorageKey : keycloakManagerStorageKey;
 }
 
 function clearOidcSession() {

@@ -35,6 +35,8 @@ test("CI hardening evidence documents PR and manual boundaries", async () => {
   assert.match(evidence, /not implemented/);
 
   assert.match(hostedStatus, /Run status: blocked/);
+  assert.match(hostedStatus, /pull_request #79/);
+  assert.match(hostedStatus, /https:\/\/github\.com\/kdh949\/banking-lab\/actions\/runs\/27281812788/);
   assert.match(hostedStatus, /pull_request #77/);
   assert.match(hostedStatus, /https:\/\/github\.com\/kdh949\/banking-lab\/actions\/runs\/27280452683/);
   assert.match(hostedStatus, /pull_request #76/);
@@ -50,6 +52,8 @@ test("CI hardening evidence documents PR and manual boundaries", async () => {
   assert.match(hostedStatus, /spending limit needs to be increased/);
   assert.match(hostedStatus, /Local commands run for PR #77/);
   assert.match(hostedStatus, /callCenterConsole\.test\.mjs tests\/nextScaffold\.test\.mjs/);
+  assert.match(hostedStatus, /Local commands run for PR #79/);
+  assert.match(hostedStatus, /test:call-center-console:keycloak-e2e-compose/);
   assert.match(hostedStatus, /Local commands run for PR #74/);
   assert.match(hostedStatus, /npm test`: pass, 191 tests/);
   assert.match(hostedStatus, /Local fallback commands are not hosted CI green/);

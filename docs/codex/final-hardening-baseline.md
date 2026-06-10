@@ -60,6 +60,9 @@ The target-stack shape is present and broad:
   reason-required access audit. It also has a Keycloak public client, synthetic
   call-center agent/manager users, a Next token exchange route, and an
   env-gated Playwright source path for signed agent/manager workflow smoke.
+  `npm run test:call-center-console:keycloak-e2e-compose` now records local
+  disposable Compose evidence for live Keycloak/JWKS agent/manager propagation
+  with simulator tokens disabled.
 - Shared TypeScript packages include screen engine, form engine, API client,
   and auth client support.
 - OpenAPI files exist for core banking, payment, notification, and reporting.
@@ -99,8 +102,8 @@ maintenance against the current PLAN.
   coverage remain open.
 - `call-center-console` has a dedicated shell, backend workflow, OpenAPI/API
   client coverage, manifest Playwright smoke, Keycloak realm/client coverage,
-  and token exchange route coverage. Live API browser execution and live
-  Keycloak/JWKS execution for the call-center route remain unrecorded.
+  token exchange route coverage, and local live Compose Keycloak/JWKS browser
+  execution evidence for the call-center route.
 
 ## Remaining Hardening Gaps
 
@@ -117,9 +120,9 @@ The active PLAN identifies these portfolio-completion gaps:
    routes.
 4. OpenAPI DTO-level generated diffing and runtime event-envelope validation
    need broader coverage beyond the current checked subsets and fixtures.
-5. The call-center workflow and Keycloak route readiness are implemented, but
-   live full-stack API browser evidence, live Keycloak/JWKS browser execution,
-   and maker-checker escalation remain open.
+5. The call-center workflow and live local Keycloak route evidence are
+   implemented, but maker-checker escalation remains open before the row should
+   move beyond partial.
 6. Final scorecard and demo script exist, but must be regenerated from actual
    verified capabilities and residual limitations after each major hardening PR.
 
@@ -138,8 +141,9 @@ This workstream should proceed in small, commit-sized branches:
   route is intentionally added.
 - Broaden DTO diffing and runtime envelope validation without weakening the
   existing structural gates.
-- Add call-center live API/Keycloak evidence and decide whether escalation
-  should become maker-checker before raising its status.
+- Decide whether call-center escalation should become maker-checker before
+  raising its status beyond partial, and rerun live API/Keycloak evidence before
+  demo or release evidence refreshes.
 
 ## Explicitly Out Of Scope For Phase 0
 
