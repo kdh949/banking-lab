@@ -48,7 +48,20 @@ export type IconName =
   | "widgets"
   | "workspaces";
 
-export type ScreenKey = "portal" | "deposit" | "fee" | "inheritance" | "fund";
+export type ScreenKey =
+  | "portal"
+  | "deposit"
+  | "fee"
+  | "inheritance"
+  | "fund"
+  | "staffCustomer"
+  | "staffAccount"
+  | "staffTransaction"
+  | "approvalInbox"
+  | "opsRetry"
+  | "workflowTimeline"
+  | "callCenter"
+  | "commandWorkbench";
 export type SideMode = "menu" | "workflow" | "none";
 export type RightMode = "manual" | "marketing";
 export type ScreenTemplate = "portal" | "navigation" | "inquiry" | "command" | "case" | "parameter";

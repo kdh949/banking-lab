@@ -69,6 +69,28 @@ test("iWorks integrated terminal handles implemented navigation and unavailable 
   await expect(dialog).toBeHidden();
 });
 
+test("iWorks integrated terminal exposes API-backed transaction codes inside the existing menu", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  await page.getByRole("button", { name: "업무메뉴" }).click();
+
+  await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[CUS101] 고객 상세 조회");
+  await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Spring API");
+
+  await page.getByRole("button", { name: /\[APR101\].*승인함 목록\/상세/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[APR101] 승인함 목록/상세");
+  await expect(page.getByText("maker").first()).toBeVisible();
+
+  await page.getByRole("button", { name: /\[WRK003\].*workflow timeline/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[WRK003] workflow timeline");
+  await expect(page.getByText("businessReferenceId").first()).toBeVisible();
+
+  await page.getByRole("button", { name: /\[CALL101\].*상담 고객 검색/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[CALL101] 상담 고객 검색");
+  await expect(page.getByText("CALL106").first()).toBeVisible();
+});
+
 test("iWorks integrated terminal supports operator inputs and lookup dialogs", async ({ page }) => {
   await page.goto(baseUrl);
 

@@ -144,8 +144,7 @@ paths:
         default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/customers/search:
     get:
-      operationId: searchStaffCustomers
-      x-api-client-required: false
+      operationId: staffCustomerSearch
       x-reason-required: true
       parameters:
         - { name: query, in: query, required: false, schema: { type: string } }
@@ -160,8 +159,7 @@ paths:
         default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/accounts/search:
     get:
-      operationId: searchStaffAccounts
-      x-api-client-required: false
+      operationId: staffAccountSearch
       x-reason-required: true
       parameters:
         - { name: customerId, in: query, required: false, schema: { type: string } }
@@ -177,8 +175,7 @@ paths:
         default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/transactions/search:
     get:
-      operationId: searchStaffTransactions
-      x-api-client-required: false
+      operationId: staffTransactionSearch
       x-reason-required: true
       parameters:
         - { name: accountId, in: query, required: false, schema: { type: string } }
