@@ -2,7 +2,7 @@
   "reviewDate": "2026-06-10",
   "syntheticOnly": true,
   "status": "partial",
-  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, and selected source envelope markers. Springdoc/Jackson DTO schema generation and runtime event-envelope validation remain PLAN-required gaps.",
+  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
   "openApi": {
     "checkedInFiles": [
       "contracts/openapi/core-banking.yaml",
@@ -37,9 +37,9 @@
       "contracts:check-events"
     ],
     "runtimeEventValidationGate": {
-      "status": "not-present-plan-required",
+      "status": "partial",
       "expectedScript": "contracts:validate-runtime-events",
-      "note": "No runtime producer/consumer event-envelope validation gate is wired yet; do not treat source inspection as a live runtime pass."
+      "note": "Script is wired and validates synthetic runtime envelope fixtures, JSON Schemas, Kafka header/body consistency, and producer ack/source markers. Full live broker producer/consumer coverage still depends on the service integration tests."
     }
   },
   "sourceInspection": [
@@ -119,7 +119,7 @@
     {
       "id": "runtime-event-validation-not-overclaimed",
       "status": "pass",
-      "details": "Evidence keeps source envelope inspection separate from a future runtime event-envelope validation gate."
+      "details": "Evidence distinguishes the wired fixture/schema/source-marker runtime event gate from full live broker producer/consumer integration coverage."
     },
     {
       "id": "synthetic-only-boundary",

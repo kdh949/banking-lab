@@ -1,0 +1,116 @@
+{
+  "reviewDate": "2026-06-10",
+  "syntheticOnly": true,
+  "status": "pass",
+  "asyncApiContract": "contracts/asyncapi/banking-lab-events.yaml",
+  "eventSchemaCount": 17,
+  "validatedEnvelopeCount": 17,
+  "envelopeFields": [
+    "eventId",
+    "eventType",
+    "aggregateType",
+    "aggregateId",
+    "occurredAt",
+    "sourceService",
+    "syntheticOnly",
+    "schemaVersion",
+    "payload"
+  ],
+  "eventTypes": [
+    "LedgerTransactionPosted",
+    "NotificationDeliveryAttempted",
+    "NotificationDeliveryDeadLettered",
+    "NotificationDeliveryDelivered",
+    "NotificationDeliveryFailed",
+    "NotificationDeliveryRequested",
+    "PaymentAutopayExecutionCreated",
+    "PaymentInstructionCanceled",
+    "PaymentInstructionDeadLettered",
+    "PaymentInstructionFailed",
+    "PaymentInstructionRetryScheduled",
+    "PaymentInstructionSettled",
+    "PaymentLedgerPostingRequested",
+    "PaymentLedgerPostingSettled",
+    "ReportArtifactExported",
+    "ReportArtifactGenerated",
+    "ReportRetentionSweepCompleted"
+  ],
+  "sourceMarkerFindings": [
+    {
+      "id": "core-banking-kafka-outbox-runtime-envelope",
+      "status": "pass",
+      "file": "services/core-banking/src/main/kotlin/lab/banking/core/eventing/KafkaOutboxPublisher.kt",
+      "markers": [
+        "ProducerConfig.ACKS_CONFIG",
+        "\"all\"",
+        "ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG",
+        "record.headers().add(header(\"eventType\", event.eventType))",
+        "record.headers().add(header(\"aggregateId\", event.aggregateId))",
+        "record.headers().add(header(\"occurredAt\", event.createdAt.toString()))",
+        "record.headers().add(header(\"sourceService\", \"core-banking-service\"))",
+        "record.headers().add(header(\"schemaVersion\", schemaVersion(event.payload)))",
+        "record.headers().add(header(\"syntheticOnly\", \"true\"))",
+        ".send(record)",
+        ".get(config.publishTimeoutMillis",
+        "outboxService.markPublished",
+        "outboxService.recordPublishFailure",
+        "DEAD_LETTER"
+      ]
+    },
+    {
+      "id": "payment-service-kafka-outbox-runtime-envelope",
+      "status": "pass",
+      "file": "services/payment-service/src/main/kotlin/lab/banking/payment/eventing/PaymentKafkaOutboxPublisher.kt",
+      "markers": [
+        "ProducerConfig.ACKS_CONFIG",
+        "\"all\"",
+        "ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG",
+        "record.headers().add(header(\"eventType\", event.eventType))",
+        "record.headers().add(header(\"aggregateId\", event.aggregateId))",
+        "record.headers().add(header(\"occurredAt\", event.createdAt.toString()))",
+        "record.headers().add(header(\"sourceService\", \"payment-service\"))",
+        "record.headers().add(header(\"schemaVersion\", schemaVersion(event.payload)))",
+        "record.headers().add(header(\"syntheticOnly\", \"true\"))",
+        ".send(record)",
+        ".get(config.publishTimeoutMillis",
+        "repository.markOutboxPublished",
+        "repository.markOutboxFailed",
+        "DEAD_LETTER"
+      ]
+    },
+    {
+      "id": "reporting-service-kafka-outbox-runtime-envelope",
+      "status": "pass",
+      "file": "services/reporting-service/src/main/kotlin/lab/banking/reporting/eventing/ReportingKafkaOutboxPublisher.kt",
+      "markers": [
+        "ProducerConfig.ACKS_CONFIG",
+        "\"all\"",
+        "ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG",
+        "record.headers().add(header(\"eventType\", event.eventType))",
+        "record.headers().add(header(\"aggregateId\", event.aggregateId))",
+        "record.headers().add(header(\"occurredAt\", event.createdAt.toString()))",
+        "record.headers().add(header(\"sourceService\", \"reporting-service\"))",
+        "record.headers().add(header(\"schemaVersion\", schemaVersion(event.payload)))",
+        "record.headers().add(header(\"syntheticOnly\", \"true\"))",
+        ".send(record)",
+        ".get(config.publishTimeoutMillis",
+        "repository.markOutboxPublished",
+        "repository.markOutboxFailed",
+        "DEAD_LETTER"
+      ]
+    },
+    {
+      "id": "notification-service-runtime-envelope-consumer",
+      "status": "pass",
+      "file": "services/notification-service/src/main/kotlin/lab/banking/notification/eventing/NotificationKafkaConsumer.kt",
+      "markers": [
+        "requireEnvelopeMetadata(envelope)",
+        "requireSyntheticOnly(envelope)",
+        "firstString(envelope.sourceService, envelope.headers[\"sourceService\"])",
+        "matching eventType envelope metadata",
+        "matching aggregateId envelope metadata",
+        "occurredAt envelope metadata"
+      ]
+    }
+  ]
+}

@@ -6,6 +6,8 @@ data class NotificationOutboxKafkaEnvelope(
     val aggregateId: String,
     val eventType: String,
     val occurredAt: String? = null,
+    val sourceService: String? = null,
+    val schemaVersion: String? = null,
     val idempotencyKey: String,
     val payload: Map<String, Any?>,
     val headers: Map<String, Any?> = emptyMap()

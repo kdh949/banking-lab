@@ -45,6 +45,9 @@ data class OutboxKafkaEnvelope(
     val aggregateType: String,
     val aggregateId: String,
     val eventType: String,
+    val occurredAt: String? = null,
+    val sourceService: String = "core-banking-service",
+    val schemaVersion: String? = null,
     val idempotencyKey: String,
     val payload: Map<String, Any?>,
     val headers: Map<String, Any?>
