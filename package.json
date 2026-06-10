@@ -67,6 +67,7 @@
     "retirement:final-review:verify": "node --experimental-strip-types scripts/verify-final-retirement-review.ts",
     "integrated-terminal:boundary-check": "node --experimental-strip-types scripts/check-integrated-terminal-boundary.ts",
     "goal:completion-audit": "node --experimental-strip-types scripts/check-goal-completion-audit.ts",
+    "live-route:evidence": "node --experimental-strip-types scripts/check-live-route-api-evidence.ts",
     "next:customer-web": "npm --workspace @banking-lab/customer-web run dev",
     "next:customer-web:build": "npm --workspace @banking-lab/customer-web run build",
     "next:customer-web:typecheck": "npm --workspace @banking-lab/customer-web run typecheck",
