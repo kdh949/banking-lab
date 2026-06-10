@@ -6,6 +6,7 @@ import test from "node:test";
 const script = "scripts/check-portfolio-completion-audit.ts";
 const evidencePath = "docs/test-evidence/generated/portfolio-completion-audit.json";
 const docPath = "docs/test-evidence/portfolio-completion-audit.md";
+const demoScriptPath = "docs/demo-scenarios/demo-video-script.md";
 
 test("portfolio completion audit classifies PLAN final conditions without overclaiming", async () => {
   const result = spawnSync("npm", ["run", "portfolio:completion-audit"], {
@@ -56,6 +57,7 @@ test("portfolio completion audit require-complete fails while blocked evidence r
 test("portfolio completion audit is documented and wired as a separate PLAN gate", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const doc = await readFile(docPath, "utf8");
+  const demoScript = await readFile(demoScriptPath, "utf8");
   const scriptSource = await readFile(script, "utf8");
 
   assert.equal(packageJson.scripts["portfolio:completion-audit"], `node --experimental-strip-types ${script}`);
@@ -65,6 +67,10 @@ test("portfolio completion audit is documented and wired as a separate PLAN gate
   assert.match(doc, /skipped\s+Playwright is not pass evidence/);
   assert.match(doc, /live-route-api-execution` is now `pass`/);
   assert.match(doc, /final-command-refresh.*now `pass`/s);
+  assert.match(demoScript, /pass: 11 \/ partial: 0 \/ blocked: 1 \/ failed: 0/);
+  assert.match(demoScript, /#90 closed the live customer\/staff route-to-API evidence row/);
+  assert.doesNotMatch(demoScript, /live route\/final-command refresh rows still partial/);
+  assert.doesNotMatch(demoScript, /remaining live route evidence row/);
   assert.match(doc, /Non-Overclaim Rule/);
   assert.match(scriptSource, /planCondition/);
   assert.match(scriptSource, /docs\/test-evidence\/generated\/portfolio-completion-audit\.json/);

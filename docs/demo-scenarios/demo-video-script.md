@@ -208,16 +208,17 @@ Show:
 - local command evidence
 - hosted CI blocked status, not green
 - final local command refresh evidence from #88
+- live customer/staff route-to-API Compose evidence from #90
 - OpenAPI/AsyncAPI gates
 - runtime event envelope fixture/source-marker gate
 - formal ledger/idempotency evidence
-- PLAN completion audit status: `not-complete`, with hosted CI blocked and live route/final-command refresh rows still partial
+- PLAN completion audit status: `not-complete`, with hosted CI blocked; live-route and final-command refresh rows are pass
 
 Narration:
 
 The portfolio separates local pass evidence from hosted CI. GitHub Actions is currently blocked before runner startup by an external runner allocation or billing/spending-limit issue. PR #82 and the post-merge main push both show `runner_id: 0` and `steps: 0`, so #83 tracks the infrastructure blocker and the status remains blocked, not green.
 
-`npm run portfolio:completion-audit` is the current PLAN-level audit. It is separate from the older Node retirement gate and must remain `not-complete` until hosted CI and the remaining live route evidence row are resolved; #88 closes only the local final command refresh row.
+`npm run portfolio:completion-audit` is the current PLAN-level audit. It is separate from the older Node retirement gate and currently reports `pass: 11 / partial: 0 / blocked: 1 / failed: 0`. It remains `not-complete` because hosted CI is externally blocked before runner startup. #88 closed the local final command refresh row, and #90 closed the live customer/staff route-to-API evidence row.
 
 ## Closing
 
