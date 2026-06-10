@@ -11,6 +11,9 @@ fallback evidence. It does not claim hosted CI is green.
 
 | Run | Event | Commit | Status | Result | URL |
 | --- | --- | --- | --- | --- | --- |
+| CI | pull_request #77 | `399de14415cfece78b9584b7b1a36db975ed0f22` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27280452683 |
+| CI | pull_request #76 | `9334afafe2812a9d7ed60b596e31bd2932ddd04a` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27279285215 |
+| CI | pull_request #75 | `8ef8cf8a74d94371f204bd998aee4ad62a8a94d4` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27279138120 |
 | CI | pull_request #74 | `4d362d80a07cee37055747428501a7c81039b2d1` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27278950044 |
 | CI | pull_request #59 | `0bd235a557e60acc9380afea955c2b8c6d887736` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269813915 |
 | CI | push to `main` after PR #58 | `ccf65285952a9c1bf229773b03661cb797678a76` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269423897 |
@@ -22,18 +25,22 @@ fallback evidence. It does not claim hosted CI is green.
 
 ## Failure Classification
 
-The latest checked PR run (`27278950044`) reported every job as failed within a
-few seconds, with an empty `steps` array for each job. The `Node reference and
-manifests` check run (`80567736503`) annotation says:
+The latest checked PR run (`27280452683`) reported every job as failed within a
+few seconds, with an empty `steps` array for each job. `gh run view
+27280452683 --log-failed` returned `log not found`, so no hosted command-level
+failure log exists for that run.
+
+The earlier checked PR run (`27278950044`) showed the same empty-steps pattern.
+The `Node reference and manifests` check run (`80567736503`) annotation says:
 
 ```text
 The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings
 ```
 
-The earlier checked PR run (`27269813915`) showed the same empty-steps pattern
-and the same billing/spending-limit annotation. This is an external
-hosted-runner availability/billing block. It is not a passing hosted CI run and
-should not be represented as green.
+The older checked PR run (`27269813915`) showed the same empty-steps pattern and
+the same billing/spending-limit annotation. This is an external hosted-runner
+availability/billing block. It is not a passing hosted CI run and should not be
+represented as green.
 
 ## Jobs Affected
 
@@ -98,6 +105,23 @@ Local commands run for PR #74:
 - `npm run validate:manifests`: pass, 73 screen manifests.
 - `npm run packages:typecheck`: pass.
 - `npm run scripts:typecheck`: pass.
+
+Local commands run for PR #75:
+
+- `node --test tests/ciHardening.test.mjs`: pass, 2 tests.
+
+Local commands run for PR #76:
+
+- `node --test tests/coverageMatrixStatus.test.mjs`: pass, 3 tests.
+- `npm run evidence:refresh-check`: pass.
+
+Local commands run for PR #77:
+
+- `node --test tests/callCenterConsole.test.mjs tests/nextScaffold.test.mjs tests/finalHardeningBaseline.test.mjs tests/evidenceHardening.test.mjs`: pass, 18 tests.
+- `node --test tests/coverageMatrixStatus.test.mjs`: pass, 3 tests.
+- `npm run next:call-center-console:typecheck`: pass.
+- `scripts/run-core-banking-tests.sh :services:core-banking:test --tests lab.banking.core.security.KeycloakRealmPolicyTest`: pass after sandbox escalation.
+- `npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts`: pass after sandbox escalation, with 2 passed and 2 skipped because API and Keycloak E2E URLs were not set.
 
 ## Manual Recovery Checklist
 
