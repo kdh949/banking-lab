@@ -53,5 +53,627 @@
       "requestDto": "RunReportRetentionSweepCommand",
       "responseDto": "ReportRetentionSweepResponse"
     }
+  ],
+  "dtoSchemas": [
+    {
+      "name": "GenerateReportCommand",
+      "kind": "object",
+      "required": [
+        "reportType"
+      ],
+      "properties": [
+        {
+          "name": "reportType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "GenerateReportResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ReportArtifactDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ReportArtifactDto",
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportArtifactDto",
+      "kind": "object",
+      "required": [
+        "artifactId",
+        "reportType",
+        "requestedBy",
+        "requestedRole",
+        "reason",
+        "status",
+        "artifactPath",
+        "artifactContent",
+        "contentSha256",
+        "retentionPolicy",
+        "exportFormat",
+        "sourceReferences",
+        "maskedByDefault",
+        "syntheticOnly",
+        "workflowInstanceId",
+        "workflowStatus",
+        "workflowTimeline"
+      ],
+      "properties": [
+        {
+          "name": "artifactId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reportType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedRole",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "artifactPath",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "artifactContent",
+          "kotlinType": "Map<String, Any?>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "contentSha256",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "retentionPolicy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "retentionUntil",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "exportFormat",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceReferences",
+          "kotlinType": "List<String>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedByDefault",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "generatedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "workflowInstanceId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "workflowStatus",
+          "kotlinType": "ReportingWorkflowStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "ReportingWorkflowStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "workflowTimeline",
+          "kotlinType": "List<ReportingWorkflowTimelineEntryDto>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportArtifactExportResponse",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "packageName",
+        "contentSha256",
+        "exportFormat",
+        "item",
+        "packageContent"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "packageName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "contentSha256",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "exportFormat",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "item",
+          "kotlinType": "ReportArtifactDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ReportArtifactDto",
+          "itemsRef": null
+        },
+        {
+          "name": "packageContent",
+          "kotlinType": "Map<String, Any?>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportArtifactListResponse",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<ReportArtifactDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ReportArtifactDto",
+          "itemsRef": "ReportArtifactDto"
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportCatalogResponse",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<ReportDefinitionDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ReportDefinitionDto",
+          "itemsRef": "ReportDefinitionDto"
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportDefinitionDto",
+      "kind": "object",
+      "required": [
+        "reportType",
+        "title",
+        "category",
+        "defaultMaskingPolicy",
+        "sensitive",
+        "sourceSystems",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "reportType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "title",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "category",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "defaultMaskingPolicy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sensitive",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sourceSystems",
+          "kotlinType": "List<String>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportingHealthResponse",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "service",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "migrationTarget",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ReportingWorkflowStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "GENERATED",
+        "EXPORTED",
+        "EXPIRED"
+      ]
+    },
+    {
+      "name": "ReportRetentionSweepResponse",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "sweepDate",
+        "expiredCount",
+        "expiredArtifactIds"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sweepDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "expiredCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "expiredArtifactIds",
+          "kotlinType": "List<String>",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerRowsMutated",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "RunReportRetentionSweepCommand",
+      "kind": "object",
+      "required": [],
+      "properties": [
+        {
+          "name": "requestedBy",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedByRole",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "sweepDate",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    }
   ]
 }

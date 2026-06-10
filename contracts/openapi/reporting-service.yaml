@@ -11,7 +11,15 @@ paths:
     get:
       operationId: reportingHealth
       x-api-client-required: false
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reporting service health.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingHealthResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
   /api/reports/catalog:
     get:
       operationId: reportCatalog
@@ -21,7 +29,15 @@ paths:
           in: query
           required: true
           schema: { type: string }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reporting catalog with audit evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportCatalogResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
   /api/reports/artifacts:
     post:
       operationId: generateReportArtifact
@@ -29,7 +45,27 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportCommand'
+      responses:
+        '201':
+          description: Report artifact generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReportResponse'
+        '200':
+          description: Idempotent replay of report generation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReportResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
     get:
       operationId: reportArtifacts
       x-reason-required: true
@@ -42,17 +78,39 @@ paths:
           in: query
           required: false
           schema: { type: string }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Report artifact list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportArtifactListResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
   /api/reports/artifacts/{artifactId}/export:
     get:
       operationId: exportReportArtifact
       x-reason-required: true
       parameters:
+        - name: artifactId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^RPT-'
         - name: reason
           in: query
           required: true
           schema: { type: string }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Synthetic report export package.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportArtifactExportResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
   /api/reports/retention/sweeps:
     post:
       operationId: runReportRetentionSweep
@@ -60,15 +118,23 @@ paths:
       x-idempotency-policy: body.idempotencyKey
       x-reason-required: true
       x-reason-policy: body.reason
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunReportRetentionSweepCommand'
+      responses:
+        '200':
+          description: Retention sweep result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRetentionSweepResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
 components:
   responses:
-    AnyJsonResponse:
-      description: Synthetic reporting response payload.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AnyJson'
     StructuredErrorResponse:
       description: Structured reporting API error.
       content:
@@ -76,9 +142,6 @@ components:
           schema:
             $ref: '#/components/schemas/StructuredError'
   schemas:
-    AnyJson:
-      type: object
-      additionalProperties: true
     StructuredError:
       type: object
       required: [code, message, traceId, syntheticOnly]
@@ -86,5 +149,225 @@ components:
         code: { type: string }
         message: { type: string }
         traceId: { type: string }
+        syntheticOnly:
+          const: true
+    ReportingHealthResponse:
+      type: object
+      required: [status, service, syntheticOnly, migrationTarget]
+      properties:
+        status: { type: string }
+        service:
+          const: reporting-service
+        syntheticOnly:
+          const: true
+        migrationTarget:
+          const: kotlin-spring-boot
+    GenerateReportCommand:
+      type: object
+      required: [reportType]
+      properties:
+        reportType: { type: string }
+        requestedBy:
+          type: string
+          nullable: true
+        requestedByRole:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        idempotencyKey:
+          type: string
+          nullable: true
+    RunReportRetentionSweepCommand:
+      type: object
+      properties:
+        requestedBy:
+          type: string
+          nullable: true
+        requestedByRole:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        sweepDate:
+          type: string
+          format: date
+          nullable: true
+    ReportDefinitionDto:
+      type: object
+      required: [reportType, title, category, defaultMaskingPolicy, sensitive, sourceSystems, syntheticOnly]
+      properties:
+        reportType: { type: string }
+        title: { type: string }
+        category: { type: string }
+        defaultMaskingPolicy: { type: string }
+        sensitive: { type: boolean }
+        sourceSystems:
+          type: array
+          items: { type: string }
+        syntheticOnly:
+          const: true
+    ReportCatalogResponse:
+      type: object
+      required: [auditEventId, items]
+      properties:
+        auditEventId:
+          type: string
+          pattern: '^RAU-'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportDefinitionDto'
+        syntheticOnly:
+          const: true
+    ReportingWorkflowStatus:
+      type: string
+      enum: [GENERATED, EXPORTED, EXPIRED]
+    ReportingWorkflowTimelineEntryDto:
+      type: object
+      required: [workflowEventId, eventType, toStatus, actorId, actorRole, reason, occurredAt, syntheticOnly]
+      properties:
+        workflowEventId:
+          type: string
+        eventType:
+          type: string
+        fromStatus:
+          $ref: '#/components/schemas/ReportingWorkflowStatus'
+          nullable: true
+        toStatus:
+          $ref: '#/components/schemas/ReportingWorkflowStatus'
+        actorId:
+          type: string
+        actorRole:
+          type: string
+        reason:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        syntheticOnly:
+          const: true
+    ReportArtifactDto:
+      type: object
+      required:
+        - artifactId
+        - reportType
+        - requestedBy
+        - requestedRole
+        - reason
+        - status
+        - artifactPath
+        - artifactContent
+        - contentSha256
+        - retentionPolicy
+        - exportFormat
+        - sourceReferences
+        - maskedByDefault
+        - syntheticOnly
+        - workflowInstanceId
+        - workflowStatus
+        - workflowTimeline
+      properties:
+        artifactId:
+          type: string
+          pattern: '^RPT-'
+        reportType: { type: string }
+        requestedBy: { type: string }
+        requestedRole: { type: string }
+        reason: { type: string }
+        status: { type: string }
+        artifactPath: { type: string }
+        artifactContent:
+          type: object
+          additionalProperties: true
+        contentSha256: { type: string }
+        retentionPolicy: { type: string }
+        retentionUntil:
+          type: string
+          format: date
+          nullable: true
+        exportFormat: { type: string }
+        sourceReferences:
+          type: array
+          items: { type: string }
+        maskedByDefault:
+          type: boolean
+        syntheticOnly:
+          const: true
+        generatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        workflowInstanceId:
+          type: string
+        workflowStatus:
+          $ref: '#/components/schemas/ReportingWorkflowStatus'
+        workflowTimeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingWorkflowTimelineEntryDto'
+    GenerateReportResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/ReportArtifactDto'
+        replayed:
+          type: boolean
+    ReportArtifactListResponse:
+      type: object
+      required: [auditEventId, items]
+      properties:
+        auditEventId:
+          type: string
+          pattern: '^RAU-'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportArtifactDto'
+        syntheticOnly:
+          const: true
+    ReportArtifactExportResponse:
+      type: object
+      required: [auditEventId, packageName, contentSha256, exportFormat, item, packageContent]
+      properties:
+        auditEventId:
+          type: string
+          pattern: '^RAU-'
+        packageName:
+          type: string
+        contentSha256:
+          type: string
+        exportFormat:
+          type: string
+        item:
+          $ref: '#/components/schemas/ReportArtifactDto'
+        packageContent:
+          type: object
+          additionalProperties: true
+        syntheticOnly:
+          const: true
+    ReportRetentionSweepResponse:
+      type: object
+      required: [auditEventId, sweepDate, expiredCount, expiredArtifactIds, ledgerRowsMutated]
+      properties:
+        auditEventId:
+          type: string
+          pattern: '^RAU-'
+        sweepDate:
+          type: string
+          format: date
+        expiredCount:
+          type: integer
+          minimum: 0
+        expiredArtifactIds:
+          type: array
+          items:
+            type: string
+            pattern: '^RPT-'
+        ledgerRowsMutated:
+          const: false
         syntheticOnly:
           const: true

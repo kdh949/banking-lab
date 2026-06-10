@@ -78,9 +78,9 @@ if (!scripts["contracts:diff-openapi"]) {
 }
 
 for (const requiredDocMarker of [
-  "add springdoc/Jackson DTO schema generation and broader live broker-backed event-envelope coverage beyond the current contract gates",
+  "extend springdoc/Jackson DTO schema generation beyond reporting-service",
   "Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`",
-  "springdoc/Jackson DTO schema generation remains a future improvement",
+  "reporting-service DTO schemas are generated from Kotlin data classes",
   "`contracts:validate-runtime-events` now validates deterministic runtime envelope fixtures"
 ]) {
   if (!readme.includes(requiredDocMarker) && !contractDoc.includes(requiredDocMarker)) {
@@ -187,7 +187,7 @@ const evidence: ContractRuntimeEvidence = {
   syntheticOnly: true,
   status: "partial",
   statusReason:
-    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
+    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, reporting-service DTO schema parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Core-banking springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
   openApi: {
     checkedInFiles: [...openApiContractFiles],
     operationCount: operations.length,
@@ -197,7 +197,7 @@ const evidence: ContractRuntimeEvidence = {
       status: "partial",
       expectedScript: "contracts:diff-openapi",
       note:
-        "Kotlin controller source-to-OpenAPI path/method diffing is wired and writes generated evidence snapshots; this does not certify full springdoc/Jackson DTO schema parity."
+        "Kotlin controller source-to-OpenAPI path/method diffing is wired, reporting-service DTO schemas are generated from Kotlin data classes, and core-banking still needs full springdoc/Jackson DTO schema parity."
     }
   },
   asyncApi: {
@@ -218,7 +218,7 @@ const evidence: ContractRuntimeEvidence = {
     {
       id: "generated-openapi-diff-not-overclaimed",
       status: "pass",
-      details: "README and contract evidence distinguish the wired Kotlin controller source diff from remaining springdoc/Jackson DTO schema generation."
+      details: "README and contract evidence distinguish reporting-service DTO schema parity from remaining core-banking springdoc/Jackson DTO schema generation."
     },
     {
       id: "runtime-event-validation-not-overclaimed",
