@@ -37,12 +37,24 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(coreSchemaNames.has("ReconciliationClosingResponse"));
   assert.ok(coreSchemaNames.has("ReconciliationItemDto"));
   assert.ok(coreSchemaNames.has("TemporalWorkflowReference"));
+  assert.ok(coreSchemaNames.has("CustomerAccountListResponse"));
+  assert.ok(coreSchemaNames.has("CustomerAccountDetailDto"));
+  assert.ok(coreSchemaNames.has("InternalRecipientLookupResponse"));
+  assert.ok(coreSchemaNames.has("StaffAccessListResponse_MaskedCustomerDto"));
+  assert.ok(coreSchemaNames.has("StaffAccessItemResponse_StaffCustomerDetailDto"));
+  assert.ok(coreSchemaNames.has("StaffAccessListResponse_StaffAccountDto"));
+  assert.ok(coreSchemaNames.has("StaffAccessListResponse_StaffTransactionDto"));
+  assert.ok(coreSchemaNames.has("MaskedCustomerDto"));
 
   const coreContract = await readFile("contracts/openapi/core-banking.yaml", "utf8");
   assert.match(coreContract, /postLedgerDeposit[\s\S]*#\/components\/schemas\/DepositCommand/);
   assert.match(coreContract, /postLedgerTransfer[\s\S]*#\/components\/schemas\/InternalTransferCommand/);
   assert.match(coreContract, /postLedgerAdjustment[\s\S]*#\/components\/schemas\/AdjustmentCommand/);
   assert.match(coreContract, /closeBusinessDay[\s\S]*#\/components\/schemas\/ReconciliationClosingResponse/);
+  assert.match(coreContract, /staffCustomerDetail[\s\S]*#\/components\/schemas\/StaffAccessItemResponse_StaffCustomerDetailDto/);
+  assert.match(coreContract, /searchStaffCustomers[\s\S]*#\/components\/schemas\/StaffAccessListResponse_MaskedCustomerDto/);
+  assert.match(coreContract, /searchStaffTransactions[\s\S]*#\/components\/schemas\/StaffAccessListResponse_StaffTransactionDto/);
+  assert.match(coreContract, /customerAccountDetail[\s\S]*#\/components\/schemas\/CustomerAccountDetailDto/);
 
   const payment = JSON.parse(await readFile("docs/test-evidence/generated/openapi/payment-service.generated.json", "utf8"));
   const paymentSchemaNames = new Set(payment.dtoSchemas.map((schema) => schema.name));

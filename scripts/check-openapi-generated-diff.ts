@@ -76,6 +76,13 @@ const services: ServiceConfig[] = [
 ];
 const dtoSchemaServiceIds = new Set<ServiceId>(["core-banking", "payment-service", "notification-service", "reporting-service"]);
 const coreBankingDtoSchemaOperationKeys = new Set([
+  "GET /api/customer/accounts",
+  "GET /api/customer/accounts/{accountId}/detail",
+  "GET /api/customer/recipients/internal-account-lookup",
+  "GET /api/staff/accounts/search",
+  "GET /api/staff/customers/search",
+  "GET /api/staff/customers/{customerId}/detail",
+  "GET /api/staff/transactions/search",
   "POST /api/ledger/deposits",
   "POST /api/ledger/withdrawals",
   "POST /api/ledger/transfers",
@@ -97,6 +104,7 @@ for (const service of services) {
     .sort(compareOperation);
   const dtoSchemaMap = dtoSchemaServiceIds.has(service.serviceId) ? await extractDtoSchemas(service.sourceRoot) : new Map<string, GeneratedDtoSchema>();
   const dtoSchemaOperations = dtoSchemaOperationsFor(service.serviceId, runtimeOperations);
+  addConcreteGenericResponseSchemas(dtoSchemaMap, dtoSchemaOperations);
   const dtoSchemas = dtoSchemaServiceIds.has(service.serviceId)
     ? referencedDtoSchemas(dtoSchemaOperations, dtoSchemaMap)
     : [];
@@ -330,6 +338,61 @@ function dtoSchemaOperationsFor(serviceId: ServiceId, operations: readonly Runti
   return operations.filter((operation) => coreBankingDtoSchemaOperationKeys.has(operationKey(operation)));
 }
 
+function addConcreteGenericResponseSchemas(
+  schemas: Map<string, GeneratedDtoSchema>,
+  operations: readonly RuntimeOperation[]
+): void {
+  for (const operation of operations) {
+    const parsed = parseConcreteGenericResponseName(operation.responseDto);
+    if (!parsed || schemas.has(operation.responseDto ?? "")) {
+      continue;
+    }
+    if (!schemas.has(parsed.itemDto)) {
+      errors.push(`${operationKey(operation)}: generated generic response references unknown DTO ${parsed.itemDto}.`);
+      continue;
+    }
+    const itemProperty: GeneratedDtoProperty = {
+      name: parsed.kind === "list" ? "items" : "item",
+      kotlinType: parsed.kind === "list" ? `List<${parsed.itemDto}>` : parsed.itemDto,
+      required: true,
+      nullable: false,
+      ref: parsed.itemDto,
+      itemsRef: parsed.kind === "list" ? parsed.itemDto : null
+    };
+    schemas.set(parsed.name, {
+      name: parsed.name,
+      kind: "object",
+      required: ["auditEventId", itemProperty.name],
+      properties: [
+        {
+          name: "auditEventId",
+          kotlinType: "String",
+          required: true,
+          nullable: false,
+          ref: null,
+          itemsRef: null
+        },
+        itemProperty
+      ],
+      enumValues: []
+    });
+  }
+}
+
+function parseConcreteGenericResponseName(
+  schemaName: string | null
+): { readonly name: string; readonly kind: "item" | "list"; readonly itemDto: string } | null {
+  const match = /^(StaffAccess(?:Item|List)Response)_([A-Za-z][A-Za-z0-9_]*)$/u.exec(schemaName ?? "");
+  if (!match) {
+    return null;
+  }
+  return {
+    name: schemaName ?? "",
+    kind: match[1] === "StaffAccessListResponse" ? "list" : "item",
+    itemDto: match[2]
+  };
+}
+
 function validateDtoSchemas(
   service: ServiceConfig,
   contractSource: string,
@@ -526,19 +589,39 @@ function responseDto(returnType: string): string | null {
 }
 
 function normalizeDto(typeName: string): string | null {
-  const cleaned = typeName
-    .replace(/\s+/gu, "")
-    .replace(/\?/gu, "")
-    .replace(/^ResponseEntity</u, "")
-    .replace(/^List</u, "")
-    .replace(/^Set</u, "")
-    .replace(/^Collection</u, "")
-    .replace(/^Map<[^,>]+,/u, "")
-    .replace(/>+$/u, "");
+  const compact = typeName.replace(/\s+/gu, "").replace(/\?/gu, "");
+  const responseEntity = unwrapGeneric(compact, "ResponseEntity");
+  if (responseEntity) {
+    return normalizeDto(responseEntity);
+  }
+  for (const wrapper of ["List", "Set", "Collection"]) {
+    const itemType = unwrapGeneric(compact, wrapper);
+    if (itemType) {
+      return normalizeDto(itemType);
+    }
+  }
+  const mapValue = /^Map<[^,>]+,(.+)>$/u.exec(compact)?.[1];
+  if (mapValue) {
+    return normalizeDto(mapValue);
+  }
+  const concreteGeneric = concreteGenericResponseSchemaName(compact);
+  const cleaned = concreteGeneric ?? compact.replace(/>+$/u, "");
   if (!cleaned || ["String", "Int", "Long", "Boolean", "Unit", "HttpServletRequest"].includes(cleaned)) {
     return null;
   }
   return cleaned;
+}
+
+function unwrapGeneric(typeName: string, wrapper: string): string | null {
+  const prefix = `${wrapper}<`;
+  return typeName.startsWith(prefix) && typeName.endsWith(">")
+    ? typeName.slice(prefix.length, -1)
+    : null;
+}
+
+function concreteGenericResponseSchemaName(typeName: string): string | null {
+  const match = /^(StaffAccess(?:Item|List)Response)<([A-Za-z][A-Za-z0-9_]*)>$/u.exec(typeName);
+  return match ? `${match[1]}_${match[2]}` : null;
 }
 
 function sameDto(contractDto: string, runtimeDto: string): boolean {

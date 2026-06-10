@@ -2,7 +2,7 @@
   "reviewDate": "2026-06-10",
   "syntheticOnly": true,
   "status": "partial",
-  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, core-banking ledger command subset DTO schema parity, payment-service, notification-service, and reporting-service DTO schema parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Full core-banking springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
+  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, core-banking ledger command and inquiry subset DTO schema parity, payment-service, notification-service, and reporting-service DTO schema parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Full core-banking springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
   "openApi": {
     "checkedInFiles": [
       "contracts/openapi/core-banking.yaml",
@@ -20,7 +20,7 @@
     "generatedDtoDiffGate": {
       "status": "partial",
       "expectedScript": "contracts:diff-openapi",
-      "note": "Kotlin controller source-to-OpenAPI path/method diffing is wired, core-banking ledger command subset plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes, and core-banking still needs full springdoc/Jackson DTO schema parity."
+      "note": "Kotlin controller source-to-OpenAPI path/method diffing is wired, core-banking ledger command and inquiry subsets plus payment-service, notification-service, and reporting-service DTO schemas are generated from Kotlin data classes, and core-banking still needs full springdoc/Jackson DTO schema parity."
     }
   },
   "asyncApi": {
@@ -114,7 +114,7 @@
     {
       "id": "generated-openapi-diff-not-overclaimed",
       "status": "pass",
-      "details": "README and contract evidence distinguish core-banking ledger command subset plus payment-service, notification-service, and reporting-service DTO schema parity from remaining full core-banking springdoc/Jackson DTO schema generation."
+      "details": "README and contract evidence distinguish core-banking ledger command and inquiry subsets plus payment-service, notification-service, and reporting-service DTO schema parity from remaining full core-banking springdoc/Jackson DTO schema generation."
     },
     {
       "id": "runtime-event-validation-not-overclaimed",

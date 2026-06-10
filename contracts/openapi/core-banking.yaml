@@ -31,14 +31,28 @@ paths:
       operationId: customerAccounts
       x-synthetic-only: true
       parameters: [{ name: customerId, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Owned customer account list with masked account numbers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAccountListResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/recipients/internal-account-lookup:
     get:
       operationId: internalRecipientLookup
       x-synthetic-only: true
       x-internal-recipient-only: true
       parameters: [{ name: query, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Internal synthetic recipient lookup with masked account number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalRecipientLookupResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/customers/onboarding-requests:
     post:
       operationId: requestStaffCustomerOnboarding
@@ -120,7 +134,14 @@ paths:
       operationId: staffCustomerDetail
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reason-audited staff customer detail with PII masked by default
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAccessItemResponse_StaffCustomerDetailDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/customers/search:
     get:
       operationId: searchStaffCustomers
@@ -129,7 +150,14 @@ paths:
       parameters:
         - { name: query, in: query, required: false, schema: { type: string } }
         - { name: reason, in: query, required: true, schema: { type: string } }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reason-audited staff customer search with masked PII
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAccessListResponse_MaskedCustomerDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/accounts/search:
     get:
       operationId: searchStaffAccounts
@@ -139,7 +167,14 @@ paths:
         - { name: customerId, in: query, required: false, schema: { type: string } }
         - { name: accountId, in: query, required: false, schema: { type: string } }
         - { name: reason, in: query, required: true, schema: { type: string } }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reason-audited staff account search with masked account numbers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAccessListResponse_StaffAccountDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/transactions/search:
     get:
       operationId: searchStaffTransactions
@@ -148,7 +183,14 @@ paths:
       parameters:
         - { name: accountId, in: query, required: false, schema: { type: string } }
         - { name: reason, in: query, required: true, schema: { type: string } }
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      responses:
+        '200':
+          description: Reason-audited staff transaction search
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAccessListResponse_StaffTransactionDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/customers/{customerId}/change-requests:
     post:
       operationId: requestCustomerInfoChange
@@ -554,7 +596,17 @@ paths:
   /api/customer/accounts/{accountId}/detail:
     get:
       operationId: customerAccountDetail
-      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+      parameters:
+        - { name: accountId, in: path, required: true, schema: { type: string } }
+        - { name: customerId, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Owned customer account detail with masked account number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAccountDetailDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/transfers:
     post:
       operationId: requestCustomerTransfer
@@ -1128,6 +1180,176 @@ components:
             additionalProperties: true
         syntheticOnly:
           const: true
+    CustomerAccountDetailDto:
+      type: object
+      required: [customerId, accountId, maskedAccountNo, status, currency, ledgerBalanceMinor, availableBalanceMinor, holdAmountMinor]
+      properties:
+        customerId: { type: string }
+        accountId: { type: string }
+        maskedAccountNo: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        ledgerBalanceMinor: { type: integer }
+        availableBalanceMinor: { type: integer }
+        holdAmountMinor: { type: integer }
+    CustomerAccountListItemDto:
+      type: object
+      required: [customerId, accountId, maskedAccountNo, status, currency, ledgerBalanceMinor, availableBalanceMinor, holdAmountMinor]
+      properties:
+        customerId: { type: string }
+        accountId: { type: string }
+        maskedAccountNo: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        ledgerBalanceMinor: { type: integer }
+        availableBalanceMinor: { type: integer }
+        holdAmountMinor: { type: integer }
+        syntheticOnly:
+          const: true
+          default: true
+    CustomerAccountListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAccountListItemDto'
+        syntheticOnly:
+          const: true
+          default: true
+    InternalRecipientAccountDto:
+      type: object
+      required: [accountId, maskedAccountNo, status, currency, recipientLabel]
+      properties:
+        accountId: { type: string }
+        maskedAccountNo: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        recipientLabel: { type: string }
+        internalOnly:
+          const: true
+          default: true
+        syntheticOnly:
+          const: true
+          default: true
+    InternalRecipientLookupResponse:
+      type: object
+      required: [item]
+      properties:
+        item:
+          $ref: '#/components/schemas/InternalRecipientAccountDto'
+        syntheticOnly:
+          const: true
+          default: true
+    StaffAccessListResponse_MaskedCustomerDto:
+      type: object
+      required: [auditEventId, items]
+      properties:
+        auditEventId: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaskedCustomerDto'
+    StaffAccessItemResponse_StaffCustomerDetailDto:
+      type: object
+      required: [auditEventId, item]
+      properties:
+        auditEventId: { type: string }
+        item:
+          $ref: '#/components/schemas/StaffCustomerDetailDto'
+    StaffAccessListResponse_StaffAccountDto:
+      type: object
+      required: [auditEventId, items]
+      properties:
+        auditEventId: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffAccountDto'
+    StaffAccessListResponse_StaffTransactionDto:
+      type: object
+      required: [auditEventId, items]
+      properties:
+        auditEventId: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffTransactionDto'
+    MaskedCustomerDto:
+      type: object
+      required: [customerId, maskedName, customerGrade, riskGrade]
+      properties:
+        customerId: { type: string }
+        maskedName: { type: string }
+        maskedPhone:
+          type: string
+          nullable: true
+        maskedAddress:
+          type: string
+          nullable: true
+        customerGrade: { type: string }
+        riskGrade: { type: string }
+    StaffCustomerDetailDto:
+      type: object
+      required: [customerId, piiExposure, customerGrade, riskGrade]
+      properties:
+        customerId: { type: string }
+        piiExposure: { type: string }
+        customerGrade: { type: string }
+        riskGrade: { type: string }
+        maskedName:
+          type: string
+          nullable: true
+        maskedPhone:
+          type: string
+          nullable: true
+        maskedAddress:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+    StaffAccountDto:
+      type: object
+      required: [customerId, accountId, maskedAccountNo, status, currency, ledgerBalanceMinor, availableBalanceMinor, holdAmountMinor]
+      properties:
+        customerId: { type: string }
+        accountId: { type: string }
+        maskedAccountNo: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        ledgerBalanceMinor: { type: integer }
+        availableBalanceMinor: { type: integer }
+        holdAmountMinor: { type: integer }
+    StaffTransactionDto:
+      type: object
+      required: [ledgerTransactionId, transactionType, status, businessDate, accountId, direction, amountMinor, currency, requestedChannel]
+      properties:
+        ledgerTransactionId: { type: string }
+        transactionType: { type: string }
+        status: { type: string }
+        businessDate:
+          type: string
+          format: date
+        postedAt:
+          type: string
+          format: date-time
+          nullable: true
+        accountId: { type: string }
+        direction: { type: string }
+        amountMinor: { type: integer }
+        currency: { type: string }
+        requestedChannel: { type: string }
+        reason:
+          type: string
+          nullable: true
     PostingDirection:
       type: string
       enum: [DEBIT, CREDIT]

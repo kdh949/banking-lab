@@ -283,7 +283,7 @@
       "handler": "list",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsController.kt",
       "requestDto": null,
-      "responseDto": "List<ReconciliationItemDto"
+      "responseDto": "ReconciliationItemDto"
     },
     {
       "method": "GET",
@@ -339,7 +339,7 @@
       "handler": "searchAccounts",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<StaffAccountDto"
+      "responseDto": "StaffAccessListResponse_StaffAccountDto"
     },
     {
       "method": "GET",
@@ -395,7 +395,7 @@
       "handler": "customerDetail",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessItemResponse<StaffCustomerDetailDto"
+      "responseDto": "StaffAccessItemResponse_StaffCustomerDetailDto"
     },
     {
       "method": "GET",
@@ -403,7 +403,7 @@
       "handler": "transferLimits",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<StaffTransferLimitDto"
+      "responseDto": "StaffAccessListResponse_StaffTransferLimitDto"
     },
     {
       "method": "GET",
@@ -419,7 +419,7 @@
       "handler": "searchCustomers",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<MaskedCustomerDto"
+      "responseDto": "StaffAccessListResponse_MaskedCustomerDto"
     },
     {
       "method": "GET",
@@ -467,7 +467,7 @@
       "handler": "operationalRetryQueue",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<OperationalRetryQueueItemDto"
+      "responseDto": "StaffAccessListResponse_OperationalRetryQueueItemDto"
     },
     {
       "method": "GET",
@@ -475,7 +475,7 @@
       "handler": "searchTransactions",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<StaffTransactionDto"
+      "responseDto": "StaffAccessListResponse_StaffTransactionDto"
     },
     {
       "method": "GET",
@@ -483,7 +483,7 @@
       "handler": "workflowTimeline",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
       "requestDto": null,
-      "responseDto": "StaffAccessListResponse<StaffWorkflowTimelineEntryDto"
+      "responseDto": "StaffAccessListResponse_StaffWorkflowTimelineEntryDto"
     },
     {
       "method": "GET",
@@ -1340,6 +1340,202 @@
       "enumValues": []
     },
     {
+      "name": "CustomerAccountDetailDto",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "accountId",
+        "maskedAccountNo",
+        "status",
+        "currency",
+        "ledgerBalanceMinor",
+        "availableBalanceMinor",
+        "holdAmountMinor"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAccountNo",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "availableBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "holdAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerAccountListItemDto",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "accountId",
+        "maskedAccountNo",
+        "status",
+        "currency",
+        "ledgerBalanceMinor",
+        "availableBalanceMinor",
+        "holdAmountMinor"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAccountNo",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "availableBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "holdAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerAccountListResponse",
+      "kind": "object",
+      "required": [
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<CustomerAccountListItemDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "CustomerAccountListItemDto",
+          "itemsRef": "CustomerAccountListItemDto"
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
       "name": "DepositCommand",
       "kind": "object",
       "required": [
@@ -1417,6 +1613,102 @@
           "kotlinType": "String?",
           "required": false,
           "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "InternalRecipientAccountDto",
+      "kind": "object",
+      "required": [
+        "accountId",
+        "maskedAccountNo",
+        "status",
+        "currency",
+        "recipientLabel"
+      ],
+      "properties": [
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAccountNo",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "recipientLabel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "internalOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "InternalRecipientLookupResponse",
+      "kind": "object",
+      "required": [
+        "item"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "InternalRecipientAccountDto",
+          "required": true,
+          "nullable": false,
+          "ref": "InternalRecipientAccountDto",
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
           "ref": null,
           "itemsRef": null
         }
@@ -1725,6 +2017,67 @@
           "nullable": false,
           "ref": "LedgerPostingDto",
           "itemsRef": "LedgerPostingDto"
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "MaskedCustomerDto",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "maskedName",
+        "customerGrade",
+        "riskGrade"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedPhone",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAddress",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerGrade",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "riskGrade",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
         }
       ],
       "enumValues": []
@@ -2372,6 +2725,394 @@
         },
         {
           "name": "businessReferenceId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffAccessItemResponse_StaffCustomerDetailDto",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "item"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "item",
+          "kotlinType": "StaffCustomerDetailDto",
+          "required": true,
+          "nullable": false,
+          "ref": "StaffCustomerDetailDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffAccessListResponse_MaskedCustomerDto",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<MaskedCustomerDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "MaskedCustomerDto",
+          "itemsRef": "MaskedCustomerDto"
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffAccessListResponse_StaffAccountDto",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<StaffAccountDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "StaffAccountDto",
+          "itemsRef": "StaffAccountDto"
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffAccessListResponse_StaffTransactionDto",
+      "kind": "object",
+      "required": [
+        "auditEventId",
+        "items"
+      ],
+      "properties": [
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<StaffTransactionDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "StaffTransactionDto",
+          "itemsRef": "StaffTransactionDto"
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffAccountDto",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "accountId",
+        "maskedAccountNo",
+        "status",
+        "currency",
+        "ledgerBalanceMinor",
+        "availableBalanceMinor",
+        "holdAmountMinor"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAccountNo",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "availableBalanceMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "holdAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffCustomerDetailDto",
+      "kind": "object",
+      "required": [
+        "customerId",
+        "piiExposure",
+        "customerGrade",
+        "riskGrade"
+      ],
+      "properties": [
+        {
+          "name": "customerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "piiExposure",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "customerGrade",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "riskGrade",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedName",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedPhone",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAddress",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "name",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "phone",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "address",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "StaffTransactionDto",
+      "kind": "object",
+      "required": [
+        "ledgerTransactionId",
+        "transactionType",
+        "status",
+        "businessDate",
+        "accountId",
+        "direction",
+        "amountMinor",
+        "currency",
+        "requestedChannel"
+      ],
+      "properties": [
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transactionType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "postedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "direction",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedChannel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
           "kotlinType": "String?",
           "required": false,
           "nullable": true,
