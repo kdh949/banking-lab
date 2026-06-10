@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "generator": "kotlin-controller-source",
+  "serviceId": "reporting-service",
+  "syntheticOnly": true,
+  "diffScope": "Spring @RestController operations under /api/** plus checked-in /health operations.",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/reports/artifacts",
+      "handler": "artifacts",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": null,
+      "responseDto": "ReportArtifactListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/artifacts/{artifactId}/export",
+      "handler": "exportArtifact",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": null,
+      "responseDto": "ReportArtifactExportResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/catalog",
+      "handler": "catalog",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": null,
+      "responseDto": "ReportCatalogResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": null,
+      "responseDto": "ReportingHealthResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reports/artifacts",
+      "handler": "generate",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": "GenerateReportCommand",
+      "responseDto": "GenerateReportResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reports/retention/sweeps",
+      "handler": "runRetentionSweep",
+      "controllerFile": "services/reporting-service/src/main/kotlin/lab/banking/reporting/api/ReportingController.kt",
+      "requestDto": "RunReportRetentionSweepCommand",
+      "responseDto": "ReportRetentionSweepResponse"
+    }
+  ]
+}

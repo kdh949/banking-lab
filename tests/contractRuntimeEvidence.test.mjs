@@ -17,9 +17,14 @@ test("contract runtime evidence boundary records structural passes and missing r
   assert.equal(evidence.status, "partial");
   assert.ok(evidence.openApi.operationCount > 100);
   assert.ok(evidence.openApi.clientMethodCount > 100);
-  assert.deepEqual(evidence.openApi.structuralGateScripts, ["contracts:lint", "contracts:check-client"]);
-  assert.equal(evidence.openApi.generatedDtoDiffGate.status, "not-present-plan-required");
+  assert.deepEqual(evidence.openApi.structuralGateScripts, [
+    "contracts:lint",
+    "contracts:check-client",
+    "contracts:diff-openapi"
+  ]);
+  assert.equal(evidence.openApi.generatedDtoDiffGate.status, "partial");
   assert.equal(evidence.openApi.generatedDtoDiffGate.expectedScript, "contracts:diff-openapi");
+  assert.match(evidence.openApi.generatedDtoDiffGate.note, /Kotlin controller source-to-OpenAPI path\/method diffing is wired/);
 
   assert.ok(evidence.asyncApi.eventSchemaCount >= 17);
   assert.deepEqual(evidence.asyncApi.envelopeFields, [
@@ -49,11 +54,11 @@ test("contract runtime evidence docs avoid DTO and runtime event overclaims", as
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 
   assert.match(doc, /Status: partial/);
-  assert.match(doc, /does not yet have PLAN-required generated OpenAPI DTO diffing/);
-  assert.match(doc, /Do not claim generated Spring\/Jackson\/springdoc DTO-level OpenAPI diffing has passed/);
+  assert.match(doc, /Kotlin controller source-to-OpenAPI path\/method diffing is wired through `contracts:diff-openapi`/);
+  assert.match(doc, /Do not claim the source diff is equivalent to generated Spring\/Jackson\/springdoc DTO-level OpenAPI schema parity/);
   assert.match(doc, /Do not claim source inspection or structural AsyncAPI validation is equivalent to a runtime producer\/consumer envelope validation integration test/);
   assert.match(doc, /synthetic-only/);
   assert.ok(packageJson.scripts["contracts:runtime-evidence"]);
-  assert.equal(packageJson.scripts["contracts:diff-openapi"], undefined);
+  assert.ok(packageJson.scripts["contracts:diff-openapi"]);
   assert.equal(packageJson.scripts["contracts:validate-runtime-events"], undefined);
 });

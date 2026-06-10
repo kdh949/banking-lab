@@ -20,6 +20,12 @@ paths:
       x-synthetic-only: true
       x-synthetic-auth-dev-test-only: true
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/auth/session:
+    get:
+      operationId: authSession
+      x-api-client-required: false
+      x-synthetic-only: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/customer/accounts:
     get:
       operationId: customerAccounts
@@ -114,6 +120,34 @@ paths:
       operationId: staffCustomerDetail
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/customers/search:
+    get:
+      operationId: searchStaffCustomers
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/accounts/search:
+    get:
+      operationId: searchStaffAccounts
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - { name: customerId, in: query, required: false, schema: { type: string } }
+        - { name: accountId, in: query, required: false, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/transactions/search:
+    get:
+      operationId: searchStaffTransactions
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - { name: accountId, in: query, required: false, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/customers/{customerId}/change-requests:
     post:
@@ -587,6 +621,13 @@ paths:
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/complaints/{caseId}:
+    get:
+      operationId: staffComplaintCase
+      x-api-client-required: false
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/complaints/{caseId}/answer-drafts:
     post:
       operationId: draftComplaintAnswer
@@ -599,9 +640,32 @@ paths:
     get:
       operationId: staffApprovals
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+    post:
+      operationId: submitApproval
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-maker-checker-required: true
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/approvals/{approvalId}:
     get:
       operationId: staffApproval
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/approvals/{approvalId}/approve:
+    post:
+      operationId: approveApproval
+      x-api-client-required: false
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-maker-checker-required: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/approvals/{approvalId}/reject:
+    post:
+      operationId: rejectApproval
+      x-api-client-required: false
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-maker-checker-required: true
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/approvals/{approvalId}/approve:
     post:
@@ -618,6 +682,13 @@ paths:
   /api/ops/reconciliation-items:
     get:
       operationId: reconciliationItems
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/reconciliation-items/{itemId}:
+    get:
+      operationId: reconciliationItem
+      x-api-client-required: false
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
@@ -678,9 +749,60 @@ paths:
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/audit-exports:
+    post:
+      operationId: exportAuditWormSegment
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/audit-exports/verification:
+    get:
+      operationId: verifyAuditWormSegments
+      x-api-client-required: false
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/kms/rotate:
+    post:
+      operationId: rotateSyntheticKmsKey
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/break-glass:
+    post:
+      operationId: requestBreakGlassGrant
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/break-glass/expire-elapsed:
+    post:
+      operationId: expireElapsedBreakGlassGrants
+      x-api-client-required: false
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/security/break-glass/reviews/{reviewCaseId}/close:
+    post:
+      operationId: closeBreakGlassReview
+      x-api-client-required: false
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/fds-cases:
     get:
       operationId: fdsCases
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/fds-cases/{caseId}:
+    get:
+      operationId: fdsCase
+      x-api-client-required: false
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
@@ -713,6 +835,31 @@ paths:
       operationId: amlCases
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/aml-cases/{caseId}:
+    get:
+      operationId: amlCase
+      x-api-client-required: false
+      x-reason-required: true
+      parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/aml-cases/{caseId}/assign:
+    post:
+      operationId: assignAmlCase
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/aml-cases/{caseId}/comments:
+    post:
+      operationId: addAmlCaseComment
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/aml-cases/{caseId}/closure-requests:
     post:
@@ -768,6 +915,54 @@ paths:
       x-idempotent-command: true
       x-idempotency-policy: body.idempotencyKey
       responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/ops/daily-closings:
+    post:
+      operationId: closeBusinessDay
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/aml/governance/screen/customers/{customerId}:
+    post:
+      operationId: screenCustomerAgainstSyntheticSanctions
+      x-api-client-required: false
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/aml/governance/screen/transfers:
+    post:
+      operationId: screenTransferAgainstSyntheticSanctions
+      x-api-client-required: false
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/aml/governance/hits/{hitId}/false-positive-dispositions:
+    post:
+      operationId: dispositionSyntheticSanctionsFalsePositive
+      x-api-client-required: false
+      x-synthetic-only: true
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/aml/governance/model-card:
+    get:
+      operationId: syntheticAmlModelCard
+      x-api-client-required: false
+      x-synthetic-only: true
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/parity/structured-errors/{code}:
+    get:
+      operationId: structuredErrorParityProbe
+      x-api-client-required: false
+      x-synthetic-only: true
+      x-test-profile-only: api-error-parity
+      responses: { '400': { $ref: '#/components/responses/StructuredErrorResponse' }, '403': { $ref: '#/components/responses/StructuredErrorResponse' }, '404': { $ref: '#/components/responses/StructuredErrorResponse' }, '409': { $ref: '#/components/responses/StructuredErrorResponse' }, '500': { $ref: '#/components/responses/StructuredErrorResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
 components:
   responses:
     AnyJsonResponse:

@@ -1,0 +1,272 @@
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { failIfErrors, openApiContractFiles, parseOpenApiOperations, readUtf8 } from "./contract-utils.ts";
+
+type ServiceId = "core-banking" | "payment-service" | "notification-service" | "reporting-service";
+
+type ServiceConfig = {
+  readonly serviceId: ServiceId;
+  readonly sourceRoot: string;
+  readonly contractPath: string;
+  readonly generatedPath: string;
+};
+
+type RuntimeOperation = {
+  readonly method: string;
+  readonly path: string;
+  readonly handler: string;
+  readonly controllerFile: string;
+  readonly requestDto: string | null;
+  readonly responseDto: string | null;
+};
+
+type GeneratedOpenApiSnapshot = {
+  readonly generatedAt: string;
+  readonly generator: "kotlin-controller-source";
+  readonly serviceId: ServiceId;
+  readonly syntheticOnly: true;
+  readonly diffScope: string;
+  readonly operations: readonly RuntimeOperation[];
+};
+
+const generatedAt = "2026-06-10T00:00:00.000Z";
+const services: ServiceConfig[] = [
+  {
+    serviceId: "core-banking",
+    sourceRoot: "services/core-banking/src/main/kotlin",
+    contractPath: "contracts/openapi/core-banking.yaml",
+    generatedPath: "docs/test-evidence/generated/openapi/core-banking.generated.json"
+  },
+  {
+    serviceId: "payment-service",
+    sourceRoot: "services/payment-service/src/main/kotlin",
+    contractPath: "contracts/openapi/payment-service.yaml",
+    generatedPath: "docs/test-evidence/generated/openapi/payment-service.generated.json"
+  },
+  {
+    serviceId: "notification-service",
+    sourceRoot: "services/notification-service/src/main/kotlin",
+    contractPath: "contracts/openapi/notification-service.yaml",
+    generatedPath: "docs/test-evidence/generated/openapi/notification-service.generated.json"
+  },
+  {
+    serviceId: "reporting-service",
+    sourceRoot: "services/reporting-service/src/main/kotlin",
+    contractPath: "contracts/openapi/reporting-service.yaml",
+    generatedPath: "docs/test-evidence/generated/openapi/reporting-service.generated.json"
+  }
+];
+
+const errors: string[] = [];
+const snapshots: GeneratedOpenApiSnapshot[] = [];
+
+for (const service of services) {
+  const contractSource = await readUtf8(service.contractPath);
+  const contractOperations = parseOpenApiOperations(service.contractPath, contractSource);
+  const contractPaths = new Set(contractOperations.map((operation) => operation.path));
+  const runtimeOperations = (await extractRuntimeOperations(service.sourceRoot))
+    .filter((operation) => inDiffScope(operation, contractPaths))
+    .sort(compareOperation);
+  const snapshot: GeneratedOpenApiSnapshot = {
+    generatedAt,
+    generator: "kotlin-controller-source",
+    serviceId: service.serviceId,
+    syntheticOnly: true,
+    diffScope: "Spring @RestController operations under /api/** plus checked-in /health operations.",
+    operations: runtimeOperations
+  };
+  snapshots.push(snapshot);
+
+  const runtimeByKey = new Map(runtimeOperations.map((operation) => [operationKey(operation), operation]));
+  const contractByKey = new Map(contractOperations.map((operation) => [operationKey(operation), operation]));
+
+  for (const operation of runtimeOperations) {
+    const key = operationKey(operation);
+    const contract = contractByKey.get(key);
+    if (!contract) {
+      errors.push(`${service.serviceId}: runtime operation is missing from checked-in OpenAPI: ${key} (${operation.controllerFile}#${operation.handler})`);
+      continue;
+    }
+
+    const contractRequestDto = firstSchemaRef(contract.block, "requestBody");
+    if (!operation.requestDto && /requestBody:/u.test(contract.block)) {
+      errors.push(`${service.serviceId} ${key}: checked-in OpenAPI declares requestBody but controller has no @RequestBody DTO.`);
+    }
+    if (operation.requestDto && contractRequestDto) {
+      if (contractRequestDto !== "AnyJson" && !sameDto(contractRequestDto, operation.requestDto)) {
+        errors.push(`${service.serviceId} ${key}: request DTO mismatch, controller=${operation.requestDto}, OpenAPI=${contractRequestDto}.`);
+      }
+    }
+
+    const responseDto = operation.responseDto;
+    const contractResponseDto = firstSchemaRef(contract.block, "responses");
+    if (responseDto && contractResponseDto && contractResponseDto !== "AnyJson" && !sameDto(contractResponseDto, responseDto)) {
+      errors.push(`${service.serviceId} ${key}: response DTO mismatch, controller=${responseDto}, OpenAPI=${contractResponseDto}.`);
+    }
+    if (!/StructuredErrorResponse/u.test(contract.block) && !/structuredErrorDefault:\s*['"]?#\/components\/responses\/StructuredErrorResponse/u.test(contractSource)) {
+      errors.push(`${service.serviceId} ${key}: structured error response metadata is missing.`);
+    }
+  }
+
+  for (const operation of contractOperations) {
+    const key = operationKey(operation);
+    if (!runtimeByKey.has(key)) {
+      errors.push(`${service.serviceId}: checked-in OpenAPI operation has no controller route: ${key} (${operation.operationId ?? "missing operationId"}).`);
+    }
+  }
+
+  await mkdir(dirname(service.generatedPath), { recursive: true });
+  await writeFile(service.generatedPath, `${JSON.stringify(snapshot, null, 2)}\n`);
+}
+
+failIfErrors("OpenAPI generated source diff", errors);
+
+console.log("OpenAPI generated source diff passed");
+for (const snapshot of snapshots) {
+  console.log(`- ${snapshot.serviceId}: ${snapshot.operations.length} controller operations matched ${contractPathFor(snapshot.serviceId)}`);
+}
+
+async function extractRuntimeOperations(root: string): Promise<RuntimeOperation[]> {
+  const controllerFiles = (await listFiles(root)).filter((file) => file.endsWith("Controller.kt"));
+  const operations: RuntimeOperation[] = [];
+  for (const controllerFile of controllerFiles) {
+    const source = await readFile(controllerFile, "utf8");
+    if (!source.includes("@RestController")) {
+      continue;
+    }
+    for (const block of restControllerBlocks(source)) {
+      const basePath = extractClassRequestMapping(block);
+      for (const operation of extractMappedFunctions(block, basePath, controllerFile)) {
+        operations.push(operation);
+      }
+    }
+  }
+  return operations;
+}
+
+async function listFiles(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const entryPath = join(root, entry.name).replaceAll("\\", "/");
+    if (entry.isDirectory()) {
+      files.push(...await listFiles(entryPath));
+    } else {
+      files.push(entryPath);
+    }
+  }
+  return files.sort();
+}
+
+function restControllerBlocks(source: string): string[] {
+  const starts = Array.from(source.matchAll(/@RestController/gmu)).map((match) => match.index ?? 0);
+  return starts.map((start, index) => source.slice(start, index + 1 < starts.length ? starts[index + 1] : source.length));
+}
+
+function extractClassRequestMapping(block: string): string {
+  return mappingPath(/@RequestMapping\s*\(([^)]*)\)/u.exec(block)?.[1] ?? "");
+}
+
+function extractMappedFunctions(block: string, basePath: string, controllerFile: string): RuntimeOperation[] {
+  const operations: RuntimeOperation[] = [];
+  const mappingRegex =
+    /@(Get|Post|Put|Patch|Delete)Mapping\s*(?:\(([^)]*)\))?[\s\S]{0,900}?fun\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([\s\S]*?)\)\s*:\s*([^\n={]+)/gmu;
+  for (const match of block.matchAll(mappingRegex)) {
+    const method = match[1].toUpperCase();
+    const path = normalizePath(basePath, mappingPath(match[2] ?? ""));
+    const handler = match[3];
+    const params = match[4];
+    const returnType = match[5].trim();
+    operations.push({
+      method,
+      path,
+      handler,
+      controllerFile,
+      requestDto: requestDto(params),
+      responseDto: responseDto(returnType)
+    });
+  }
+  return operations;
+}
+
+function mappingPath(mappingArgs: string): string {
+  if (!mappingArgs.trim()) {
+    return "";
+  }
+  const direct = /^"([^"]*)"/u.exec(mappingArgs.trim())?.[1];
+  if (direct !== undefined) {
+    return direct;
+  }
+  return /(?:value|path)\s*=\s*"([^"]*)"/u.exec(mappingArgs)?.[1] ?? "";
+}
+
+function normalizePath(basePath: string, methodPath: string): string {
+  const joined = `${basePath}${methodPath}`.replaceAll("\\", "/").replace(/\/{2,}/gu, "/");
+  if (!joined) {
+    return "/";
+  }
+  return joined.startsWith("/") ? joined : `/${joined}`;
+}
+
+function requestDto(params: string): string | null {
+  const match = /@RequestBody\s+(?:val\s+)?[A-Za-z][A-Za-z0-9_]*\s*:\s*([A-Za-z][A-Za-z0-9_<>?]*)/u.exec(params);
+  return match ? normalizeDto(match[1]) : null;
+}
+
+function responseDto(returnType: string): string | null {
+  return normalizeDto(returnType);
+}
+
+function normalizeDto(typeName: string): string | null {
+  const cleaned = typeName
+    .replace(/\s+/gu, "")
+    .replace(/\?/gu, "")
+    .replace(/^ResponseEntity</u, "")
+    .replace(/^List</u, "")
+    .replace(/^Set</u, "")
+    .replace(/^Collection</u, "")
+    .replace(/^Map<[^,>]+,/u, "")
+    .replace(/>+$/u, "");
+  if (!cleaned || ["String", "Int", "Long", "Boolean", "Unit", "HttpServletRequest"].includes(cleaned)) {
+    return null;
+  }
+  return cleaned;
+}
+
+function sameDto(contractDto: string, runtimeDto: string): boolean {
+  return canonicalDto(contractDto) === canonicalDto(runtimeDto);
+}
+
+function canonicalDto(typeName: string): string {
+  return typeName.replace(/Dto$/u, "");
+}
+
+function firstSchemaRef(block: string, section: "requestBody" | "responses"): string | null {
+  const sectionStart = block.indexOf(`${section}:`);
+  if (sectionStart < 0) {
+    return null;
+  }
+  const sectionBlock = block.slice(sectionStart);
+  const schemaRef = /\$ref:\s*['"]?#\/components\/schemas\/([A-Za-z][A-Za-z0-9_]*)/u.exec(sectionBlock)?.[1];
+  if (schemaRef) {
+    return schemaRef;
+  }
+  const responseRef = /\$ref:\s*['"]?#\/components\/responses\/AnyJsonResponse/u.test(sectionBlock);
+  return responseRef ? "AnyJson" : null;
+}
+
+function inDiffScope(operation: RuntimeOperation, contractPaths: ReadonlySet<string>): boolean {
+  return operation.path.startsWith("/api/") || (operation.path === "/health" && contractPaths.has("/health"));
+}
+
+function operationKey(operation: { readonly method: string; readonly path: string }): string {
+  return `${operation.method} ${operation.path}`;
+}
+
+function compareOperation(left: RuntimeOperation, right: RuntimeOperation): number {
+  return operationKey(left).localeCompare(operationKey(right));
+}
+
+function contractPathFor(serviceId: ServiceId): string {
+  return openApiContractFiles.find((file) => file.includes(serviceId === "core-banking" ? "core-banking" : serviceId)) ?? serviceId;
+}

@@ -1,0 +1,121 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "generator": "kotlin-controller-source",
+  "serviceId": "payment-service",
+  "syntheticOnly": true,
+  "diffScope": "Spring @RestController operations under /api/** plus checked-in /health operations.",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/payments/autopay/agreements/{agreementId}",
+      "handler": "autopayAgreement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": null,
+      "responseDto": "PaymentAutopayAgreementResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/instructions/{instructionId}",
+      "handler": "instruction",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": null,
+      "responseDto": "PaymentInstructionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/autopay/agreements",
+      "handler": "createAutopayAgreement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "CreateAutopayAgreementRequest",
+      "responseDto": "PaymentAutopayAgreementResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/autopay/agreements/{agreementId}/cancel",
+      "handler": "cancelAutopayAgreement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "CancelAutopayAgreementRequest",
+      "responseDto": "PaymentAutopayAgreementResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/autopay/agreements/{agreementId}/pause",
+      "handler": "pauseAutopayAgreement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "PauseAutopayAgreementRequest",
+      "responseDto": "PaymentAutopayAgreementResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/autopay/agreements/{agreementId}/resume",
+      "handler": "resumeAutopayAgreement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "ResumeAutopayAgreementRequest",
+      "responseDto": "PaymentAutopayAgreementResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/autopay/executions/due",
+      "handler": "executeDueAutopay",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "ExecuteDueAutopayRequest",
+      "responseDto": "ExecuteDueAutopayResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/cancellation-requests/{requestId}/approve",
+      "handler": "approveCancellationRequest",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "ReviewPaymentCancellationRequest",
+      "responseDto": "PaymentCancellationRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/cancellation-requests/{requestId}/reject",
+      "handler": "rejectCancellationRequest",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "ReviewPaymentCancellationRequest",
+      "responseDto": "PaymentCancellationRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/instructions",
+      "handler": "createInstruction",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "CreatePaymentInstructionRequest",
+      "responseDto": "PaymentInstructionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/instructions/{instructionId}/cancel",
+      "handler": "cancel",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "CancelPaymentInstructionRequest",
+      "responseDto": "PaymentInstructionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/instructions/{instructionId}/cancellation-requests",
+      "handler": "requestCancellationApproval",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "RequestPaymentCancellationApprovalRequest",
+      "responseDto": "PaymentCancellationRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/instructions/{instructionId}/settlements",
+      "handler": "recordSettlement",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "RecordPaymentSettlementRequest",
+      "responseDto": "PaymentInstructionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/outbox/ledger-postings/dispatch-next",
+      "handler": "dispatchNextLedgerPosting",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "DispatchPaymentLedgerPostingRequest",
+      "responseDto": "PaymentOutboxDispatchResponse"
+    }
+  ]
+}

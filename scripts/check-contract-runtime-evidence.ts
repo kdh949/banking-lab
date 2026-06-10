@@ -73,9 +73,14 @@ for (const requiredScript of ["contracts:lint", "contracts:check-client", "contr
   }
 }
 
+if (!scripts["contracts:diff-openapi"]) {
+  errors.push("package.json is missing PLAN Phase 4 OpenAPI source diff script: contracts:diff-openapi");
+}
+
 for (const requiredDocMarker of [
-  "add generated OpenAPI DTO diffing and runtime event-envelope validation beyond the current structural contract gates",
-  "DTO-level schema generation or springdoc diffing remains a future improvement",
+  "add springdoc/Jackson DTO schema generation and runtime event-envelope validation beyond the current contract gates",
+  "Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`",
+  "springdoc/Jackson DTO schema generation remains a future improvement",
   "implementation-level producer validation against the envelope fields"
 ]) {
   if (!readme.includes(requiredDocMarker) && !contractDoc.includes(requiredDocMarker)) {
@@ -182,18 +187,17 @@ const evidence: ContractRuntimeEvidence = {
   syntheticOnly: true,
   status: "partial",
   statusReason:
-    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, event schema references, and selected source envelope markers. PLAN-required generated OpenAPI DTO diffing and runtime event-envelope validation gates are not implemented yet.",
+    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, and selected source envelope markers. Springdoc/Jackson DTO schema generation and runtime event-envelope validation remain PLAN-required gaps.",
   openApi: {
     checkedInFiles: [...openApiContractFiles],
     operationCount: operations.length,
     clientMethodCount: clientMethods.size,
-    structuralGateScripts: ["contracts:lint", "contracts:check-client"],
+    structuralGateScripts: ["contracts:lint", "contracts:check-client", "contracts:diff-openapi"],
     generatedDtoDiffGate: {
-      status: scripts["contracts:diff-openapi"] ? "partial" : "not-present-plan-required",
+      status: "partial",
       expectedScript: "contracts:diff-openapi",
-      note: scripts["contracts:diff-openapi"]
-        ? "Script is present but this boundary evidence does not certify generated DTO diff completeness."
-        : "No springdoc/Jackson-generated OpenAPI DTO diff gate is wired yet; do not claim DTO-level runtime parity."
+      note:
+        "Kotlin controller source-to-OpenAPI path/method diffing is wired and writes generated evidence snapshots; this does not certify full springdoc/Jackson DTO schema parity."
     }
   },
   asyncApi: {
@@ -214,7 +218,7 @@ const evidence: ContractRuntimeEvidence = {
     {
       id: "generated-openapi-diff-not-overclaimed",
       status: "pass",
-      details: "README and contract evidence still identify generated OpenAPI DTO diffing as remaining hardening work."
+      details: "README and contract evidence distinguish the wired Kotlin controller source diff from remaining springdoc/Jackson DTO schema generation."
     },
     {
       id: "runtime-event-validation-not-overclaimed",

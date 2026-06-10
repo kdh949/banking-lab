@@ -2,7 +2,7 @@
   "reviewDate": "2026-06-10",
   "syntheticOnly": true,
   "status": "partial",
-  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, event schema references, and selected source envelope markers. PLAN-required generated OpenAPI DTO diffing and runtime event-envelope validation gates are not implemented yet.",
+  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, and selected source envelope markers. Springdoc/Jackson DTO schema generation and runtime event-envelope validation remain PLAN-required gaps.",
   "openApi": {
     "checkedInFiles": [
       "contracts/openapi/core-banking.yaml",
@@ -10,16 +10,17 @@
       "contracts/openapi/notification-service.yaml",
       "contracts/openapi/reporting-service.yaml"
     ],
-    "operationCount": 153,
+    "operationCount": 178,
     "clientMethodCount": 146,
     "structuralGateScripts": [
       "contracts:lint",
-      "contracts:check-client"
+      "contracts:check-client",
+      "contracts:diff-openapi"
     ],
     "generatedDtoDiffGate": {
-      "status": "not-present-plan-required",
+      "status": "partial",
       "expectedScript": "contracts:diff-openapi",
-      "note": "No springdoc/Jackson-generated OpenAPI DTO diff gate is wired yet; do not claim DTO-level runtime parity."
+      "note": "Kotlin controller source-to-OpenAPI path/method diffing is wired and writes generated evidence snapshots; this does not certify full springdoc/Jackson DTO schema parity."
     }
   },
   "asyncApi": {
@@ -113,7 +114,7 @@
     {
       "id": "generated-openapi-diff-not-overclaimed",
       "status": "pass",
-      "details": "README and contract evidence still identify generated OpenAPI DTO diffing as remaining hardening work."
+      "details": "README and contract evidence distinguish the wired Kotlin controller source diff from remaining springdoc/Jackson DTO schema generation."
     },
     {
       "id": "runtime-event-validation-not-overclaimed",

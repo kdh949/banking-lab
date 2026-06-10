@@ -46,7 +46,7 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 
 ## Residual Risk
 
-- Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; DTO-level schema generation or springdoc diffing remains a future improvement.
+- Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`, while springdoc/Jackson DTO schema generation remains a future improvement.
 - AsyncAPI models a shared outbox/envelope contract plus payload schemas. Some services still need implementation-level producer validation against the envelope fields in later bounded-context hardening.
 
 ## 2026-06-10 Runtime Boundary Evidence
@@ -55,5 +55,32 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 `docs/test-evidence/generated/contract-runtime-evidence.json` record the
 current boundary without upgrading it to a runtime pass. They confirm the
 structural contract gates and selected source envelope markers are present, and
-they explicitly keep `contracts:diff-openapi` and
-`contracts:validate-runtime-events` as PLAN-required missing gates.
+they record `contracts:diff-openapi` as a passing Kotlin controller source diff
+gate while keeping `contracts:validate-runtime-events` as a PLAN-required
+missing gate.
+
+## 2026-06-10 OpenAPI Source Diff Gate
+
+- Added `npm run contracts:diff-openapi`, which compares Kotlin
+  `@RestController` `/api/**` and checked-in `/health` routes against the
+  checked-in OpenAPI files for core-banking, payment-service,
+  notification-service, and reporting-service.
+- The gate writes deterministic synthetic-only snapshots under
+  `docs/test-evidence/generated/openapi/`.
+- The gate fails on runtime path/methods missing from OpenAPI, OpenAPI
+  path/methods with no controller route, structured error metadata gaps, and
+  request/response DTO name mismatches where checked-in OpenAPI declares a DTO
+  schema reference.
+- This is not a full springdoc/Jackson schema export. Existing broad
+  `AnyJsonResponse` coverage remains a documented residual risk until DTO
+  schema generation is added.
+
+Current local validation:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `npm run contracts:diff-openapi` | pass | Matched 142 core-banking, 14 payment-service, 16 notification-service, and 6 reporting-service controller operations to checked-in OpenAPI. |
+| `npm run contracts:lint` | pass | Revalidated 4 OpenAPI files and 1 AsyncAPI file after adding the source diff gate. |
+| `npm run contracts:check-client` | pass | Validated 178 OpenAPI operation IDs against 146 shared API client methods/exemptions. |
+| `npm run contracts:check-events` | pass | Revalidated 17 AsyncAPI event schema references. |
+| `npm run contracts:runtime-evidence` | pass | Regenerated `docs/test-evidence/generated/contract-runtime-evidence.json` with the OpenAPI source diff boundary. |

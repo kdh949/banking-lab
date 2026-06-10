@@ -1,0 +1,137 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "generator": "kotlin-controller-source",
+  "serviceId": "notification-service",
+  "syntheticOnly": true,
+  "diffScope": "Spring @RestController operations under /api/** plus checked-in /health operations.",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/notifications/customers/{customerId}/deliveries",
+      "handler": "customerDeliveryHistory",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationDeliveryDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/customers/{customerId}/preferences",
+      "handler": "customerPreferences",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationPreferenceDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/deliveries",
+      "handler": "deliveryHistory",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationDeliveryDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/deliveries/{deliveryRequestId}",
+      "handler": "delivery",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationDeliveryDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/preferences",
+      "handler": "preferences",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationPreferenceDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/templates",
+      "handler": "templates",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationTemplateDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/templates/change-requests",
+      "handler": "templateChangeRequests",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationTemplateChangeRequestDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/templates/change-requests/{changeRequestId}",
+      "handler": "templateChangeRequest",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": null,
+      "responseDto": "NotificationTemplateChangeRequestDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/deliveries/{deliveryRequestId}/delivered",
+      "handler": "markDelivered",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "MarkNotificationDeliveredRequest",
+      "responseDto": "NotificationDeliveryDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/deliveries/{deliveryRequestId}/failures",
+      "handler": "recordFailure",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "RecordNotificationFailureRequest",
+      "responseDto": "NotificationDeliveryDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/events",
+      "handler": "consumeEvent",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "ConsumeNotificationEventRequest",
+      "responseDto": "NotificationDeliveryResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/templates/change-requests",
+      "handler": "createTemplateChangeRequest",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "CreateNotificationTemplateChangeRequest",
+      "responseDto": "NotificationTemplateChangeRequestDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/templates/change-requests/{changeRequestId}/approve",
+      "handler": "approveTemplateChangeRequest",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "ApproveNotificationTemplateChangeRequest",
+      "responseDto": "NotificationTemplateChangeRequestDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/templates/change-requests/{changeRequestId}/reject",
+      "handler": "rejectTemplateChangeRequest",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "RejectNotificationTemplateChangeRequest",
+      "responseDto": "NotificationTemplateChangeRequestDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notifications/customers/{customerId}/preferences",
+      "handler": "upsertCustomerPreference",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "UpsertCustomerNotificationPreferenceRequest",
+      "responseDto": "NotificationPreferenceDto"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notifications/preferences",
+      "handler": "upsertPreference",
+      "controllerFile": "services/notification-service/src/main/kotlin/lab/banking/notification/api/NotificationController.kt",
+      "requestDto": "UpsertNotificationPreferenceRequest",
+      "responseDto": "NotificationPreferenceDto"
+    }
+  ]
+}

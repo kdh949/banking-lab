@@ -1,0 +1,1145 @@
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "generator": "kotlin-controller-source",
+  "serviceId": "core-banking",
+  "syntheticOnly": true,
+  "diffScope": "Spring @RestController operations under /api/** plus checked-in /health operations.",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/accounts/{accountId}/balance-certificate",
+      "handler": "balanceCertificate",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "BalanceCertificateDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/authorization-parameters",
+      "handler": "authorizationParameters",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/authorization-parameters/history",
+      "handler": "authorizationHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/evidence-coverage",
+      "handler": "evidenceCoverage",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/admin/AdminPlatformController.kt",
+      "requestDto": null,
+      "responseDto": "AdminEvidenceCoverageResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/security-parameters",
+      "handler": "securityParameters",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/security-parameters/history",
+      "handler": "securityHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/summary",
+      "handler": "summary",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/admin/AdminPlatformController.kt",
+      "requestDto": null,
+      "responseDto": "AdminPlatformControlSummary"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/system-status",
+      "handler": "systemStatus",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/admin/AdminPlatformController.kt",
+      "requestDto": null,
+      "responseDto": "AdminSystemStatusResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/aml/governance/model-card",
+      "handler": "modelCard",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlFdsGovernanceController.kt",
+      "requestDto": null,
+      "responseDto": "AmlModelCardDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/approvals",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalController.kt",
+      "requestDto": null,
+      "responseDto": "OperatorApproval"
+    },
+    {
+      "method": "GET",
+      "path": "/api/approvals/{approvalId}",
+      "handler": "approval",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalController.kt",
+      "requestDto": null,
+      "responseDto": "OperatorApproval"
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit/events",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/audit/AuditEventController.kt",
+      "requestDto": null,
+      "responseDto": "AuditEventListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit/exports/{exportId}",
+      "handler": "export",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/audit/AuditExportController.kt",
+      "requestDto": null,
+      "responseDto": "AuditExportJobResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "handler": "session",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/security/AuthSessionController.kt",
+      "requestDto": null,
+      "responseDto": "AuthSessionResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/{cardId}",
+      "handler": "detail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": null,
+      "responseDto": "CardDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/accounts",
+      "handler": "accounts",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerAccountListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/accounts/{accountId}/detail",
+      "handler": "detail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerAccountDetailDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/complaint-types",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": null,
+      "responseDto": "ComplaintTypeGuideResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/complaints",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerComplaintListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/recipients/internal-account-lookup",
+      "handler": "internalAccountLookup",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
+      "requestDto": null,
+      "responseDto": "InternalRecipientLookupResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/transactions",
+      "handler": "transactionHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerTransactionHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/transfers",
+      "handler": "transferStatuses",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerTransferStatusResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customers/{customerId}/access-history",
+      "handler": "accessHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerAccessHistoryDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customers/{customerId}/statements",
+      "handler": "customerStatement",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerStatementDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/fds/analytics",
+      "handler": "evidence",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/analytics/FdsAnalyticsEvidenceController.kt",
+      "requestDto": null,
+      "responseDto": "FdsAnalyticsEvidenceDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/fees/policies",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
+      "requestDto": null,
+      "responseDto": "FeePolicyListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/fees/policies/{policyId}",
+      "handler": "detail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
+      "requestDto": null,
+      "responseDto": "FeePolicyDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/loans/{loanId}",
+      "handler": "detail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": null,
+      "responseDto": "LoanDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/loans/products",
+      "handler": "products",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": null,
+      "responseDto": "LoanProductListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/eod/{businessDate}",
+      "handler": "monitor",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/eod/EodClosingController.kt",
+      "requestDto": null,
+      "responseDto": "EodClosingMonitorDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/ledger/projection-drift-runs/{runId}",
+      "handler": "driftRun",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": null,
+      "responseDto": "LedgerProjectionDriftRunResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/ledger/projection-rebuild-runs/{runId}",
+      "handler": "rebuildRun",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": null,
+      "responseDto": "LedgerProjectionRebuildRunResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/parameters/reconciliation",
+      "handler": "reconciliationParameters",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/parameters/reconciliation/history",
+      "handler": "reconciliationHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/reconciliation-items",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsController.kt",
+      "requestDto": null,
+      "responseDto": "List<ReconciliationItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/reconciliation-items/{itemId}",
+      "handler": "item",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsController.kt",
+      "requestDto": null,
+      "responseDto": "ReconciliationItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/security/audit-exports/verification",
+      "handler": "verifyAuditSegments",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": null,
+      "responseDto": "AuditWormVerificationResult"
+    },
+    {
+      "method": "GET",
+      "path": "/api/parity/structured-errors/{code}",
+      "handler": "raise",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/api/StructuredApiErrorParityProbeController.kt",
+      "requestDto": null,
+      "responseDto": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/products/deposits",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/DepositProductController.kt",
+      "requestDto": null,
+      "responseDto": "DepositProductListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/products/deposits/{productId}",
+      "handler": "detail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/DepositProductController.kt",
+      "requestDto": null,
+      "responseDto": "DepositProductDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/accounts/opening-requests/{requestId}",
+      "handler": "request",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/account/AccountOpeningController.kt",
+      "requestDto": null,
+      "responseDto": "AccountOpeningRequestResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/accounts/search",
+      "handler": "searchAccounts",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<StaffAccountDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/aml-cases",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlCaseController.kt",
+      "requestDto": null,
+      "responseDto": "AmlCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/aml-cases/{caseId}",
+      "handler": "case",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlCaseController.kt",
+      "requestDto": null,
+      "responseDto": "AmlCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/audit-parameters",
+      "handler": "auditParameters",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/audit-parameters/history",
+      "handler": "auditHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/complaints",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": null,
+      "responseDto": "ComplaintCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/complaints/{caseId}",
+      "handler": "case",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": null,
+      "responseDto": "ComplaintCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/customers/{customerId}/detail",
+      "handler": "customerDetail",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessItemResponse<StaffCustomerDetailDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/customers/{customerId}/transfer-limits",
+      "handler": "transferLimits",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<StaffTransferLimitDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/customers/onboarding-requests/{requestId}",
+      "handler": "onboardingRequest",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/onboarding/CustomerOnboardingController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerOnboardingRequestResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/customers/search",
+      "handler": "searchCustomers",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<MaskedCustomerDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/fds-cases",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsCaseController.kt",
+      "requestDto": null,
+      "responseDto": "FdsCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/fds-cases/{caseId}",
+      "handler": "case",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsCaseController.kt",
+      "requestDto": null,
+      "responseDto": "FdsCaseDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/fds-parameters",
+      "handler": "fdsParameters",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/fds-parameters/history",
+      "handler": "fdsHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": null,
+      "responseDto": "ParameterHistoryResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/fees",
+      "handler": "list",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
+      "requestDto": null,
+      "responseDto": "StaffFeePolicyListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/operations/retry-queue",
+      "handler": "operationalRetryQueue",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<OperationalRetryQueueItemDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/transactions/search",
+      "handler": "searchTransactions",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<StaffTransactionDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/workflows/{businessReferenceId}/timeline",
+      "handler": "workflowTimeline",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": null,
+      "responseDto": "StaffAccessListResponse<StaffWorkflowTimelineEntryDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/transactions/{transactionId}/confirmation",
+      "handler": "transactionConfirmation",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "TransactionConfirmationDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/platform/authorization-parameters/change-requests",
+      "handler": "requestAuthorizationChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": "ParameterChangeRequestCommand",
+      "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/platform/security-parameters/change-requests",
+      "handler": "requestSecurityChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": "ParameterChangeRequestCommand",
+      "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/aml/governance/hits/{hitId}/false-positive-dispositions",
+      "handler": "falsePositiveDisposition",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlFdsGovernanceController.kt",
+      "requestDto": "FalsePositiveDispositionCommand",
+      "responseDto": "SanctionsScreeningHitDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/aml/governance/screen/customers/{customerId}",
+      "handler": "screenCustomer",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlFdsGovernanceController.kt",
+      "requestDto": "SanctionsScreenCustomerCommand",
+      "responseDto": "SanctionsScreeningResultDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/aml/governance/screen/transfers",
+      "handler": "screenTransfer",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlFdsGovernanceController.kt",
+      "requestDto": "SanctionsScreenTransferCommand",
+      "responseDto": "SanctionsScreeningResultDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/approvals",
+      "handler": "submit",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalController.kt",
+      "requestDto": "SubmitApprovalCommand",
+      "responseDto": "OperatorApproval"
+    },
+    {
+      "method": "POST",
+      "path": "/api/approvals/{approvalId}/approve",
+      "handler": "approve",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalController.kt",
+      "requestDto": "ApproveApprovalCommand",
+      "responseDto": "OperatorApproval"
+    },
+    {
+      "method": "POST",
+      "path": "/api/approvals/{approvalId}/reject",
+      "handler": "reject",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/approval/ApprovalController.kt",
+      "requestDto": "RejectApprovalCommand",
+      "responseDto": "OperatorApproval"
+    },
+    {
+      "method": "POST",
+      "path": "/api/audit/exports",
+      "handler": "requestExport",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/audit/AuditExportController.kt",
+      "requestDto": "AuditExportRequestCommand",
+      "responseDto": "AuditExportJobResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/audit/exports/{exportId}/approve",
+      "handler": "approveExport",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/audit/AuditExportController.kt",
+      "requestDto": "AuditExportApproveCommand",
+      "responseDto": "AuditExportJobResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/audit/exports/{exportId}/reject",
+      "handler": "rejectExport",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/audit/AuditExportController.kt",
+      "requestDto": "AuditExportRejectCommand",
+      "responseDto": "AuditExportJobResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/customer/login",
+      "handler": "login",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthController.kt",
+      "requestDto": "CustomerLoginCommand",
+      "responseDto": "CustomerAuthResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/customer/signup",
+      "handler": "signup",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthController.kt",
+      "requestDto": "CustomerSignupCommand",
+      "responseDto": "CustomerAuthResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards",
+      "handler": "issue",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "IssueCardCommand",
+      "responseDto": "CardIssueResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/{cardId}/loss-report",
+      "handler": "reportLost",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "CardLossReportCommand",
+      "responseDto": "CardDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/3ds-simulations",
+      "handler": "simulateThreeDs",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "ThreeDsSimulationCommand",
+      "responseDto": "ThreeDsSimulationDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/authorizations",
+      "handler": "authorize",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "CardAuthorizationCommand",
+      "responseDto": "CardAuthorizationResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/authorizations/{authorizationId}/cancel",
+      "handler": "cancelAuthorization",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "CardCancelCommand",
+      "responseDto": "CardAuthorizationResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/authorizations/{authorizationId}/captures",
+      "handler": "capture",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "CardCaptureCommand",
+      "responseDto": "CardCaptureResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards/captures/{captureId}/reverse",
+      "handler": "reverseCapture",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
+      "requestDto": "CardCancelCommand",
+      "responseDto": "CardCaptureResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/complaints",
+      "handler": "create",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": "CustomerComplaintEntryCommand",
+      "responseDto": "CustomerComplaintEntryResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/complaints/{caseId}/confirm",
+      "handler": "confirm",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": "CustomerComplaintConfirmCommand",
+      "responseDto": "CustomerComplaintConfirmResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/complaints/{caseId}/materials",
+      "handler": "submitMaterial",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": "CustomerComplaintMaterialCommand",
+      "responseDto": "CustomerComplaintMaterialResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/complaints/{caseId}/reopen-requests",
+      "handler": "reopen",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": "CustomerComplaintReopenCommand",
+      "responseDto": "CustomerComplaintReopenResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/transfers",
+      "handler": "transfer",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferController.kt",
+      "requestDto": "CustomerTransferCommand",
+      "responseDto": "CustomerTransferResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/adjustments",
+      "handler": "adjustment",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "AdjustmentCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/deposits",
+      "handler": "deposit",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "DepositCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/payment-postings",
+      "handler": "paymentPosting",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "BillPaymentCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/reversals",
+      "handler": "reversal",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "ReversalCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/transfers",
+      "handler": "transfer",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "InternalTransferCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ledger/withdrawals",
+      "handler": "withdraw",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "WithdrawalCommand",
+      "responseDto": "LedgerCommandResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/loans/{loanId}/accruals/run",
+      "handler": "runAccrual",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": "LoanAccrualCommand",
+      "responseDto": "LoanAccrualResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/loans/{loanId}/prepayments",
+      "handler": "prepay",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": "LoanPaymentCommand",
+      "responseDto": "LoanPaymentResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/loans/{loanId}/repayments",
+      "handler": "repay",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": "LoanPaymentCommand",
+      "responseDto": "LoanPaymentResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/loans/applications",
+      "handler": "apply",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
+      "requestDto": "LoanApplicationCommand",
+      "responseDto": "LoanApplicationResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/daily-closings",
+      "handler": "closeBusinessDay",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerController.kt",
+      "requestDto": "ReconciliationDailyClosingCommand",
+      "responseDto": "ReconciliationClosingResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/eod/close",
+      "handler": "requestClose",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/eod/EodClosingController.kt",
+      "requestDto": "EodCloseCommand",
+      "responseDto": "EodCloseRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/fee-posting-batches",
+      "handler": "postFeeBatch",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
+      "requestDto": "FeePostingBatchCommand",
+      "responseDto": "FeePostingBatchResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/interest-accruals/run",
+      "handler": "runInterestAccrual",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/DepositProductController.kt",
+      "requestDto": "InterestAccrualRunCommand",
+      "responseDto": "InterestAccrualRunResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/interest-posting-batches",
+      "handler": "postInterestBatch",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/DepositProductController.kt",
+      "requestDto": "InterestPostingBatchCommand",
+      "responseDto": "InterestPostingBatchResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/ledger/projection-drift-runs",
+      "handler": "startDriftRun",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": "LedgerProjectionDriftRunCommand",
+      "responseDto": "LedgerProjectionDriftRunResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/ledger/projection-rebuild-requests",
+      "handler": "requestRebuild",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": "LedgerProjectionRebuildRequestCommand",
+      "responseDto": "LedgerProjectionRebuildRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/ledger/projection-rebuild-requests/{requestId}/approve",
+      "handler": "approveRebuildRequest",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": "LedgerProjectionRebuildApproveCommand",
+      "responseDto": "LedgerProjectionRebuildReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/ledger/projection-rebuild-requests/{requestId}/execute",
+      "handler": "executeRebuild",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": "LedgerProjectionRebuildExecuteCommand",
+      "responseDto": "LedgerProjectionRebuildRunResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/ledger/projection-rebuild-requests/{requestId}/reject",
+      "handler": "rejectRebuildRequest",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/api/LedgerProjectionIntegrityController.kt",
+      "requestDto": "LedgerProjectionRebuildRejectCommand",
+      "responseDto": "LedgerProjectionRebuildReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/parameters/reconciliation/change-requests",
+      "handler": "requestReconciliationChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": "ParameterChangeRequestCommand",
+      "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/reconciliation-items/{itemId}/adjustment-requests",
+      "handler": "requestAdjustment",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsController.kt",
+      "requestDto": "ReconciliationAdjustmentCommand",
+      "responseDto": "ReconciliationAdjustmentRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/security/audit-exports",
+      "handler": "exportAuditSegment",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": "AuditWormExportCommand",
+      "responseDto": "AuditWormSegmentDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/security/break-glass",
+      "handler": "requestBreakGlass",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": "BreakGlassGrantCommand",
+      "responseDto": "BreakGlassGrantDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/security/break-glass/expire-elapsed",
+      "handler": "expireElapsedBreakGlassGrants",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": "ExpireBreakGlassGrantsCommand",
+      "responseDto": "ExpireBreakGlassGrantsResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/security/break-glass/reviews/{reviewCaseId}/close",
+      "handler": "closeBreakGlassReview",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": "CloseBreakGlassReviewCommand",
+      "responseDto": "BreakGlassGrantDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ops/security/kms/rotate",
+      "handler": "rotateSyntheticKey",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/opsec/OperationalSecurityController.kt",
+      "requestDto": "RotateSyntheticKeyCommand",
+      "responseDto": "KmsRotationResult"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/{accountId}/fee-waiver-requests",
+      "handler": "requestFeeWaiver",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "FeeWaiverRequestCommand",
+      "responseDto": "FeeWaiverRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/{accountId}/hold-release-requests",
+      "handler": "requestAccountHoldRelease",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "AccountHoldReleaseRequestCommand",
+      "responseDto": "AccountHoldRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/{accountId}/hold-requests",
+      "handler": "requestAccountHold",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "AccountHoldRequestCommand",
+      "responseDto": "AccountHoldRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/{accountId}/limit-change-requests",
+      "handler": "requestTransferLimitChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "TransferLimitChangeRequestCommand",
+      "responseDto": "TransferLimitChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/opening-requests",
+      "handler": "requestOpening",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/account/AccountOpeningController.kt",
+      "requestDto": "AccountOpeningRequestCommand",
+      "responseDto": "AccountOpeningRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/opening-requests/{requestId}/approve",
+      "handler": "approve",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/account/AccountOpeningController.kt",
+      "requestDto": "AccountOpeningApproveCommand",
+      "responseDto": "AccountOpeningReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/opening-requests/{requestId}/execute",
+      "handler": "execute",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/account/AccountOpeningController.kt",
+      "requestDto": "AccountOpeningExecuteCommand",
+      "responseDto": "AccountOpeningExecuteResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/accounts/opening-requests/{requestId}/reject",
+      "handler": "reject",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/account/AccountOpeningController.kt",
+      "requestDto": "AccountOpeningRejectCommand",
+      "responseDto": "AccountOpeningReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/aml-cases/{caseId}/assign",
+      "handler": "assign",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlCaseController.kt",
+      "requestDto": "AmlAssignCommand",
+      "responseDto": "AmlCaseDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/aml-cases/{caseId}/closure-requests",
+      "handler": "requestClosure",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlCaseController.kt",
+      "requestDto": "AmlClosureCommand",
+      "responseDto": "AmlClosureRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/aml-cases/{caseId}/comments",
+      "handler": "addComment",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/aml/AmlCaseController.kt",
+      "requestDto": "AmlCommentCommand",
+      "responseDto": "AmlCaseDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/approvals/{approvalId}/approve",
+      "handler": "approveStaffRequest",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "ApproveApprovalCommand",
+      "responseDto": "StaffApprovalExecutionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/approvals/{approvalId}/reject",
+      "handler": "rejectStaffRequest",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "RejectApprovalCommand",
+      "responseDto": "StaffApprovalRejectionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/audit-parameters/change-requests",
+      "handler": "requestAuditChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": "ParameterChangeRequestCommand",
+      "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/complaints/{caseId}/answer-drafts",
+      "handler": "draftAnswer",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
+      "requestDto": "ComplaintAnswerDraftCommand",
+      "responseDto": "ComplaintAnswerDraftResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/{customerId}/change-requests",
+      "handler": "requestCustomerInfoChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "CustomerInfoChangeCommand",
+      "responseDto": "CustomerInfoChangeResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/{customerId}/kyc-review-requests",
+      "handler": "requestCustomerKycReview",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "CustomerKycReviewRequestCommand",
+      "responseDto": "CustomerKycReviewRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/onboarding-requests",
+      "handler": "requestOnboarding",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/onboarding/CustomerOnboardingController.kt",
+      "requestDto": "CustomerOnboardingRequestCommand",
+      "responseDto": "CustomerOnboardingRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/onboarding-requests/{requestId}/approve",
+      "handler": "approveOnboarding",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/onboarding/CustomerOnboardingController.kt",
+      "requestDto": "CustomerOnboardingApproveCommand",
+      "responseDto": "CustomerOnboardingReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/onboarding-requests/{requestId}/execute",
+      "handler": "executeOnboarding",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/onboarding/CustomerOnboardingController.kt",
+      "requestDto": "CustomerOnboardingExecuteCommand",
+      "responseDto": "CustomerOnboardingExecuteResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/customers/onboarding-requests/{requestId}/reject",
+      "handler": "rejectOnboarding",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/onboarding/CustomerOnboardingController.kt",
+      "requestDto": "CustomerOnboardingRejectCommand",
+      "responseDto": "CustomerOnboardingReviewResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/fds-cases/{caseId}/assign",
+      "handler": "assign",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsCaseController.kt",
+      "requestDto": "FdsAssignCommand",
+      "responseDto": "FdsCaseDto"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/fds-cases/{caseId}/block-requests",
+      "handler": "requestBlock",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsCaseController.kt",
+      "requestDto": "FdsDecisionCommand",
+      "responseDto": "FdsDecisionRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/fds-cases/{caseId}/release-requests",
+      "handler": "requestRelease",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/fds/FdsCaseController.kt",
+      "requestDto": "FdsDecisionCommand",
+      "responseDto": "FdsDecisionRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/fds-parameters/change-requests",
+      "handler": "requestFdsChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
+      "requestDto": "ParameterChangeRequestCommand",
+      "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/fee-policies/{policyId}/change-requests",
+      "handler": "requestPolicyChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
+      "requestDto": "FeePolicyChangeRequestCommand",
+      "responseDto": "FeePolicyChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/pii/unmask",
+      "handler": "unmask",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "PiiUnmaskCommand",
+      "responseDto": "StaffUnmaskResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/products/deposits/{productId}/rate-change-requests",
+      "handler": "requestRateChange",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/DepositProductController.kt",
+      "requestDto": "DepositRateChangeRequestCommand",
+      "responseDto": "DepositRateChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/transactions/{transactionId}/correction-requests",
+      "handler": "requestTransactionCorrection",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/staff/StaffAccessController.kt",
+      "requestDto": "TransactionCorrectionRequestCommand",
+      "responseDto": "TransactionCorrectionRequestResponse"
+    }
+  ]
+}
