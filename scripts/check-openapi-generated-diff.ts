@@ -74,6 +74,7 @@ const services: ServiceConfig[] = [
     generatedPath: "docs/test-evidence/generated/openapi/reporting-service.generated.json"
   }
 ];
+const dtoSchemaServiceIds = new Set<ServiceId>(["payment-service", "reporting-service"]);
 
 const errors: string[] = [];
 const snapshots: GeneratedOpenApiSnapshot[] = [];
@@ -85,8 +86,8 @@ for (const service of services) {
   const runtimeOperations = (await extractRuntimeOperations(service.sourceRoot))
     .filter((operation) => inDiffScope(operation, contractPaths))
     .sort(compareOperation);
-  const dtoSchemaMap = service.serviceId === "reporting-service" ? await extractDtoSchemas(service.sourceRoot) : new Map<string, GeneratedDtoSchema>();
-  const dtoSchemas = service.serviceId === "reporting-service"
+  const dtoSchemaMap = dtoSchemaServiceIds.has(service.serviceId) ? await extractDtoSchemas(service.sourceRoot) : new Map<string, GeneratedDtoSchema>();
+  const dtoSchemas = dtoSchemaServiceIds.has(service.serviceId)
     ? referencedDtoSchemas(runtimeOperations, dtoSchemaMap)
     : [];
   const snapshot: GeneratedOpenApiSnapshot = {
@@ -138,8 +139,8 @@ for (const service of services) {
     }
   }
 
-  if (service.serviceId === "reporting-service") {
-    validateReportingDtoSchemas(contractSource, runtimeOperations, dtoSchemas);
+  if (dtoSchemaServiceIds.has(service.serviceId)) {
+    validateDtoSchemas(service, contractSource, runtimeOperations, dtoSchemas);
   }
 
   await mkdir(dirname(service.generatedPath), { recursive: true });
@@ -301,54 +302,68 @@ function referencedDtoSchemas(
   return result.sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function validateReportingDtoSchemas(
+function validateDtoSchemas(
+  service: ServiceConfig,
   contractSource: string,
   operations: readonly RuntimeOperation[],
   dtoSchemas: readonly GeneratedDtoSchema[]
 ): void {
   for (const operation of operations) {
-    if (operation.requestDto && !operationHasNonGenericSchema(contractSource, operation, "requestBody")) {
-      errors.push(`reporting-service ${operationKey(operation)}: request DTO ${operation.requestDto} must use a concrete OpenAPI schema.`);
+    if (operation.requestDto && !operationHasNonGenericSchema(service.contractPath, contractSource, operation, "requestBody")) {
+      errors.push(`${service.serviceId} ${operationKey(operation)}: request DTO ${operation.requestDto} must use a concrete OpenAPI schema.`);
     }
-    if (operation.responseDto && !operationHasNonGenericSchema(contractSource, operation, "responses")) {
-      errors.push(`reporting-service ${operationKey(operation)}: response DTO ${operation.responseDto} must use a concrete OpenAPI schema.`);
+    if (operation.responseDto && !operationHasNonGenericSchema(service.contractPath, contractSource, operation, "responses")) {
+      errors.push(`${service.serviceId} ${operationKey(operation)}: response DTO ${operation.responseDto} must use a concrete OpenAPI schema.`);
     }
   }
 
   for (const schema of dtoSchemas) {
-    const block = componentSchemaBlock(contractSource, schema.name);
-    if (!block) {
-      errors.push(`reporting-service: generated DTO schema ${schema.name} is missing from checked-in OpenAPI components.`);
-      continue;
-    }
     if (schema.kind === "enum") {
-      for (const value of schema.enumValues) {
-        if (!block.includes(value)) {
-          errors.push(`reporting-service ${schema.name}: OpenAPI enum is missing ${value}.`);
+      for (const usage of enumUsages(contractSource, dtoSchemas, schema.name)) {
+        for (const value of schema.enumValues) {
+          if (!usage.block.includes(value)) {
+            errors.push(`${service.serviceId} ${usage.componentName}.${usage.propertyName}: OpenAPI enum for ${schema.name} is missing ${value}.`);
+          }
         }
       }
       continue;
     }
+    const component = componentSchemaBlockForDto(contractSource, schema.name);
+    if (!component) {
+      errors.push(`${service.serviceId}: generated DTO schema ${schema.name} is missing from checked-in OpenAPI components.`);
+      continue;
+    }
+    const block = component.block;
     if (schema.properties.length > 0 && !/properties:/u.test(block)) {
-      errors.push(`reporting-service ${schema.name}: OpenAPI component has no properties block.`);
+      errors.push(`${service.serviceId} ${component.name}: OpenAPI component has no properties block.`);
       continue;
     }
     for (const property of schema.properties) {
       if (!new RegExp(`\\n\\s{8}${property.name}:`, "u").test(block)) {
-        errors.push(`reporting-service ${schema.name}: OpenAPI component is missing property ${property.name}.`);
+        errors.push(`${service.serviceId} ${component.name}: OpenAPI component is missing property ${property.name}.`);
       }
     }
   }
 }
 
-function operationHasNonGenericSchema(contractSource: string, operation: RuntimeOperation, section: "requestBody" | "responses"): boolean {
-  const operations = parseOpenApiOperations("contracts/openapi/reporting-service.yaml", contractSource);
+function operationHasNonGenericSchema(contractPath: string, contractSource: string, operation: RuntimeOperation, section: "requestBody" | "responses"): boolean {
+  const operations = parseOpenApiOperations(contractPath, contractSource);
   const block = operations.find((contractOperation) => operationKey(contractOperation) === operationKey(operation))?.block;
   if (!block) {
     return false;
   }
   const schemaRef = firstSchemaRef(block, section);
   return schemaRef !== null && schemaRef !== "AnyJson";
+}
+
+function componentSchemaBlockForDto(contractSource: string, schemaName: string): { readonly name: string; readonly block: string } | null {
+  for (const candidate of new Set([schemaName, canonicalDto(schemaName)])) {
+    const block = componentSchemaBlock(contractSource, candidate);
+    if (block) {
+      return { name: candidate, block };
+    }
+  }
+  return null;
 }
 
 function componentSchemaBlock(contractSource: string, schemaName: string): string | null {
@@ -359,6 +374,54 @@ function componentSchemaBlock(contractSource: string, schemaName: string): strin
   const rest = contractSource.slice(match.index + match[0].length);
   const next = /^    [A-Za-z][A-Za-z0-9_]*:\n/mu.exec(rest);
   return rest.slice(0, next?.index ?? rest.length);
+}
+
+function enumUsages(
+  contractSource: string,
+  dtoSchemas: readonly GeneratedDtoSchema[],
+  enumName: string
+): Array<{ readonly componentName: string; readonly propertyName: string; readonly block: string }> {
+  const usages: Array<{ readonly componentName: string; readonly propertyName: string; readonly block: string }> = [];
+  for (const schema of dtoSchemas) {
+    if (schema.kind !== "object") {
+      continue;
+    }
+    const enumProperties = schema.properties.filter((property) => property.ref === enumName);
+    if (enumProperties.length === 0) {
+      continue;
+    }
+    const component = componentSchemaBlockForDto(contractSource, schema.name);
+    if (!component) {
+      continue;
+    }
+    for (const property of enumProperties) {
+      const block = componentPropertyBlock(component.block, property.name);
+      if (block) {
+        const referencedEnumBlock = block.includes(`#/components/schemas/${enumName}`)
+          ? componentSchemaBlock(contractSource, enumName)
+          : null;
+        usages.push({ componentName: component.name, propertyName: property.name, block: referencedEnumBlock ?? block });
+      }
+    }
+  }
+  if (usages.length > 0) {
+    return usages;
+  }
+  return [{ componentName: "components.schemas", propertyName: enumName, block: contractSource }];
+}
+
+function componentPropertyBlock(componentBlock: string, propertyName: string): string | null {
+  const match = new RegExp(`^        ${escapeRegExp(propertyName)}:\\n`, "mu").exec(componentBlock);
+  if (!match || match.index === undefined) {
+    return null;
+  }
+  const rest = componentBlock.slice(match.index + match[0].length);
+  const next = /^        [A-Za-z][A-Za-z0-9_]*:\n/mu.exec(rest);
+  return rest.slice(0, next?.index ?? rest.length);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 async function listFiles(root: string): Promise<string[]> {

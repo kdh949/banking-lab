@@ -321,7 +321,7 @@ Next engineering slices:
 - normalize docs and evidence after each hardening phase so README, the coverage matrix, and evidence reports describe the same implementation state
 - add hosted GitHub Actions run evidence or explicit blocked evidence without treating local commands as hosted green
 - add customer-web and staff-terminal live route-to-API execution evidence for the major demo flows
-- extend springdoc/Jackson DTO schema generation beyond reporting-service and broaden live broker-backed event-envelope coverage beyond the current contract gates
+- extend springdoc/Jackson DTO schema generation beyond payment-service and reporting-service, and broaden live broker-backed event-envelope coverage beyond the current contract gates
 - add a synthetic-only call-center workflow with reason-required access, masked notes, after-call tasks, escalation, and audit
 - broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
 - extend high-contention retry or operator-visible failure policy to every future financial command path

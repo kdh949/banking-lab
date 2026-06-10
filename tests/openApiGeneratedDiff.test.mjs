@@ -30,6 +30,18 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(coreKeys.has("POST /api/ops/security/break-glass"));
   assert.ok(coreKeys.has("GET /api/parity/structured-errors/{code}"));
 
+  const payment = JSON.parse(await readFile("docs/test-evidence/generated/openapi/payment-service.generated.json", "utf8"));
+  const paymentSchemaNames = new Set(payment.dtoSchemas.map((schema) => schema.name));
+  assert.ok(paymentSchemaNames.has("CreatePaymentInstructionRequest"));
+  assert.ok(paymentSchemaNames.has("PaymentInstructionDto"));
+  assert.ok(paymentSchemaNames.has("PaymentAutopayAgreementDto"));
+  assert.ok(paymentSchemaNames.has("PaymentCancellationRequestStatus"));
+
+  const paymentContract = await readFile("contracts/openapi/payment-service.yaml", "utf8");
+  assert.doesNotMatch(paymentContract, /AnyJsonResponse/);
+  assert.match(paymentContract, /PaymentInstruction:/);
+  assert.match(paymentContract, /enum: \[PENDING, APPROVED, REJECTED\]/);
+
   const reporting = JSON.parse(await readFile("docs/test-evidence/generated/openapi/reporting-service.generated.json", "utf8"));
   const reportingSchemaNames = new Set(reporting.dtoSchemas.map((schema) => schema.name));
   assert.ok(reportingSchemaNames.has("GenerateReportCommand"));
