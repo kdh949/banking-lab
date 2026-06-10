@@ -60,6 +60,10 @@ class KafkaOutboxPublisher(
             )
             record.headers().add(header("outboxEventId", event.outboxEventId))
             record.headers().add(header("eventType", event.eventType))
+            record.headers().add(header("aggregateId", event.aggregateId))
+            record.headers().add(header("occurredAt", event.createdAt.toString()))
+            record.headers().add(header("sourceService", "core-banking-service"))
+            record.headers().add(header("schemaVersion", schemaVersion(event.payload)))
             record.headers().add(header("syntheticOnly", "true"))
 
             val metadata = producer
@@ -128,10 +132,25 @@ class KafkaOutboxPublisher(
             aggregateType = aggregateType,
             aggregateId = aggregateId,
             eventType = eventType,
+            occurredAt = createdAt.toString(),
+            sourceService = "core-banking-service",
+            schemaVersion = schemaVersion(payload),
             idempotencyKey = idempotencyKey,
             payload = payload,
-            headers = headers + ("syntheticOnly" to true)
+            headers = headers + mapOf(
+                "syntheticOnly" to true,
+                "sourceService" to "core-banking-service",
+                "eventType" to eventType,
+                "aggregateId" to aggregateId,
+                "occurredAt" to createdAt.toString(),
+                "schemaVersion" to schemaVersion(payload)
+            )
         )
+
+    private fun schemaVersion(payload: Map<String, Any?>): String =
+        payload["contractVersion"]?.toString()
+            ?: payload["schemaVersion"]?.toString()
+            ?: "core-banking-events.v1"
 
     private fun header(name: String, value: String): RecordHeader =
         RecordHeader(name, value.toByteArray(StandardCharsets.UTF_8))

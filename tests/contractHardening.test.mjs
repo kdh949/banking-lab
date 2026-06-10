@@ -4,7 +4,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 test("Phase 4 contract validation scripts are wired and pass", () => {
-  for (const script of ["contracts:lint", "contracts:check-client", "contracts:check-events", "contracts:diff-openapi"]) {
+  for (const script of [
+    "contracts:lint",
+    "contracts:check-client",
+    "contracts:check-events",
+    "contracts:diff-openapi",
+    "contracts:validate-runtime-events"
+  ]) {
     const result = spawnSync("npm", ["run", script], { encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr || result.stdout);
   }

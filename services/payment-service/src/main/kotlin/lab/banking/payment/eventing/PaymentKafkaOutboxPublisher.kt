@@ -70,6 +70,7 @@ class PaymentKafkaOutboxPublisher(
             record.headers().add(header("aggregateId", event.aggregateId))
             record.headers().add(header("occurredAt", event.createdAt.toString()))
             record.headers().add(header("sourceService", "payment-service"))
+            record.headers().add(header("schemaVersion", schemaVersion(event.payload)))
             record.headers().add(header("syntheticOnly", "true"))
 
             val metadata = producer
@@ -135,6 +136,8 @@ class PaymentKafkaOutboxPublisher(
             aggregateId = aggregateId,
             eventType = eventType,
             occurredAt = createdAt.toString(),
+            sourceService = "payment-service",
+            schemaVersion = schemaVersion(payload),
             idempotencyKey = idempotencyKey,
             payload = payload,
             headers = mapOf(
@@ -142,9 +145,15 @@ class PaymentKafkaOutboxPublisher(
                 "sourceService" to "payment-service",
                 "eventType" to eventType,
                 "aggregateId" to aggregateId,
-                "occurredAt" to createdAt.toString()
+                "occurredAt" to createdAt.toString(),
+                "schemaVersion" to schemaVersion(payload)
             )
         )
+
+    private fun schemaVersion(payload: Map<String, Any?>): String =
+        payload["contractVersion"]?.toString()
+            ?: payload["schemaVersion"]?.toString()
+            ?: "payment-events.v1"
 
     private fun header(name: String, value: String): RecordHeader =
         RecordHeader(name, value.toByteArray(StandardCharsets.UTF_8))

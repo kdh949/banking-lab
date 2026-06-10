@@ -111,7 +111,7 @@ class NotificationKafkaConsumer(
     }
 
     private fun requireEnvelopeMetadata(envelope: NotificationOutboxKafkaEnvelope) {
-        require(firstString(envelope.headers["sourceService"]) != null) {
+        require(firstString(envelope.sourceService, envelope.headers["sourceService"]) != null) {
             "notification kafka consumer requires sourceService envelope metadata"
         }
         require(firstString(envelope.headers["eventType"], envelope.eventType) == envelope.eventType) {

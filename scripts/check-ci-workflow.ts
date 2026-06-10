@@ -41,6 +41,7 @@ const requiredScripts = [
   "contracts:check-client",
   "contracts:check-events",
   "contracts:diff-openapi",
+  "contracts:validate-runtime-events",
   "platform:validate",
   "security:evidence",
   "formal:ledger"
@@ -85,6 +86,7 @@ requireJobCommand("contracts-validation", "npm run contracts:lint");
 requireJobCommand("contracts-validation", "npm run contracts:check-client");
 requireJobCommand("contracts-validation", "npm run contracts:check-events");
 requireJobCommand("contracts-validation", "npm run contracts:diff-openapi");
+requireJobCommand("contracts-validation", "npm run contracts:validate-runtime-events");
 requireJobCommand("playwright-manifest-e2e", "npm run test:e2e");
 requireJobCommand("security-evidence", "npm audit --audit-level=high");
 requireJobCommand("security-evidence", "npm run security:evidence");

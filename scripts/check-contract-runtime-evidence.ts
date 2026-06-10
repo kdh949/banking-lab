@@ -78,10 +78,10 @@ if (!scripts["contracts:diff-openapi"]) {
 }
 
 for (const requiredDocMarker of [
-  "add springdoc/Jackson DTO schema generation and runtime event-envelope validation beyond the current contract gates",
+  "add springdoc/Jackson DTO schema generation and broader live broker-backed event-envelope coverage beyond the current contract gates",
   "Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`",
   "springdoc/Jackson DTO schema generation remains a future improvement",
-  "implementation-level producer validation against the envelope fields"
+  "`contracts:validate-runtime-events` now validates deterministic runtime envelope fixtures"
 ]) {
   if (!readme.includes(requiredDocMarker) && !contractDoc.includes(requiredDocMarker)) {
     errors.push(`contract evidence docs are missing no-overclaim marker: ${requiredDocMarker}`);
@@ -187,7 +187,7 @@ const evidence: ContractRuntimeEvidence = {
   syntheticOnly: true,
   status: "partial",
   statusReason:
-    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, and selected source envelope markers. Springdoc/Jackson DTO schema generation and runtime event-envelope validation remain PLAN-required gaps.",
+    "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, Kotlin controller source-to-OpenAPI path/method parity, event schema references, runtime envelope fixture/schema validation, and selected source envelope markers. Springdoc/Jackson DTO schema generation remains a PLAN-required gap.",
   openApi: {
     checkedInFiles: [...openApiContractFiles],
     operationCount: operations.length,
@@ -209,7 +209,7 @@ const evidence: ContractRuntimeEvidence = {
       status: scripts["contracts:validate-runtime-events"] ? "partial" : "not-present-plan-required",
       expectedScript: "contracts:validate-runtime-events",
       note: scripts["contracts:validate-runtime-events"]
-        ? "Script is present but this boundary evidence does not certify live producer/consumer validation completeness."
+        ? "Script is wired and validates synthetic runtime envelope fixtures, JSON Schemas, Kafka header/body consistency, and producer ack/source markers. Full live broker producer/consumer coverage still depends on the service integration tests."
         : "No runtime producer/consumer event-envelope validation gate is wired yet; do not treat source inspection as a live runtime pass."
     }
   },
@@ -223,7 +223,7 @@ const evidence: ContractRuntimeEvidence = {
     {
       id: "runtime-event-validation-not-overclaimed",
       status: "pass",
-      details: "Evidence keeps source envelope inspection separate from a future runtime event-envelope validation gate."
+      details: "Evidence distinguishes the wired fixture/schema/source-marker runtime event gate from full live broker producer/consumer integration coverage."
     },
     {
       id: "synthetic-only-boundary",

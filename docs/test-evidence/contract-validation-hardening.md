@@ -47,7 +47,7 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 ## Residual Risk
 
 - Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; Kotlin controller source-to-OpenAPI path/method diffing is wired through `contracts:diff-openapi`, while springdoc/Jackson DTO schema generation remains a future improvement.
-- AsyncAPI models a shared outbox/envelope contract plus payload schemas. Some services still need implementation-level producer validation against the envelope fields in later bounded-context hardening.
+- AsyncAPI models a shared outbox/envelope contract plus payload schemas. `contracts:validate-runtime-events` now validates deterministic runtime envelope fixtures, header/body consistency, and producer ack/source markers; full live broker behavior remains covered by service integration tests.
 
 ## 2026-06-10 Runtime Boundary Evidence
 
@@ -56,8 +56,8 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 current boundary without upgrading it to a runtime pass. They confirm the
 structural contract gates and selected source envelope markers are present, and
 they record `contracts:diff-openapi` as a passing Kotlin controller source diff
-gate while keeping `contracts:validate-runtime-events` as a PLAN-required
-missing gate.
+gate and `contracts:validate-runtime-events` as a wired fixture/schema/source-marker
+runtime envelope gate.
 
 ## 2026-06-10 OpenAPI Source Diff Gate
 
@@ -83,4 +83,5 @@ Current local validation:
 | `npm run contracts:lint` | pass | Revalidated 4 OpenAPI files and 1 AsyncAPI file after adding the source diff gate. |
 | `npm run contracts:check-client` | pass | Validated 178 OpenAPI operation IDs against 146 shared API client methods/exemptions. |
 | `npm run contracts:check-events` | pass | Revalidated 17 AsyncAPI event schema references. |
+| `npm run contracts:validate-runtime-events` | pass | Validated 17 synthetic runtime envelope fixtures against 17 event schemas, Kafka header/body consistency, and producer ack/source markers. |
 | `npm run contracts:runtime-evidence` | pass | Regenerated `docs/test-evidence/generated/contract-runtime-evidence.json` with the OpenAPI source diff boundary. |

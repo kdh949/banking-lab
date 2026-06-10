@@ -34,8 +34,9 @@ test("contract runtime evidence boundary records structural passes and missing r
     "aggregateId",
     "occurredAt"
   ]);
-  assert.equal(evidence.asyncApi.runtimeEventValidationGate.status, "not-present-plan-required");
+  assert.equal(evidence.asyncApi.runtimeEventValidationGate.status, "partial");
   assert.equal(evidence.asyncApi.runtimeEventValidationGate.expectedScript, "contracts:validate-runtime-events");
+  assert.match(evidence.asyncApi.runtimeEventValidationGate.note, /validates synthetic runtime envelope fixtures/);
 
   for (const id of [
     "payment-service-kafka-producer-envelope-source",
@@ -56,9 +57,9 @@ test("contract runtime evidence docs avoid DTO and runtime event overclaims", as
   assert.match(doc, /Status: partial/);
   assert.match(doc, /Kotlin controller source-to-OpenAPI path\/method diffing is wired through `contracts:diff-openapi`/);
   assert.match(doc, /Do not claim the source diff is equivalent to generated Spring\/Jackson\/springdoc DTO-level OpenAPI schema parity/);
-  assert.match(doc, /Do not claim source inspection or structural AsyncAPI validation is equivalent to a runtime producer\/consumer envelope validation integration test/);
+  assert.match(doc, /Do not claim this fixture\/schema\/source-marker gate is equivalent to exhaustive live broker producer\/consumer coverage/);
   assert.match(doc, /synthetic-only/);
   assert.ok(packageJson.scripts["contracts:runtime-evidence"]);
   assert.ok(packageJson.scripts["contracts:diff-openapi"]);
-  assert.equal(packageJson.scripts["contracts:validate-runtime-events"], undefined);
+  assert.ok(packageJson.scripts["contracts:validate-runtime-events"]);
 });
