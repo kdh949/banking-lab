@@ -11,6 +11,8 @@ fallback evidence. It does not claim hosted CI is green.
 
 | Run | Event | Commit | Status | Result | URL |
 | --- | --- | --- | --- | --- | --- |
+| CI | push to `main` after PR #82 | `f150663875d1ec094b11f5db8d8c03d7b242ed38` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27285121678 |
+| CI | pull_request #82 | `c2841c7b8cdaadfe3b0e1b7d8a3e19c2a1b46d11` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27285001175 |
 | CI | pull_request #79 | `dead036460edc5aca402a7ad5017be25ada3b9d5` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27281812788 |
 | CI | pull_request #77 | `399de14415cfece78b9584b7b1a36db975ed0f22` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27280452683 |
 | CI | pull_request #76 | `9334afafe2812a9d7ed60b596e31bd2932ddd04a` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27279285215 |
@@ -26,7 +28,17 @@ fallback evidence. It does not claim hosted CI is green.
 
 ## Failure Classification
 
-The latest checked PR run (`27281812788`) reported every job as failed within a
+The latest checked main push run (`27285121678`, merge commit
+`f150663875d1ec094b11f5db8d8c03d7b242ed38`) reported every job as failed
+within a few seconds. GitHub job metadata showed `runner_id: 0` and `steps: 0`
+for every job, so no hosted command-level failure log exists for that run.
+
+The PR #82 run (`27285001175`, head commit
+`c2841c7b8cdaadfe3b0e1b7d8a3e19c2a1b46d11`) showed the same empty-runner
+pattern: every job had `runner_id: 0` and `steps: 0`. The infrastructure issue
+is tracked as https://github.com/kdh949/banking-lab/issues/83.
+
+The earlier checked PR run (`27281812788`) reported every job as failed within a
 few seconds, with an empty `steps` array for each job. `gh api
 repos/kdh949/banking-lab/actions/jobs/80578094240/logs` returned
 `BlobNotFound`, so no hosted command-level failure log exists for that run.
@@ -136,6 +148,18 @@ Local commands run for PR #79:
 - `npm run test:call-center-console:keycloak-e2e-compose`: first approved run failed in Playwright because the manager Keycloak redirect reset the in-memory agent token; approved rerun passed with 1 live Keycloak browser test after preserving same-tab synthetic token state.
 - `node --test tests/callCenterConsole.test.mjs tests/finalHardeningBaseline.test.mjs tests/evidenceHardening.test.mjs tests/coverageMatrixStatus.test.mjs`: pass, 9 tests.
 - `git diff --check`: pass.
+
+Local commands run for PR #82:
+
+- `npm run integrated-terminal:boundary-check`: pass.
+- `npm run live-route:evidence`: pass.
+- `node --test tests/liveRouteApiEvidence.test.mjs tests/coverageMatrixStatus.test.mjs tests/evidenceHardening.test.mjs tests/finalHardeningBaseline.test.mjs`: pass, 10 tests.
+- `npm run packages:typecheck`: pass.
+- `npm run next:staff-terminal:typecheck`: pass.
+- `npm run next:staff-terminal:build`: pass.
+- `npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts --project=chromium`: pass, 4 passed and 1 skipped because the live API environment was not configured.
+- `npm run test:staff-terminal:api-e2e-compose`: pass, 1 live staff Spring API browser test against disposable Compose.
+- In-app Browser verification of `http://localhost:3002` confirmed the staff-terminal Spring API evidence panel renders on the portal screen.
 
 ## Manual Recovery Checklist
 

@@ -51,8 +51,10 @@ The target-stack shape is present and broad:
 - `customer-web` includes route pages for signup, login, accounts, transfers,
   complaints, security, cards, loans, payments, and notifications.
 - `staff-terminal` is currently an iWorks-style integrated terminal shell with
-  `/` and `/api/terminal-status`; Spring staff-control APIs remain backend
-  covered but are not exposed as the previous staff manifest route set.
+  `/`, `/api/terminal-status`, and a bounded Spring API evidence panel for
+  reason-required staff customer detail plus approval-inbox reads; broader
+  staff-control command APIs remain backend covered and are not exposed as the
+  previous staff manifest route set.
 - `call-center-console` now has a dedicated Next.js shell on port 3008,
   manifests `CALL-101` through `CALL-106`, shared API-client methods, and a
   Spring/PostgreSQL workflow for masked customer search, interaction start and
@@ -85,9 +87,9 @@ maintenance against the current PLAN.
   `docs/demo-scenarios/demo-video-script.md` now use explicit status boundaries,
   but they must be refreshed after each hardening PR.
 - `docs/implementation-coverage-matrix.md` now declares the current status
-  vocabulary, including `route-backed-live-gated`, `integrated-terminal`, and
+  vocabulary, including `route-backed-live-gated` and
   `backend-control-covered`; tests guard that every table row uses a declared
-  value.
+  value and that the retired `integrated-terminal` row status is not reused.
 - Existing evidence documents contain long historical command logs from earlier
   branches. They are useful as prior evidence, but they must not be presented
   as commands rerun for this branch.
@@ -115,10 +117,10 @@ The active PLAN identifies these portfolio-completion gaps:
 2. Hosted CI evidence must be separated from local evidence, and blocked hosted
    CI must remain explicitly blocked rather than marked green.
 3. `customer-web` route evidence should be refreshed against a running
-   synthetic stack before demo recording. The current `staff-terminal` is an
-   integrated-terminal shell, so staff route-to-API claims must use backend
-   control evidence or a new operator workflow rather than the retired manifest
-   routes.
+   synthetic stack before demo recording. The current `staff-terminal` keeps
+   the integrated-terminal shell and adds only a bounded Spring API evidence
+   panel, so broader staff command claims must use backend control evidence or
+   a new operator workflow rather than the retired manifest routes.
 4. OpenAPI DTO-level generated diffing and runtime event-envelope validation
    need broader coverage beyond the current checked subsets and fixtures.
 5. The call-center workflow and live local Keycloak route evidence are

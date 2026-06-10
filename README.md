@@ -78,11 +78,13 @@ shell. It includes:
 - lookup modal behavior
 - digit-only operator input
 - status bar client IP and server time from `/api/terminal-status`
+- bounded Spring API evidence panel for reason-required customer detail and
+  approval-inbox reads when local API and simulator-token opt-in are configured
 
-The retired staff manifest routes and API-backed staff panel are not part of
-the current frontend. Spring staff-control APIs remain target-stack backend
-coverage for reason-required lookup, privileged unmask, approvals, account
-hold/release, limit changes, KYC review, fee waiver, transaction correction,
+The retired staff manifest routes and broad API-backed staff route set are not
+part of the current frontend. Spring staff-control APIs remain target-stack
+backend coverage for privileged unmask, approvals, account hold/release, limit
+changes, KYC review, fee waiver, transaction correction,
 complaint/FDS/AML/reconciliation controls, audit, and maker-checker behavior.
 
 ## 6. Customer Web Banking
@@ -193,14 +195,14 @@ The coverage matrix uses explicit status values to avoid mixing structural
 coverage with live execution evidence. `api-backed-read` and
 `api-backed-command` mean a target API path exists for the stated scope.
 `browser-e2e-backed` and `live-keycloak-backed` are stronger browser/runtime
-claims. `route-backed-live-gated`, `integrated-terminal`,
-`backend-control-covered`, `manifest-only`, and `partial` are not completion
-claims for live route execution. A skipped env-gated Playwright smoke is not
-counted as a live API pass.
+claims. `route-backed-live-gated`, `backend-control-covered`,
+`manifest-only`, and `partial` are not completion claims for live route
+execution. A skipped env-gated Playwright smoke is not counted as a live API
+pass.
 
 Important current gaps are intentionally not marked complete:
 
-- remaining staff-terminal depth should be expanded only as later platform/operations workflows add new operator commands;
+- staff-terminal has a bounded Spring API evidence panel for reason-required customer detail and approval-inbox reads, while broader staff command depth should be expanded only as later platform/operations workflows add targeted operator commands;
 - deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
 - Python AML/FDS analytics has a DuckDB mart, generated batch evidence, a Spring read API, and an FDS/AML console evidence panel;
 - `npm run formal:ledger` now records actual TLC evidence when a TLC jar is available and always rejects static-only output as CI/milestone evidence;

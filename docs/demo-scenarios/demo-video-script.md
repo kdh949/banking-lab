@@ -56,12 +56,13 @@ Show:
 
 - iWorks integrated terminal shell
 - `/api/terminal-status`
+- bounded Spring API evidence panel for `staffCustomerDetail` and approval-inbox reads
 - `docs/test-evidence/api-backed-channel-smoke.md`
 - `docs/test-evidence/live-route-api-execution.md`
 
 Narration:
 
-The current staff frontend is the integrated terminal shell. Staff Spring control APIs still enforce reason-required access, masking, privileged unmasking, denial audit, and maker-checker controls, but staff-terminal route-to-API execution is not claimed until a new operator route is implemented.
+The current staff frontend keeps the integrated terminal shell and adds a bounded Spring API evidence panel. It proves reason-required staff customer detail and approval-inbox reads against the synthetic Spring API when the local API environment is configured. Broader high-risk staff commands remain backend/control evidence until a targeted operator workflow is intentionally added.
 
 ## Scene 5: Fee Waiver Or Transaction Correction Request
 
@@ -211,7 +212,7 @@ Show:
 
 Narration:
 
-The portfolio separates local pass evidence from hosted CI. GitHub Actions is currently blocked before runner startup by an external billing/spending-limit issue, so it is documented as blocked, not green.
+The portfolio separates local pass evidence from hosted CI. GitHub Actions is currently blocked before runner startup by an external runner allocation or billing/spending-limit issue. PR #82 and the post-merge main push both show `runner_id: 0` and `steps: 0`, so #83 tracks the infrastructure blocker and the status remains blocked, not green.
 
 ## Closing
 

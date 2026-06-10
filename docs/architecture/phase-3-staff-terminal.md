@@ -2,7 +2,8 @@
 
 ## Official Boundary
 
-`apps/staff-terminal` now has one official UI: the iWorks integrated terminal.
+`apps/staff-terminal` now has one official UI: the iWorks integrated terminal
+with a bounded Spring API evidence panel.
 
 Official runtime files:
 
@@ -13,10 +14,14 @@ Official runtime files:
 - `apps/staff-terminal/src/components/terminal/**`
 - `apps/staff-terminal/src/components/integrated-terminal.css`
 - `apps/staff-terminal/e2e/integrated-terminal.spec.ts`
+- `scripts/run-staff-terminal-api-e2e-compose-smoke.sh`
 
 The app exposes `/` and `/api/terminal-status` only. Staff-terminal manifests,
-old route pages, old API-backed panels, and old manifest renderer components are
-removed.
+old route pages, old broad API-backed panels, and old manifest renderer
+components are removed. `StaffApiEvidencePanel` is the only frontend Spring API
+caller in this slice, and it is limited to reason-required staff customer detail
+and approval-inbox reads when local API and simulator-token opt-in environment
+variables are configured.
 
 ## Runtime Flow
 
@@ -26,6 +31,7 @@ Browser
   -> IntegratedTerminalApp
   -> reusable terminal shell/components
   -> /api/terminal-status for client IP and connected server time
+  -> StaffApiEvidencePanel for bounded Spring read evidence when configured
 ```
 
 Operator actions inside the terminal either navigate to implemented synthetic
@@ -42,6 +48,9 @@ added through shared terminal primitives instead of page-route copy-paste.
 - Number-entry fields restrict input to digits.
 - Lookup icons open modal lookup surfaces rather than inert decoration.
 - The bottom status bar reads current client IP and server time from `/api/terminal-status`.
+- The Spring API evidence panel requires explicit dev/test simulator-token
+  opt-in and uses the `core-banking-api` audience expected by the Spring
+  Resource Server.
 
 ## Verification
 
@@ -49,3 +58,4 @@ added through shared terminal primitives instead of page-route copy-paste.
 - `npm run next:staff-terminal:build`
 - `npm run integrated-terminal:boundary-check`
 - `npx playwright test apps/staff-terminal/e2e/integrated-terminal.spec.ts`
+- `npm run test:staff-terminal:api-e2e-compose`

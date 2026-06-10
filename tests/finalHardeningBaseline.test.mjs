@@ -36,6 +36,8 @@ test("final hardening baseline reflects current implementation without overclaim
   assert.match(baseline, /A skipped live API test is\s+not proof of route-to-live-API execution/);
   assert.match(baseline, /bounded Spring API evidence panel/);
   assert.match(baseline, /broader staff-control command\s+evidence in backend\/control rows/);
+  assert.match(baseline, /retired `integrated-terminal` row status is not reused/);
+  assert.match(baseline, /reason-required staff customer detail plus approval-inbox reads/);
 
   assert.match(baseline, /no real customer money/);
   assert.match(baseline, /no real personal data/);

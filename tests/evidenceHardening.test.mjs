@@ -99,6 +99,8 @@ test("final hardening scorecard and demo script disclose limits without overclai
 
   assert.match(scorecard, /Call-center 상담 전산 \| 8\/10 \| partial/);
   assert.match(scorecard, /Hosted CI \| 3\/10 \| blocked/);
+  assert.match(scorecard, /PR #82 and the post-merge main push/);
+  assert.match(scorecard, /#83/);
   assert.match(scorecard, /not as green/);
   assert.match(scorecard, /no real customer money, real PII, real KYC\/AML provider/);
   assert.doesNotMatch(scorecard, /production-ready|real banking ready|actual payment network ready/i);
@@ -109,5 +111,8 @@ test("final hardening scorecard and demo script disclose limits without overclai
   assert.match(demo, /maker-checker protected escalation/);
   assert.doesNotMatch(demo, /escalation is role-gated rather than maker-checker/);
   assert.match(demo, /GitHub Actions is currently blocked before runner startup/);
+  assert.match(demo, /runner_id: 0/);
+  assert.match(demo, /steps: 0/);
+  assert.match(demo, /bounded Spring API evidence panel/);
   assert.doesNotMatch(demo, /PostgreSQL backup\/restore drill gap remains/);
 });
