@@ -11,6 +11,7 @@ fallback evidence. It does not claim hosted CI is green.
 
 | Run | Event | Commit | Status | Result | URL |
 | --- | --- | --- | --- | --- | --- |
+| CI | pull_request #74 | `4d362d80a07cee37055747428501a7c81039b2d1` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27278950044 |
 | CI | pull_request #59 | `0bd235a557e60acc9380afea955c2b8c6d887736` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269813915 |
 | CI | push to `main` after PR #58 | `ccf65285952a9c1bf229773b03661cb797678a76` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269423897 |
 | CI | pull_request #58 | `f9efb58643eede62ee0e9ee7c70c98a6d89039c2` | completed | blocked before runner steps | https://github.com/kdh949/banking-lab/actions/runs/27269407681 |
@@ -21,16 +22,18 @@ fallback evidence. It does not claim hosted CI is green.
 
 ## Failure Classification
 
-The checked PR run (`27269813915`) reported every job as failed within a
+The latest checked PR run (`27278950044`) reported every job as failed within a
 few seconds, with an empty `steps` array for each job. The `Node reference and
-manifests` check annotation says:
+manifests` check run (`80567736503`) annotation says:
 
 ```text
 The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings
 ```
 
-This is an external hosted-runner availability/billing block. It is not a
-passing hosted CI run and should not be represented as green.
+The earlier checked PR run (`27269813915`) showed the same empty-steps pattern
+and the same billing/spending-limit annotation. This is an external
+hosted-runner availability/billing block. It is not a passing hosted CI run and
+should not be represented as green.
 
 ## Jobs Affected
 
@@ -87,6 +90,14 @@ Local commands run for PR #59:
 - `npm run scripts:typecheck`: pass.
 - `npm run integrated-terminal:boundary-check`: pass.
 - `npm test`: pass, 183 tests.
+
+Local commands run for PR #74:
+
+- `node --test tests/finalHardeningBaseline.test.mjs`: pass, 1 test.
+- `npm test`: pass, 191 tests.
+- `npm run validate:manifests`: pass, 73 screen manifests.
+- `npm run packages:typecheck`: pass.
+- `npm run scripts:typecheck`: pass.
 
 ## Manual Recovery Checklist
 

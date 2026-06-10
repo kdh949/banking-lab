@@ -35,9 +35,14 @@ test("CI hardening evidence documents PR and manual boundaries", async () => {
   assert.match(evidence, /not implemented/);
 
   assert.match(hostedStatus, /Run status: blocked/);
+  assert.match(hostedStatus, /pull_request #74/);
+  assert.match(hostedStatus, /https:\/\/github\.com\/kdh949\/banking-lab\/actions\/runs\/27278950044/);
+  assert.match(hostedStatus, /80567736503/);
   assert.match(hostedStatus, /https:\/\/github\.com\/kdh949\/banking-lab\/actions\/runs\/27269813915/);
   assert.match(hostedStatus, /https:\/\/github\.com\/kdh949\/banking-lab\/actions\/runs\/27269207643/);
   assert.match(hostedStatus, /spending limit needs to be increased/);
+  assert.match(hostedStatus, /Local commands run for PR #74/);
+  assert.match(hostedStatus, /npm test`: pass, 191 tests/);
   assert.match(hostedStatus, /Local fallback commands are not hosted CI green/);
   assert.doesNotMatch(hostedStatus, /Run status: green/);
 });
