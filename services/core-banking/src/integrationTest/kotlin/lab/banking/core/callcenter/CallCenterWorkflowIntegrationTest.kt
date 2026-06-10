@@ -160,9 +160,9 @@ class CallCenterWorkflowIntegrationTest {
                 .content(
                     """
                     {
-                      "requestedBy": "call-agent01",
-                      "requestedByRole": "CALL_CENTER_AGENT",
-                      "reason": "Agent attempted manager-only escalation",
+                      "requestedBy": "auditor01",
+                      "requestedByRole": "AUDITOR",
+                      "reason": "Auditor attempted escalation creation",
                       "escalationType": "COMPLAINT"
                     }
                     """.trimIndent()
@@ -225,9 +225,9 @@ class CallCenterWorkflowIntegrationTest {
                 .content(
                     """
                     {
-                      "requestedBy": "call-manager01",
-                      "requestedByRole": "CALL_CENTER_MANAGER",
-                      "reason": "Convert synthetic unresolved call to complaint",
+                      "requestedBy": "call-agent01",
+                      "requestedByRole": "CALL_CENTER_AGENT",
+                      "reason": "Request checker approval to convert synthetic unresolved call to complaint",
                       "escalationType": "COMPLAINT",
                       "complaintCategory": "ACCOUNT_ACCESS",
                       "complaintDescription": "Synthetic complaint converted from call-center script with 010-2222-3333 redacted."
@@ -236,13 +236,67 @@ class CallCenterWorkflowIntegrationTest {
                 )
         )
             .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.item.status").value("ESCALATED"))
-            .andExpect(jsonPath("$.escalation.complaintCaseId").exists())
+            .andExpect(jsonPath("$.item.status").value("AFTERCALL"))
+            .andExpect(jsonPath("$.escalation.status").value("PENDING_APPROVAL"))
+            .andExpect(jsonPath("$.escalation.approvalId").exists())
+            .andExpect(jsonPath("$.escalation.complaintCaseId").doesNotExist())
+            .andExpect(jsonPath("$.approval.businessType").value("CALL_CENTER_ESCALATION"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
             .andReturn()
             .response
             .contentAsString
-        val complaintCaseId = objectMapper.readTree(escalationPayload).at("/escalation/complaintCaseId").asText()
+        val escalationJson = objectMapper.readTree(escalationPayload)
+        val approvalId = escalationJson.at("/approval/approvalId").asText()
+        val escalationId = escalationJson.at("/escalation/escalationId").asText()
+        assertEquals(
+            1,
+            countRows(
+                "operator_approvals WHERE approval_id = '$approvalId' AND business_type = 'CALL_CENTER_ESCALATION' AND business_reference_id = '$escalationId'"
+            )
+        )
+        assertEquals(0, countRows("complaint_cases WHERE source_reference_json @> '{\"interactionId\": \"$interactionId\"}'::jsonb"))
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "approvedBy": "call-agent01",
+                      "approvedByRole": "CALL_CENTER_MANAGER",
+                      "approvalReason": "Self approval must be rejected for call-center escalation",
+                      "screenId": "CALL-106"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("MAKER_CHECKER_SELF_APPROVAL_REJECTED"))
+
+        val approvedPayload = mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "approvedBy": "call-manager01",
+                      "approvedByRole": "CALL_CENTER_MANAGER",
+                      "approvalReason": "Independent checker approves synthetic call-center complaint conversion",
+                      "screenId": "CALL-106"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.executed").value(true))
+            .andExpect(jsonPath("$.callCenterEscalation.status").value("CREATED"))
+            .andExpect(jsonPath("$.callCenterEscalation.complaintCaseId").exists())
+            .andReturn()
+            .response
+            .contentAsString
+        val complaintCaseId = objectMapper.readTree(approvedPayload).at("/callCenterEscalation/complaintCaseId").asText()
         assertEquals(1, countRows("complaint_cases WHERE complaint_case_id = '$complaintCaseId' AND source_reference_json @> '{\"syntheticOnly\": true}'::jsonb"))
+        assertEquals(1, countRows("call_center_escalations WHERE escalation_id = '$escalationId' AND status = 'CREATED' AND approval_id = '$approvalId'"))
 
         mockMvc.perform(
             post("/api/staff/call-center/interactions/$interactionId/close")
@@ -324,4 +378,3 @@ class CallCenterWorkflowIntegrationTest {
         }
     }
 }
-

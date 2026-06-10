@@ -300,6 +300,8 @@ paths:
       x-reason-required: true
       x-reason-policy: body.reason
       x-masking-policy: CALL_CENTER_ESCALATION_REDACTION
+      x-maker-checker-required: true
+      x-approval-business-type: CALL_CENTER_ESCALATION
       parameters: [{ name: interactionId, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true

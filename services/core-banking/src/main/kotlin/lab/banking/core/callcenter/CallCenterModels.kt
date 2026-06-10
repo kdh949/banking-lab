@@ -1,6 +1,7 @@
 package lab.banking.core.callcenter
 
 import java.time.OffsetDateTime
+import lab.banking.core.approval.OperatorApproval
 
 data class CallCenterCustomerSearchResponse(
     val auditEventId: String,
@@ -151,6 +152,7 @@ data class CallCenterEscalationDto(
     val requestedBy: String,
     val requestedByRole: String,
     val reason: String,
+    val approvalId: String?,
     val auditEventId: String,
     val metadata: Map<String, Any?>,
     val createdAt: OffsetDateTime
@@ -158,6 +160,6 @@ data class CallCenterEscalationDto(
 
 data class CallCenterEscalationResponse(
     val item: CallCenterInteractionDto,
-    val escalation: CallCenterEscalationDto
+    val escalation: CallCenterEscalationDto,
+    val approval: OperatorApproval? = null
 )
-

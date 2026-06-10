@@ -44,6 +44,8 @@
     "maskedByDefault": true,
     "noteRedaction": true,
     "rawNoteCopiedToAudit": false,
+    "escalationMakerChecker": true,
+    "selfApprovalRejected": true,
     "auditorReadOnly": true,
     "complaintEscalationSourceReference": true
   },
@@ -71,7 +73,8 @@
     {
       "command": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.callcenter.CallCenterWorkflowIntegrationTest",
       "status": "pass_after_sandbox_escalation",
-      "sandboxFailure": "Gradle file-lock socket Operation not permitted"
+      "sandboxFailure": "Gradle file-lock socket Operation not permitted",
+      "evidence": "Proves CALL-106 escalation request creates CALL_CENTER_ESCALATION maker-checker approval, self-approval returns MAKER_CHECKER_SELF_APPROVAL_REJECTED, independent call-center manager approval creates the synthetic complaint source reference, and raw complaint text is not copied to audit metadata"
     },
     {
       "command": "npm run next:call-center-console:typecheck",
@@ -98,11 +101,10 @@
     {
       "command": "npm run test:call-center-console:keycloak-e2e-compose",
       "status": "pass_after_sandbox_escalation",
-      "evidence": "Gradle bootJar passed; disposable PostgreSQL, Keycloak, and core-banking started through Docker Compose with simulator tokens disabled; call-agent01 and call-manager01 direct-grant preflight checks reached Spring call-center search; Playwright live Keycloak smoke reported 1 passed (20.8s)"
+      "evidence": "Gradle bootJar passed; disposable PostgreSQL, Keycloak, and core-banking started through Docker Compose with simulator tokens disabled and step-up enforcement disabled for this JWKS propagation smoke; call-agent01 and call-manager01 direct-grant preflight checks reached Spring call-center search; Playwright live Keycloak smoke reported 1 passed (17.8s)"
     }
   ],
   "remainingLimits": [
-    "Escalation is role-gated but not maker-checker in this first slice",
     "Live evidence is local disposable Compose evidence, not hosted CI evidence or a production identity deployment",
     "No real telephony, call recording, PII, KYC/AML provider, payment network, or regulator integration"
   ]

@@ -24,17 +24,19 @@ Scope: synthetic-only call-center workflow with a dedicated Next.js shell. This 
 - `infra/keycloak/realm-banking-lab.json` declares the `call-center-console` client, `call-agent01`, `call-manager01`, `CALL_CENTER_AGENT`, and `CALL_CENTER_MANAGER` for live synthetic browser smoke.
 - `ApiBackedCallCenterPanel` can run a signed agent/manager Keycloak workflow smoke when both `NEXT_PUBLIC_BANKING_API_BASE_URL` and `NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL` are configured. The smoke preserves only same-tab synthetic Keycloak token state with token expiry metadata across the agent and manager Authorization Code redirects.
 - OpenAPI contract includes all call-center routes with reason-required, synthetic-only, masking/redaction, and structured-error metadata.
+- `CALL-106` escalation now submits `CALL_CENTER_ESCALATION` maker-checker approvals. The interaction remains in aftercall state until an independent checker approves, and complaint conversion runs only from the approved execution path.
 
 ## Controls
 
 - Every read/write path requires a business reason.
 - Customer search and history expose masked customer data only.
 - `CALL_CENTER_AGENT` can search, start sessions, add notes, create aftercall tasks, and close sessions.
-- `CALL_CENTER_MANAGER`, `BRANCH_MANAGER`, `COMPLAINT_HANDLER`, and `COMPLIANCE_MANAGER` can create escalations.
+- `CALL_CENTER_AGENT`, branch, complaint, and compliance actors can request escalation with a reason.
+- `CALL_CENTER_MANAGER`, `BRANCH_MANAGER`, `COMPLAINT_HANDLER`, and `COMPLIANCE_MANAGER` can approve or reject pending escalation requests; self-approval returns `MAKER_CHECKER_SELF_APPROVAL_REJECTED`.
 - `AUDITOR` is read-only; command attempts fail before mutation.
 - Free-form note bodies are redacted for PII-like phone, resident-number, email, and numeric-account patterns before persistence.
 - Audit payloads store note length, redaction status, and pattern count, but do not copy raw note text.
-- Complaint escalation creates a synthetic complaint case with `source_reference_json.syntheticOnly=true` and `sourceType=CALL_CENTER_INTERACTION`.
+- Complaint escalation stores redacted complaint metadata on the approval request and creates a synthetic complaint case with `source_reference_json.syntheticOnly=true` and `sourceType=CALL_CENTER_INTERACTION` only after independent checker approval.
 
 ## Evidence
 
@@ -60,10 +62,9 @@ npm run test:call-center-console:keycloak-e2e-compose
 The Gradle command failed inside the sandbox with the known file-lock socket denial and passed after approved unsandboxed rerun.
 The Keycloak realm policy test also failed inside the sandbox with the same Gradle file-lock socket denial and passed after approved unsandboxed rerun.
 The first Playwright command failed inside the sandbox with `listen EPERM`; the approved unsandboxed rerun passed the manifest/shell checks, with the live API workflow test skipped because `BANKING_LAB_E2E_API_BASE_URL` was not set and the live Keycloak workflow test skipped because `BANKING_LAB_E2E_API_BASE_URL` and `BANKING_LAB_E2E_KEYCLOAK_BASE_URL` were not set.
-The first live wrapper run in this slice reached the browser workflow but failed because the manager Keycloak redirect reset the in-memory agent token and left `Run Keycloak call-center workflow smoke` disabled. After adding bounded same-tab synthetic token-state persistence with expiry metadata, the approved rerun of `npm run test:call-center-console:keycloak-e2e-compose` passed: Gradle `:services:core-banking:bootJar` was up to date, disposable PostgreSQL, Keycloak, and core-banking started through Docker Compose with simulator tokens disabled, direct-grant preflight checks for `call-agent01` and `call-manager01` reached the Spring call-center search API, and Playwright reported `1 passed (20.8s)` for the live Authorization Code + PKCE agent/manager workflow smoke.
+The first live wrapper run in the earlier call-center slice reached the browser workflow but failed because the manager Keycloak redirect reset the in-memory agent token and left `Run Keycloak call-center workflow smoke` disabled. After adding bounded same-tab synthetic token-state persistence with expiry metadata, the approved rerun of `npm run test:call-center-console:keycloak-e2e-compose` passed. The maker-checker update keeps simulator tokens disabled and disables step-up enforcement only for this JWKS/role-propagation wrapper, because `/api/staff/approvals/{approvalId}/approve` is already covered as a step-up-protected route by the security posture evidence. The wrapper still exercises separate `call-agent01` maker and `call-manager01` checker tokens through the local Compose Keycloak/Core Banking path.
 
 ## Remaining Limits
 
-- Escalation is role-gated but not maker-checker in this first slice.
 - The live evidence is local disposable Compose evidence, not hosted CI evidence and not a production identity deployment.
 - This is a synthetic workflow only; no real telephony, call recording, contact-center SaaS, real PII, real KYC/AML provider, real payment network, or real regulator integration is present.

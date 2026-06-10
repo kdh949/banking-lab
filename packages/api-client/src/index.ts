@@ -186,6 +186,7 @@ export interface CallCenterEscalationDto {
   readonly requestedBy: string;
   readonly requestedByRole: string;
   readonly reason: string;
+  readonly approvalId?: string | null;
   readonly auditEventId: string;
   readonly metadata: Record<string, unknown>;
   readonly createdAt: string;
@@ -228,6 +229,7 @@ export interface CallCenterAftercallTaskResponse {
 export interface CallCenterEscalationResponse {
   readonly item: CallCenterInteractionDto;
   readonly escalation: CallCenterEscalationDto;
+  readonly approval?: OperatorApproval | null;
 }
 
 export interface CallCenterInteractionSummaryDto {
@@ -2316,6 +2318,7 @@ export interface StaffApprovalExecutionResponse {
   readonly reconciliationItem?: ReconciliationItemDto | null;
   readonly eodClosing?: EodClosingMonitorDto | null;
   readonly loanExecution?: LoanExecutionResponse | null;
+  readonly callCenterEscalation?: CallCenterEscalationDto | null;
   readonly ledgerTransaction?: LedgerCommandResult | null;
 }
 
@@ -2327,6 +2330,7 @@ export interface StaffApprovalRejectionResponse {
   readonly loanApplication?: LoanApplicationDto | null;
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
   readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
+  readonly callCenterEscalation?: CallCenterEscalationDto | null;
 }
 
 export interface ReconciliationItemsResponse {

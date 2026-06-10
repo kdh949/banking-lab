@@ -6,6 +6,13 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.UUID
 import lab.banking.core.audit.AuditEventAppender
+import lab.banking.core.approval.ApprovalBusinessTypes
+import lab.banking.core.approval.ApprovalStatus
+import lab.banking.core.approval.ApproveApprovalCommand
+import lab.banking.core.approval.OperatorApproval
+import lab.banking.core.approval.PersistentApprovalService
+import lab.banking.core.approval.RejectApprovalCommand
+import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.dao.EmptyResultDataAccessException
@@ -18,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional
 class CallCenterService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val objectMapper: ObjectMapper,
-    private val auditEvents: AuditEventAppender
+    private val auditEvents: AuditEventAppender,
+    private val approvals: PersistentApprovalService
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun searchCustomers(query: String, reason: String?): CallCenterCustomerSearchResponse {
@@ -259,18 +267,37 @@ class CallCenterService(
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun escalate(interactionId: String, command: CallCenterEscalationCommand): CallCenterEscalationResponse {
         val reason = requireReason(command.reason, "call-center escalation requires a business reason")
-        val actor = resolveActor(command.requestedBy, command.requestedByRole, ESCALATION_ROLES, "CALL_CENTER_MANAGER", "callcenter-manager01")
+        val actor = resolveActor(command.requestedBy, command.requestedByRole, ESCALATION_REQUEST_ROLES, "CALL_CENTER_AGENT", "callcenter01")
         val interaction = findInteractionRecordForUpdate(interactionId)
         requireNotClosed(interaction)
         val escalationType = normalize(command.escalationType, "escalationType", ESCALATION_TYPES)
         val escalationId = "CALL-ESC-${UUID.randomUUID().toString().uppercase()}"
-        val complaintCaseId = if (escalationType == "COMPLAINT") {
-            createComplaintFromEscalation(interaction, actor, command)
-        } else {
-            null
-        }
+        val metadata = escalationMetadata(command, escalationType)
+        val approval = approvals.submit(
+            SubmitApprovalCommand(
+                businessType = ApprovalBusinessTypes.CALL_CENTER_ESCALATION,
+                businessReferenceId = escalationId,
+                requestedBy = actor.id,
+                requestedByRole = actor.role,
+                requestReason = reason,
+                beforeSnapshot = mapOf(
+                    "interactionId" to interactionId,
+                    "interactionStatus" to interaction.status,
+                    "customerId" to interaction.customerId,
+                    "syntheticOnly" to true
+                ),
+                afterSnapshot = mapOf(
+                    "escalationId" to escalationId,
+                    "interactionId" to interactionId,
+                    "escalationType" to escalationType,
+                    "targetStatus" to "ESCALATED",
+                    "syntheticOnly" to true
+                ) + metadata,
+                screenId = "CALL-106"
+            )
+        )
         val auditEventId = appendAudit(
-            eventType = "CALL_CENTER_ESCALATED",
+            eventType = "CALL_CENTER_ESCALATION_REQUESTED",
             actor = actor,
             screenId = "CALL-106",
             interactionId = interactionId,
@@ -280,7 +307,7 @@ class CallCenterService(
             payload = mapOf(
                 "escalationId" to escalationId,
                 "escalationType" to escalationType,
-                "complaintCaseId" to complaintCaseId,
+                "approvalId" to approval.approvalId,
                 "syntheticOnly" to true
             )
         )
@@ -289,12 +316,12 @@ class CallCenterService(
             INSERT INTO call_center_escalations (
               escalation_id, interaction_id, customer_id, escalation_type, status,
               complaint_case_id, requested_by, requested_by_role, reason,
-              audit_event_id, metadata_json
+              approval_id, audit_event_id, metadata_json
             )
             VALUES (
-              :escalationId, :interactionId, :customerId, :escalationType, 'CREATED',
+              :escalationId, :interactionId, :customerId, :escalationType, 'PENDING_APPROVAL',
               :complaintCaseId, :requestedBy, :requestedByRole, :reason,
-              :auditEventId, CAST(:metadataJson AS jsonb)
+              :approvalId, :auditEventId, CAST(:metadataJson AS jsonb)
             )
             """.trimIndent(),
             mapOf(
@@ -302,12 +329,70 @@ class CallCenterService(
                 "interactionId" to interactionId,
                 "customerId" to interaction.customerId,
                 "escalationType" to escalationType,
-                "complaintCaseId" to complaintCaseId,
+                "complaintCaseId" to null,
                 "requestedBy" to actor.id,
                 "requestedByRole" to actor.role,
                 "reason" to reason,
+                "approvalId" to approval.approvalId,
                 "auditEventId" to auditEventId,
-                "metadataJson" to objectMapper.writeValueAsString(syntheticMetadata(command.metadata))
+                "metadataJson" to objectMapper.writeValueAsString(metadata)
+            )
+        )
+        appendAccessAudit(auditEventId, interactionId, interaction.customerId, actor, "CALL-106", "ESCALATION_REQUESTED", reason)
+        return CallCenterEscalationResponse(item = findInteraction(interactionId), escalation = findEscalation(escalationId), approval = approval)
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun applyApprovedEscalation(approval: OperatorApproval, command: ApproveApprovalCommand): CallCenterEscalationResponse {
+        if (approval.businessType != ApprovalBusinessTypes.CALL_CENTER_ESCALATION) {
+            throw WorkflowErrors.stateViolation("approval is not a call-center escalation approval")
+        }
+        if (approval.status != ApprovalStatus.APPROVED) {
+            throw WorkflowErrors.stateViolation("call-center escalation approval is not approved")
+        }
+        val escalation = findEscalationRecordForUpdate(approval.businessReferenceId)
+        if (escalation.approvalId != approval.approvalId) {
+            throw WorkflowErrors.stateViolation("approval does not match call-center escalation")
+        }
+        if (escalation.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending call-center escalations can be approved")
+        }
+        val interaction = findInteractionRecordForUpdate(escalation.interactionId)
+        requireNotClosed(interaction)
+        val actor = CallCenterActor(command.approvedBy, command.approvedByRole)
+        val complaintCaseId = if (escalation.escalationType == "COMPLAINT") {
+            createComplaintFromEscalation(interaction, actor, escalation)
+        } else {
+            null
+        }
+        val auditEventId = appendAudit(
+            eventType = "CALL_CENTER_ESCALATED",
+            actor = actor,
+            screenId = command.screenId ?: "CALL-106",
+            interactionId = escalation.interactionId,
+            customerId = escalation.customerId,
+            accountId = interaction.accountId,
+            reason = approval.requestReason,
+            payload = mapOf(
+                "escalationId" to escalation.escalationId,
+                "escalationType" to escalation.escalationType,
+                "approvalId" to approval.approvalId,
+                "complaintCaseId" to complaintCaseId,
+                "syntheticOnly" to true
+            )
+        )
+        jdbc.update(
+            """
+            UPDATE call_center_escalations
+            SET status = 'CREATED',
+                complaint_case_id = :complaintCaseId,
+                audit_event_id = :auditEventId
+            WHERE escalation_id = :escalationId
+            """.trimIndent(),
+            mapOf(
+                "escalationId" to escalation.escalationId,
+                "complaintCaseId" to complaintCaseId,
+                "auditEventId" to auditEventId
             )
         )
         jdbc.update(
@@ -317,10 +402,56 @@ class CallCenterService(
             WHERE interaction_id = :interactionId
               AND status <> 'CLOSED'
             """.trimIndent(),
-            mapOf("interactionId" to interactionId)
+            mapOf("interactionId" to escalation.interactionId)
         )
-        appendAccessAudit(auditEventId, interactionId, interaction.customerId, actor, "CALL-106", "ESCALATED", reason)
-        return CallCenterEscalationResponse(item = findInteraction(interactionId), escalation = findEscalation(escalationId))
+        appendAccessAudit(auditEventId, escalation.interactionId, escalation.customerId, actor, "CALL-106", "ESCALATED", approval.requestReason)
+        return CallCenterEscalationResponse(
+            item = findInteraction(escalation.interactionId),
+            escalation = findEscalation(escalation.escalationId),
+            approval = approval
+        )
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun rejectEscalation(approval: OperatorApproval, command: RejectApprovalCommand): CallCenterEscalationDto {
+        if (approval.businessType != ApprovalBusinessTypes.CALL_CENTER_ESCALATION) {
+            throw WorkflowErrors.stateViolation("approval is not a call-center escalation approval")
+        }
+        val escalation = findEscalationRecordForUpdate(approval.businessReferenceId)
+        if (escalation.approvalId != approval.approvalId) {
+            throw WorkflowErrors.stateViolation("approval does not match call-center escalation")
+        }
+        if (escalation.status != "PENDING_APPROVAL") {
+            throw WorkflowErrors.stateViolation("only pending call-center escalations can be rejected")
+        }
+        val interaction = findInteractionRecord(escalation.interactionId)
+        val actor = CallCenterActor(command.rejectedBy, command.rejectedByRole)
+        val reason = requireReason(command.rejectReason, "call-center escalation rejection requires a business reason")
+        val auditEventId = appendAudit(
+            eventType = "CALL_CENTER_ESCALATION_REJECTED",
+            actor = actor,
+            screenId = command.screenId ?: "CALL-106",
+            interactionId = escalation.interactionId,
+            customerId = escalation.customerId,
+            accountId = interaction.accountId,
+            reason = reason,
+            payload = mapOf(
+                "escalationId" to escalation.escalationId,
+                "approvalId" to approval.approvalId,
+                "syntheticOnly" to true
+            )
+        )
+        jdbc.update(
+            """
+            UPDATE call_center_escalations
+            SET status = 'REJECTED',
+                audit_event_id = :auditEventId
+            WHERE escalation_id = :escalationId
+            """.trimIndent(),
+            mapOf("escalationId" to escalation.escalationId, "auditEventId" to auditEventId)
+        )
+        appendAccessAudit(auditEventId, escalation.interactionId, escalation.customerId, actor, "CALL-106", "ESCALATION_REJECTED", reason)
+        return findEscalation(escalation.escalationId)
     }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -386,12 +517,12 @@ class CallCenterService(
     private fun createComplaintFromEscalation(
         interaction: CallCenterInteractionRecord,
         actor: CallCenterActor,
-        command: CallCenterEscalationCommand
+        escalation: CallCenterEscalationRecord
     ): String {
         val complaintCaseId = "CMP-${UUID.randomUUID().toString().uppercase()}"
-        val category = command.complaintCategory?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: "ACCOUNT_ACCESS"
+        val category = stringMetadata(escalation.metadata, "complaintCategory") ?: "ACCOUNT_ACCESS"
         val description = redactNote(
-            command.complaintDescription?.takeIf { it.isNotBlank() }
+            stringMetadata(escalation.metadata, "complaintDescriptionRedacted")
                 ?: "Synthetic complaint converted from call-center interaction ${interaction.interactionId}."
         ).redacted
         val sourceReference = mapOf(
@@ -513,7 +644,7 @@ class CallCenterService(
             """
             SELECT escalation_id, interaction_id, customer_id, escalation_type, status,
                    complaint_case_id, requested_by, requested_by_role, reason,
-                   audit_event_id, metadata_json::text AS metadata_json, created_at
+                   approval_id, audit_event_id, metadata_json::text AS metadata_json, created_at
             FROM call_center_escalations
             WHERE interaction_id = :interactionId
             ORDER BY created_at, escalation_id
@@ -553,12 +684,26 @@ class CallCenterService(
             """
             SELECT escalation_id, interaction_id, customer_id, escalation_type, status,
                    complaint_case_id, requested_by, requested_by_role, reason,
-                   audit_event_id, metadata_json::text AS metadata_json, created_at
+                   approval_id, audit_event_id, metadata_json::text AS metadata_json, created_at
             FROM call_center_escalations
             WHERE escalation_id = :escalationId
             """.trimIndent(),
             mapOf("escalationId" to escalationId),
             this::mapEscalation
+        ) ?: throw WorkflowErrors.notFound("call-center escalation not found")
+
+    private fun findEscalationRecordForUpdate(escalationId: String): CallCenterEscalationRecord =
+        jdbc.queryForObject(
+            """
+            SELECT escalation_id, interaction_id, customer_id, escalation_type, status,
+                   complaint_case_id, requested_by, requested_by_role, reason,
+                   approval_id, audit_event_id, metadata_json::text AS metadata_json, created_at
+            FROM call_center_escalations
+            WHERE escalation_id = :escalationId
+            FOR UPDATE
+            """.trimIndent(),
+            mapOf("escalationId" to escalationId),
+            this::mapEscalationRecord
         ) ?: throw WorkflowErrors.notFound("call-center escalation not found")
 
     private fun interactionSql(suffix: String): String =
@@ -654,6 +799,24 @@ class CallCenterService(
             requestedBy = rs.getString("requested_by"),
             requestedByRole = rs.getString("requested_by_role"),
             reason = rs.getString("reason"),
+            approvalId = rs.getString("approval_id"),
+            auditEventId = rs.getString("audit_event_id"),
+            metadata = readMap(rs.getString("metadata_json")),
+            createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
+        )
+
+    private fun mapEscalationRecord(rs: ResultSet, rowNum: Int): CallCenterEscalationRecord =
+        CallCenterEscalationRecord(
+            escalationId = rs.getString("escalation_id"),
+            interactionId = rs.getString("interaction_id"),
+            customerId = rs.getString("customer_id"),
+            escalationType = rs.getString("escalation_type"),
+            status = rs.getString("status"),
+            complaintCaseId = rs.getString("complaint_case_id"),
+            requestedBy = rs.getString("requested_by"),
+            requestedByRole = rs.getString("requested_by_role"),
+            reason = rs.getString("reason"),
+            approvalId = rs.getString("approval_id"),
             auditEventId = rs.getString("audit_event_id"),
             metadata = readMap(rs.getString("metadata_json")),
             createdAt = rs.getObject("created_at", OffsetDateTime::class.java)
@@ -781,6 +944,26 @@ class CallCenterService(
     private fun syntheticMetadata(metadata: Map<String, Any?>?): Map<String, Any?> =
         (metadata ?: emptyMap()) + mapOf("syntheticOnly" to true)
 
+    private fun escalationMetadata(command: CallCenterEscalationCommand, escalationType: String): Map<String, Any?> {
+        val base = syntheticMetadata(command.metadata) + mapOf("escalationType" to escalationType)
+        if (escalationType != "COMPLAINT") {
+            return base
+        }
+        val category = command.complaintCategory?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: "ACCOUNT_ACCESS"
+        val description = redactNote(
+            command.complaintDescription?.takeIf { it.isNotBlank() }
+                ?: "Synthetic complaint converted from call-center escalation."
+        ).redacted
+        return base + mapOf(
+            "complaintCategory" to category,
+            "complaintDescriptionRedacted" to description,
+            "rawComplaintCopiedToAudit" to false
+        )
+    }
+
+    private fun stringMetadata(metadata: Map<String, Any?>, key: String): String? =
+        (metadata[key] as? String)?.trimToNull()
+
     private fun readMap(payloadJson: String?): Map<String, Any?> =
         payloadJson?.let { objectMapper.readValue(it, MAP_TYPE) } ?: emptyMap()
 
@@ -838,11 +1021,28 @@ class CallCenterService(
         val auditEventId: String
     )
 
+    private data class CallCenterEscalationRecord(
+        val escalationId: String,
+        val interactionId: String,
+        val customerId: String,
+        val escalationType: String,
+        val status: String,
+        val complaintCaseId: String?,
+        val requestedBy: String,
+        val requestedByRole: String,
+        val reason: String,
+        val approvalId: String?,
+        val auditEventId: String,
+        val metadata: Map<String, Any?>,
+        val createdAt: OffsetDateTime
+    )
+
     private companion object {
         val MAP_TYPE = object : TypeReference<Map<String, Any?>>() {}
         val CHANNELS = setOf("PHONE", "CHAT", "EMAIL", "BRANCH", "WEB")
         val ESCALATION_TYPES = setOf("MANAGER", "COMPLAINT", "FDS", "AML")
         val COMMAND_ROLES = setOf("CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER")
+        val ESCALATION_REQUEST_ROLES = COMMAND_ROLES
         val ESCALATION_ROLES = setOf("CALL_CENTER_MANAGER", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER")
         val READ_ROLES = COMMAND_ROLES + setOf("AUDITOR")
         val PII_PATTERNS = listOf(
@@ -853,4 +1053,3 @@ class CallCenterService(
         )
     }
 }
-
