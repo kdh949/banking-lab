@@ -1141,5 +1141,6 @@
       "requestDto": "TransactionCorrectionRequestCommand",
       "responseDto": "TransactionCorrectionRequestResponse"
     }
-  ]
+  ],
+  "dtoSchemas": []
 }

@@ -117,5 +117,6 @@
       "requestDto": "DispatchPaymentLedgerPostingRequest",
       "responseDto": "PaymentOutboxDispatchResponse"
     }
-  ]
+  ],
+  "dtoSchemas": []
 }

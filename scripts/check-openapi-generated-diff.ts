@@ -20,6 +20,23 @@ type RuntimeOperation = {
   readonly responseDto: string | null;
 };
 
+type GeneratedDtoProperty = {
+  readonly name: string;
+  readonly kotlinType: string;
+  readonly required: boolean;
+  readonly nullable: boolean;
+  readonly ref: string | null;
+  readonly itemsRef: string | null;
+};
+
+type GeneratedDtoSchema = {
+  readonly name: string;
+  readonly kind: "object" | "enum";
+  readonly required: readonly string[];
+  readonly properties: readonly GeneratedDtoProperty[];
+  readonly enumValues: readonly string[];
+};
+
 type GeneratedOpenApiSnapshot = {
   readonly generatedAt: string;
   readonly generator: "kotlin-controller-source";
@@ -27,6 +44,7 @@ type GeneratedOpenApiSnapshot = {
   readonly syntheticOnly: true;
   readonly diffScope: string;
   readonly operations: readonly RuntimeOperation[];
+  readonly dtoSchemas: readonly GeneratedDtoSchema[];
 };
 
 const generatedAt = "2026-06-10T00:00:00.000Z";
@@ -67,13 +85,18 @@ for (const service of services) {
   const runtimeOperations = (await extractRuntimeOperations(service.sourceRoot))
     .filter((operation) => inDiffScope(operation, contractPaths))
     .sort(compareOperation);
+  const dtoSchemaMap = service.serviceId === "reporting-service" ? await extractDtoSchemas(service.sourceRoot) : new Map<string, GeneratedDtoSchema>();
+  const dtoSchemas = service.serviceId === "reporting-service"
+    ? referencedDtoSchemas(runtimeOperations, dtoSchemaMap)
+    : [];
   const snapshot: GeneratedOpenApiSnapshot = {
     generatedAt,
     generator: "kotlin-controller-source",
     serviceId: service.serviceId,
     syntheticOnly: true,
     diffScope: "Spring @RestController operations under /api/** plus checked-in /health operations.",
-    operations: runtimeOperations
+    operations: runtimeOperations,
+    dtoSchemas
   };
   snapshots.push(snapshot);
 
@@ -115,6 +138,10 @@ for (const service of services) {
     }
   }
 
+  if (service.serviceId === "reporting-service") {
+    validateReportingDtoSchemas(contractSource, runtimeOperations, dtoSchemas);
+  }
+
   await mkdir(dirname(service.generatedPath), { recursive: true });
   await writeFile(service.generatedPath, `${JSON.stringify(snapshot, null, 2)}\n`);
 }
@@ -142,6 +169,196 @@ async function extractRuntimeOperations(root: string): Promise<RuntimeOperation[
     }
   }
   return operations;
+}
+
+async function extractDtoSchemas(root: string): Promise<Map<string, GeneratedDtoSchema>> {
+  const files = await listFiles(root);
+  const source = (await Promise.all(files.filter((file) => file.endsWith(".kt")).map((file) => readFile(file, "utf8")))).join("\n");
+  const schemas = new Map<string, GeneratedDtoSchema>();
+
+  for (const match of source.matchAll(/enum class\s+([A-Za-z][A-Za-z0-9_]*)\s*\{([\s\S]*?)\}/gmu)) {
+    const enumValues = match[2]
+      .split(/[,\n]/u)
+      .map((value) => value.trim())
+      .filter((value) => /^[A-Z][A-Z0-9_]*$/u.test(value));
+    schemas.set(match[1], {
+      name: match[1],
+      kind: "enum",
+      required: [],
+      properties: [],
+      enumValues
+    });
+  }
+
+  for (const match of source.matchAll(/data class\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([\s\S]*?)\)\s*(?:\{|$)/gmu)) {
+    const properties = splitKotlinParameters(match[2])
+      .map((parameter) => dtoProperty(parameter.trim(), schemas))
+      .filter((property): property is GeneratedDtoProperty => property !== null);
+    schemas.set(match[1], {
+      name: match[1],
+      kind: "object",
+      required: properties.filter((property) => property.required).map((property) => property.name),
+      properties,
+      enumValues: []
+    });
+  }
+  return schemas;
+}
+
+function splitKotlinParameters(parameterBlock: string): string[] {
+  const parameters: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < parameterBlock.length; index += 1) {
+    const char = parameterBlock[index];
+    if (char === "<" || char === "(") depth += 1;
+    if (char === ">" || char === ")") depth -= 1;
+    if (char === "," && depth === 0) {
+      parameters.push(parameterBlock.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parameters.push(parameterBlock.slice(start));
+  return parameters;
+}
+
+function dtoProperty(parameter: string, schemas: ReadonlyMap<string, GeneratedDtoSchema>): GeneratedDtoProperty | null {
+  const match = /^val\s+([A-Za-z][A-Za-z0-9_]*)\s*:\s*([^=]+?)(?:\s*=\s*[\s\S]+)?$/u.exec(parameter.replace(/\s+/gu, " ").trim());
+  if (!match) {
+    return null;
+  }
+  const kotlinType = match[2].trim();
+  const nullable = isTopLevelNullable(kotlinType);
+  const required = !nullable && !/\s=\s/u.test(parameter);
+  return {
+    name: match[1],
+    kotlinType,
+    required,
+    nullable,
+    ref: dtoRef(kotlinType, schemas),
+    itemsRef: listItemDtoRef(kotlinType, schemas)
+  };
+}
+
+function isTopLevelNullable(kotlinType: string): boolean {
+  let depth = 0;
+  for (const char of kotlinType.replace(/\s+/gu, "")) {
+    if (char === "<") depth += 1;
+    if (char === ">") depth -= 1;
+    if (char === "?" && depth === 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function dtoRef(kotlinType: string, schemas: ReadonlyMap<string, GeneratedDtoSchema>): string | null {
+  const cleaned = cleanKotlinType(kotlinType);
+  if (schemas.has(cleaned)) {
+    return cleaned;
+  }
+  return null;
+}
+
+function listItemDtoRef(kotlinType: string, schemas: ReadonlyMap<string, GeneratedDtoSchema>): string | null {
+  const match = /^(?:List|Set|Collection)<([A-Za-z][A-Za-z0-9_]*)\??>$/u.exec(cleanKotlinType(kotlinType, false));
+  return match && schemas.has(match[1]) ? match[1] : null;
+}
+
+function cleanKotlinType(kotlinType: string, stripGeneric = true): string {
+  const cleaned = kotlinType.replace(/\s+/gu, "").replace(/\?/gu, "");
+  if (!stripGeneric) {
+    return cleaned;
+  }
+  return cleaned.replace(/^(?:List|Set|Collection)</u, "").replace(/>$/u, "");
+}
+
+function referencedDtoSchemas(
+  operations: readonly RuntimeOperation[],
+  schemas: ReadonlyMap<string, GeneratedDtoSchema>
+): GeneratedDtoSchema[] {
+  const queue = operations
+    .flatMap((operation) => [operation.requestDto, operation.responseDto])
+    .filter((name): name is string => name !== null);
+  const seen = new Set<string>();
+  const result: GeneratedDtoSchema[] = [];
+  while (queue.length > 0) {
+    const name = queue.shift() ?? "";
+    if (seen.has(name)) {
+      continue;
+    }
+    const schema = schemas.get(name);
+    if (!schema) {
+      continue;
+    }
+    seen.add(name);
+    result.push(schema);
+    for (const property of schema.properties) {
+      if (property.ref) queue.push(property.ref);
+      if (property.itemsRef) queue.push(property.itemsRef);
+    }
+  }
+  return result.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function validateReportingDtoSchemas(
+  contractSource: string,
+  operations: readonly RuntimeOperation[],
+  dtoSchemas: readonly GeneratedDtoSchema[]
+): void {
+  for (const operation of operations) {
+    if (operation.requestDto && !operationHasNonGenericSchema(contractSource, operation, "requestBody")) {
+      errors.push(`reporting-service ${operationKey(operation)}: request DTO ${operation.requestDto} must use a concrete OpenAPI schema.`);
+    }
+    if (operation.responseDto && !operationHasNonGenericSchema(contractSource, operation, "responses")) {
+      errors.push(`reporting-service ${operationKey(operation)}: response DTO ${operation.responseDto} must use a concrete OpenAPI schema.`);
+    }
+  }
+
+  for (const schema of dtoSchemas) {
+    const block = componentSchemaBlock(contractSource, schema.name);
+    if (!block) {
+      errors.push(`reporting-service: generated DTO schema ${schema.name} is missing from checked-in OpenAPI components.`);
+      continue;
+    }
+    if (schema.kind === "enum") {
+      for (const value of schema.enumValues) {
+        if (!block.includes(value)) {
+          errors.push(`reporting-service ${schema.name}: OpenAPI enum is missing ${value}.`);
+        }
+      }
+      continue;
+    }
+    if (schema.properties.length > 0 && !/properties:/u.test(block)) {
+      errors.push(`reporting-service ${schema.name}: OpenAPI component has no properties block.`);
+      continue;
+    }
+    for (const property of schema.properties) {
+      if (!new RegExp(`\\n\\s{8}${property.name}:`, "u").test(block)) {
+        errors.push(`reporting-service ${schema.name}: OpenAPI component is missing property ${property.name}.`);
+      }
+    }
+  }
+}
+
+function operationHasNonGenericSchema(contractSource: string, operation: RuntimeOperation, section: "requestBody" | "responses"): boolean {
+  const operations = parseOpenApiOperations("contracts/openapi/reporting-service.yaml", contractSource);
+  const block = operations.find((contractOperation) => operationKey(contractOperation) === operationKey(operation))?.block;
+  if (!block) {
+    return false;
+  }
+  const schemaRef = firstSchemaRef(block, section);
+  return schemaRef !== null && schemaRef !== "AnyJson";
+}
+
+function componentSchemaBlock(contractSource: string, schemaName: string): string | null {
+  const match = new RegExp(`^    ${schemaName}:\\n`, "mu").exec(contractSource);
+  if (!match || match.index === undefined) {
+    return null;
+  }
+  const rest = contractSource.slice(match.index + match[0].length);
+  const next = /^    [A-Za-z][A-Za-z0-9_]*:\n/mu.exec(rest);
+  return rest.slice(0, next?.index ?? rest.length);
 }
 
 async function listFiles(root: string): Promise<string[]> {

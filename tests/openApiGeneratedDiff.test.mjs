@@ -29,4 +29,14 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.ok(coreKeys.has("GET /api/auth/session"));
   assert.ok(coreKeys.has("POST /api/ops/security/break-glass"));
   assert.ok(coreKeys.has("GET /api/parity/structured-errors/{code}"));
+
+  const reporting = JSON.parse(await readFile("docs/test-evidence/generated/openapi/reporting-service.generated.json", "utf8"));
+  const reportingSchemaNames = new Set(reporting.dtoSchemas.map((schema) => schema.name));
+  assert.ok(reportingSchemaNames.has("GenerateReportCommand"));
+  assert.ok(reportingSchemaNames.has("ReportArtifactDto"));
+  assert.ok(reportingSchemaNames.has("ReportRetentionSweepResponse"));
+
+  const reportingContract = await readFile("contracts/openapi/reporting-service.yaml", "utf8");
+  assert.doesNotMatch(reportingContract, /AnyJsonResponse/);
+  assert.match(reportingContract, /ReportArtifactDto:/);
 });
