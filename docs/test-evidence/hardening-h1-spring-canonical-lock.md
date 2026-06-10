@@ -42,7 +42,7 @@ npm run next:admin-console:build
 - `npm run scripts:typecheck`: pass.
 - All seven `npm run next:<app>:build` commands passed for customer-web, staff-terminal, complaint-portal, ops-console, audit-console, fds-aml-console, and admin-console.
 
-Current inventory note: later slices expanded the parity map to 43 mapped Node reference scenarios and the manifest catalog to 109 checked-in screen manifests. Use current parity/gate outputs for release decisions; keep the older command counts above as this H1 run's evidence.
+Current inventory note: later slices expanded the parity map to 43 mapped Node reference scenarios, moved staff-terminal to the iWorks integrated shell, and expanded the manifest catalog to 73 checked-in screen manifests including `call-center-console`. Use current parity/gate outputs for release decisions; keep the older command counts above as this H1 run's evidence.
 
 ## New Guard
 

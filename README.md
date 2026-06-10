@@ -175,9 +175,10 @@ docker compose config
 
 Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
 
-The current manifest catalog contains 67 synthetic screens across customer web,
-complaint portal, FDS/AML, ops, audit, and admin consoles. Staff-terminal
-manifests are intentionally absent from the current iWorks shell model.
+The current manifest catalog contains 73 synthetic screens across customer web,
+complaint portal, FDS/AML, ops, audit, admin, and call-center consoles.
+Staff-terminal manifests are intentionally absent from the current iWorks shell
+model.
 
 `npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC through a local `tlc` command, `BANKING_LAB_TLC_CMD`, `BANKING_LAB_TLC_JAR`, a repo-local TLC jar, or `~/Downloads/tla2tools.jar`, resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback when a TLC jar is used, and then runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
 
