@@ -24,12 +24,13 @@ class BankingLabRouteAuthorizationManager {
             path.startsWith("/api/aml/governance") -> setOf("AML_REVIEWER", "COMPLIANCE_MANAGER", "AUDITOR")
             path == "/api/staff/pii/unmask" -> setOf("BRANCH_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/staff/operations/retry-queue") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
-            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.startsWith("/api/staff/workflows/") && path.endsWith("/timeline") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/audit/exports") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             path.startsWith("/api/audit/") -> setOf("AUDITOR", "COMPLIANCE_MANAGER")
             approvalApprove.matches(path) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
             approvalReject.matches(path) -> setOf("BRANCH_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER")
-            path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path.startsWith("/api/staff/call-center/") -> setOf("CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER", "AUDITOR")
+            path.startsWith("/api/staff/") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
             path.startsWith("/api/ops/security") -> setOf("OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
             path.startsWith("/api/ops/ledger/projection-drift-runs") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
             path.startsWith("/api/ops/ledger/projection-rebuild-runs") -> setOf("OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER", "AUDITOR")
@@ -52,6 +53,7 @@ class BankingLabRouteAuthorizationManager {
             "CUSTOMER",
             "BRANCH_STAFF",
             "BRANCH_MANAGER",
+            "CALL_CENTER_AGENT",
             "CALL_CENTER_MANAGER",
             "OPS_MANAGER",
             "AUDITOR",
@@ -61,6 +63,7 @@ class BankingLabRouteAuthorizationManager {
             "CUSTOMER",
             "BRANCH_STAFF",
             "BRANCH_MANAGER",
+            "CALL_CENTER_AGENT",
             "CALL_CENTER_MANAGER",
             "OPS_OPERATOR",
             "OPS_MANAGER",

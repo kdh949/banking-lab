@@ -1,0 +1,39 @@
+{
+  "screenId": "CALL-106",
+  "transactionCode": "CALL106",
+  "title": "Call-Center Escalation",
+  "app": "call-center-console",
+  "type": "CASE",
+  "domain": "call-center",
+  "requiredRoles": ["CALL_CENTER_MANAGER", "BRANCH_MANAGER", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "callCenterEscalationWorkflow",
+    "states": ["CREATED", "ACCEPTED", "REJECTED", "CLOSED"]
+  },
+  "approval": {
+    "required": false,
+    "makerChecker": false,
+    "businessTypes": []
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CALL_CENTER_ESCALATION_REDACTION",
+    "eventTypes": ["CALL_CENTER_ESCALATED"]
+  },
+  "sections": ["caseSummary", "customerContext", "complaintConversion", "workflowTimeline", "auditPanel"],
+  "actions": [
+    {
+      "id": "escalate",
+      "label": "Escalate",
+      "type": "command",
+      "target": "POST /api/staff/call-center/interactions/{interactionId}/escalations"
+    }
+  ]
+}
+

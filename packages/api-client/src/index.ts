@@ -88,6 +88,165 @@ export interface StaffWorkflowTimelineEntryDto {
   readonly occurredAt: string;
 }
 
+export interface CallCenterCustomerSummaryDto {
+  readonly customerId: string;
+  readonly maskedName: string;
+  readonly maskedPhone?: string | null;
+  readonly customerGrade: string;
+  readonly riskGrade: string;
+}
+
+export interface CallCenterCustomerSearchResponse {
+  readonly auditEventId: string;
+  readonly items: readonly CallCenterCustomerSummaryDto[];
+}
+
+export interface StartCallCenterInteractionCommand {
+  readonly customerId?: string | null;
+  readonly accountId?: string | null;
+  readonly channel?: string | null;
+  readonly contactReasonCode?: string | null;
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly assignedTo?: string | null;
+  readonly reason?: string | null;
+  readonly metadata?: Record<string, unknown> | null;
+}
+
+export interface CallCenterNoteCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly noteBody?: string | null;
+}
+
+export interface CallCenterAftercallTaskCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly taskType?: string | null;
+  readonly assignedTo?: string | null;
+  readonly dueAt?: string | null;
+  readonly metadata?: Record<string, unknown> | null;
+}
+
+export interface CallCenterEscalationCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+  readonly escalationType?: string | null;
+  readonly complaintCategory?: string | null;
+  readonly complaintDescription?: string | null;
+  readonly metadata?: Record<string, unknown> | null;
+}
+
+export interface CloseCallCenterInteractionCommand {
+  readonly requestedBy?: string | null;
+  readonly requestedByRole?: string | null;
+  readonly reason?: string | null;
+}
+
+export interface CallCenterNoteDto {
+  readonly noteId: string;
+  readonly interactionId: string;
+  readonly customerId: string;
+  readonly createdBy: string;
+  readonly createdByRole: string;
+  readonly noteBodyRedacted: string;
+  readonly redactionApplied: boolean;
+  readonly piiPatternCount: number;
+  readonly reason: string;
+  readonly auditEventId: string;
+  readonly createdAt: string;
+}
+
+export interface CallCenterAftercallTaskDto {
+  readonly taskId: string;
+  readonly interactionId: string;
+  readonly customerId: string;
+  readonly taskType: string;
+  readonly status: string;
+  readonly assignedTo?: string | null;
+  readonly dueAt?: string | null;
+  readonly createdBy: string;
+  readonly createdByRole: string;
+  readonly reason: string;
+  readonly auditEventId: string;
+  readonly metadata: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface CallCenterEscalationDto {
+  readonly escalationId: string;
+  readonly interactionId: string;
+  readonly customerId: string;
+  readonly escalationType: string;
+  readonly status: string;
+  readonly complaintCaseId?: string | null;
+  readonly requestedBy: string;
+  readonly requestedByRole: string;
+  readonly reason: string;
+  readonly auditEventId: string;
+  readonly metadata: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface CallCenterInteractionDto {
+  readonly interactionId: string;
+  readonly customerId: string;
+  readonly accountId?: string | null;
+  readonly channel: string;
+  readonly contactReasonCode: string;
+  readonly status: string;
+  readonly createdBy: string;
+  readonly createdByRole: string;
+  readonly assignedTo?: string | null;
+  readonly reason: string;
+  readonly startedAt: string;
+  readonly endedAt?: string | null;
+  readonly metadata: Record<string, unknown>;
+  readonly auditEventId: string;
+  readonly notes: readonly CallCenterNoteDto[];
+  readonly aftercallTasks: readonly CallCenterAftercallTaskDto[];
+  readonly escalations: readonly CallCenterEscalationDto[];
+}
+
+export interface CallCenterInteractionResponse {
+  readonly item: CallCenterInteractionDto;
+}
+
+export interface CallCenterNoteResponse {
+  readonly item: CallCenterInteractionDto;
+  readonly note: CallCenterNoteDto;
+}
+
+export interface CallCenterAftercallTaskResponse {
+  readonly item: CallCenterInteractionDto;
+  readonly task: CallCenterAftercallTaskDto;
+}
+
+export interface CallCenterEscalationResponse {
+  readonly item: CallCenterInteractionDto;
+  readonly escalation: CallCenterEscalationDto;
+}
+
+export interface CallCenterInteractionSummaryDto {
+  readonly interactionId: string;
+  readonly customerId: string;
+  readonly maskedCustomerName: string;
+  readonly channel: string;
+  readonly contactReasonCode: string;
+  readonly status: string;
+  readonly assignedTo?: string | null;
+  readonly startedAt: string;
+  readonly endedAt?: string | null;
+}
+
+export interface CallCenterInteractionListResponse {
+  readonly auditEventId: string;
+  readonly items: readonly CallCenterInteractionSummaryDto[];
+}
+
 export interface StaffCustomerDetailDto {
   readonly customerId: string;
   readonly piiExposure: string;
@@ -2688,6 +2847,91 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/workflows/${encodeURIComponent(businessReferenceId)}/timeline`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    searchCallCenterCustomers(query: string, reason: string) {
+      return request<CallCenterCustomerSearchResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/call-center/customers/search",
+        { query, reason },
+        options.bearerToken
+      );
+    },
+
+    startCallCenterInteraction(command: StartCallCenterInteractionCommand) {
+      return request<CallCenterInteractionResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/call-center/interactions",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    callCenterInteraction(interactionId: string, reason: string) {
+      return request<CallCenterInteractionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/interactions/${encodeURIComponent(interactionId)}`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    addCallCenterNote(interactionId: string, command: CallCenterNoteCommand) {
+      return request<CallCenterNoteResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/interactions/${encodeURIComponent(interactionId)}/notes`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    createCallCenterAftercallTask(interactionId: string, command: CallCenterAftercallTaskCommand) {
+      return request<CallCenterAftercallTaskResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/interactions/${encodeURIComponent(interactionId)}/aftercall-tasks`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    escalateCallCenterInteraction(interactionId: string, command: CallCenterEscalationCommand) {
+      return request<CallCenterEscalationResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/interactions/${encodeURIComponent(interactionId)}/escalations`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    closeCallCenterInteraction(interactionId: string, command: CloseCallCenterInteractionCommand) {
+      return request<CallCenterInteractionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/interactions/${encodeURIComponent(interactionId)}/close`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    callCenterCustomerHistory(customerId: string, reason: string) {
+      return request<CallCenterInteractionListResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/call-center/customers/${encodeURIComponent(customerId)}/history`,
         { reason },
         options.bearerToken
       );

@@ -233,6 +233,103 @@ paths:
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/customers/search:
+    get:
+      operationId: searchCallCenterCustomers
+      x-synthetic-only: true
+      x-reason-required: true
+      x-masking-policy: CALL_CENTER_MASKED
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions:
+    post:
+      operationId: startCallCenterInteraction
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnyJson' }
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions/{interactionId}:
+    get:
+      operationId: callCenterInteraction
+      x-synthetic-only: true
+      x-reason-required: true
+      x-masking-policy: CALL_CENTER_MASKED
+      parameters:
+        - { name: interactionId, in: path, required: true, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions/{interactionId}/notes:
+    post:
+      operationId: addCallCenterNote
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-masking-policy: CALL_CENTER_NOTE_REDACTION
+      x-audit-raw-payload-forbidden: true
+      parameters: [{ name: interactionId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnyJson' }
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions/{interactionId}/aftercall-tasks:
+    post:
+      operationId: createCallCenterAftercallTask
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      parameters: [{ name: interactionId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnyJson' }
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions/{interactionId}/escalations:
+    post:
+      operationId: escalateCallCenterInteraction
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      x-masking-policy: CALL_CENTER_ESCALATION_REDACTION
+      parameters: [{ name: interactionId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnyJson' }
+      responses: { '201': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/interactions/{interactionId}/close:
+    post:
+      operationId: closeCallCenterInteraction
+      x-synthetic-only: true
+      x-reason-required: true
+      x-reason-policy: body.reason
+      parameters: [{ name: interactionId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnyJson' }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/call-center/customers/{customerId}/history:
+    get:
+      operationId: callCenterCustomerHistory
+      x-synthetic-only: true
+      x-reason-required: true
+      x-masking-policy: CALL_CENTER_MASKED
+      parameters:
+        - { name: customerId, in: path, required: true, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
   /api/staff/accounts/{accountId}/limit-change-requests:
     post:
       operationId: requestTransferLimitChange

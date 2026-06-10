@@ -27,7 +27,7 @@ test("expanded manifests cover reusable templates across bank channels", async (
   const apps = new Set(manifests.map((manifest) => manifest.app));
   const types = new Set(manifests.map((manifest) => manifest.type));
 
-  for (const app of ["customer-web", "complaint-portal", "ops-console", "audit-console", "fds-aml-console"]) {
+  for (const app of ["customer-web", "complaint-portal", "call-center-console", "ops-console", "audit-console", "fds-aml-console"]) {
     assert.ok(apps.has(app), `${app} manifest coverage is missing`);
   }
   assert.equal(apps.has("staff-terminal"), false);
@@ -93,6 +93,8 @@ test("manifest expansion covers parity control scenarios for screen factory doma
   assert.ok(manifests.some((manifest) => manifest.controlMetadata.approval.makerChecker));
   assert.ok(manifests.some((manifest) => manifest.controlMetadata.masking.defaultMasked));
   assert.ok(manifests.some((manifest) => manifest.domain === "complaint" && manifest.controlMetadata.workflow.required));
+  assert.ok(manifests.some((manifest) => manifest.domain === "call-center" && manifest.controlMetadata.audit.reasonRequired));
+  assert.ok(manifests.some((manifest) => manifest.screenId === "CALL-103" && manifest.controlMetadata.masking.policy === "CALL_CENTER_NOTE_REDACTION"));
   assert.ok(manifests.some((manifest) => ["fds", "aml"].includes(manifest.domain) && manifest.controlMetadata.workflow.required));
   assert.ok(manifests.some((manifest) => manifest.domain === "reconciliation"));
 });

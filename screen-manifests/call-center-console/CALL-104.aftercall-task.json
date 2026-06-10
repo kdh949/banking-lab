@@ -1,0 +1,39 @@
+{
+  "screenId": "CALL-104",
+  "transactionCode": "CALL104",
+  "title": "Call-Center Aftercall Task",
+  "app": "call-center-console",
+  "type": "COMMAND",
+  "domain": "call-center",
+  "requiredRoles": ["CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": false,
+    "maskingPolicy": "NONE",
+    "eventTypes": ["CALL_CENTER_AFTERCALL_TASK_CREATED"]
+  },
+  "fields": [
+    { "name": "requestedBy", "label": "Actor", "type": "text", "required": true },
+    { "name": "requestedByRole", "label": "Role", "type": "select", "required": true },
+    { "name": "reason", "label": "Business Reason", "type": "text", "required": true },
+    { "name": "taskType", "label": "Task Type", "type": "select", "required": true },
+    { "name": "assignedTo", "label": "Assigned To", "type": "text", "required": false },
+    { "name": "dueAt", "label": "Due At", "type": "datetime", "required": false }
+  ],
+  "api": "POST /api/staff/call-center/interactions/{interactionId}/aftercall-tasks",
+  "sections": ["targetLookup", "commandForm", "aftercallQueue", "auditPanel"],
+  "actions": [
+    {
+      "id": "createAftercallTask",
+      "label": "Create Aftercall Task",
+      "type": "command",
+      "target": "POST /api/staff/call-center/interactions/{interactionId}/aftercall-tasks"
+    }
+  ]
+}
+

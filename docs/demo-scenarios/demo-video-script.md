@@ -174,18 +174,19 @@ Audit is not a UI-only claim. The hash chain, access history, WORM export simula
 Open:
 
 - `docs/test-evidence/final-hardening-scorecard.md`
-- `docs/test-evidence/live-route-api-execution.md`
+- `docs/test-evidence/call-center-console.md`
 - `docs/test-evidence/evidence-gap-report.md`
 
 Show:
 
 - scorecard row `Call-center 상담 전산`
-- current missing status
-- required future workflow: 상담 이력, 상담 메모, 후처리, escalation, authorization, audit
+- current partial status
+- API-backed first slice: masked customer search, 상담 세션, redacted 상담 메모, 후처리 task, escalation, close, history, authorization, audit
+- remaining future work: dedicated Next.js call-center shell, browser E2E, live Keycloak/JWKS evidence
 
 Narration:
 
-The lab has adjacent staff, complaint, workflow, approval, and audit APIs, but no coherent call-center console or staff-terminal call-center workflow yet. This remains a PLAN gap and is not demonstrated as complete.
+The lab now has a Spring/PostgreSQL call-center workflow with redacted notes and access audit, but no dedicated call-center Next.js shell or live browser evidence yet. This remains partial and is not demonstrated as complete.
 
 ## Scene 13: Evidence Pack, CI, Contract, And Formal Gates
 

@@ -1,0 +1,42 @@
+{
+  "screenId": "CALL-103",
+  "transactionCode": "CALL103",
+  "title": "Call-Center Note Entry",
+  "app": "call-center-console",
+  "type": "COMMAND",
+  "domain": "call-center",
+  "requiredRoles": ["CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "COMPLAINT_HANDLER", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "command",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CALL_CENTER_NOTE_REDACTION",
+    "eventTypes": ["CALL_CENTER_NOTE_ADDED"]
+  },
+  "validation": {
+    "syntheticOnly": true,
+    "redactionRequired": true,
+    "rawNoteAuditCopyForbidden": true
+  },
+  "fields": [
+    { "name": "requestedBy", "label": "Actor", "type": "text", "required": true },
+    { "name": "requestedByRole", "label": "Role", "type": "select", "required": true },
+    { "name": "reason", "label": "Business Reason", "type": "text", "required": true },
+    { "name": "noteBody", "label": "Synthetic Note", "type": "textarea", "required": true, "mask": "REDACT_PII_LIKE" }
+  ],
+  "api": "POST /api/staff/call-center/interactions/{interactionId}/notes",
+  "sections": ["targetLookup", "commandForm", "redactionPreview", "auditPanel"],
+  "actions": [
+    {
+      "id": "addNote",
+      "label": "Add Note",
+      "type": "command",
+      "target": "POST /api/staff/call-center/interactions/{interactionId}/notes"
+    }
+  ]
+}
+
