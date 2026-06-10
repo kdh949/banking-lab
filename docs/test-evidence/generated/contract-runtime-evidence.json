@@ -1,0 +1,129 @@
+{
+  "reviewDate": "2026-06-10",
+  "syntheticOnly": true,
+  "status": "partial",
+  "statusReason": "Current gates prove checked-in OpenAPI/AsyncAPI structure, API-client operationId parity, event schema references, and selected source envelope markers. PLAN-required generated OpenAPI DTO diffing and runtime event-envelope validation gates are not implemented yet.",
+  "openApi": {
+    "checkedInFiles": [
+      "contracts/openapi/core-banking.yaml",
+      "contracts/openapi/payment-service.yaml",
+      "contracts/openapi/notification-service.yaml",
+      "contracts/openapi/reporting-service.yaml"
+    ],
+    "operationCount": 153,
+    "clientMethodCount": 146,
+    "structuralGateScripts": [
+      "contracts:lint",
+      "contracts:check-client"
+    ],
+    "generatedDtoDiffGate": {
+      "status": "not-present-plan-required",
+      "expectedScript": "contracts:diff-openapi",
+      "note": "No springdoc/Jackson-generated OpenAPI DTO diff gate is wired yet; do not claim DTO-level runtime parity."
+    }
+  },
+  "asyncApi": {
+    "contractFile": "contracts/asyncapi/banking-lab-events.yaml",
+    "eventSchemaCount": 17,
+    "envelopeFields": [
+      "syntheticOnly",
+      "sourceService",
+      "eventType",
+      "aggregateId",
+      "occurredAt"
+    ],
+    "structuralGateScripts": [
+      "contracts:check-events"
+    ],
+    "runtimeEventValidationGate": {
+      "status": "not-present-plan-required",
+      "expectedScript": "contracts:validate-runtime-events",
+      "note": "No runtime producer/consumer event-envelope validation gate is wired yet; do not treat source inspection as a live runtime pass."
+    }
+  },
+  "sourceInspection": [
+    {
+      "id": "payment-service-kafka-producer-envelope-source",
+      "status": "pass",
+      "files": [
+        "services/payment-service/src/main/kotlin/lab/banking/payment/eventing/PaymentKafkaOutboxPublisher.kt"
+      ],
+      "markers": [
+        "toKafkaEnvelope",
+        "sourceService\" to \"payment-service",
+        "syntheticOnly\" to true",
+        "eventType\" to eventType",
+        "aggregateId\" to aggregateId",
+        "occurredAt\" to createdAt.toString()",
+        "record.headers().add(header(\"syntheticOnly\", \"true\"))"
+      ],
+      "note": "Payment publisher source builds envelope headers and payload metadata before Kafka send; this is source inspection, not a generated runtime schema gate."
+    },
+    {
+      "id": "reporting-service-kafka-producer-envelope-source",
+      "status": "pass",
+      "files": [
+        "services/reporting-service/src/main/kotlin/lab/banking/reporting/eventing/ReportingKafkaOutboxPublisher.kt"
+      ],
+      "markers": [
+        "toKafkaEnvelope",
+        "sourceService\" to \"reporting-service",
+        "syntheticOnly\" to true",
+        "eventType\" to eventType",
+        "aggregateId\" to aggregateId",
+        "occurredAt\" to createdAt.toString()",
+        "record.headers().add(header(\"syntheticOnly\", \"true\"))"
+      ],
+      "note": "Reporting publisher source builds envelope headers and payload metadata before Kafka send; this is source inspection, not a generated runtime schema gate."
+    },
+    {
+      "id": "notification-service-consumer-envelope-source",
+      "status": "pass",
+      "files": [
+        "services/notification-service/src/main/kotlin/lab/banking/notification/eventing/NotificationKafkaConsumer.kt",
+        "services/notification-service/src/main/kotlin/lab/banking/notification/eventing/NotificationKafkaModels.kt"
+      ],
+      "markers": [
+        "requireEnvelopeMetadata(envelope)",
+        "requireSyntheticOnly(envelope)",
+        "sourceService envelope metadata",
+        "matching eventType envelope metadata",
+        "matching aggregateId envelope metadata",
+        "occurredAt envelope metadata",
+        "NotificationOutboxKafkaEnvelope"
+      ],
+      "note": "Notification consumer source rejects missing envelope metadata and non-synthetic events; this is source inspection, not a cross-service runtime contract validation gate."
+    },
+    {
+      "id": "core-banking-outbox-source",
+      "status": "pass",
+      "files": [
+        "services/core-banking/src/main/kotlin/lab/banking/core/ledger/application/LedgerCommandService.kt"
+      ],
+      "markers": [
+        "INSERT INTO outbox_events",
+        "\"syntheticOnly\" to true",
+        "aggregateId",
+        "eventType"
+      ],
+      "note": "Core banking persists durable synthetic outbox records; full Kafka envelope runtime validation is still a PLAN-required gap."
+    }
+  ],
+  "overclaimGuards": [
+    {
+      "id": "generated-openapi-diff-not-overclaimed",
+      "status": "pass",
+      "details": "README and contract evidence still identify generated OpenAPI DTO diffing as remaining hardening work."
+    },
+    {
+      "id": "runtime-event-validation-not-overclaimed",
+      "status": "pass",
+      "details": "Evidence keeps source envelope inspection separate from a future runtime event-envelope validation gate."
+    },
+    {
+      "id": "synthetic-only-boundary",
+      "status": "pass",
+      "details": "Contract evidence remains synthetic-only and excludes real money, real PII, real KYC/AML providers, payment/card networks, and external financial institution APIs."
+    }
+  ]
+}

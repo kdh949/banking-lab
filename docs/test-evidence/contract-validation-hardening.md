@@ -48,3 +48,12 @@ Scope: Phase 4 OpenAPI/AsyncAPI contract validation for the synthetic banking la
 
 - Core-banking OpenAPI uses generic response schemas for broad operation coverage in this phase; DTO-level schema generation or springdoc diffing remains a future improvement.
 - AsyncAPI models a shared outbox/envelope contract plus payload schemas. Some services still need implementation-level producer validation against the envelope fields in later bounded-context hardening.
+
+## 2026-06-10 Runtime Boundary Evidence
+
+`docs/test-evidence/contract-runtime-evidence-boundary.md` and
+`docs/test-evidence/generated/contract-runtime-evidence.json` record the
+current boundary without upgrading it to a runtime pass. They confirm the
+structural contract gates and selected source envelope markers are present, and
+they explicitly keep `contracts:diff-openapi` and
+`contracts:validate-runtime-events` as PLAN-required missing gates.
