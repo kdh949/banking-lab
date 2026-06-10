@@ -460,8 +460,8 @@
           "kotlinType": "List<NotificationDeliveryDto>",
           "required": true,
           "nullable": false,
-          "ref": null,
-          "itemsRef": null
+          "ref": "NotificationDeliveryDto",
+          "itemsRef": "NotificationDeliveryDto"
         },
         {
           "name": "replayed",
@@ -746,8 +746,8 @@
           "kotlinType": "List<NotificationWorkflowTimelineEntryDto>",
           "required": true,
           "nullable": false,
-          "ref": null,
-          "itemsRef": null
+          "ref": "NotificationWorkflowTimelineEntryDto",
+          "itemsRef": "NotificationWorkflowTimelineEntryDto"
         },
         {
           "name": "syntheticOnly",
@@ -871,6 +871,86 @@
         "APPROVED",
         "REJECTED"
       ]
+    },
+    {
+      "name": "NotificationWorkflowTimelineEntryDto",
+      "kind": "object",
+      "required": [
+        "workflowEventId",
+        "eventType",
+        "toStatus",
+        "actorId",
+        "reason",
+        "occurredAt",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "workflowEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "eventType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fromStatus",
+          "kotlinType": "NotificationWorkflowStatus?",
+          "required": false,
+          "nullable": true,
+          "ref": "NotificationWorkflowStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "toStatus",
+          "kotlinType": "NotificationWorkflowStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "NotificationWorkflowStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "actorId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "occurredAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
     },
     {
       "name": "RecordNotificationFailureRequest",

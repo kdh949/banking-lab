@@ -74,7 +74,16 @@ const services: ServiceConfig[] = [
     generatedPath: "docs/test-evidence/generated/openapi/reporting-service.generated.json"
   }
 ];
-const dtoSchemaServiceIds = new Set<ServiceId>(["payment-service", "notification-service", "reporting-service"]);
+const dtoSchemaServiceIds = new Set<ServiceId>(["core-banking", "payment-service", "notification-service", "reporting-service"]);
+const coreBankingDtoSchemaOperationKeys = new Set([
+  "POST /api/ledger/deposits",
+  "POST /api/ledger/withdrawals",
+  "POST /api/ledger/transfers",
+  "POST /api/ledger/reversals",
+  "POST /api/ledger/adjustments",
+  "POST /api/ledger/payment-postings",
+  "POST /api/ops/daily-closings"
+]);
 
 const errors: string[] = [];
 const snapshots: GeneratedOpenApiSnapshot[] = [];
@@ -87,8 +96,9 @@ for (const service of services) {
     .filter((operation) => inDiffScope(operation, contractPaths))
     .sort(compareOperation);
   const dtoSchemaMap = dtoSchemaServiceIds.has(service.serviceId) ? await extractDtoSchemas(service.sourceRoot) : new Map<string, GeneratedDtoSchema>();
+  const dtoSchemaOperations = dtoSchemaOperationsFor(service.serviceId, runtimeOperations);
   const dtoSchemas = dtoSchemaServiceIds.has(service.serviceId)
-    ? referencedDtoSchemas(runtimeOperations, dtoSchemaMap)
+    ? referencedDtoSchemas(dtoSchemaOperations, dtoSchemaMap)
     : [];
   const snapshot: GeneratedOpenApiSnapshot = {
     generatedAt,
@@ -140,7 +150,7 @@ for (const service of services) {
   }
 
   if (dtoSchemaServiceIds.has(service.serviceId)) {
-    validateDtoSchemas(service, contractSource, runtimeOperations, dtoSchemas);
+    validateDtoSchemas(service, contractSource, dtoSchemaOperations, dtoSchemas);
   }
 
   await mkdir(dirname(service.generatedPath), { recursive: true });
@@ -191,12 +201,23 @@ async function extractDtoSchemas(root: string): Promise<Map<string, GeneratedDto
     });
   }
 
-  for (const match of source.matchAll(/data class\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([\s\S]*?)\)\s*(?:\{|$)/gmu)) {
-    const properties = splitKotlinParameters(match[2])
+  const dataClasses = Array.from(source.matchAll(/data class\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([\s\S]*?)\)\s*(?:\{|$)/gmu))
+    .map((match) => ({ name: match[1], parameters: match[2] }));
+  for (const dataClass of dataClasses) {
+    schemas.set(dataClass.name, {
+      name: dataClass.name,
+      kind: "object",
+      required: [],
+      properties: [],
+      enumValues: []
+    });
+  }
+  for (const dataClass of dataClasses) {
+    const properties = splitKotlinParameters(dataClass.parameters)
       .map((parameter) => dtoProperty(parameter.trim(), schemas))
       .filter((property): property is GeneratedDtoProperty => property !== null);
-    schemas.set(match[1], {
-      name: match[1],
+    schemas.set(dataClass.name, {
+      name: dataClass.name,
       kind: "object",
       required: properties.filter((property) => property.required).map((property) => property.name),
       properties,
@@ -300,6 +321,13 @@ function referencedDtoSchemas(
     }
   }
   return result.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function dtoSchemaOperationsFor(serviceId: ServiceId, operations: readonly RuntimeOperation[]): readonly RuntimeOperation[] {
+  if (serviceId !== "core-banking") {
+    return operations;
+  }
+  return operations.filter((operation) => coreBankingDtoSchemaOperationKeys.has(operationKey(operation)));
 }
 
 function validateDtoSchemas(
