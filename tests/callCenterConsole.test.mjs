@@ -9,6 +9,8 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   const openApi = await readFile("contracts/openapi/core-banking.yaml", "utf8");
   const client = await readFile("packages/api-client/src/index.ts", "utf8");
   const evidence = JSON.parse(await readFile("docs/test-evidence/generated/call-center-console.json", "utf8"));
+  const nextPanel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
+  const e2eSpec = await readFile("apps/call-center-console/e2e/call-center-console-parity.spec.ts", "utf8");
 
   for (const table of [
     "call_center_interactions",
@@ -47,6 +49,9 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   assert.equal(evidence.status, "partial");
   assert.equal(evidence.syntheticOnly, true);
   assert.equal(evidence.controls.rawNoteCopiedToAudit, false);
-  assert.ok(evidence.remainingLimits.some((limit) => /No dedicated Next\.js call-center console shell/.test(limit)));
+  assert.equal(evidence.implemented.nextShell, "@banking-lab/call-center-console");
+  assert.match(nextPanel, /data-testid="api-backed-call-center-workflow"/);
+  assert.match(nextPanel, /Browser CALL-103 redacted synthetic note smoke/);
+  assert.match(e2eSpec, /call-center console renders masked interaction controls from manifests/);
+  assert.ok(evidence.remainingLimits.every((limit) => !/No dedicated Next\.js call-center console shell/.test(limit)));
 });
-

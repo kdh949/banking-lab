@@ -2,7 +2,7 @@
 
 Review date: 2026-06-10
 
-Scope: synthetic-only call-center workflow first slice. This is not a real contact-center system and does not connect to real telephony, real recordings, real customer PII, real KYC/AML providers, card networks, payment networks, regulator filing systems, or external financial-institution APIs.
+Scope: synthetic-only call-center workflow with a dedicated Next.js shell. This is not a real contact-center system and does not connect to real telephony, real recordings, real customer PII, real KYC/AML providers, card networks, payment networks, regulator filing systems, or external financial-institution APIs.
 
 ## Implemented
 
@@ -18,6 +18,8 @@ Scope: synthetic-only call-center workflow first slice. This is not a real conta
   - `GET /api/staff/call-center/customers/{customerId}/history`
 - `@banking-lab/api-client` has shared client methods for the same routes.
 - `screen-manifests/call-center-console/CALL-101..CALL-106` declares reusable inquiry, command, and case templates for customer search, interaction detail, note entry, aftercall task, history, and escalation.
+- `apps/call-center-console` renders those manifests through `packages/channel-ui` on port 3008.
+- `ApiBackedCallCenterPanel` can run a synthetic CALL-101 through CALL-106 browser smoke when `NEXT_PUBLIC_BANKING_API_BASE_URL` is configured.
 - OpenAPI contract includes all call-center routes with reason-required, synthetic-only, masking/redaction, and structured-error metadata.
 
 ## Controls
@@ -44,14 +46,17 @@ npm run contracts:check-client
 npm run contracts:lint
 npm run contracts:diff-openapi
 scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.callcenter.CallCenterWorkflowIntegrationTest
+npm run next:call-center-console:typecheck
+npm run next:call-center-console:build
+npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts
 ```
 
 The Gradle command failed inside the sandbox with the known file-lock socket denial and passed after approved unsandboxed rerun.
+The first Playwright command failed inside the sandbox with `listen EPERM`; the approved unsandboxed rerun passed the manifest/shell checks, with the live API workflow test skipped because `BANKING_LAB_E2E_API_BASE_URL` was not set.
 
 ## Remaining Limits
 
-- No dedicated `apps/call-center-console` Next.js shell has been added yet.
-- No browser E2E or live Keycloak/JWKS propagation evidence exists for this new call-center workflow yet.
+- No live Keycloak/JWKS propagation evidence exists for this new call-center workflow yet.
+- No live full-stack call-center API browser run has been recorded yet.
 - Escalation is role-gated but not maker-checker in this first slice.
 - This is a synthetic workflow only; no real telephony, call recording, contact-center SaaS, real PII, real KYC/AML provider, real payment network, or real regulator integration is present.
-

@@ -2,7 +2,7 @@
   "generatedAt": "2026-06-10T12:37:24.000Z",
   "status": "partial",
   "syntheticOnly": true,
-  "scope": "call-center workflow first slice",
+  "scope": "call-center workflow with dedicated Next.js shell",
   "implemented": {
     "postgresTables": [
       "call_center_interactions",
@@ -28,7 +28,10 @@
       "CALL-104",
       "CALL-105",
       "CALL-106"
-    ]
+    ],
+    "nextShell": "@banking-lab/call-center-console",
+    "nextPort": 3008,
+    "browserSpec": "apps/call-center-console/e2e/call-center-console-parity.spec.ts"
   },
   "controls": {
     "reasonRequired": true,
@@ -63,13 +66,24 @@
       "command": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.callcenter.CallCenterWorkflowIntegrationTest",
       "status": "pass_after_sandbox_escalation",
       "sandboxFailure": "Gradle file-lock socket Operation not permitted"
+    },
+    {
+      "command": "npm run next:call-center-console:typecheck",
+      "status": "pass"
+    },
+    {
+      "command": "npm run next:call-center-console:build",
+      "status": "pass"
+    },
+    {
+      "command": "npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts",
+      "status": "pass_with_api_live_test_skipped",
+      "skipReason": "BANKING_LAB_E2E_API_BASE_URL was not set"
     }
   ],
   "remainingLimits": [
-    "No dedicated Next.js call-center console shell yet",
-    "No browser E2E evidence yet",
     "No live Keycloak/JWKS propagation evidence for call-center routes yet",
+    "No live full-stack call-center browser run has been recorded yet",
     "No real telephony, call recording, PII, KYC/AML provider, payment network, or regulator integration"
   ]
 }
-
