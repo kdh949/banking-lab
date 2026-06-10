@@ -2,6 +2,9 @@ import { readFile } from "node:fs/promises";
 
 const workflowPath = ".github/workflows/ci.yml";
 const source = await readFile(workflowPath, "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8")) as { scripts?: Record<string, string> };
+const formalCheckerSource = await readFile("scripts/check-tla-model.ts", "utf8");
+const securityEvidenceSource = await readFile("scripts/run-security-evidence.ts", "utf8");
 const errors: string[] = [];
 
 const requiredJobs = [
@@ -20,13 +23,47 @@ const requiredJobs = [
   "formal-model"
 ];
 
+const requiredScripts = [
+  "test",
+  "validate:manifests",
+  "packages:typecheck",
+  "scripts:typecheck",
+  "ci:check-workflow",
+  "test:core-banking:unit",
+  "test:core-banking:integration",
+  "test:payment-service:unit",
+  "test:payment-service:integration",
+  "test:notification-service:unit",
+  "test:notification-service:integration",
+  "test:reporting-service:unit",
+  "test:reporting-service:integration",
+  "contracts:lint",
+  "contracts:check-client",
+  "contracts:check-events",
+  "platform:validate",
+  "security:evidence",
+  "formal:ledger"
+];
+
 for (const jobId of requiredJobs) {
   if (!jobSection(jobId)) {
     errors.push(`Missing CI job: ${jobId}`);
   }
 }
 
+for (const scriptName of requiredScripts) {
+  if (!packageJson.scripts?.[scriptName]) {
+    errors.push(`Missing package.json script: ${scriptName}`);
+  }
+}
+
+requireJobCommand("node-and-manifests", "npm test");
+requireJobCommand("node-and-manifests", "npm run validate:manifests");
+requireJobCommand("node-and-manifests", "npm run packages:typecheck");
+requireJobCommand("node-and-manifests", "npm run scripts:typecheck");
 requireJobCommand("node-and-manifests", "npm run ci:check-workflow");
+requireJobCommand("next-builds", "npm run next:${{ matrix.app }}:typecheck");
+requireJobCommand("next-builds", "npm run next:${{ matrix.app }}:build");
 requireJobCommand("backend-core-banking", "scripts/run-core-banking-tests.sh :services:core-banking:test");
 requireJobCommand("backend-core-banking", "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest");
 
@@ -46,6 +83,37 @@ requireJobCommand("contracts-validation", "tests/stackRetirementAreaAudit.test.m
 requireJobCommand("contracts-validation", "npm run contracts:lint");
 requireJobCommand("contracts-validation", "npm run contracts:check-client");
 requireJobCommand("contracts-validation", "npm run contracts:check-events");
+requireJobCommand("playwright-manifest-e2e", "npm run test:e2e");
+requireJobCommand("security-evidence", "npm audit --audit-level=high");
+requireJobCommand("security-evidence", "npm run security:evidence");
+requireJobCommand("formal-model", "npm run formal:ledger");
+
+const securityJob = jobSection("security-evidence") ?? "";
+if (/continue-on-error:\s*true/u.test(securityJob)) {
+  errors.push("security-evidence job must not be marked continue-on-error.");
+}
+
+for (const token of [
+  "process.env.CI",
+  "process.env.GITHUB_ACTIONS",
+  "BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY",
+  "Static-only formal checks are not allowed"
+]) {
+  if (!formalCheckerSource.includes(token)) {
+    errors.push(`Formal checker must enforce non-static CI evidence token: ${token}`);
+  }
+}
+
+for (const token of [
+  "totals",
+  "skipped",
+  "BANKING_LAB_DAST_URL",
+  "Security evidence:"
+]) {
+  if (!securityEvidenceSource.includes(token)) {
+    errors.push(`Security evidence runner must report skip/pass/fail detail token: ${token}`);
+  }
+}
 
 if (!source.includes("workflow_dispatch:")) {
   errors.push("CI workflow must keep workflow_dispatch for manual runs.");
