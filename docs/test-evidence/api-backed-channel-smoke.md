@@ -1,10 +1,14 @@
 # API-backed Channel Smoke Evidence
 
-Date: 2026-06-04
+Review date: 2026-06-10
+
+Original evidence date: 2026-06-04. The 2026-06-10 refresh records the PR #82
+staff-terminal bounded Spring API evidence panel without restoring the retired
+staff route set.
 
 ## Scope
 
-This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the manifest-backed channel apps, plus the current iWorks integrated staff terminal shell. Customer, complaint, operations, audit, FDS/AML, and admin channels retain API-backed smoke coverage. `staff-terminal` no longer exposes the retired API-backed panel or staff manifest renderer; its current frontend evidence is `apps/staff-terminal/e2e/integrated-terminal.spec.ts`, `/api/terminal-status`, and `npm run integrated-terminal:boundary-check`. It does not mark platform retirement ready by itself.
+This evidence records browser-backed Next.js channel calls into the Spring Boot core-banking API across the manifest-backed channel apps, plus the current iWorks integrated staff terminal shell. Customer, complaint, operations, audit, FDS/AML, and admin channels retain API-backed smoke coverage. `staff-terminal` no longer exposes the retired staff route set or staff manifest renderer; its current frontend evidence is `apps/staff-terminal/e2e/integrated-terminal.spec.ts`, `/api/terminal-status`, `StaffApiEvidencePanel`, `npm run integrated-terminal:boundary-check`, and `npm run test:staff-terminal:api-e2e-compose`. It does not mark platform retirement ready by itself.
 
 ## Changes Proven
 
@@ -23,10 +27,10 @@ This evidence records browser-backed Next.js channel calls into the Spring Boot 
 - The Spring customer transfer API now persists channel-visible command outcomes in `customer_transfer_results` so `POSTED`, `HELD`, `FAILED`, and `BLOCKED` statuses can be read without treating failed or held commands as ledger postings.
 - FDS release/block decisions update the linked customer transfer result to `POSTED` or `BLOCKED` after maker-checker approval while retaining balanced ledger posting rules for released transfers.
 - The Spring customer transfer API checks customer ownership before delegating to the ledger service, so customer-channel transfer smoke uses the customer route rather than the generic ledger route.
-- `staff-terminal` renders the iWorks integrated terminal only. Playwright verifies module navigation, unavailable-work X modal, lookup modal, digit-only operator input, status-bar client IP/server time from `/api/terminal-status`, and removal of old staff routes/manifests.
+- `staff-terminal` renders the iWorks integrated terminal plus a bounded Spring API evidence panel. Playwright verifies module navigation, unavailable-work X modal, lookup modal, digit-only operator input, status-bar client IP/server time from `/api/terminal-status`, and removal of old staff routes/manifests. The Compose wrapper proves the panel can call reason-required `staffCustomerDetail` and approval-inbox reads against the Spring API with explicit dev/test simulator-token opt-in.
 - The Spring product-ledger API can list deposit products, create approval-gated rate versions, run deterministic daily interest accruals, and post interest through a balanced `INTEREST_POSTING` ledger transaction.
 - The Spring product-ledger API can list fee policies, create approval-gated fee policy versions, post fee batches through a balanced `FEE_POSTING` ledger transaction, replay the same batch idempotency key without duplicate postings, and refund a targeted posted fee through an approved `FEE_WAIVER` reversal.
-- Staff access, privileged unmask, approval, and WebAuthn controls remain covered by Spring integration tests and passkey evidence artifacts rather than the retired staff-terminal API-backed frontend panel.
+- Staff access, privileged unmask, approval, and WebAuthn controls remain covered by Spring integration tests and passkey evidence artifacts rather than the retired staff-terminal route set. The current staff-terminal API panel is scoped to read-only customer detail and approval-inbox evidence.
 - `complaint-portal` renders an API-backed case panel that calls `GET /api/staff/complaints`.
 - `complaint-portal` can execute the first Spring API-backed browser command smoke by drafting an answer for `CMP-SYN-CMD-001` and approving the resulting maker-checker approval.
 - `complaint-portal` can execute a Spring API-backed browser failure-state smoke by attempting a duplicate answer draft for already answered `CMP-SYN-FAIL-001` and rendering structured `WORKFLOW_STATE_VIOLATION` details from the real route.
