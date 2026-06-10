@@ -11,6 +11,7 @@ The lab models a simulated digital bank with:
 - customer web banking
 - staff integrated terminal
 - electronic complaint portal
+- call-center console
 - FDS/AML review console
 - operations and reconciliation console
 - audit console
@@ -45,7 +46,7 @@ analytics/aml-fds-python  Python/DuckDB/scikit-learn synthetic AML/FDS analytics
 packages/*                TypeScript API, auth, channel UI, screen, and form packages
 screen-manifests          manifest-driven channel and operations screens
 contracts                 OpenAPI, AsyncAPI, event, and Temporal contracts
-db/migrations             Flyway PostgreSQL schema V001-V039
+db/migrations             Flyway PostgreSQL schema V001-V040
 infra                     Docker Compose, Kubernetes, Helm, Terraform, Argo CD, observability, and security assets
 legacy-node-reference     archived Node oracle modules and static reference shells
 runtime                   local Node reference HTTP runtime for parity/oracle comparison
