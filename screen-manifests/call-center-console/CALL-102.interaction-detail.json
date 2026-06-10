@@ -1,0 +1,44 @@
+{
+  "screenId": "CALL-102",
+  "transactionCode": "CALL102",
+  "title": "Call-Center Interaction Detail",
+  "app": "call-center-console",
+  "type": "CASE",
+  "domain": "call-center",
+  "requiredRoles": ["CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "AUDITOR", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "case",
+    "customerContext": true
+  },
+  "workflow": {
+    "name": "callCenterInteractionWorkflow",
+    "states": ["OPEN", "AFTERCALL", "ESCALATED", "CLOSED"]
+  },
+  "sla": {
+    "enabled": true,
+    "targetHours": 24
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CALL_CENTER_MASKED",
+    "eventTypes": ["CALL_CENTER_INTERACTION_STARTED", "CALL_CENTER_INTERACTION_VIEW", "CALL_CENTER_INTERACTION_CLOSED"]
+  },
+  "sections": ["interactionSummary", "customerContext", "notes", "aftercallTasks", "escalations", "workflowTimeline", "auditPanel"],
+  "actions": [
+    {
+      "id": "viewInteraction",
+      "label": "View Interaction",
+      "type": "query",
+      "target": "GET /api/staff/call-center/interactions/{interactionId}"
+    },
+    {
+      "id": "closeInteraction",
+      "label": "Close Interaction",
+      "type": "command",
+      "target": "POST /api/staff/call-center/interactions/{interactionId}/close"
+    }
+  ]
+}
+

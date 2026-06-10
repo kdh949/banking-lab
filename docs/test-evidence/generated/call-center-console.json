@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-06-10T12:37:24.000Z",
+  "status": "partial",
+  "syntheticOnly": true,
+  "scope": "call-center workflow first slice",
+  "implemented": {
+    "postgresTables": [
+      "call_center_interactions",
+      "call_center_notes",
+      "call_center_aftercall_tasks",
+      "call_center_escalations",
+      "call_center_access_audit"
+    ],
+    "springRoutes": [
+      "GET /api/staff/call-center/customers/search",
+      "POST /api/staff/call-center/interactions",
+      "GET /api/staff/call-center/interactions/{interactionId}",
+      "POST /api/staff/call-center/interactions/{interactionId}/notes",
+      "POST /api/staff/call-center/interactions/{interactionId}/aftercall-tasks",
+      "POST /api/staff/call-center/interactions/{interactionId}/escalations",
+      "POST /api/staff/call-center/interactions/{interactionId}/close",
+      "GET /api/staff/call-center/customers/{customerId}/history"
+    ],
+    "manifests": [
+      "CALL-101",
+      "CALL-102",
+      "CALL-103",
+      "CALL-104",
+      "CALL-105",
+      "CALL-106"
+    ]
+  },
+  "controls": {
+    "reasonRequired": true,
+    "maskedByDefault": true,
+    "noteRedaction": true,
+    "rawNoteCopiedToAudit": false,
+    "auditorReadOnly": true,
+    "complaintEscalationSourceReference": true
+  },
+  "verification": [
+    {
+      "command": "npm run validate:manifests",
+      "status": "pass"
+    },
+    {
+      "command": "npm run packages:typecheck",
+      "status": "pass"
+    },
+    {
+      "command": "npm run contracts:check-client",
+      "status": "pass"
+    },
+    {
+      "command": "npm run contracts:lint",
+      "status": "pass"
+    },
+    {
+      "command": "npm run contracts:diff-openapi",
+      "status": "pass"
+    },
+    {
+      "command": "scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.callcenter.CallCenterWorkflowIntegrationTest",
+      "status": "pass_after_sandbox_escalation",
+      "sandboxFailure": "Gradle file-lock socket Operation not permitted"
+    }
+  ],
+  "remainingLimits": [
+    "No dedicated Next.js call-center console shell yet",
+    "No browser E2E evidence yet",
+    "No live Keycloak/JWKS propagation evidence for call-center routes yet",
+    "No real telephony, call recording, PII, KYC/AML provider, payment network, or regulator integration"
+  ]
+}
+

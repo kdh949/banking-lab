@@ -375,6 +375,30 @@
     },
     {
       "method": "GET",
+      "path": "/api/staff/call-center/customers/{customerId}/history",
+      "handler": "callCenterCustomerHistory",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": null,
+      "responseDto": "CallCenterInteractionListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/call-center/customers/search",
+      "handler": "searchCallCenterCustomers",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": null,
+      "responseDto": "CallCenterCustomerSearchResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/call-center/interactions/{interactionId}",
+      "handler": "callCenterInteraction",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": null,
+      "responseDto": "CallCenterInteractionResponse"
+    },
+    {
+      "method": "GET",
       "path": "/api/staff/complaints",
       "handler": "list",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/complaint/ComplaintCaseController.kt",
@@ -1020,6 +1044,46 @@
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/parameters/ParameterAdminController.kt",
       "requestDto": "ParameterChangeRequestCommand",
       "responseDto": "ParameterChangeRequestResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/call-center/interactions",
+      "handler": "startCallCenterInteraction",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": "StartCallCenterInteractionCommand",
+      "responseDto": "CallCenterInteractionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/call-center/interactions/{interactionId}/aftercall-tasks",
+      "handler": "createCallCenterAftercallTask",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": "CallCenterAftercallTaskCommand",
+      "responseDto": "CallCenterAftercallTaskResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/call-center/interactions/{interactionId}/close",
+      "handler": "closeCallCenterInteraction",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": "CloseCallCenterInteractionCommand",
+      "responseDto": "CallCenterInteractionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/call-center/interactions/{interactionId}/escalations",
+      "handler": "escalateCallCenterInteraction",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": "CallCenterEscalationCommand",
+      "responseDto": "CallCenterEscalationResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/call-center/interactions/{interactionId}/notes",
+      "handler": "addCallCenterNote",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt",
+      "requestDto": "CallCenterNoteCommand",
+      "responseDto": "CallCenterNoteResponse"
     },
     {
       "method": "POST",

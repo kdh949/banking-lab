@@ -1,0 +1,40 @@
+{
+  "screenId": "CALL-101",
+  "transactionCode": "CALL101",
+  "title": "Call-Center Customer Search",
+  "app": "call-center-console",
+  "type": "INQUIRY",
+  "domain": "call-center",
+  "requiredRoles": ["CALL_CENTER_AGENT", "CALL_CENTER_MANAGER", "BRANCH_STAFF", "AUDITOR", "COMPLIANCE_MANAGER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": true,
+    "piiAccess": true,
+    "maskingPolicy": "CALL_CENTER_MASKED",
+    "eventTypes": ["CALL_CENTER_CUSTOMER_SEARCH"]
+  },
+  "query": {
+    "fields": [
+      { "name": "query", "label": "Customer Query", "type": "text", "required": false },
+      { "name": "reason", "label": "Business Reason", "type": "text", "required": true }
+    ],
+    "api": "GET /api/staff/call-center/customers/search"
+  },
+  "resultTable": {
+    "columns": ["customerId", "maskedName", "maskedPhone", "customerGrade", "riskGrade"]
+  },
+  "sections": ["search", "resultTable", "customerContext", "auditPanel"],
+  "actions": [
+    {
+      "id": "startInteraction",
+      "label": "Start Interaction",
+      "type": "command",
+      "target": "POST /api/staff/call-center/interactions"
+    }
+  ]
+}
+
