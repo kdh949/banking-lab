@@ -31,7 +31,7 @@ The implementation prioritizes bank-grade controls over UI breadth:
 - staff sensitive access is reason-required and audited
 - high-risk operations require maker-checker approval
 - screens scale through manifests and reusable templates
-- screen manifests are validated for 100+ catalog breadth and unique transaction codes
+- screen manifests are validated for the current synthetic catalog breadth and unique transaction codes
 - every phase has tests and evidence
 
 ## 3. Overall Architecture
@@ -322,9 +322,9 @@ Next engineering slices:
 
 - normalize docs and evidence after each hardening phase so README, the coverage matrix, and evidence reports describe the same implementation state
 - add hosted GitHub Actions run evidence or explicit blocked evidence without treating local commands as hosted green
-- add customer-web and staff-terminal live route-to-API execution evidence for the major demo flows
+- refresh customer-web live route-to-API evidence for the major demo flows, and keep staff-control API evidence separate from the current iWorks terminal boundary unless a new operator route is added
 - extend springdoc/Jackson DTO schema generation beyond the core-banking ledger command, inquiry, and case workflow subsets plus payment-service, notification-service, and reporting-service, and broaden live broker-backed event-envelope coverage beyond the current contract gates
-- add a synthetic-only call-center workflow with reason-required access, masked notes, after-call tasks, escalation, and audit
+- record live synthetic API and Keycloak browser evidence for the call-center workflow without weakening reason-required access, masking, redaction, escalation, and audit controls
 - broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
 - extend high-contention retry or operator-visible failure policy to every future financial command path
 - add live browser evidence for broader session/device UX and authorization exception paths
