@@ -10,9 +10,10 @@ test("target screen manifests validate and cover channel shells", async () => {
   const manifests = await loadManifests(manifestRoot);
   const apps = new Set(manifests.map((manifest) => manifest.app));
 
-  for (const app of ["customer-web", "staff-terminal", "complaint-portal", "ops-console", "audit-console", "fds-aml-console", "admin-console"]) {
+  for (const app of ["customer-web", "complaint-portal", "ops-console", "audit-console", "fds-aml-console", "admin-console"]) {
     assert.equal(apps.has(app), true, `${app} must have target manifest coverage`);
   }
+  assert.equal(apps.has("staff-terminal"), false, "staff-terminal is now the iWorks integrated terminal, not a manifest-backed channel");
   assert.equal(manifests.length >= MINIMUM_MANIFEST_COUNTS.total, true);
 });
 
@@ -85,9 +86,9 @@ test("target admin manifests cover privileged platform controls without one-off 
   assert.equal(systemStatus?.controlMetadata.audit.eventTypes.includes("ADMIN_SYSTEM_STATUS_VIEW"), true);
 });
 
-test("target staff high-risk commands require maker-checker approval metadata", async () => {
+test("target high-risk commands require maker-checker approval metadata", async () => {
   const manifests = await loadExpandedManifests(manifestRoot);
-  const highRiskCommands = manifests.filter((manifest) => manifest.app === "staff-terminal" && manifest.highRisk === true);
+  const highRiskCommands = manifests.filter((manifest) => manifest.highRisk === true);
 
   assert.equal(highRiskCommands.length >= 1, true);
   for (const manifest of highRiskCommands) {
@@ -99,21 +100,14 @@ test("target staff high-risk commands require maker-checker approval metadata", 
   }
 });
 
-test("target complaint workflow manifests cover staff and customer views", async () => {
+test("target complaint workflow manifests cover customer views without staff-terminal manifests", async () => {
   const manifests = await loadExpandedManifests(manifestRoot);
   const byId = new Map(manifests.map((manifest) => [manifest.screenId, manifest]));
 
-  const staffWorkflow = byId.get("CMP-201");
   const customerIntake = byId.get("CMP-101");
   const customerStatus = byId.get("CMP-102");
 
-  assert.equal(staffWorkflow?.app, "staff-terminal");
-  assert.equal(staffWorkflow?.type, "CASE");
-  assert.equal(staffWorkflow?.approval?.makerChecker, true);
-  assert.equal(staffWorkflow?.controlMetadata.approval.makerChecker, true);
-  assert.equal(staffWorkflow?.audit.reasonRequired, true);
-  assert.equal(staffWorkflow?.workflow?.states.includes("WAITING_APPROVAL"), true);
-  assert.equal(staffWorkflow?.workflow?.states.includes("ANSWERED"), true);
+  assert.equal(byId.has("CMP-201"), false);
 
   for (const manifest of [customerIntake, customerStatus]) {
     assert.equal(manifest?.app, "complaint-portal");
@@ -125,43 +119,49 @@ test("target complaint workflow manifests cover staff and customer views", async
   }
 });
 
-test("target staff PII inquiries require reason and non-empty masking policy", async () => {
+test("target PII manifests require reason or self-service masking policy", async () => {
   const manifests = await loadExpandedManifests(manifestRoot);
-  const staffPiiScreens = manifests.filter((manifest) => manifest.app === "staff-terminal" && manifest.audit.piiAccess === true);
+  const piiScreens = manifests.filter((manifest) => manifest.audit.piiAccess === true);
 
-  assert.equal(staffPiiScreens.length >= 2, true);
-  for (const manifest of staffPiiScreens) {
-    assert.equal(manifest.audit.reasonRequired, true, `${manifest.screenId} must require a reason`);
-    if (manifest.type === "INQUIRY") {
-      assert.equal((manifest.audit.eventTypes || []).length > 0, true, `${manifest.screenId} must declare audit events`);
-      assert.equal(manifest.controlMetadata.audit.eventTypes.length > 0, true);
-    }
+  assert.equal(piiScreens.length >= 2, true);
+  for (const manifest of piiScreens) {
+    assert.equal(manifest.audit.reasonRequired || manifest.audit.selfService, true, `${manifest.screenId} must require a reason or self-service masking`);
     assert.notEqual(manifest.audit.maskingPolicy, "NONE", `${manifest.screenId} must mask PII by default`);
     assert.equal(manifest.controlMetadata.masking.defaultMasked, true);
     assert.notEqual(manifest.controlMetadata.masking.policy, "NONE");
   }
 });
 
-test("target staff customer search declares reason and customer search audit event", async () => {
+test("target manifest catalog excludes staff-terminal", async () => {
   const manifests = await loadExpandedManifests(manifestRoot);
-  const customerSearch = manifests.find((manifest) => manifest.screenId === "CST-001");
-  const fields = customerSearch?.formContract.fields || [];
 
-  assert.equal(customerSearch?.transactionCode, "CST001");
-  assert.equal(customerSearch?.audit.eventTypes?.includes("CUSTOMER_SEARCH"), true);
-  assert.equal(customerSearch?.controlMetadata.audit.eventTypes.includes("CUSTOMER_SEARCH"), true);
-  assert.equal(fields.some((field) => field.name === "reason" && field.required === true), true);
-  assert.equal(customerSearch?.formContract.reasonFieldNames.includes("reason"), true);
+  assert.equal(manifests.some((manifest) => manifest.app === "staff-terminal"), false);
+  assert.equal(manifests.some((manifest) => manifest.screenId.startsWith("CST-")), false);
 });
 
-test("target staff PII inquiry validation fails without audit event declaration", async () => {
-  const manifests = await loadManifests(manifestRoot);
-  const customerSearch = manifests.find((manifest) => manifest.screenId === "CST-001");
-  assert.ok(customerSearch);
-
+test("target staff PII inquiry validation still fails without audit event declaration", () => {
   assert.throws(
-    () => validateManifest({ ...customerSearch, audit: { ...customerSearch.audit, eventTypes: [] } }),
-    /CST-001 staff PII inquiry must declare audit\.eventTypes/
+    () =>
+      validateManifest({
+        screenId: "CST-TEST",
+        transactionCode: "CSTTEST",
+        app: "staff-terminal",
+        type: "INQUIRY",
+        domain: "customer",
+        title: "Synthetic staff inquiry",
+        requiredRoles: ["STAFF"],
+        layout: { template: "inquiry" },
+        audit: {
+          enabled: true,
+          reasonRequired: true,
+          piiAccess: true,
+          maskingPolicy: "STAFF_DEFAULT",
+          eventTypes: []
+        },
+        query: { fields: [] },
+        resultTable: { columns: [] }
+      }),
+    /CST-TEST staff PII inquiry must declare audit\.eventTypes/
   );
 });
 
