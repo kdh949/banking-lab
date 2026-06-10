@@ -1,139 +1,222 @@
 # Demo Video Script
 
-## Opening
+Target length: 5-10 minutes.
 
-This is a synthetic Bank-grade Core Banking Lab. It does not connect to real money, real PII, or real payment networks. The point is to show bank-grade control structure: double-entry ledger, idempotency, audit logs, maker-checker, manifest-driven screens, complaints, FDS/AML, and reconciliation.
+Boundary statement: this is a synthetic banking lab. It does not connect to real money, real PII, real KYC/AML providers, card networks, payment networks, regulator filing systems, or external financial-institution APIs.
 
-## Scene 1: Ledger Integrity
+## Scene 1: Synthetic Boundary
+
+Open `README.md`.
 
 Show:
 
-- `services/core-banking`
-- ledger tests
-- balance projection from postings
+- target-stack scope and archived Node oracle boundary
+- explicit local-simulation limits
+- `docs/test-evidence/final-hardening-scorecard.md`
 
 Narration:
 
-Balances are not directly mutated. Every movement is represented as a balanced transaction and postings.
+This portfolio demonstrates bank-grade control patterns in a synthetic environment. The Node runtime is retained only as an archived oracle; target behavior belongs in Spring, PostgreSQL, Next.js, Redpanda/Kafka, Temporal, Python analytics, and platform evidence.
 
-## Scene 2: Staff Integrated Terminal
+## Scene 2: Customer Signup And Login
 
-Open:
-
-- `/staff-terminal`
+Open `/customer-web/signup` and `/customer-web/login`.
 
 Show:
 
-- transaction code input
-- reason-required customer lookup
-- masked PII
-- audit panel
-- approval inbox
-- `APR001` approval inbox tab with API-backed list/detail/approval controls when the Spring API is configured
-- `AUD001` audit log tab with API-backed event list and hash-chain status when the Spring API is configured
+- synthetic signup/login forms
+- session state from Spring auth responses
+- masked customer/account context after login
 
 Narration:
 
-Sensitive staff access requires a reason and leaves an audit event. The approval inbox and audit log are no longer only declared screens; they have conditional Spring API-backed paths. Account hold, limit change, KYC review, fee waiver, and transaction correction now have conditional Spring API-backed command slices; transaction correction uses approval-gated reversal postings instead of mutating original ledger rows.
+Customer self-service uses synthetic identity data only. The secure-default path rejects simulator tokens unless explicit local/test opt-ins are enabled.
 
-## Scene 3: Customer Web Transfer
+## Scene 3: Customer Account And Transfer
 
-Open:
-
-- `/customer-web`
+Open `/customer-web/accounts`, `/customer-web/accounts/[accountId]`, `/customer-web/transfers/new`, and `/customer-web/transfers/[resultId]`.
 
 Show:
 
-- accounts
-- transaction history
-- idempotent transfer result
+- owned account list/detail
+- masked account numbers
+- internal recipient lookup
+- idempotent transfer replay
+- transaction history/status reading the ledger source of truth
 
 Narration:
 
-Customer and staff transaction history read the same ledger source of truth.
+Balances are projections from postings, not mutable truth fields. A retried transfer returns the original result instead of creating duplicate postings.
 
-## Scene 4: Complaint Workflow
+## Scene 4: Staff Reason-Required Lookup
 
-Open:
-
-- `/complaint-portal`
-- `/staff-terminal`
+Open `/staff-terminal` and the Spring staff API evidence.
 
 Show:
 
-- complaint intake
-- staff workflow
+- iWorks integrated terminal shell
+- `/api/terminal-status`
+- `docs/test-evidence/api-backed-channel-smoke.md`
+- `docs/test-evidence/live-route-api-execution.md`
+
+Narration:
+
+The current staff frontend is the integrated terminal shell. Staff Spring control APIs still enforce reason-required access, masking, privileged unmasking, denial audit, and maker-checker controls, but staff-terminal route-to-API execution is not claimed until a new operator route is implemented.
+
+## Scene 5: Fee Waiver Or Transaction Correction Request
+
+Open evidence for `FEE-102`, `FEE-103`, or `LED-103`.
+
+Show:
+
+- reason-required request
+- maker-checker approval row
+- reversal/refund path instead of source-row mutation
+- `docs/test-evidence/api-backed-channel-smoke.md`
+
+Narration:
+
+High-risk operational corrections create approval records and balanced ledger reversal or adjustment effects. Finalized transactions are not edited in place.
+
+## Scene 6: Checker Approval
+
+Open approval evidence and one approval-backed flow.
+
+Show:
+
+- maker request
+- independent checker approval
+- self-approval rejection
+- structured error on invalid workflow transition
+
+Narration:
+
+Maker-checker separation is enforced at the service layer, and invalid approvals fail before business mutation.
+
+## Scene 7: Resulting Ledger Reversal Or Refund
+
+Open ledger evidence.
+
+Show:
+
+- `docs/test-evidence/phase-2-ledger-core.md`
+- `docs/test-evidence/hardening-h3-ledger-db-integrity.md`
+- balanced postings for reversal/refund/adjustment
+
+Narration:
+
+The accounting effect is append-only. Corrections use new balanced transactions, and PostgreSQL triggers reject invalid posted ledger state.
+
+## Scene 8: Complaint Intake And Escalation
+
+Open `/complaint-portal` and complaint evidence.
+
+Show:
+
+- complaint intake/list/detail
+- additional material/reopen/type guide
 - answer draft
-- maker-checker approval
-- customer confirmation
+- checker approval before customer-visible answer
+- workflow failure-state rendering
 
 Narration:
 
-Customer-visible answers are sent only after approval.
+Customer-visible complaint answers are sent only after approval. Timeline and audit rows preserve the case lifecycle.
 
-## Scene 5: FDS and AML
+## Scene 9: FDS Held Transfer Release Or Block
 
-Open:
-
-- `/fds-aml-console`
+Open `/fds-aml-console`.
 
 Show:
 
-- high amount transfer hold
-- FDS release/block
-- AML STR simulation closure
+- held high-amount transfer
+- release request and checker approval
+- block request and no ledger posting
+- duplicate workflow failure state
 
 Narration:
 
-Held transfers do not hit the ledger until a checker approves release.
+A held transfer does not hit the ledger until release is approved. Blocking closes the held result without unsafe postings.
 
-## Scene 6: EOD Reconciliation
+## Scene 10: Ops EOD And Reconciliation
 
-Open:
-
-- `/ops-console`
+Open `/ops-console`.
 
 Show:
 
-- seed transfer
-- run EOD
-- unmatched item
+- EOD/reconciliation monitor
+- mismatch item
 - adjustment request
-- approval
+- checker approval
+- closed-date posting rejection
 
 Narration:
 
-Closed business dates cannot be mutated directly. Corrections are balanced adjustment transactions on an open date.
+Closed business dates reject direct posting. Reconciliation corrections are balanced adjustments on an open business date.
 
-## Scene 7: Coverage and Remaining Gaps
+## Scene 11: Audit Hash Chain And Access History
+
+Open `/audit-console` and customer access history.
+
+Show:
+
+- hash-chain validity
+- reason-required access log
+- masked delivery/reporting artifacts where configured
+- `docs/test-evidence/hardening-h5-operational-security.md`
+
+Narration:
+
+Audit is not a UI-only claim. The hash chain, access history, WORM export simulation, break-glass review, and SIEM drill are backed by tests and generated evidence.
+
+## Scene 12: Call-Center Workflow Boundary
 
 Open:
 
-- `docs/implementation-coverage-matrix.md`
+- `docs/test-evidence/final-hardening-scorecard.md`
+- `docs/test-evidence/live-route-api-execution.md`
 - `docs/test-evidence/evidence-gap-report.md`
 
 Show:
 
-- API-backed, manifest-only, partial, and missing classifications
-- remaining optional hardening items that are not claimed as completed evidence
-- product-ledger Phase C now includes deposit interest, fee policy versioning, fee posting, and targeted fee refund reversal
-- Python/DuckDB analytics now has batch evidence; live Spring/FDS-console linkage remains
-- formal model-checker evidence is executable through bounded state search; local TLC binary is still optional
-- Kubernetes/Helm structural validation and local synthetic load-smoke evidence are present; PostgreSQL backup/restore drill gap remains
+- scorecard row `Call-center 상담 전산`
+- current missing status
+- required future workflow: 상담 이력, 상담 메모, 후처리, escalation, authorization, audit
 
 Narration:
 
-This is a synthetic lab portfolio. The matrix separates what is API-backed from what is only declared, so the demo does not overstate implementation coverage.
+The lab has adjacent staff, complaint, workflow, approval, and audit APIs, but no coherent call-center console or staff-terminal call-center workflow yet. This remains a PLAN gap and is not demonstrated as complete.
+
+## Scene 13: Evidence Pack, CI, Contract, And Formal Gates
+
+Open:
+
+- `docs/test-evidence/evidence-pack-summary.md`
+- `docs/test-evidence/ci-hosted-run-status.md`
+- `docs/test-evidence/contract-validation-hardening.md`
+- `docs/test-evidence/contract-runtime-evidence-boundary.md`
+- `docs/test-evidence/formal-ledger-verification.md`
+
+Show:
+
+- local command evidence
+- hosted CI blocked status, not green
+- OpenAPI/AsyncAPI gates
+- runtime event envelope fixture/source-marker gate
+- formal ledger/idempotency evidence
+
+Narration:
+
+The portfolio separates local pass evidence from hosted CI. GitHub Actions is currently blocked before runner startup by an external billing/spending-limit issue, so it is documented as blocked, not green.
 
 ## Closing
 
 Show:
 
-- `docs/test-evidence/evidence-pack-summary.md`
-- `npm test`
-- `npm run validate:manifests`
-- `npm run test:e2e`
+- `docs/implementation-coverage-matrix.md`
+- `docs/test-evidence/final-hardening-scorecard.md`
+- `docs/test-evidence/evidence-gap-report.md`
 
 Narration:
 
-The repository includes runnable controls and evidence documents, not only UI screens.
+The repository is a synthetic, evidence-backed banking lab. It is useful because the documentation names what is API-backed, what is environment-gated, what is structural, and what is still missing.

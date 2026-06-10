@@ -76,3 +76,35 @@ test("PostgreSQL backup restore drill records live evidence and reusable Docker 
   assert.ok(evidence.checks.some((check) => check.id === "audit-hash-chain-valid" && check.status === "pass"));
   assert.ok(evidence.checks.some((check) => check.id === "synthetic-boundary-valid" && check.status === "pass"));
 });
+
+test("final hardening scorecard and demo script disclose limits without overclaiming", async () => {
+  const scorecard = await readFile("docs/test-evidence/final-hardening-scorecard.md", "utf8");
+  const demo = await readFile("docs/demo-scenarios/demo-video-script.md", "utf8");
+
+  for (const requiredArea of [
+    "Ledger integrity",
+    "Idempotency/reversal/adjustment",
+    "Staff integrated terminal",
+    "Customer channel",
+    "Electronic complaint portal",
+    "Call-center 상담 전산",
+    "FDS/AML 실질 적용",
+    "Payment/notification/reporting bounded contexts",
+    "Security/JWKS/Keycloak",
+    "K8s/Helm/Argo",
+    "Documentation consistency"
+  ]) {
+    assert.match(scorecard, new RegExp(requiredArea.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(scorecard, /Call-center 상담 전산 \| 2\/10 \| missing/);
+  assert.match(scorecard, /Hosted CI \| 3\/10 \| blocked/);
+  assert.match(scorecard, /not as green/);
+  assert.match(scorecard, /no real customer money, real PII, real KYC\/AML provider/);
+  assert.doesNotMatch(scorecard, /production-ready|real banking ready|actual payment network ready/i);
+
+  assert.match(demo, /Scene 12: Call-Center Workflow Boundary/);
+  assert.match(demo, /not demonstrated as complete/);
+  assert.match(demo, /GitHub Actions is currently blocked before runner startup/);
+  assert.doesNotMatch(demo, /PostgreSQL backup\/restore drill gap remains/);
+});
