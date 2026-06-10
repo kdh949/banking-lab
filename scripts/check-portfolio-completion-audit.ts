@@ -65,9 +65,41 @@ type CallCenterEvidence = {
   readonly verification?: unknown;
 };
 
+type FinalCommandRefreshEvidence = {
+  readonly reviewDate?: unknown;
+  readonly issue?: unknown;
+  readonly status?: unknown;
+  readonly syntheticOnly?: unknown;
+  readonly localOnly?: unknown;
+  readonly hostedCiGreenClaim?: unknown;
+  readonly commands?: unknown;
+};
+
+type CommandEvidence = {
+  readonly command?: unknown;
+  readonly status?: unknown;
+};
+
 const requireComplete = process.argv.includes("--require-complete");
 const generatedPath = "docs/test-evidence/generated/portfolio-completion-audit.json";
+const finalCommandRefreshPath = "docs/test-evidence/generated/final-command-refresh-2026-06-11.json";
+const finalCommandRefreshDocPath = "docs/test-evidence/final-command-refresh-2026-06-11.md";
 const errors: string[] = [];
+const requiredFinalCommands = [
+  "npm test",
+  "npm run validate:manifests",
+  "npm run packages:typecheck",
+  "npm run scripts:typecheck",
+  "npm run contracts:lint",
+  "npm run contracts:check-client",
+  "npm run contracts:check-events",
+  "npm run contracts:diff-openapi",
+  "npm run contracts:validate-runtime-events",
+  "npm run platform:validate",
+  "npm run security:posture-check",
+  "npm run formal:ledger",
+  "npm run evidence:pack"
+];
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -140,6 +172,8 @@ const callCenter = await readJson<CallCenterEvidence>("docs/test-evidence/genera
 const scorecard = await read("docs/test-evidence/final-hardening-scorecard.md");
 const demoScript = await read("docs/demo-scenarios/demo-video-script.md");
 const gapReport = await read("docs/test-evidence/evidence-gap-report.md");
+const finalCommandRefreshDoc = await read(finalCommandRefreshDocPath);
+const finalCommandRefresh = await readJson<FinalCommandRefreshEvidence>(finalCommandRefreshPath);
 
 const packageScripts = packageJson?.scripts ?? {};
 const requirements: AuditRequirement[] = [];
@@ -371,29 +405,37 @@ requirements.push(requirement(
 ));
 
 const commandCoverage = includesAll(scorecard, [
-  "npm test",
-  "npm run validate:manifests",
-  "npm run packages:typecheck",
-  "npm run scripts:typecheck",
-  "npm run contracts:lint",
-  "npm run contracts:check-client",
-  "npm run contracts:check-events",
-  "npm run contracts:diff-openapi",
-  "npm run contracts:validate-runtime-events",
-  "npm run platform:validate",
-  "npm run security:posture-check",
-  "npm run formal:ledger",
-  "npm run evidence:pack"
+  ...requiredFinalCommands,
+  "npm run portfolio:completion-audit"
 ]);
+const finalCommandMap = new Map(
+  objectArray<CommandEvidence>(finalCommandRefresh?.commands).map((entry) => [entry.command, entry.status])
+);
+const finalCommandRefreshPass = finalCommandRefresh?.reviewDate === "2026-06-11"
+  && finalCommandRefresh.issue === "https://github.com/kdh949/banking-lab/issues/88"
+  && finalCommandRefresh.status === "pass"
+  && finalCommandRefresh.syntheticOnly === true
+  && finalCommandRefresh.localOnly === true
+  && finalCommandRefresh.hostedCiGreenClaim === false
+  && requiredFinalCommands.every((command) => finalCommandMap.get(command) === "pass")
+  && finalCommandRefreshDoc.includes("not hosted GitHub Actions green evidence");
 requirements.push(requirement(
   "final-command-refresh",
   "Required final commands pass or have explicit blocked evidence.",
-  commandCoverage ? "partial" : "failed",
-  ["docs/test-evidence/final-hardening-scorecard.md"],
-  commandCoverage
-    ? "Final command list is documented, but this audit does not prove all commands were freshly rerun in the current branch."
-    : "Final command list is missing required PLAN commands.",
-  "Run the full local refresh list and record command results in the next release evidence pack."
+  commandCoverage && finalCommandRefreshPass ? "pass" : commandCoverage ? "partial" : "failed",
+  [
+    "docs/test-evidence/final-hardening-scorecard.md",
+    finalCommandRefreshDocPath,
+    finalCommandRefreshPath
+  ],
+  commandCoverage && finalCommandRefreshPass
+    ? "Final local command refresh evidence exists for the required PLAN command list."
+    : commandCoverage
+      ? "Final command list is documented, but this audit does not prove all commands were freshly rerun in the current branch."
+      : "Final command list is missing required PLAN commands.",
+  commandCoverage && finalCommandRefreshPass
+    ? "Keep this evidence current after material hardening changes."
+    : "Run the full local refresh list and record command results in the next release evidence pack."
 ));
 
 const limitationsDocumented = includesAll(scorecard, [

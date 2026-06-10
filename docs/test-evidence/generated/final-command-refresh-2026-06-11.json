@@ -1,0 +1,94 @@
+{
+  "reviewDate": "2026-06-11",
+  "issue": "https://github.com/kdh949/banking-lab/issues/88",
+  "status": "pass",
+  "syntheticOnly": true,
+  "localOnly": true,
+  "hostedCiGreenClaim": false,
+  "hostedCiReference": "https://github.com/kdh949/banking-lab/issues/83",
+  "notes": [
+    "This artifact records local command refresh evidence only.",
+    "It must not be used as hosted GitHub Actions green evidence.",
+    "The commands used only synthetic data and simulators."
+  ],
+  "commands": [
+    {
+      "command": "npm test",
+      "status": "pass",
+      "summary": "194 tests passed"
+    },
+    {
+      "command": "npm run validate:manifests",
+      "status": "pass",
+      "summary": "Validated 73 screen manifests"
+    },
+    {
+      "command": "npm run packages:typecheck",
+      "status": "pass",
+      "summary": "screen-engine, form-engine, api-client, and auth-client typechecks passed"
+    },
+    {
+      "command": "npm run scripts:typecheck",
+      "status": "pass",
+      "summary": "scripts TypeScript project compiled with no emit"
+    },
+    {
+      "command": "npm run contracts:lint",
+      "status": "pass",
+      "summary": "4 OpenAPI files and 1 AsyncAPI file validated"
+    },
+    {
+      "command": "npm run contracts:check-client",
+      "status": "pass",
+      "summary": "186 operationIds matched 154 shared client methods or exemptions"
+    },
+    {
+      "command": "npm run contracts:check-events",
+      "status": "pass",
+      "summary": "17 AsyncAPI schema references validated"
+    },
+    {
+      "command": "npm run contracts:diff-openapi",
+      "status": "pass",
+      "summary": "core-banking 150, payment-service 14, notification-service 16, reporting-service 6 controller operations matched checked-in OpenAPI"
+    },
+    {
+      "command": "npm run contracts:validate-runtime-events",
+      "status": "pass",
+      "summary": "17 synthetic envelope fixtures validated against 17 event schemas"
+    },
+    {
+      "command": "npm run platform:validate",
+      "status": "pass",
+      "summary": "Kubernetes 27 resources, Helm 27 rendered resources, Argo CD 2 applications; kubectl client dry-run skipped because no cluster was configured"
+    },
+    {
+      "command": "npm run security:posture-check",
+      "status": "pass",
+      "summary": "22 security posture controls verified"
+    },
+    {
+      "command": "npm run formal:ledger",
+      "status": "pass",
+      "summary": "3335 states, 8241 transitions, and 15 invariants checked"
+    },
+    {
+      "command": "npm run evidence:pack",
+      "status": "pass",
+      "summary": "Wrote evidence-pack summary with 38 of 38 checks passing"
+    }
+  ],
+  "generatedArtifactsTouchedByThisRefresh": [
+    "docs/test-evidence/generated/formal-ledger-tlc-result.json",
+    "docs/test-evidence/generated/evidence-pack-summary.json",
+    "docs/test-evidence/evidence-pack-summary.md"
+  ],
+  "preExistingUnrelatedDirtyFilesExcluded": [
+    "PLAN.md",
+    "docs/test-evidence/generated/aml-model-card.json",
+    "docs/test-evidence/generated/aml-regulatory-report.json",
+    "docs/test-evidence/generated/aml-str-report-summary.json",
+    "docs/test-evidence/generated/synthetic-str-report.json",
+    "docs/codex/customer-onboarding-self-service-goals.md"
+  ]
+}
