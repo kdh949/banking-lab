@@ -67,6 +67,7 @@ const allowedSecretValueFragments = [
   "replace-with",
   "synthetic",
   "${",
+  "$(",
   "{{",
   "jdbc:postgresql://",
   "http://",
