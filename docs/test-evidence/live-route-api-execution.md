@@ -14,9 +14,12 @@ This evidence is synthetic-only. It does not use real customer money, real perso
 - The synthetic customer auth token now carries the configured `core-banking-api` audience and a deterministic synthetic device fingerprint; signup/login binds an active synthetic trusted device so the customer transfer route satisfies the trusted-device gate without disabling the policy.
 - `apps/customer-web/e2e/customer-web-parity.spec.ts` contains additional env-gated API and Keycloak browser smokes for transfer retry, insufficient balance, history/status, held/failed transfer statuses, complaint entry, and complaint confirmation.
 - Customer-web routes exist for `/signup`, `/login`, `/accounts`, `/accounts/[accountId]`, `/transfers/new`, `/transfers/[resultId]`, `/complaints`, `/complaints/[caseId]`, `/security`, and `/api/auth/keycloak-token`.
-- `apps/staff-terminal` exposes the iWorks shell plus `/api/terminal-status`, and `StaffApiEvidencePanel` can call Spring staff APIs when `NEXT_PUBLIC_BANKING_API_BASE_URL` and simulator-token opt-in are configured.
-- The staff-terminal bounded Spring API evidence panel calls `staffCustomerDetail("SYN-CUS-001", reason)` and `staffApprovals()` through the shared API client, preserving reason-required audit on customer detail lookup.
-- `npm run test:staff-terminal:api-e2e-compose` passed on 2026-06-11 against disposable PostgreSQL and Spring Boot services, proving the iWorks shell plus bounded staff customer detail and approval-inbox route/API flow.
+- `apps/staff-terminal` exposes the iWorks shell plus `/api/terminal-status`, and the existing one-page terminal now includes API-backed transaction-code screens without adding staff-terminal routes or manifests.
+- `CUS101`, `ACC101`, and `TX101` use shared API client staff inquiry methods for reason-required customer, account, and transaction lookup with masked PII/account data and audit event visibility.
+- `APR101`, `CMD101`, `WRK002`, and `WRK003` expose approval inbox actions, idempotent high-risk command request workbench metadata, outbox retry/dead-letter visibility, and workflow/audit/approval timeline visibility.
+- `CALL101` through `CALL106` expose compact call-center search, interaction, redacted note, aftercall task, history, and escalation flows inside the integrated terminal while the dedicated call-center console remains intact.
+- `StaffApiEvidencePanel` still provides the bounded Spring API evidence panel and Compose smoke path by calling `staffCustomerDetail("SYN-CUS-001", reason)` and `staffApprovals()` through the shared API client, preserving reason-required audit on customer detail lookup.
+- `npm run test:staff-terminal:api-e2e-compose` passed on 2026-06-11 against disposable PostgreSQL and Spring Boot services, proving the iWorks shell plus bounded staff customer detail and approval-inbox route/API flow. The broader transaction-code screens are covered by typecheck, build, boundary check, Playwright smoke, and shared API client contract tests in this slice.
 - The local Compose wrappers use explicit dev/test simulator-token opt-in plus the `core-banking-api` audience expected by the Spring Resource Server.
 
 ## What Is Not Proven
@@ -25,7 +28,7 @@ This evidence is synthetic-only. It does not use real customer money, real perso
 - This slice does not claim hosted CI green; #83 remains the hosted runner blocker.
 - The broader customer-web Keycloak browser smoke remains environment-gated in this document.
 - This slice does not restore the retired `apps/staff-terminal/src/app/accounts`, approvals, audit, customers, tx, or workflows route set.
-- High-risk staff command execution remains backend/security covered unless a dedicated frontend command path is added.
+- High-risk staff command execution from the new workbench records request/approval metadata in the UI, but this evidence does not claim every command branch was live-executed through Compose.
 
 ## Generated Artifact
 

@@ -11,7 +11,7 @@
       "contracts/openapi/reporting-service.yaml"
     ],
     "operationCount": 186,
-    "clientMethodCount": 154,
+    "clientMethodCount": 157,
     "structuralGateScripts": [
       "contracts:lint",
       "contracts:check-client",

@@ -61,8 +61,9 @@ test("OpenAPI generated source diff gate compares Kotlin controller routes to ch
   assert.match(coreContract, /postLedgerAdjustment[\s\S]*#\/components\/schemas\/AdjustmentCommand/);
   assert.match(coreContract, /closeBusinessDay[\s\S]*#\/components\/schemas\/ReconciliationClosingResponse/);
   assert.match(coreContract, /staffCustomerDetail[\s\S]*#\/components\/schemas\/StaffAccessItemResponse_StaffCustomerDetailDto/);
-  assert.match(coreContract, /searchStaffCustomers[\s\S]*#\/components\/schemas\/StaffAccessListResponse_MaskedCustomerDto/);
-  assert.match(coreContract, /searchStaffTransactions[\s\S]*#\/components\/schemas\/StaffAccessListResponse_StaffTransactionDto/);
+  assert.match(coreContract, /staffCustomerSearch[\s\S]*#\/components\/schemas\/StaffAccessListResponse_MaskedCustomerDto/);
+  assert.match(coreContract, /staffAccountSearch[\s\S]*#\/components\/schemas\/StaffAccessListResponse_StaffAccountDto/);
+  assert.match(coreContract, /staffTransactionSearch[\s\S]*#\/components\/schemas\/StaffAccessListResponse_StaffTransactionDto/);
   assert.match(coreContract, /customerAccountDetail[\s\S]*#\/components\/schemas\/CustomerAccountDetailDto/);
   assert.match(coreContract, /requestCustomerComplaint[\s\S]*#\/components\/schemas\/CustomerComplaintEntryCommand[\s\S]*#\/components\/schemas\/CustomerComplaintEntryResponse/);
   assert.match(coreContract, /draftComplaintAnswer[\s\S]*#\/components\/schemas\/ComplaintAnswerDraftCommand[\s\S]*#\/components\/schemas\/ComplaintAnswerDraftResponse/);

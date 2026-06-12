@@ -113,6 +113,8 @@ const staffE2eSpec = await read("apps/staff-terminal/e2e/integrated-terminal.spe
 const staffBoundaryScript = await read("scripts/check-integrated-terminal-boundary.ts");
 const staffPackage = await read("apps/staff-terminal/package.json");
 const staffApiEvidencePanel = await read("apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx");
+const staffTerminalScreens = await read("apps/staff-terminal/src/components/terminal/screens.tsx");
+const staffTerminalRegistry = await read("apps/staff-terminal/src/components/terminal/registry.ts");
 const staffApiComposeSmoke = await read("scripts/run-staff-terminal-api-e2e-compose-smoke.sh");
 const customerApiComposeSmoke = await read("scripts/run-customer-web-self-service-api-e2e-compose-smoke.sh");
 const customerAppFiles = (await listFiles("apps/customer-web/src/app")).sort();
@@ -242,6 +244,10 @@ for (const marker of [
   "/api/terminal-status",
   "staff-terminal Spring API evidence smoke",
   "staff-terminal-api-evidence",
+  "CUS101",
+  "APR101",
+  "WRK003",
+  "CALL101",
   "SYN-CUS-001",
   "clientIp",
   "serverTimeIso",
@@ -282,6 +288,50 @@ for (const marker of [
   "SYN-CUS-001"
 ]) {
   requireIncludes(staffApiEvidencePanel, marker, `StaffApiEvidencePanel is missing API evidence marker: ${marker}`, errors);
+}
+
+for (const marker of [
+  "staffCustomerSearch",
+  "staffAccountSearch",
+  "staffTransactionSearch",
+  "staffOperationalRetryQueue",
+  "staffWorkflowTimeline",
+  "requestAccountHold",
+  "requestAccountHoldRelease",
+  "requestTransferLimitChange",
+  "requestCustomerKycReview",
+  "requestFeeWaiver",
+  "requestTransactionCorrection",
+  "searchCallCenterCustomers",
+  "startCallCenterInteraction",
+  "addCallCenterNote",
+  "createCallCenterAftercallTask",
+  "callCenterCustomerHistory",
+  "escalateCallCenterInteraction",
+  "TerminalApiClientProvider",
+  "ReasonRequiredPanel",
+  "StructuredErrorPanel",
+  "ApprovalActionPanel",
+  "TimelinePanel"
+]) {
+  requireIncludes(staffTerminalScreens, marker, `staff-terminal screens are missing API workflow marker: ${marker}`, errors);
+}
+
+for (const marker of [
+  "CUS101",
+  "ACC101",
+  "TX101",
+  "APR101",
+  "WRK002",
+  "WRK003",
+  "CALL101",
+  "CALL102",
+  "CALL103",
+  "CALL104",
+  "CALL105",
+  "CALL106"
+]) {
+  requireIncludes(staffTerminalRegistry, marker, `staff-terminal registry is missing transaction code marker: ${marker}`, errors);
 }
 
 for (const marker of [
@@ -412,27 +462,59 @@ const evidence: EvidenceDocument = {
       ],
       apiMethods: [
         "terminalStatus",
+        "staffCustomerSearch",
         "staffCustomerDetail",
-        "staffApprovals"
+        "staffAccountSearch",
+        "staffTransactionSearch",
+        "staffApprovals",
+        "staffApproval",
+        "approveStaffApproval",
+        "rejectStaffApproval",
+        "staffOperationalRetryQueue",
+        "staffWorkflowTimeline",
+        "requestAccountHold",
+        "requestAccountHoldRelease",
+        "requestTransferLimitChange",
+        "requestCustomerKycReview",
+        "requestFeeWaiver",
+        "requestTransactionCorrection",
+        "searchCallCenterCustomers",
+        "startCallCenterInteraction",
+        "callCenterInteraction",
+        "addCallCenterNote",
+        "createCallCenterAftercallTask",
+        "callCenterCustomerHistory",
+        "escalateCallCenterInteraction",
+        "closeCallCenterInteraction"
       ],
       states: [
         "integrated-terminal",
         "route-backed-live-gated",
         "reason-required audit",
-        "masked staff customer read"
+        "masked staff customer read",
+        "maker-checker approval",
+        "outbox retry/dead-letter",
+        "workflow timeline",
+        "redacted call-center note"
       ],
       controls: [
         "iWorks shell rendering",
         "terminal status route",
         "source boundary excludes retired staff route set",
         "bounded Spring API evidence panel",
+        "CUS101/ACC101/TX101 reason-required staff inquiries",
+        "APR101 approval inbox approve/reject actions",
+        "CMD101 idempotent high-risk command workbench",
+        "WRK002 outbox retry/dead-letter visibility",
+        "WRK003 workflow/audit/approval timeline visibility",
+        "CALL101-CALL106 compact call-center workflow",
         "simulator token opt-in required",
         "reason-required staff customer detail",
         "approval inbox read through Spring API"
       ],
       notes: [
         "Current staff-terminal keeps the iWorks shell and does not restore the retired accounts, approvals, audit, customer, transaction, or workflow app route set.",
-        "The bounded evidence panel is the only staff-terminal frontend Spring API caller in this slice.",
+        "The integrated terminal exposes API-backed transaction-code screens inside the existing iWorks page instead of creating new Next routes or staff-terminal screen manifests.",
         staffTerminalLivePass
           ? "The local disposable Compose smoke executed the bounded staff customer detail and approval inbox route/API flow."
           : "Use npm run test:staff-terminal:api-e2e-compose to produce local live route-to-API evidence."
