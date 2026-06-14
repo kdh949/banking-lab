@@ -1,0 +1,42 @@
+{
+  "screenId": "CWB-104",
+  "transactionCode": "CWB104",
+  "title": "Customer 360",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "customer",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_360_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/customer/360",
+    "clientMethod": "customer360",
+    "fields": [
+      {
+        "name": "sessionCustomerId",
+        "label": "Customer",
+        "type": "session-customer-id",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["section", "status", "count", "lastUpdatedAt"]
+  },
+  "api": {
+    "query": "GET /api/customer/360",
+    "clientMethod": "customer360",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
+}

@@ -287,3 +287,185 @@ test("Phase 5 customer self-service manifests smoke and evidence are wired", asy
   assert.match(matrix, /Synthetic account opening: `ACC-201`, `ACC-202`/);
   assert.match(matrix, /docs\/test-evidence\/customer-onboarding-self-service\.md/);
 });
+
+test("Phase 6 customer self-service profile onboarding 360 and statements are wired", async () => {
+  const [
+    contract,
+    client,
+    migration,
+    authService,
+    selfServiceController,
+    selfServiceService,
+    accountService,
+    statementService,
+    authFilter,
+    selfServiceUi,
+    profilePage,
+    onboardingPage,
+    customer360Page,
+    accountStatementPage,
+    statementsPage,
+    routes,
+    smoke,
+    evidence,
+    matrix
+  ] = await Promise.all([
+    read("contracts/openapi/core-banking.yaml"),
+    read("packages/api-client/src/index.ts"),
+    read("db/migrations/V042__customer_self_service_360.sql"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementService.kt"),
+    read("services/core-banking/src/main/kotlin/lab/banking/core/security/BankingLabAuthorizationFilter.kt"),
+    read("apps/customer-web/src/components/CustomerSelfService.tsx"),
+    read("apps/customer-web/src/app/profile/page.tsx"),
+    read("apps/customer-web/src/app/onboarding/page.tsx"),
+    read("apps/customer-web/src/app/360/page.tsx"),
+    read("apps/customer-web/src/app/accounts/[accountId]/statement/page.tsx"),
+    read("apps/customer-web/src/app/statements/page.tsx"),
+    read("apps/customer-web/src/components/workflow-routes.tsx"),
+    read("apps/customer-web/e2e/customer-self-service-360.spec.ts"),
+    read("docs/test-evidence/customer-self-service-360.md"),
+    read("docs/implementation-coverage-matrix.md")
+  ]);
+
+  for (const operationId of [
+    "customerProfile",
+    "requestCustomerAccountOpening",
+    "customerAccountOpeningRequests",
+    "customer360",
+    "customerConsolidatedStatement",
+    "customerAccountStatement",
+    "customerStatementArtifacts"
+  ]) {
+    assert.match(contract, new RegExp(`operationId: ${operationId}`));
+    assert.match(client, new RegExp(`${operationId}\\(`));
+  }
+
+  for (const path of [
+    "/api/customer/me",
+    "/api/customer/account-opening-requests",
+    "/api/customer/360",
+    "/api/customer/statements/consolidated",
+    "/api/customer/accounts/{accountId}/statement",
+    "/api/customer/statements/artifacts"
+  ]) {
+    assert.match(contract, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(client, /interface CustomerProfileDto/);
+  assert.match(client, /interface Customer360Dto/);
+  assert.match(client, /interface CustomerStatementArtifactDto/);
+  assert.match(client, /interface CustomerSelfServiceAccountOpeningCommand/);
+
+  assert.match(migration, /CREATE TABLE customer_onboarding_checks/);
+  assert.match(migration, /CREATE TABLE customer_self_service_account_opening_requests/);
+  assert.match(migration, /CREATE TABLE statement_artifact_snapshots/);
+  assert.match(migration, /raw_pii_stored BOOLEAN NOT NULL DEFAULT false/);
+  assert.match(migration, /raw_pii_stored = false/);
+  assert.match(migration, /staff_account_opening_request_id TEXT UNIQUE REFERENCES account_opening_requests/);
+  assert.match(migration, /generated_account_id TEXT REFERENCES accounts/);
+  assert.doesNotMatch(migration, /ledger_transaction_id TEXT/);
+
+  assert.match(authService, /DUPLICATE_IDENTITY/);
+  assert.match(authService, /KYC_SIMULATION/);
+  assert.match(authService, /TERMS_ACCEPTANCE/);
+  assert.match(authService, /CONTACT_REACHABILITY/);
+  assert.match(authService, /rawPiiStored" to false/);
+
+  assert.match(selfServiceController, /@GetMapping\("\/me"\)/);
+  assert.match(selfServiceController, /@PostMapping\("\/account-opening-requests"\)/);
+  assert.match(selfServiceController, /@GetMapping\("\/360"\)/);
+  assert.match(selfServiceService, /CUSTOMER_PROFILE_VIEW/);
+  assert.match(selfServiceService, /CUSTOMER_ACCOUNT_OPENING_REQUESTED/);
+  assert.match(selfServiceService, /CUSTOMER_ACCOUNT_OPENING_STATUS_VIEW/);
+  assert.match(selfServiceService, /CUSTOMER_360_VIEW/);
+  assert.match(selfServiceService, /STATEMENT_ARTIFACT_HISTORY_VIEW/);
+  assert.match(selfServiceService, /CUSTOMER_ACCOUNT_OPENING_ALREADY_PENDING/);
+  assert.match(selfServiceService, /INSERT INTO customer_self_service_account_opening_requests/);
+  assert.doesNotMatch(selfServiceService, /INSERT INTO accounts/);
+  assert.doesNotMatch(selfServiceService, /INSERT INTO ledger_transactions/);
+
+  assert.match(accountService, /recentLedgerActivity/);
+  assert.match(accountService, /CustomerAccountLimitsDto/);
+  assert.match(accountService, /CustomerStatementActionDto/);
+  assert.match(statementService, /sourceLedgerHash/);
+  assert.match(statementService, /payloadHash/);
+  assert.match(statementService, /statement_artifact_snapshots/);
+  assert.match(statementService, /CUSTOMER_ACCOUNT_STATEMENT_VIEW/);
+  assert.match(statementService, /CUSTOMER_CONSOLIDATED_STATEMENT_VIEW/);
+  assert.match(authFilter, /CWB-104/);
+  assert.match(authFilter, /CWB-105/);
+  assert.match(authFilter, /CWB-106/);
+
+  for (const component of [
+    "CustomerProfileView",
+    "CustomerOnboardingView",
+    "Customer360View",
+    "CustomerAccountStatementView",
+    "CustomerConsolidatedStatementsView"
+  ]) {
+    assert.match(selfServiceUi, new RegExp(component));
+  }
+
+  assert.match(profilePage, /CustomerProfileView/);
+  assert.match(onboardingPage, /CustomerOnboardingView/);
+  assert.match(customer360Page, /Customer360View/);
+  assert.match(accountStatementPage, /CustomerAccountStatementView/);
+  assert.match(statementsPage, /CustomerConsolidatedStatementsView/);
+  assert.match(routes, /customer360/);
+  assert.match(routes, /accountStatement/);
+  assert.match(routes, /statements/);
+
+  for (const token of [
+    "customerProfile",
+    "requestCustomerAccountOpening",
+    "customerAccountOpeningRequests",
+    "customer360",
+    "customerAccountStatement",
+    "customerConsolidatedStatement",
+    "customerStatementArtifacts",
+    "profile->onboarding->360->statements"
+  ]) {
+    assert.match(smoke, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(evidence, /Customer Self-Service 360 Evidence/);
+  assert.match(evidence, /CustomerSelfService360IntegrationTest/);
+  assert.match(evidence, /JDK 26/);
+  assert.match(matrix, /Customer profile, onboarding intake, Customer 360, and statements/);
+  assert.match(matrix, /docs\/test-evidence\/customer-self-service-360\.md/);
+});
+
+test("Phase 6 customer self-service manifests declare ownership masking and ledger boundaries", async () => {
+  const manifests = await Promise.all([
+    "CWB-003.customer-profile",
+    "CWB-004.self-service-account-opening-request",
+    "CWB-104.customer-360",
+    "CWB-105.account-statement",
+    "CWB-106.consolidated-statement",
+    "CWB-107.statement-artifact-history"
+  ].map(async (name) => JSON.parse(await read(`screen-manifests/customer-web/${name}.json`))));
+
+  for (const manifest of manifests) {
+    assert.equal(manifest.audit.selfService, true, `${manifest.screenId} must be marked self-service`);
+    assert.equal(manifest.audit.maskingPolicy, "CUSTOMER_SELF");
+    assert.ok(Array.isArray(manifest.audit.eventTypes) && manifest.audit.eventTypes.length > 0);
+    assert.equal(manifest.api.ownershipEnforced, true);
+    assert.equal(manifest.api.syntheticOnly, true);
+    assert.equal(typeof manifest.api.clientMethod, "string");
+  }
+
+  const accountOpening = manifests.find((manifest) => manifest.screenId === "CWB-004");
+  assert.equal(accountOpening.api.idempotencyPolicy, "body.idempotencyKey");
+  assert.equal(accountOpening.api.createsAccount, false);
+  assert.equal(accountOpening.api.createsLedgerPosting, false);
+
+  const statementScreens = manifests.filter((manifest) => ["CWB-105", "CWB-106", "CWB-107"].includes(manifest.screenId));
+  for (const manifest of statementScreens) {
+    assert.equal(manifest.api.sourceLedgerOnly, true);
+    assert.equal(manifest.api.snapshotArtifact, true);
+  }
+});

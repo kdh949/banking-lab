@@ -1,0 +1,51 @@
+{
+  "screenId": "CWB-106",
+  "transactionCode": "CWB106",
+  "title": "Consolidated Statement",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "statement",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_CONSOLIDATED_STATEMENT_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/customer/statements/consolidated",
+    "clientMethod": "customerConsolidatedStatement",
+    "fields": [
+      {
+        "name": "from",
+        "label": "From",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "to",
+        "label": "To",
+        "type": "date",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["statementId", "lineCount", "openingBalanceMinor", "closingBalanceMinor", "sourceLedgerHash"]
+  },
+  "api": {
+    "query": "GET /api/customer/statements/consolidated",
+    "clientMethod": "customerConsolidatedStatement",
+    "ownershipEnforced": true,
+    "syntheticOnly": true,
+    "ledgerReadOnly": true,
+    "sourceLedgerOnly": true,
+    "snapshotArtifact": true
+  }
+}

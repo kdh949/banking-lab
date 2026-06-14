@@ -1,0 +1,57 @@
+{
+  "screenId": "CWB-105",
+  "transactionCode": "CWB105",
+  "title": "Account Statement",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "statement",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_ACCOUNT_STATEMENT_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/customer/accounts/{accountId}/statement",
+    "clientMethod": "customerAccountStatement",
+    "fields": [
+      {
+        "name": "accountId",
+        "label": "Account ID",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "from",
+        "label": "From",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "to",
+        "label": "To",
+        "type": "date",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["statementId", "businessDate", "transactionType", "direction", "amountMinor", "sourceLedgerHash"]
+  },
+  "api": {
+    "query": "GET /api/customer/accounts/{accountId}/statement",
+    "clientMethod": "customerAccountStatement",
+    "ownershipEnforced": true,
+    "syntheticOnly": true,
+    "ledgerReadOnly": true,
+    "sourceLedgerOnly": true,
+    "snapshotArtifact": true
+  }
+}
