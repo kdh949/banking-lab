@@ -114,6 +114,29 @@ class CustomerSelfService360IntegrationTest {
     }
 
     @Test
+    fun `customer self service routes reject missing session before profile audit`() {
+        mockMvc.perform(
+            get("/api/customer/me")
+                .header("x-request-id", "REQ-C360-MISSING-SESSION")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.requestId").value("REQ-C360-MISSING-SESSION"))
+            .andExpect(jsonPath("$.error.route").value("/api/customer/me"))
+
+        mockMvc.perform(
+            get("/api/customer/360")
+                .header("x-request-id", "REQ-C360-360-MISSING-SESSION")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+            .andExpect(jsonPath("$.error.route").value("/api/customer/360"))
+
+        assertEquals(0, countRows("audit_events WHERE event_type = 'CUSTOMER_PROFILE_VIEW'"))
+        assertEquals(0, countRows("audit_events WHERE event_type = 'CUSTOMER_360_VIEW'"))
+    }
+
+    @Test
     fun `self service account opening is idempotent intake without account or ledger mutation`() {
         val accountsBefore = countRows("accounts")
         val ledgerBefore = countRows("ledger_transactions")

@@ -327,7 +327,7 @@ test("Phase 6 customer self-service profile onboarding 360 and statements are wi
     read("apps/customer-web/src/app/statements/page.tsx"),
     read("apps/customer-web/src/components/workflow-routes.tsx"),
     read("apps/customer-web/e2e/customer-self-service-360.spec.ts"),
-    read("docs/test-evidence/customer-self-service-360.md"),
+    read("docs/test-evidence/customer-self-service-360-hardening.md"),
     read("docs/implementation-coverage-matrix.md")
   ]);
 
@@ -432,11 +432,14 @@ test("Phase 6 customer self-service profile onboarding 360 and statements are wi
     assert.match(smoke, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 
-  assert.match(evidence, /Customer Self-Service 360 Evidence/);
+  assert.match(evidence, /Customer Self-Service 360 Hardening Evidence/);
   assert.match(evidence, /CustomerSelfService360IntegrationTest/);
-  assert.match(evidence, /JDK 26/);
+  assert.match(evidence, /missing session/);
+  assert.match(evidence, /JDK 21/);
+  assert.match(evidence, /test:core-banking:integration/);
   assert.match(matrix, /Customer profile, onboarding intake, Customer 360, and statements/);
-  assert.match(matrix, /docs\/test-evidence\/customer-self-service-360\.md/);
+  assert.match(matrix, /docs\/test-evidence\/customer-self-service-360-hardening\.md/);
+  assert.match(matrix, /api-backed-command/);
 });
 
 test("Phase 6 customer self-service manifests declare ownership masking and ledger boundaries", async () => {
