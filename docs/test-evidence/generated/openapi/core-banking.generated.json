@@ -127,6 +127,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/customer/360",
+      "handler": "customer360",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
+      "requestDto": null,
+      "responseDto": "Customer360Dto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/account-opening-requests",
+      "handler": "accountOpeningRequests",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerSelfServiceAccountOpeningRequestListResponse"
+    },
+    {
+      "method": "GET",
       "path": "/api/customer/accounts",
       "handler": "accounts",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
@@ -140,6 +156,14 @@
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
       "requestDto": null,
       "responseDto": "CustomerAccountDetailDto"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/accounts/{accountId}/statement",
+      "handler": "customerAccountStatement",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerStatementDto"
     },
     {
       "method": "GET",
@@ -159,11 +183,35 @@
     },
     {
       "method": "GET",
+      "path": "/api/customer/me",
+      "handler": "profile",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerProfileDto"
+    },
+    {
+      "method": "GET",
       "path": "/api/customer/recipients/internal-account-lookup",
       "handler": "internalAccountLookup",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountController.kt",
       "requestDto": null,
       "responseDto": "InternalRecipientLookupResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/statements/artifacts",
+      "handler": "statementArtifacts",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerStatementArtifactListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/statements/consolidated",
+      "handler": "customerConsolidatedStatement",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/statement/StatementController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerStatementDto"
     },
     {
       "method": "GET",
@@ -676,6 +724,14 @@
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/card/CardController.kt",
       "requestDto": "CardCancelCommand",
       "responseDto": "CardCaptureResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/account-opening-requests",
+      "handler": "requestAccountOpening",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
+      "requestDto": "CustomerSelfServiceAccountOpeningCommand",
+      "responseDto": "CustomerSelfServiceAccountOpeningRequestResponse"
     },
     {
       "method": "POST",
@@ -2466,6 +2522,159 @@
           "nullable": false,
           "ref": null,
           "itemsRef": null
+        },
+        {
+          "name": "openedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "limits",
+          "kotlinType": "CustomerAccountLimitsDto?",
+          "required": false,
+          "nullable": true,
+          "ref": "CustomerAccountLimitsDto",
+          "itemsRef": null
+        },
+        {
+          "name": "holds",
+          "kotlinType": "List<CustomerAccountHoldDto>",
+          "required": false,
+          "nullable": false,
+          "ref": "CustomerAccountHoldDto",
+          "itemsRef": "CustomerAccountHoldDto"
+        },
+        {
+          "name": "recentTransactions",
+          "kotlinType": "List<CustomerRecentLedgerActivityDto>",
+          "required": false,
+          "nullable": false,
+          "ref": "CustomerRecentLedgerActivityDto",
+          "itemsRef": "CustomerRecentLedgerActivityDto"
+        },
+        {
+          "name": "statementActions",
+          "kotlinType": "List<CustomerStatementActionDto>",
+          "required": false,
+          "nullable": false,
+          "ref": "CustomerStatementActionDto",
+          "itemsRef": "CustomerStatementActionDto"
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskingPolicy",
+          "kotlinType": "String",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerAccountHoldDto",
+      "kind": "object",
+      "required": [
+        "holdId",
+        "holdAmountMinor",
+        "reasonCode",
+        "status",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "holdId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "holdAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reasonCode",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvalId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerAccountLimitsDto",
+      "kind": "object",
+      "required": [
+        "dailyTransferLimitMinor",
+        "singleTransferLimitMinor"
+      ],
+      "properties": [
+        {
+          "name": "dailyTransferLimitMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "singleTransferLimitMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
         }
       ],
       "enumValues": []
@@ -2864,6 +3073,164 @@
           "required": true,
           "nullable": false,
           "ref": "ComplaintReopenRequestDto",
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerRecentLedgerActivityDto",
+      "kind": "object",
+      "required": [
+        "transactionId",
+        "transactionType",
+        "businessDate",
+        "accountId",
+        "direction",
+        "amountMinor",
+        "signedAmountMinor",
+        "currency",
+        "postingType",
+        "requestedChannel"
+      ],
+      "properties": [
+        {
+          "name": "transactionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transactionType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "postedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "accountId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "maskedAccountNo",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "direction",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "signedAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "postingType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedChannel",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CustomerStatementActionDto",
+      "kind": "object",
+      "required": [
+        "actionType",
+        "href"
+      ],
+      "properties": [
+        {
+          "name": "actionType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "href",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ownershipEnforced",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": false,
+          "nullable": false,
+          "ref": null,
           "itemsRef": null
         }
       ],

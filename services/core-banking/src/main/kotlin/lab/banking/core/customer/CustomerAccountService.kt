@@ -22,6 +22,7 @@ class CustomerAccountService(
         val items = jdbc.query(
             """
             SELECT a.customer_id, a.account_id, a.account_no, a.status, a.currency,
+                   a.opened_at,
                    COALESCE(p.ledger_balance_minor, 0) AS ledger_balance_minor,
                    COALESCE(p.available_balance_minor, 0) AS available_balance_minor,
                    COALESCE(p.hold_amount_minor, 0) AS hold_amount_minor
@@ -46,6 +47,7 @@ class CustomerAccountService(
         val detail = jdbc.queryForObject(
             """
             SELECT a.customer_id, a.account_id, a.account_no, a.status, a.currency,
+                   a.opened_at,
                    COALESCE(p.ledger_balance_minor, 0) AS ledger_balance_minor,
                    COALESCE(p.available_balance_minor, 0) AS available_balance_minor,
                    COALESCE(p.hold_amount_minor, 0) AS hold_amount_minor
@@ -59,8 +61,23 @@ class CustomerAccountService(
             mapOf("customerId" to customerId, "accountId" to accountId),
             this::mapDetail
         ) ?: throw WorkflowErrors.notFound("customer account not found: $accountId")
-        appendAccountViewAudit(customerId, accountId, detail)
-        return detail
+        val enriched = detail.copy(
+            limits = accountLimits(accountId),
+            holds = accountHolds(accountId),
+            recentTransactions = recentLedgerActivity(customerId, accountId, limit = 10),
+            statementActions = listOf(
+                CustomerStatementActionDto(
+                    actionType = "ACCOUNT_STATEMENT",
+                    href = "/api/customer/accounts/$accountId/statement"
+                ),
+                CustomerStatementActionDto(
+                    actionType = "BALANCE_CERTIFICATE",
+                    href = "/api/accounts/$accountId/balance-certificate"
+                )
+            )
+        )
+        appendAccountViewAudit(customerId, accountId, enriched)
+        return enriched
     }
 
     @Transactional
@@ -163,7 +180,8 @@ class CustomerAccountService(
             currency = rs.getString("currency"),
             ledgerBalanceMinor = rs.getLong("ledger_balance_minor"),
             availableBalanceMinor = rs.getLong("available_balance_minor"),
-            holdAmountMinor = rs.getLong("hold_amount_minor")
+            holdAmountMinor = rs.getLong("hold_amount_minor"),
+            openedAt = rs.getObject("opened_at", java.time.OffsetDateTime::class.java)
         )
 
     private fun mapListItem(rs: ResultSet, rowNum: Int): CustomerAccountListItemDto =
@@ -198,4 +216,80 @@ class CustomerAccountService(
         }
         return "${value.take(4)}-${"*".repeat(maxOf(3, value.length - 10))}-${value.takeLast(4)}"
     }
+
+    private fun accountLimits(accountId: String): CustomerAccountLimitsDto? =
+        jdbc.query(
+            """
+            SELECT daily_transfer_limit_minor, single_transfer_limit_minor, updated_at
+            FROM account_limits
+            WHERE account_id = :accountId
+            """.trimIndent(),
+            mapOf("accountId" to accountId)
+        ) { rs, _ ->
+            CustomerAccountLimitsDto(
+                dailyTransferLimitMinor = rs.getLong("daily_transfer_limit_minor"),
+                singleTransferLimitMinor = rs.getLong("single_transfer_limit_minor"),
+                updatedAt = rs.getObject("updated_at", java.time.OffsetDateTime::class.java)
+            )
+        }.firstOrNull()
+
+    private fun accountHolds(accountId: String): List<CustomerAccountHoldDto> =
+        jdbc.query(
+            """
+            SELECT hold_id, hold_amount_minor, reason_code, status, approval_id, created_at
+            FROM account_holds
+            WHERE account_id = :accountId
+              AND status <> 'RELEASED'
+            ORDER BY created_at DESC, hold_id DESC
+            LIMIT 20
+            """.trimIndent(),
+            mapOf("accountId" to accountId)
+        ) { rs, _ ->
+            CustomerAccountHoldDto(
+                holdId = rs.getString("hold_id"),
+                holdAmountMinor = rs.getLong("hold_amount_minor"),
+                reasonCode = rs.getString("reason_code"),
+                status = rs.getString("status"),
+                approvalId = rs.getString("approval_id"),
+                createdAt = rs.getObject("created_at", java.time.OffsetDateTime::class.java)
+            )
+        }
+
+    private fun recentLedgerActivity(
+        customerId: String,
+        accountId: String,
+        limit: Int
+    ): List<CustomerRecentLedgerActivityDto> =
+        jdbc.query(
+            """
+            SELECT lt.ledger_transaction_id, lt.transaction_type, lt.business_date, lt.posted_at,
+                   lp.account_id, a.account_no, lp.direction, lp.amount_minor, lp.currency, lp.posting_type,
+                   lt.requested_channel
+            FROM ledger_transactions lt
+            JOIN ledger_postings lp ON lp.ledger_transaction_id = lt.ledger_transaction_id
+            JOIN accounts a ON a.account_id = lp.account_id
+            WHERE a.customer_id = :customerId
+              AND lp.account_id = :accountId
+            ORDER BY lt.business_date DESC, lt.posted_at DESC NULLS LAST, lt.ledger_transaction_id DESC, lp.ledger_posting_id DESC
+            LIMIT :limit
+            """.trimIndent(),
+            mapOf("customerId" to customerId, "accountId" to accountId, "limit" to limit)
+        ) { rs, _ ->
+            val direction = rs.getString("direction")
+            val amount = rs.getLong("amount_minor")
+            CustomerRecentLedgerActivityDto(
+                transactionId = rs.getString("ledger_transaction_id"),
+                transactionType = rs.getString("transaction_type"),
+                businessDate = rs.getObject("business_date", java.time.LocalDate::class.java),
+                postedAt = rs.getObject("posted_at", java.time.OffsetDateTime::class.java),
+                accountId = rs.getString("account_id"),
+                maskedAccountNo = maskAccountNo(rs.getString("account_no")),
+                direction = direction,
+                amountMinor = amount,
+                signedAmountMinor = if (direction == "DEBIT") -amount else amount,
+                currency = rs.getString("currency").trim(),
+                postingType = rs.getString("posting_type"),
+                requestedChannel = rs.getString("requested_channel")
+            )
+        }
 }

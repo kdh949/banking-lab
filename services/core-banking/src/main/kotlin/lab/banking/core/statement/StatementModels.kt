@@ -20,6 +20,9 @@ data class StatementLineDto(
 )
 
 data class CustomerStatementDto(
+    val statementId: String? = null,
+    val statementScope: String = "CONSOLIDATED",
+    val accountId: String? = null,
     val customerId: String,
     val from: LocalDate,
     val to: LocalDate,
@@ -31,6 +34,10 @@ data class CustomerStatementDto(
     val netAmountMinor: Long,
     val lineCount: Int,
     val lines: List<StatementLineDto>,
+    val sourceLedgerHash: String? = null,
+    val payloadHash: String? = null,
+    val generatedAt: OffsetDateTime? = null,
+    val maskingPolicy: String = "CUSTOMER_SELF",
     val syntheticOnly: Boolean = true
 )
 

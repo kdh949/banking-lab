@@ -10,8 +10,8 @@
       "contracts/openapi/notification-service.yaml",
       "contracts/openapi/reporting-service.yaml"
     ],
-    "operationCount": 186,
-    "clientMethodCount": 154,
+    "operationCount": 193,
+    "clientMethodCount": 161,
     "structuralGateScripts": [
       "contracts:lint",
       "contracts:check-client",

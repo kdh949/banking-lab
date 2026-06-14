@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { API_ERROR_CONTRACT_VERSION, inferApiError } from "../runtime/synthetic-reference/packages/banking-domain/src/index.mjs";
 import { createLabHttpServer, createLabState } from "../runtime/labApp.mjs";
@@ -88,4 +89,17 @@ test("runtime ledger failures return invariant-specific status and error code", 
     assert.match(payload.error.invariant, /available_balance/);
     assert.equal(payload.error.requestId, "REQ-TEST-LEDGER");
   });
+});
+
+test("customer self-service structured error families are documented", async () => {
+  const contract = await readFile("docs/migration/structured-api-error-contract.md", "utf8");
+
+  for (const code of [
+    "CUSTOMER_ONBOARDING_CHECK_FAILED",
+    "CUSTOMER_ACCOUNT_OPENING_ALREADY_PENDING",
+    "CUSTOMER_AUTH_IDENTITY_NOT_ACTIVE",
+    "IDEMPOTENCY_KEY_CONFLICT"
+  ]) {
+    assert.match(contract, new RegExp(`\\\`${code}\\\``));
+  }
 });

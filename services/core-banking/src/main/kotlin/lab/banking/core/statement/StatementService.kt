@@ -1,5 +1,6 @@
 package lab.banking.core.statement
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.security.MessageDigest
 import java.sql.ResultSet
 import java.time.LocalDate
@@ -16,10 +17,62 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class StatementService(
     private val jdbc: NamedParameterJdbcTemplate,
+    private val objectMapper: ObjectMapper,
     private val auditEvents: AuditEventAppender
 ) {
     @Transactional
-    fun customerStatement(customerId: String, from: LocalDate, to: LocalDate, reason: String?): CustomerStatementDto {
+    fun customerStatement(customerId: String, from: LocalDate, to: LocalDate, reason: String?): CustomerStatementDto =
+        buildStatement(
+            customerId = customerId,
+            accountId = null,
+            from = from,
+            to = to,
+            reason = reason,
+            statementScope = "CONSOLIDATED",
+            screenId = "CWB-103"
+        )
+
+    @Transactional
+    fun customerConsolidatedStatement(from: LocalDate, to: LocalDate): CustomerStatementDto {
+        val customerId = currentCustomerId()
+        return buildStatement(
+            customerId = customerId,
+            accountId = null,
+            from = from,
+            to = to,
+            reason = null,
+            statementScope = "CONSOLIDATED",
+            screenId = "CWB-106"
+        )
+    }
+
+    @Transactional
+    fun customerAccountStatement(accountId: String, from: LocalDate, to: LocalDate): CustomerStatementDto {
+        val customerId = currentCustomerId()
+        val account = accountRow(accountId)
+        if (account.customerId != customerId) {
+            throw WorkflowErrors.authorizationViolation("customer token cannot access another customer's account statement")
+        }
+        return buildStatement(
+            customerId = customerId,
+            accountId = accountId,
+            from = from,
+            to = to,
+            reason = null,
+            statementScope = "ACCOUNT",
+            screenId = "CWB-105"
+        )
+    }
+
+    private fun buildStatement(
+        customerId: String,
+        accountId: String?,
+        from: LocalDate,
+        to: LocalDate,
+        reason: String?,
+        statementScope: String,
+        screenId: String
+    ): CustomerStatementDto {
         requireDateRange(from, to)
         val actor = authorizeCustomerOrStaffForCustomer(customerId, reason)
         val lines = jdbc.query(
@@ -33,43 +86,102 @@ class StatementService(
             JOIN accounts a
               ON a.account_id = lp.account_id
             WHERE a.customer_id = :customerId
+              AND (CAST(:accountId AS text) IS NULL OR lp.account_id = :accountId)
               AND lt.business_date >= :from
               AND lt.business_date <= :to
             ORDER BY lt.business_date, lt.posted_at NULLS LAST, lt.ledger_transaction_id, lp.ledger_posting_id
             """.trimIndent(),
-            mapOf("customerId" to customerId, "from" to from, "to" to to),
+            mapOf("customerId" to customerId, "accountId" to accountId, "from" to from, "to" to to),
             this::mapStatementLine
         )
         val currency = lines.firstOrNull()?.currency ?: primaryCurrency(customerId)
+        val openingBalance = if (accountId == null) {
+            customerSignedPostingSum(customerId, toExclusive = from)
+        } else {
+            accountSignedPostingSum(accountId, toExclusive = from)
+        }
+        val closingBalance = if (accountId == null) {
+            customerSignedPostingSum(customerId, toInclusive = to)
+        } else {
+            accountSignedPostingSum(accountId, toInclusive = to)
+        }
+        val debitTotal = lines.filter { it.direction == PostingDirection.DEBIT }.sumOf { it.amountMinor }
+        val creditTotal = lines.filter { it.direction == PostingDirection.CREDIT }.sumOf { it.amountMinor }
+        val netAmount = lines.sumOf { it.signedAmountMinor }
+        val sourceLedgerHash = statementSourceLedgerHash(
+            customerId = customerId,
+            accountId = accountId,
+            from = from,
+            to = to,
+            openingBalanceMinor = openingBalance,
+            closingBalanceMinor = closingBalance,
+            lines = lines
+        )
+        val payloadHash = statementPayloadHash(
+            customerId = customerId,
+            accountId = accountId,
+            from = from,
+            to = to,
+            statementScope = statementScope,
+            currency = currency,
+            openingBalanceMinor = openingBalance,
+            closingBalanceMinor = closingBalance,
+            debitTotalMinor = debitTotal,
+            creditTotalMinor = creditTotal,
+            netAmountMinor = netAmount,
+            lineCount = lines.size,
+            sourceLedgerHash = sourceLedgerHash
+        )
+        val statementId = deterministicId(
+            "STMT",
+            "$customerId:${accountId ?: "ALL"}:$from:$to:$statementScope:$sourceLedgerHash:$payloadHash"
+        )
         val statement = CustomerStatementDto(
+            statementId = statementId,
+            statementScope = statementScope,
+            accountId = accountId,
             customerId = customerId,
             from = from,
             to = to,
             currency = currency,
-            openingBalanceMinor = customerSignedPostingSum(customerId, toExclusive = from),
-            closingBalanceMinor = customerSignedPostingSum(customerId, toInclusive = to),
-            debitTotalMinor = lines.filter { it.direction == PostingDirection.DEBIT }.sumOf { it.amountMinor },
-            creditTotalMinor = lines.filter { it.direction == PostingDirection.CREDIT }.sumOf { it.amountMinor },
-            netAmountMinor = lines.sumOf { it.signedAmountMinor },
+            openingBalanceMinor = openingBalance,
+            closingBalanceMinor = closingBalance,
+            debitTotalMinor = debitTotal,
+            creditTotalMinor = creditTotal,
+            netAmountMinor = netAmount,
             lineCount = lines.size,
-            lines = lines
+            lines = lines,
+            sourceLedgerHash = sourceLedgerHash,
+            payloadHash = payloadHash
         )
         appendReadAudit(
             actor = actor,
-            eventType = "STATEMENT_VIEW",
-            screenId = "CWB-103",
-            businessReferenceId = "$customerId:$from:$to",
+            eventType = statementViewEventType(screenId),
+            screenId = screenId,
+            businessReferenceId = statementId,
             customerId = customerId,
-            accountId = null,
+            accountId = accountId,
             reason = reason,
             payload = mapOf(
+                "statementId" to statementId,
+                "statementScope" to statementScope,
                 "from" to from.toString(),
                 "to" to to.toString(),
                 "lineCount" to statement.lineCount,
+                "sourceLedgerHash" to sourceLedgerHash,
+                "payloadHash" to payloadHash,
+                "maskingPolicy" to statement.maskingPolicy,
                 "syntheticOnly" to true
             )
         )
-        return statement
+        val snapshot = persistStatementArtifactSnapshot(statement)
+        return statement.copy(generatedAt = snapshot.createdAt)
+    }
+
+    private fun statementViewEventType(screenId: String): String = when (screenId) {
+        "CWB-105" -> "CUSTOMER_ACCOUNT_STATEMENT_VIEW"
+        "CWB-106" -> "CUSTOMER_CONSOLIDATED_STATEMENT_VIEW"
+        else -> "STATEMENT_VIEW"
     }
 
     @Transactional
@@ -367,6 +479,25 @@ class StatementService(
             Long::class.java
         ) ?: 0L
 
+    private fun accountSignedPostingSum(
+        accountId: String,
+        toExclusive: LocalDate? = null,
+        toInclusive: LocalDate? = null
+    ): Long =
+        jdbc.queryForObject(
+            """
+            SELECT COALESCE(SUM(CASE WHEN lp.direction = 'DEBIT' THEN -lp.amount_minor ELSE lp.amount_minor END), 0)
+            FROM ledger_postings lp
+            JOIN ledger_transactions lt
+              ON lt.ledger_transaction_id = lp.ledger_transaction_id
+            WHERE lp.account_id = :accountId
+              AND (CAST(:toExclusive AS date) IS NULL OR lt.business_date < :toExclusive)
+              AND (CAST(:toInclusive AS date) IS NULL OR lt.business_date <= :toInclusive)
+            """.trimIndent(),
+            mapOf("accountId" to accountId, "toExclusive" to toExclusive, "toInclusive" to toInclusive),
+            Long::class.java
+        ) ?: 0L
+
     private fun balanceCertificateSource(accountId: String, date: LocalDate): BalanceCertificateSource {
         val rows = jdbc.query(
             """
@@ -535,6 +666,148 @@ class StatementService(
         }
     }
 
+    private fun currentCustomerId(): String {
+        val principal = BankingLabAuthContext.get()
+            ?: throw WorkflowErrors.authorizationViolation("customer token is required")
+        if (!principal.roles.contains("CUSTOMER")) {
+            throw WorkflowErrors.authorizationViolation("CUSTOMER role is required")
+        }
+        return principal.customerId?.takeIf { it.isNotBlank() }
+            ?: throw WorkflowErrors.authorizationViolation("customer token is missing customerId")
+    }
+
+    private fun statementSourceLedgerHash(
+        customerId: String,
+        accountId: String?,
+        from: LocalDate,
+        to: LocalDate,
+        openingBalanceMinor: Long,
+        closingBalanceMinor: Long,
+        lines: List<StatementLineDto>
+    ): String {
+        val fingerprint = lines.joinToString("\n") {
+            listOf(
+                it.transactionId,
+                it.transactionType,
+                it.businessDate,
+                it.postedAt,
+                it.accountId,
+                it.direction,
+                it.amountMinor,
+                it.currency,
+                it.postingType,
+                it.requestedChannel
+            ).joinToString("|")
+        }.ifEmpty { "no-postings:$customerId:${accountId ?: "ALL"}:$from:$to" }
+        return sha256("$customerId:${accountId ?: "ALL"}:$from:$to:$openingBalanceMinor:$closingBalanceMinor:$fingerprint")
+    }
+
+    private fun statementPayloadHash(
+        customerId: String,
+        accountId: String?,
+        from: LocalDate,
+        to: LocalDate,
+        statementScope: String,
+        currency: String,
+        openingBalanceMinor: Long,
+        closingBalanceMinor: Long,
+        debitTotalMinor: Long,
+        creditTotalMinor: Long,
+        netAmountMinor: Long,
+        lineCount: Int,
+        sourceLedgerHash: String
+    ): String =
+        sha256(
+            objectMapper.writeValueAsString(
+                mapOf(
+                    "customerId" to customerId,
+                    "accountId" to accountId,
+                    "from" to from.toString(),
+                    "to" to to.toString(),
+                    "statementScope" to statementScope,
+                    "currency" to currency,
+                    "openingBalanceMinor" to openingBalanceMinor,
+                    "closingBalanceMinor" to closingBalanceMinor,
+                    "debitTotalMinor" to debitTotalMinor,
+                    "creditTotalMinor" to creditTotalMinor,
+                    "netAmountMinor" to netAmountMinor,
+                    "lineCount" to lineCount,
+                    "sourceLedgerHash" to sourceLedgerHash,
+                    "maskingPolicy" to "CUSTOMER_SELF",
+                    "syntheticOnly" to true
+                ).toSortedMap()
+            )
+        )
+
+    private fun persistStatementArtifactSnapshot(statement: CustomerStatementDto): StatementArtifactSnapshot =
+        jdbc.queryForObject(
+            """
+            INSERT INTO statement_artifact_snapshots (
+              statement_id,
+              customer_id,
+              account_id,
+              from_date,
+              to_date,
+              statement_scope,
+              source_ledger_hash,
+              payload_hash,
+              snapshot_json,
+              synthetic_only
+            )
+            VALUES (
+              :statementId,
+              :customerId,
+              :accountId,
+              :fromDate,
+              :toDate,
+              :statementScope,
+              :sourceLedgerHash,
+              :payloadHash,
+              CAST(:snapshotJson AS jsonb),
+              true
+            )
+            ON CONFLICT (statement_id) DO UPDATE
+            SET last_viewed_at = now()
+            RETURNING created_at, last_viewed_at
+            """.trimIndent(),
+            mapOf(
+                "statementId" to statement.statementId,
+                "customerId" to statement.customerId,
+                "accountId" to statement.accountId,
+                "fromDate" to statement.from,
+                "toDate" to statement.to,
+                "statementScope" to statement.statementScope,
+                "sourceLedgerHash" to statement.sourceLedgerHash,
+                "payloadHash" to statement.payloadHash,
+                "snapshotJson" to objectMapper.writeValueAsString(
+                    mapOf(
+                        "statementId" to statement.statementId,
+                        "customerId" to statement.customerId,
+                        "accountId" to statement.accountId,
+                        "from" to statement.from.toString(),
+                        "to" to statement.to.toString(),
+                        "statementScope" to statement.statementScope,
+                        "currency" to statement.currency,
+                        "openingBalanceMinor" to statement.openingBalanceMinor,
+                        "closingBalanceMinor" to statement.closingBalanceMinor,
+                        "debitTotalMinor" to statement.debitTotalMinor,
+                        "creditTotalMinor" to statement.creditTotalMinor,
+                        "netAmountMinor" to statement.netAmountMinor,
+                        "lineCount" to statement.lineCount,
+                        "sourceLedgerHash" to statement.sourceLedgerHash,
+                        "payloadHash" to statement.payloadHash,
+                        "maskingPolicy" to statement.maskingPolicy,
+                        "syntheticOnly" to true
+                    )
+                )
+            )
+        ) { rs, _ ->
+            StatementArtifactSnapshot(
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+                lastViewedAt = rs.getObject("last_viewed_at", OffsetDateTime::class.java)
+            )
+        } ?: error("statement artifact snapshot was not returned")
+
     private fun appendReadAudit(
         actor: ReadActor,
         eventType: String,
@@ -654,6 +927,11 @@ class StatementService(
                 syntheticOnly = syntheticOnly
             )
     }
+
+    private data class StatementArtifactSnapshot(
+        val createdAt: OffsetDateTime,
+        val lastViewedAt: OffsetDateTime
+    )
 
     private companion object {
         val STAFF_READ_ROLES = setOf(

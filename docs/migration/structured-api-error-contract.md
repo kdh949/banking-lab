@@ -60,6 +60,10 @@ Kotlin/Spring Boot controllers and the current Node reference runtime must repor
 | `LEDGER_CLOSED_DAY_IMMUTABLE` | ledger | Direct posting is attempted on a closed business date. |
 | `LEDGER_REVERSAL_POLICY_VIOLATION` | ledger | Duplicate or invalid reversal request. |
 | `REQUEST_VALIDATION_FAILED` | validation | Required payload/query value is missing or invalid. |
+| `CUSTOMER_ONBOARDING_CHECK_FAILED` | validation | Synthetic onboarding check failed and blocks customer self-service progression. |
+| `CUSTOMER_ACCOUNT_OPENING_ALREADY_PENDING` | account-opening | Customer already has a pending self-service account-opening intake for the same product and currency. |
+| `CUSTOMER_AUTH_IDENTITY_NOT_ACTIVE` | auth | Customer route requires an active synthetic auth identity but the identity is locked or disabled. |
+| `IDEMPOTENCY_KEY_CONFLICT` | idempotency | Externally retried command reused an idempotency key with a different command hash. |
 | `RESOURCE_NOT_FOUND` | resource | Synthetic customer, account, case, transaction, or route is missing. |
 | `WORKFLOW_STATE_VIOLATION` | workflow | Transition is invalid for the current state. |
 | `INTERNAL_RUNTIME_ERROR` | runtime | Unmapped reference runtime exception. |

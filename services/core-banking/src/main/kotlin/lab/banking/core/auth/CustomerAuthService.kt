@@ -123,7 +123,7 @@ class CustomerAuthService(
         val identity = identityByUsernameForUpdate(username) ?: throw invalidCredentials(username)
         if (identity.status != "ACTIVE") {
             throw BankingLabDomainException(
-                code = "CUSTOMER_AUTH_IDENTITY_DISABLED",
+                code = "CUSTOMER_AUTH_IDENTITY_NOT_ACTIVE",
                 status = HttpStatus.FORBIDDEN,
                 domain = "auth",
                 policy = "ACTIVE_SYNTHETIC_CUSTOMER_AUTH_REQUIRED",
@@ -161,6 +161,7 @@ class CustomerAuthService(
         replayed: Boolean,
         eventType: String
     ): CustomerAuthResponse {
+        val onboarding = ensureOnboardingChecks(identity)
         ensureSyntheticTrustedDevice(identity)
         val issued = tokenIssuer.issue(
             authSubject = identity.authSubject,
@@ -173,14 +174,171 @@ class CustomerAuthService(
                 customerId = identity.customerId,
                 authSubject = identity.authSubject,
                 username = identity.username,
-                kycStatus = identity.kycStatus
+                kycStatus = identity.kycStatus,
+                onboardingStatus = onboarding.onboardingStatus,
+                duplicateCheckStatus = onboarding.duplicateCheckStatus,
+                nextRequiredAction = onboarding.nextRequiredAction
             ),
             session = issued.session,
             bearerToken = issued.bearerToken,
             expiresAt = issued.expiresAt,
-            replayed = replayed
+            replayed = replayed,
+            onboardingStatus = onboarding.onboardingStatus,
+            duplicateCheckStatus = onboarding.duplicateCheckStatus,
+            nextRequiredAction = onboarding.nextRequiredAction
         )
     }
+
+    private fun ensureOnboardingChecks(identity: CustomerAuthIdentityRecord): OnboardingSummary {
+        val profile = customerProfileForOnboardingChecks(identity.customerId)
+        val duplicateCount = jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM customers
+            WHERE customer_id <> :customerId
+              AND lower(customer_name) = lower(:customerName)
+              AND lower(COALESCE(customer_phone, '')) = lower(:customerPhone)
+              AND lower(COALESCE(customer_address, '')) = lower(:customerAddress)
+            """.trimIndent(),
+            mapOf(
+                "customerId" to identity.customerId,
+                "customerName" to profile.customerName,
+                "customerPhone" to profile.customerPhone.orEmpty(),
+                "customerAddress" to profile.customerAddress.orEmpty()
+            ),
+            Int::class.java
+        ) ?: 0
+        val profileFingerprint = profileFingerprint(
+            profile.customerName,
+            profile.customerPhone,
+            profile.customerAddress
+        )
+        val checkInputs = listOf(
+            OnboardingCheckInput(
+                checkType = "DUPLICATE_IDENTITY",
+                status = if (duplicateCount > 0) "REVIEW_REQUIRED" else "PASSED",
+                riskLevel = if (duplicateCount > 0) "MEDIUM" else "LOW",
+                evidence = mapOf(
+                    "profileFingerprint" to profileFingerprint,
+                    "duplicateCandidateCount" to duplicateCount,
+                    "rawPiiStored" to false,
+                    "syntheticOnly" to true
+                )
+            ),
+            OnboardingCheckInput(
+                checkType = "KYC_SIMULATION",
+                status = when (identity.kycStatus) {
+                    "VERIFIED" -> "PASSED"
+                    "REVIEW_REQUIRED" -> "REVIEW_REQUIRED"
+                    "REJECTED" -> "FAILED"
+                    else -> "PENDING"
+                },
+                riskLevel = if (identity.kycStatus == "REJECTED") "HIGH" else "LOW",
+                evidence = mapOf(
+                    "kycStatus" to identity.kycStatus,
+                    "realKycProviderCalled" to false,
+                    "syntheticOnly" to true
+                )
+            ),
+            OnboardingCheckInput(
+                checkType = "TERMS_ACCEPTANCE",
+                status = "PASSED",
+                riskLevel = "LOW",
+                evidence = mapOf(
+                    "acceptedThrough" to "CUSTOMER_SELF_SIGNUP",
+                    "legalDocumentDeliveryPerformed" to false,
+                    "syntheticOnly" to true
+                )
+            ),
+            OnboardingCheckInput(
+                checkType = "CONTACT_REACHABILITY",
+                status = "PASSED",
+                riskLevel = "LOW",
+                evidence = mapOf(
+                    "profileFingerprint" to profileFingerprint,
+                    "realSmsOrEmailSent" to false,
+                    "syntheticOnly" to true
+                )
+            )
+        )
+        checkInputs.forEach { input ->
+            jdbc.update(
+                """
+                INSERT INTO customer_onboarding_checks (
+                  check_id, customer_id, check_type, status, risk_level, evidence_json, synthetic_only
+                )
+                VALUES (
+                  :checkId, :customerId, :checkType, :status, :riskLevel, CAST(:evidenceJson AS jsonb), true
+                )
+                ON CONFLICT (customer_id, check_type) DO NOTHING
+                """.trimIndent(),
+                mapOf(
+                    "checkId" to "CHK-${identity.customerId}-${input.checkType}",
+                    "customerId" to identity.customerId,
+                    "checkType" to input.checkType,
+                    "status" to input.status,
+                    "riskLevel" to input.riskLevel,
+                    "evidenceJson" to objectMapper.writeValueAsString(input.evidence)
+                )
+            )
+        }
+        val statuses = jdbc.query(
+            """
+            SELECT check_type, status
+            FROM customer_onboarding_checks
+            WHERE customer_id = :customerId
+            """.trimIndent(),
+            mapOf("customerId" to identity.customerId)
+        ) { rs, _ -> rs.getString("check_type") to rs.getString("status") }.toMap()
+        val duplicateStatus = statuses["DUPLICATE_IDENTITY"] ?: "UNKNOWN"
+        return OnboardingSummary(
+            onboardingStatus = onboardingStatus(identity.kycStatus, statuses),
+            duplicateCheckStatus = duplicateStatus,
+            nextRequiredAction = nextRequiredAction(identity.kycStatus, statuses)
+        )
+    }
+
+    private fun onboardingStatus(kycStatus: String, checks: Map<String, String>): String {
+        if (checks.values.any { it == "FAILED" }) {
+            return "BLOCKED"
+        }
+        if (checks.values.any { it == "REVIEW_REQUIRED" }) {
+            return "REVIEW_REQUIRED"
+        }
+        if (kycStatus != "VERIFIED" || checks.values.any { it == "PENDING" }) {
+            return "PENDING_KYC"
+        }
+        return "COMPLETE"
+    }
+
+    private fun nextRequiredAction(kycStatus: String, checks: Map<String, String>): String {
+        if (checks["DUPLICATE_IDENTITY"] == "REVIEW_REQUIRED") {
+            return "WAIT_FOR_STAFF_DUPLICATE_REVIEW"
+        }
+        if (checks.values.any { it == "FAILED" }) {
+            return "CONTACT_SYNTHETIC_SUPPORT"
+        }
+        if (kycStatus != "VERIFIED" || checks["KYC_SIMULATION"] == "PENDING") {
+            return "WAIT_FOR_SYNTHETIC_KYC_REVIEW"
+        }
+        return "NONE"
+    }
+
+    private fun customerProfileForOnboardingChecks(customerId: String): CustomerProfileForChecks =
+        jdbc.queryForObject(
+            """
+            SELECT customer_name, customer_phone, customer_address
+            FROM customers
+            WHERE customer_id = :customerId
+            """.trimIndent(),
+            mapOf("customerId" to customerId)
+        ) { rs, _ ->
+            CustomerProfileForChecks(
+                customerName = rs.getString("customer_name"),
+                customerPhone = rs.getString("customer_phone"),
+                customerAddress = rs.getString("customer_address")
+            )
+        } ?: throw WorkflowErrors.notFound("synthetic customer not found: $customerId")
 
     private fun ensureSyntheticTrustedDevice(identity: CustomerAuthIdentityRecord) {
         jdbc.update(
@@ -460,6 +618,15 @@ class CustomerAuthService(
     private fun metadataJson(vararg entries: Pair<String, Any?>): String =
         objectMapper.writeValueAsString(mapOf("syntheticOnly" to true, *entries))
 
+    private fun profileFingerprint(name: String, phone: String?, address: String?): String =
+        sha256(
+            listOf(
+                name.trim().lowercase(),
+                phone.orEmpty().filter { it.isDigit() },
+                address.orEmpty().trim().lowercase().replace(Regex("\\s+"), " ")
+            ).joinToString("|")
+        )
+
     private fun nextSignupSequence(): Long =
         jdbc.queryForObject(
             "SELECT nextval('synthetic_customer_signup_customer_seq')",
@@ -505,5 +672,24 @@ class CustomerAuthService(
         val signupIdempotencyKey: String?,
         val signupCommandHash: String?,
         val kycStatus: String
+    )
+
+    private data class CustomerProfileForChecks(
+        val customerName: String,
+        val customerPhone: String?,
+        val customerAddress: String?
+    )
+
+    private data class OnboardingCheckInput(
+        val checkType: String,
+        val status: String,
+        val riskLevel: String,
+        val evidence: Map<String, Any?>
+    )
+
+    private data class OnboardingSummary(
+        val onboardingStatus: String,
+        val duplicateCheckStatus: String,
+        val nextRequiredAction: String
     )
 }
