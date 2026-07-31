@@ -406,6 +406,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/SettlementBatchRunResponse'
 
+
+  /api/payments/reconciliation/runs:
+    post:
+      summary: Create an idempotent payment-ledger-external three-way reconciliation run
+      operationId: createPaymentReconciliationRun
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentReconciliationRunRequest'
+      responses:
+        '201':
+          description: Reconciliation run finalized with matched results or durable exceptions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+        '200':
+          description: Idempotent replay of a terminal reconciliation run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+        '409':
+          description: Conflicting idempotency, duplicate import run, or an active evidence claim
+        '503':
+          description: Core Banking ledger evidence unavailable; replay the same idempotency key
+  /api/payments/reconciliation/runs/{runId}:
+    get:
+      summary: Read a reconciliation run and its reason-audited results
+      operationId: getPaymentReconciliationRun
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^PRR-' }
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Reconciliation run, mismatch snapshots, owner, SLA, and aging state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+  /api/payments/reconciliation/exceptions:
+    get:
+      summary: List open payment reconciliation exceptions with owner and SLA aging
+      operationId: listPaymentReconciliationExceptions
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - name: ownerId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentReconciliationResultStatus'
+        - name: overdueOnly
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Reason-audited reconciliation exception queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationExceptionListResponse'
 components:
   responses:
     StructuredErrorResponse:
@@ -437,6 +523,145 @@ components:
         type: string
         pattern: '^PCR-'
   schemas:
+
+    PaymentReconciliationRunStatus:
+      type: string
+      enum: [EVIDENCE_PENDING, MATCHED, EXCEPTIONS_OPEN, FAILED]
+    PaymentReconciliationMismatchType:
+      type: string
+      enum:
+        - MATCHED
+        - MISSING_PAYMENT
+        - MISSING_LEDGER
+        - MISSING_EXTERNAL
+        - AMOUNT_MISMATCH
+        - STATUS_MISMATCH
+        - DUPLICATE_EXTERNAL
+        - VALUE_DATE_MISMATCH
+        - LATE_SETTLEMENT
+    PaymentReconciliationResultStatus:
+      type: string
+      enum: [MATCHED, OPEN, INVESTIGATING, RESOLVED]
+    CreatePaymentReconciliationRunRequest:
+      type: object
+      required:
+        - externalSettlementImportId
+        - expectedValueDate
+        - ownerId
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        externalSettlementImportId: { type: string, pattern: '^ESI-' }
+        expectedValueDate: { type: string, format: date }
+        allowedValueDateLagDays: { type: integer, minimum: 0, maximum: 30, default: 0 }
+        slaDays: { type: integer, minimum: 1, maximum: 30, default: 2 }
+        ownerId: { type: string }
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason: { type: string }
+    PaymentReconciliationRunDto:
+      type: object
+      required:
+        - paymentReconciliationRunId
+        - externalSettlementImportId
+        - businessDate
+        - expectedValueDate
+        - allowedValueDateLagDays
+        - slaDays
+        - ownerId
+        - status
+        - externalLineCount
+        - ledgerEvidenceCount
+        - matchedCount
+        - exceptionCount
+        - attemptCount
+        - syntheticOnly
+        - createdAt
+        - updatedAt
+      properties:
+        paymentReconciliationRunId: { type: string, pattern: '^PRR-' }
+        externalSettlementImportId: { type: string, pattern: '^ESI-' }
+        businessDate: { type: string, format: date }
+        expectedValueDate: { type: string, format: date }
+        allowedValueDateLagDays: { type: integer, minimum: 0 }
+        slaDays: { type: integer, minimum: 1 }
+        ownerId: { type: string }
+        status: { $ref: '#/components/schemas/PaymentReconciliationRunStatus' }
+        externalLineCount: { type: integer, minimum: 0 }
+        ledgerEvidenceCount: { type: integer, minimum: 0 }
+        matchedCount: { type: integer, minimum: 0 }
+        exceptionCount: { type: integer, minimum: 0 }
+        attemptCount: { type: integer, minimum: 1 }
+        failureMessage: { type: string, nullable: true }
+        syntheticOnly: { const: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    PaymentReconciliationResultDto:
+      type: object
+      required:
+        - paymentReconciliationResultId
+        - paymentReconciliationRunId
+        - paymentInstructionId
+        - mismatchType
+        - resultStatus
+        - businessDate
+        - expectedValueDate
+        - ownerId
+        - detectedReason
+        - detectedAt
+        - agingDays
+        - overdue
+        - syntheticOnly
+      properties:
+        paymentReconciliationResultId: { type: string, pattern: '^PRC-' }
+        paymentReconciliationRunId: { type: string, pattern: '^PRR-' }
+        externalSettlementLineId: { type: string, pattern: '^ESL-', nullable: true }
+        paymentInstructionId: { type: string, pattern: '^PAY-' }
+        ledgerTransactionId: { type: string, pattern: '^TX-', nullable: true }
+        mismatchType: { $ref: '#/components/schemas/PaymentReconciliationMismatchType' }
+        resultStatus: { $ref: '#/components/schemas/PaymentReconciliationResultStatus' }
+        internalAmountMinor: { type: integer, minimum: 1, nullable: true }
+        ledgerAmountMinor: { type: integer, minimum: 1, nullable: true }
+        externalAmountMinor: { type: integer, minimum: 1, nullable: true }
+        currency: { type: string, pattern: '^[A-Z]{3}$', nullable: true }
+        externalStatus: { type: string, nullable: true }
+        businessDate: { type: string, format: date }
+        expectedValueDate: { type: string, format: date }
+        actualValueDate: { type: string, format: date, nullable: true }
+        ownerId: { type: string }
+        detectedReason: { type: string }
+        detectedAt: { type: string, format: date-time }
+        dueAt: { type: string, format: date-time, nullable: true }
+        agingDays: { type: integer, minimum: 0 }
+        overdue: { type: boolean }
+        resolution: { type: string, nullable: true }
+        approvalId: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        syntheticOnly: { const: true }
+    PaymentReconciliationRunResponse:
+      type: object
+      required: [item, results, replayed, syntheticOnly]
+      properties:
+        item: { $ref: '#/components/schemas/PaymentReconciliationRunDto' }
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentReconciliationResultDto' }
+        replayed: { type: boolean }
+        auditEventId: { type: string, nullable: true }
+        syntheticOnly: { const: true }
+    PaymentReconciliationExceptionListResponse:
+      type: object
+      required: [items, auditEventId, syntheticOnly]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentReconciliationResultDto' }
+        auditEventId: { type: string, pattern: '^PRA-' }
+        syntheticOnly: { const: true }
     ImportExternalSettlementCsvRequest:
       type: object
       required:

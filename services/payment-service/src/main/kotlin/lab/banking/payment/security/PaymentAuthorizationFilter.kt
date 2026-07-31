@@ -30,6 +30,7 @@ class PaymentAuthorizationFilter(
     private val autopayCommand = Regex("^/api/payments/autopay/agreements/[^/]+/(pause|resume|cancel)$")
     private val paymentSettlementImport = Regex("^/api/payments/settlement/imports/[^/]+$")
     private val paymentSettlementBatchRun = Regex("^/api/payments/settlement/batch-runs/[^/]+$")
+    private val paymentReconciliationRun = Regex("^/api/payments/reconciliation/runs/[^/]+$")
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -88,6 +89,11 @@ class PaymentAuthorizationFilter(
                 setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/payments/settlement/batch-runs" && method == "POST" -> setOf("OPS_OPERATOR", "OPS_MANAGER")
             paymentSettlementBatchRun.matches(path) && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/payments/reconciliation/runs" && method == "POST" -> setOf("OPS_OPERATOR", "OPS_MANAGER")
+            paymentReconciliationRun.matches(path) && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/payments/reconciliation/exceptions" && method == "GET" ->
                 setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             else -> emptySet()
         }

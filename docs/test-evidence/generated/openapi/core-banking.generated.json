@@ -223,6 +223,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/ledger/payment-postings/evidence",
+      "handler": "evidence",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/ledger/evidence/PaymentLedgerEvidenceController.kt",
+      "requestDto": null,
+      "responseDto": "PaymentLedgerEvidenceResponse"
+    },
+    {
+      "method": "GET",
       "path": "/api/loans/{loanId}",
       "handler": "detail",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/loan/LoanController.kt",
@@ -3833,6 +3841,167 @@
           "kotlinType": "String?",
           "required": false,
           "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentLedgerEvidenceDto",
+      "kind": "object",
+      "required": [
+        "ledgerTransactionId",
+        "paymentInstructionId",
+        "businessDate",
+        "transactionType",
+        "status",
+        "currency",
+        "amountMinor",
+        "totalDebitMinor",
+        "totalCreditMinor",
+        "postingCount",
+        "balanced",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "transactionType",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "totalDebitMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "totalCreditMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "postingCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "balanced",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "postedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentLedgerEvidenceResponse",
+      "kind": "object",
+      "required": [
+        "items",
+        "auditEventId",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<PaymentLedgerEvidenceDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentLedgerEvidenceDto",
+          "itemsRef": "PaymentLedgerEvidenceDto"
+        },
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
           "ref": null,
           "itemsRef": null
         }

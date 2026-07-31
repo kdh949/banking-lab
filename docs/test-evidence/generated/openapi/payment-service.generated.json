@@ -23,6 +23,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/payments/reconciliation/exceptions",
+      "handler": "exceptions",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/reconciliation/PaymentReconciliationController.kt",
+      "requestDto": null,
+      "responseDto": "PaymentReconciliationExceptionListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/reconciliation/runs/{runId}",
+      "handler": "run",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/reconciliation/PaymentReconciliationController.kt",
+      "requestDto": null,
+      "responseDto": "PaymentReconciliationRunResponse"
+    },
+    {
+      "method": "GET",
       "path": "/api/payments/settlement/batch-runs/{batchRunId}",
       "handler": "getSettlementBatchRun",
       "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/settlement/PaymentSettlementController.kt",
@@ -140,6 +156,14 @@
       "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
       "requestDto": "DispatchPaymentLedgerPostingRequest",
       "responseDto": "PaymentOutboxDispatchResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/reconciliation/runs",
+      "handler": "createRun",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/reconciliation/PaymentReconciliationController.kt",
+      "requestDto": "CreatePaymentReconciliationRunRequest",
+      "responseDto": "PaymentReconciliationRunResponse"
     },
     {
       "method": "POST",
@@ -418,6 +442,85 @@
           "kotlinType": "String?",
           "required": false,
           "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "CreatePaymentReconciliationRunRequest",
+      "kind": "object",
+      "required": [
+        "externalSettlementImportId",
+        "expectedValueDate",
+        "ownerId",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "expectedValueDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "allowedValueDateLagDays",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "slaDays",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ownerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
           "ref": null,
           "itemsRef": null
         }
@@ -1705,6 +1808,527 @@
         }
       ],
       "enumValues": []
+    },
+    {
+      "name": "PaymentReconciliationExceptionListResponse",
+      "kind": "object",
+      "required": [
+        "items",
+        "auditEventId",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "items",
+          "kotlinType": "List<PaymentReconciliationResultDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationResultDto",
+          "itemsRef": "PaymentReconciliationResultDto"
+        },
+        {
+          "name": "auditEventId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentReconciliationMismatchType",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "MATCHED",
+        "MISSING_PAYMENT",
+        "MISSING_LEDGER",
+        "MISSING_EXTERNAL",
+        "AMOUNT_MISMATCH",
+        "STATUS_MISMATCH",
+        "DUPLICATE_EXTERNAL",
+        "VALUE_DATE_MISMATCH",
+        "LATE_SETTLEMENT"
+      ]
+    },
+    {
+      "name": "PaymentReconciliationResultDto",
+      "kind": "object",
+      "required": [
+        "paymentReconciliationResultId",
+        "paymentReconciliationRunId",
+        "paymentInstructionId",
+        "mismatchType",
+        "resultStatus",
+        "businessDate",
+        "expectedValueDate",
+        "ownerId",
+        "detectedReason",
+        "detectedAt",
+        "agingDays",
+        "overdue",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "paymentReconciliationResultId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentReconciliationRunId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalSettlementLineId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerTransactionId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "mismatchType",
+          "kotlinType": "PaymentReconciliationMismatchType",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationMismatchType",
+          "itemsRef": null
+        },
+        {
+          "name": "resultStatus",
+          "kotlinType": "PaymentReconciliationResultStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationResultStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "internalAmountMinor",
+          "kotlinType": "Long?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerAmountMinor",
+          "kotlinType": "Long?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalAmountMinor",
+          "kotlinType": "Long?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalStatus",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "expectedValueDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "actualValueDate",
+          "kotlinType": "LocalDate?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ownerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "detectedReason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "detectedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "dueAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "agingDays",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "overdue",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "resolution",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "approvalId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "resolvedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentReconciliationResultStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "MATCHED",
+        "OPEN",
+        "INVESTIGATING",
+        "RESOLVED"
+      ]
+    },
+    {
+      "name": "PaymentReconciliationRunDto",
+      "kind": "object",
+      "required": [
+        "paymentReconciliationRunId",
+        "externalSettlementImportId",
+        "businessDate",
+        "expectedValueDate",
+        "allowedValueDateLagDays",
+        "slaDays",
+        "ownerId",
+        "status",
+        "externalLineCount",
+        "ledgerEvidenceCount",
+        "matchedCount",
+        "exceptionCount",
+        "attemptCount",
+        "syntheticOnly",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": [
+        {
+          "name": "paymentReconciliationRunId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "expectedValueDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "allowedValueDateLagDays",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "slaDays",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ownerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "PaymentReconciliationRunStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationRunStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "externalLineCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "ledgerEvidenceCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "matchedCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "exceptionCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "attemptCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "failureMessage",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "updatedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "completedAt",
+          "kotlinType": "OffsetDateTime?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentReconciliationRunResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "results",
+        "replayed",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "PaymentReconciliationRunDto",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationRunDto",
+          "itemsRef": null
+        },
+        {
+          "name": "results",
+          "kotlinType": "List<PaymentReconciliationResultDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "PaymentReconciliationResultDto",
+          "itemsRef": "PaymentReconciliationResultDto"
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "auditEventId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "PaymentReconciliationRunStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "EVIDENCE_PENDING",
+        "MATCHED",
+        "EXCEPTIONS_OPEN",
+        "FAILED"
+      ]
     },
     {
       "name": "RecordPaymentLedgerPostingRequest",
