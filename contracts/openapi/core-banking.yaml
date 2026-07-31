@@ -26,6 +26,72 @@ paths:
       x-api-client-required: false
       x-synthetic-only: true
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/me:
+    get:
+      operationId: customerProfile
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      responses:
+        '200':
+          description: Token-owned synthetic customer profile with masked PII
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfileDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
+  /api/customer/account-opening-requests:
+    post:
+      operationId: requestCustomerAccountOpening
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-maker-checker-required: staff-followup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningCommand'
+      responses:
+        '201':
+          description: Customer self-service account-opening intake created without account or ledger rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningRequestResponse'
+        '200':
+          description: Idempotent replay of the same customer account-opening intake
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningRequestResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
+    get:
+      operationId: customerAccountOpeningRequests
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      responses:
+        '200':
+          description: Token-owned customer account-opening intake list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningRequestListResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
+  /api/customer/360:
+    get:
+      operationId: customer360
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      responses:
+        '200':
+          description: Token-owned Customer 360 read model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer360Dto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/accounts:
     get:
       operationId: customerAccounts
@@ -720,6 +786,52 @@ paths:
     get:
       operationId: customerStatement
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/statements/consolidated:
+    get:
+      operationId: customerConsolidatedStatement
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Token-owned deterministic consolidated statement artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerStatementDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
+  /api/customer/accounts/{accountId}/statement:
+    get:
+      operationId: customerAccountStatement
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      parameters:
+        - { name: accountId, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Token-owned deterministic account statement artifact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerStatementDto'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
+  /api/customer/statements/artifacts:
+    get:
+      operationId: customerStatementArtifacts
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      responses:
+        '200':
+          description: Token-owned statement artifact history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerStatementArtifactListResponse'
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/transactions/{transactionId}/confirmation:
     get:
       operationId: transactionConfirmation
@@ -1561,6 +1673,27 @@ components:
         ledgerBalanceMinor: { type: integer }
         availableBalanceMinor: { type: integer }
         holdAmountMinor: { type: integer }
+        openedAt: { type: string, format: date-time, nullable: true }
+        limits:
+          $ref: '#/components/schemas/CustomerAccountLimitsDto'
+        holds:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAccountHoldDto'
+        recentTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerRecentLedgerActivityDto'
+        statementActions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerStatementActionDto'
+        syntheticOnly:
+          const: true
+          default: true
+        maskingPolicy:
+          type: string
+          default: CUSTOMER_SELF
     CustomerAccountListItemDto:
       type: object
       required: [customerId, accountId, maskedAccountNo, status, currency, ledgerBalanceMinor, availableBalanceMinor, holdAmountMinor]
@@ -1587,6 +1720,214 @@ components:
         syntheticOnly:
           const: true
           default: true
+    CustomerAccountLimitsDto:
+      type: object
+      required: [dailyTransferLimitMinor, singleTransferLimitMinor]
+      properties:
+        dailyTransferLimitMinor: { type: integer }
+        singleTransferLimitMinor: { type: integer }
+        updatedAt: { type: string, format: date-time, nullable: true }
+    CustomerAccountHoldDto:
+      type: object
+      required: [holdId, holdAmountMinor, reasonCode, status, createdAt]
+      properties:
+        holdId: { type: string }
+        holdAmountMinor: { type: integer }
+        reasonCode: { type: string }
+        status: { type: string }
+        approvalId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    CustomerStatementActionDto:
+      type: object
+      required: [actionType, href, ownershipEnforced, syntheticOnly]
+      properties:
+        actionType: { type: string }
+        href: { type: string }
+        ownershipEnforced: { type: boolean, default: true }
+        syntheticOnly: { const: true, default: true }
+    CustomerRecentLedgerActivityDto:
+      type: object
+      required: [transactionId, transactionType, businessDate, accountId, direction, amountMinor, signedAmountMinor, currency, postingType, requestedChannel]
+      properties:
+        transactionId: { type: string }
+        transactionType: { type: string }
+        businessDate: { type: string, format: date }
+        postedAt: { type: string, format: date-time, nullable: true }
+        accountId: { type: string }
+        maskedAccountNo: { type: string, nullable: true }
+        direction: { type: string }
+        amountMinor: { type: integer }
+        signedAmountMinor: { type: integer }
+        currency: { type: string }
+        postingType: { type: string }
+        requestedChannel: { type: string }
+    CustomerOnboardingCheckDto:
+      type: object
+      required: [checkId, customerId, checkType, status, riskLevel, evidence, createdAt, syntheticOnly]
+      properties:
+        checkId: { type: string }
+        customerId: { type: string }
+        checkType: { type: string }
+        status: { type: string }
+        riskLevel: { type: string }
+        evidence:
+          type: object
+          additionalProperties: true
+        createdAt: { type: string, format: date-time }
+        syntheticOnly: { const: true, default: true }
+    CustomerProfileDto:
+      type: object
+      required: [customerId, authSubject, username, maskedCustomerName, customerGrade, riskGrade, kycStatus, onboardingStatus, duplicateCheckStatus, nextRequiredAction, authIdentityStatus, onboardingChecks, syntheticOnly, maskingPolicy]
+      properties:
+        customerId: { type: string }
+        authSubject: { type: string }
+        username: { type: string }
+        maskedCustomerName: { type: string }
+        maskedPhone: { type: string, nullable: true }
+        maskedAddress: { type: string, nullable: true }
+        customerGrade: { type: string }
+        riskGrade: { type: string }
+        kycStatus: { type: string }
+        onboardingStatus: { type: string }
+        duplicateCheckStatus: { type: string }
+        nextRequiredAction: { type: string }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        authIdentityStatus: { type: string }
+        onboardingChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerOnboardingCheckDto'
+        syntheticOnly: { const: true, default: true }
+        maskingPolicy: { type: string, default: CUSTOMER_SELF }
+    CustomerSelfServiceAccountOpeningCommand:
+      type: object
+      required: [idempotencyKey, termsAccepted]
+      properties:
+        idempotencyKey: { type: string }
+        productCode: { type: string, default: SYNTHETIC_DEPOSIT }
+        accountAlias: { type: string, nullable: true }
+        currency: { type: string, default: KRW }
+        syntheticInitialDepositAmountMinor: { type: integer, default: 0 }
+        termsAccepted: { type: boolean }
+    CustomerSelfServiceAccountOpeningRequestDto:
+      type: object
+      required: [requestId, idempotencyKey, status, customerId, requestedProductCode, requestedCurrency, requestedInitialDepositAmountMinor, createdAt, updatedAt, syntheticOnly]
+      properties:
+        requestId: { type: string }
+        idempotencyKey: { type: string }
+        status: { type: string }
+        customerId: { type: string }
+        approvalId: { type: string, nullable: true }
+        approvalStatus: { type: string, nullable: true }
+        staffAccountOpeningRequestId: { type: string, nullable: true }
+        requestedProductCode: { type: string }
+        requestedAccountAlias: { type: string, nullable: true }
+        requestedCurrency: { type: string }
+        requestedInitialDepositAmountMinor: { type: integer }
+        generatedAccountId: { type: string, nullable: true }
+        generatedMaskedAccountNo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        syntheticOnly: { const: true, default: true }
+    CustomerSelfServiceAccountOpeningRequestResponse:
+      type: object
+      required: [item, replayed, syntheticOnly]
+      properties:
+        item:
+          $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningRequestDto'
+        replayed: { type: boolean }
+        syntheticOnly: { const: true, default: true }
+    CustomerSelfServiceAccountOpeningRequestListResponse:
+      type: object
+      required: [items, syntheticOnly]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerSelfServiceAccountOpeningRequestDto'
+        syntheticOnly: { const: true, default: true }
+    Customer360Dto:
+      type: object
+      required: [profile, accountSummary, accounts, recentLedgerActivity, accessHistorySummary, availableActions, sourceWatermarks, syntheticOnly, maskingPolicy]
+      additionalProperties: true
+      properties:
+        profile:
+          $ref: '#/components/schemas/CustomerProfileDto'
+        kycSummary:
+          $ref: '#/components/schemas/AnyJson'
+        accountSummary:
+          $ref: '#/components/schemas/AnyJson'
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnyJson'
+        recentLedgerActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerRecentLedgerActivityDto'
+        accessHistorySummary:
+          $ref: '#/components/schemas/AnyJson'
+        availableActions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnyJson'
+        sourceWatermarks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnyJson'
+        syntheticOnly: { const: true, default: true }
+        maskingPolicy: { type: string, default: CUSTOMER_SELF }
+    CustomerStatementDto:
+      type: object
+      required: [customerId, from, to, currency, openingBalanceMinor, closingBalanceMinor, debitTotalMinor, creditTotalMinor, netAmountMinor, lineCount, lines, syntheticOnly]
+      additionalProperties: true
+      properties:
+        statementId: { type: string, nullable: true }
+        statementScope: { type: string }
+        accountId: { type: string, nullable: true }
+        customerId: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        currency: { type: string }
+        openingBalanceMinor: { type: integer }
+        closingBalanceMinor: { type: integer }
+        debitTotalMinor: { type: integer }
+        creditTotalMinor: { type: integer }
+        netAmountMinor: { type: integer }
+        lineCount: { type: integer }
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnyJson'
+        sourceLedgerHash: { type: string, nullable: true }
+        payloadHash: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+        maskingPolicy: { type: string, default: CUSTOMER_SELF }
+        syntheticOnly: { const: true, default: true }
+    CustomerStatementArtifactDto:
+      type: object
+      required: [statementId, customerId, from, to, statementScope, sourceLedgerHash, payloadHash, createdAt, lastViewedAt, syntheticOnly]
+      properties:
+        statementId: { type: string }
+        customerId: { type: string }
+        accountId: { type: string, nullable: true }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        statementScope: { type: string }
+        sourceLedgerHash: { type: string }
+        payloadHash: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastViewedAt: { type: string, format: date-time }
+        syntheticOnly: { const: true, default: true }
+    CustomerStatementArtifactListResponse:
+      type: object
+      required: [items, syntheticOnly]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerStatementArtifactDto'
+        syntheticOnly: { const: true, default: true }
     InternalRecipientAccountDto:
       type: object
       required: [accountId, maskedAccountNo, status, currency, recipientLabel]

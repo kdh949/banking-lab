@@ -14,10 +14,13 @@
     "enabled": true,
     "reasonRequired": false,
     "piiAccess": false,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["TRANSACTION_HISTORY_VIEW", "STATEMENT_VIEW", "TRANSACTION_CONFIRMATION_VIEW", "BALANCE_CERTIFICATE_VIEW"]
   },
   "query": {
     "endpoint": "GET /api/customer/transactions",
+    "clientMethod": "customerTransactions",
     "fields": [
       {
         "name": "accountId",
@@ -35,7 +38,7 @@
       "id": "readStatement",
       "label": "Read Statement",
       "type": "query",
-      "target": "GET /api/customers/{customerId}/statements"
+      "target": "CWB-106"
     },
     {
       "id": "readTransactionConfirmation",
@@ -55,5 +58,11 @@
       "type": "navigate",
       "target": "CWB-201"
     }
-  ]
+  ],
+  "api": {
+    "query": "GET /api/customer/transactions",
+    "clientMethod": "customerTransactions",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
 }

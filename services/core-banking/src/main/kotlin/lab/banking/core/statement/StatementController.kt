@@ -20,6 +20,21 @@ class StatementController(
     ): CustomerStatementDto =
         statementService.customerStatement(customerId, from, to, reason)
 
+    @GetMapping("/api/customer/statements/consolidated")
+    fun customerConsolidatedStatement(
+        @RequestParam from: LocalDate,
+        @RequestParam to: LocalDate
+    ): CustomerStatementDto =
+        statementService.customerConsolidatedStatement(from, to)
+
+    @GetMapping("/api/customer/accounts/{accountId}/statement")
+    fun customerAccountStatement(
+        @PathVariable accountId: String,
+        @RequestParam from: LocalDate,
+        @RequestParam to: LocalDate
+    ): CustomerStatementDto =
+        statementService.customerAccountStatement(accountId, from, to)
+
     @GetMapping("/api/customers/{customerId}/access-history")
     fun accessHistory(
         @PathVariable customerId: String,

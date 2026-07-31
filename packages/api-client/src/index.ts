@@ -27,6 +27,9 @@ export interface CustomerAuthCustomerDto {
   readonly authSubject: string;
   readonly username: string;
   readonly kycStatus: string;
+  readonly onboardingStatus?: string;
+  readonly duplicateCheckStatus?: string;
+  readonly nextRequiredAction?: string;
   readonly syntheticOnly: boolean;
 }
 
@@ -48,6 +51,9 @@ export interface CustomerAuthResponse {
   readonly tokenType: "Bearer" | string;
   readonly expiresAt: string;
   readonly replayed: boolean;
+  readonly onboardingStatus?: string;
+  readonly duplicateCheckStatus?: string;
+  readonly nextRequiredAction?: string;
   readonly syntheticOnly: boolean;
 }
 
@@ -305,6 +311,13 @@ export interface CustomerAccountDetailDto {
   readonly ledgerBalanceMinor: number;
   readonly availableBalanceMinor: number;
   readonly holdAmountMinor: number;
+  readonly openedAt?: string | null;
+  readonly limits?: CustomerAccountLimitsDto | null;
+  readonly holds?: readonly CustomerAccountHoldDto[];
+  readonly recentTransactions?: readonly CustomerRecentLedgerActivityDto[];
+  readonly statementActions?: readonly CustomerStatementActionDto[];
+  readonly syntheticOnly?: boolean;
+  readonly maskingPolicy?: string;
 }
 
 export interface CustomerAccountListItemDto extends CustomerAccountDetailDto {
@@ -314,6 +327,179 @@ export interface CustomerAccountListItemDto extends CustomerAccountDetailDto {
 export interface CustomerAccountListResponse {
   readonly items: readonly CustomerAccountListItemDto[];
   readonly syntheticOnly: boolean;
+}
+
+export interface CustomerAccountLimitsDto {
+  readonly dailyTransferLimitMinor: number;
+  readonly singleTransferLimitMinor: number;
+  readonly updatedAt?: string | null;
+}
+
+export interface CustomerAccountHoldDto {
+  readonly holdId: string;
+  readonly holdAmountMinor: number;
+  readonly reasonCode: string;
+  readonly status: string;
+  readonly approvalId?: string | null;
+  readonly createdAt: string;
+}
+
+export interface CustomerStatementActionDto {
+  readonly actionType: string;
+  readonly href: string;
+  readonly ownershipEnforced: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerRecentLedgerActivityDto {
+  readonly transactionId: string;
+  readonly transactionType: string;
+  readonly businessDate: string;
+  readonly postedAt?: string | null;
+  readonly accountId: string;
+  readonly maskedAccountNo?: string | null;
+  readonly direction: string;
+  readonly amountMinor: number;
+  readonly signedAmountMinor: number;
+  readonly currency: string;
+  readonly postingType: string;
+  readonly requestedChannel: string;
+}
+
+export interface CustomerOnboardingCheckDto {
+  readonly checkId: string;
+  readonly customerId: string;
+  readonly checkType: string;
+  readonly status: string;
+  readonly riskLevel: string;
+  readonly evidence: Record<string, unknown>;
+  readonly createdAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerProfileDto {
+  readonly customerId: string;
+  readonly authSubject: string;
+  readonly username: string;
+  readonly maskedCustomerName: string;
+  readonly maskedPhone?: string | null;
+  readonly maskedAddress?: string | null;
+  readonly customerGrade: string;
+  readonly riskGrade: string;
+  readonly kycStatus: string;
+  readonly onboardingStatus: string;
+  readonly duplicateCheckStatus: string;
+  readonly nextRequiredAction: string;
+  readonly lastLoginAt?: string | null;
+  readonly authIdentityStatus: string;
+  readonly onboardingChecks: readonly CustomerOnboardingCheckDto[];
+  readonly syntheticOnly: boolean;
+  readonly maskingPolicy: string;
+}
+
+export interface CustomerSelfServiceAccountOpeningCommand {
+  readonly idempotencyKey: string;
+  readonly productCode?: string;
+  readonly accountAlias?: string | null;
+  readonly currency?: string;
+  readonly syntheticInitialDepositAmountMinor?: number;
+  readonly termsAccepted: boolean;
+}
+
+export interface CustomerSelfServiceAccountOpeningRequestDto {
+  readonly requestId: string;
+  readonly idempotencyKey: string;
+  readonly status: string;
+  readonly customerId: string;
+  readonly approvalId?: string | null;
+  readonly approvalStatus?: string | null;
+  readonly staffAccountOpeningRequestId?: string | null;
+  readonly requestedProductCode: string;
+  readonly requestedAccountAlias?: string | null;
+  readonly requestedCurrency: string;
+  readonly requestedInitialDepositAmountMinor: number;
+  readonly generatedAccountId?: string | null;
+  readonly generatedMaskedAccountNo?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerSelfServiceAccountOpeningRequestResponse {
+  readonly item: CustomerSelfServiceAccountOpeningRequestDto;
+  readonly replayed: boolean;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerSelfServiceAccountOpeningRequestListResponse {
+  readonly items: readonly CustomerSelfServiceAccountOpeningRequestDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface Customer360AccountDto {
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly status: string;
+  readonly currency: string;
+  readonly ledgerBalanceMinor: number;
+  readonly availableBalanceMinor: number;
+  readonly holdAmountMinor: number;
+  readonly openedAt?: string | null;
+  readonly statementActions: readonly CustomerStatementActionDto[];
+  readonly syntheticOnly: boolean;
+}
+
+export interface Customer360AccountSummaryDto {
+  readonly totalAccounts: number;
+  readonly activeAccounts: number;
+  readonly totalLedgerBalanceMinor: number;
+  readonly totalAvailableBalanceMinor: number;
+  readonly totalHoldAmountMinor: number;
+  readonly currency: string;
+}
+
+export interface Customer360StatusSummaryDto {
+  readonly totalCount: number;
+  readonly statusCounts: Record<string, number>;
+  readonly source: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface Customer360AccessHistorySummaryDto {
+  readonly totalEvents: number;
+  readonly recentEventTypes: readonly string[];
+  readonly lastAccessAt?: string | null;
+}
+
+export interface Customer360AvailableActionDto {
+  readonly actionType: string;
+  readonly enabled: boolean;
+  readonly reason?: string | null;
+  readonly href?: string | null;
+}
+
+export interface Customer360SourceWatermarkDto {
+  readonly source: string;
+  readonly lastUpdatedAt?: string | null;
+  readonly rowCount: number;
+}
+
+export interface Customer360Dto {
+  readonly profile: CustomerProfileDto;
+  readonly kycSummary: Customer360StatusSummaryDto;
+  readonly accountSummary: Customer360AccountSummaryDto;
+  readonly accounts: readonly Customer360AccountDto[];
+  readonly loanSummary: Customer360StatusSummaryDto;
+  readonly cardSummary: Customer360StatusSummaryDto;
+  readonly complaintSummary: Customer360StatusSummaryDto;
+  readonly paymentSummary: Customer360StatusSummaryDto;
+  readonly notificationSummary: Customer360StatusSummaryDto;
+  readonly recentLedgerActivity: readonly CustomerRecentLedgerActivityDto[];
+  readonly accessHistorySummary: Customer360AccessHistorySummaryDto;
+  readonly availableActions: readonly Customer360AvailableActionDto[];
+  readonly sourceWatermarks: readonly Customer360SourceWatermarkDto[];
+  readonly syntheticOnly: boolean;
+  readonly maskingPolicy: string;
 }
 
 export interface InternalRecipientAccountDto {
@@ -399,6 +585,9 @@ export interface StatementLineDto {
 }
 
 export interface CustomerStatementDto {
+  readonly statementId?: string | null;
+  readonly statementScope?: string;
+  readonly accountId?: string | null;
   readonly customerId: string;
   readonly from: string;
   readonly to: string;
@@ -410,6 +599,29 @@ export interface CustomerStatementDto {
   readonly netAmountMinor: number;
   readonly lineCount: number;
   readonly lines: readonly StatementLineDto[];
+  readonly sourceLedgerHash?: string | null;
+  readonly payloadHash?: string | null;
+  readonly generatedAt?: string | null;
+  readonly maskingPolicy?: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerStatementArtifactDto {
+  readonly statementId: string;
+  readonly customerId: string;
+  readonly accountId?: string | null;
+  readonly from: string;
+  readonly to: string;
+  readonly statementScope: string;
+  readonly sourceLedgerHash: string;
+  readonly payloadHash: string;
+  readonly createdAt: string;
+  readonly lastViewedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerStatementArtifactListResponse {
+  readonly items: readonly CustomerStatementArtifactDto[];
   readonly syntheticOnly: boolean;
 }
 
@@ -2712,6 +2924,47 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    customerProfile() {
+      return request<CustomerProfileDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/me",
+        {},
+        options.bearerToken
+      );
+    },
+
+    requestCustomerAccountOpening(command: CustomerSelfServiceAccountOpeningCommand) {
+      return request<CustomerSelfServiceAccountOpeningRequestResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/account-opening-requests",
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    customerAccountOpeningRequests() {
+      return request<CustomerSelfServiceAccountOpeningRequestListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/account-opening-requests",
+        {},
+        options.bearerToken
+      );
+    },
+
+    customer360() {
+      return request<Customer360Dto>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/360",
+        {},
+        options.bearerToken
+      );
+    },
+
     requestStaffCustomerOnboarding(command: CustomerOnboardingRequestCommand) {
       return request<CustomerOnboardingRequestResponse>(
         fetchImpl,
@@ -3995,6 +4248,36 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         `/api/customers/${encodeURIComponent(customerId)}/statements`,
         reason ? { from, to, reason } : { from, to },
+        options.bearerToken
+      );
+    },
+
+    customerConsolidatedStatement(from: string, to: string) {
+      return request<CustomerStatementDto>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/statements/consolidated",
+        { from, to },
+        options.bearerToken
+      );
+    },
+
+    customerAccountStatement(accountId: string, from: string, to: string) {
+      return request<CustomerStatementDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/accounts/${encodeURIComponent(accountId)}/statement`,
+        { from, to },
+        options.bearerToken
+      );
+    },
+
+    customerStatementArtifacts() {
+      return request<CustomerStatementArtifactListResponse>(
+        fetchImpl,
+        baseUrl,
+        "/api/customer/statements/artifacts",
+        {},
         options.bearerToken
       );
     },

@@ -1,0 +1,45 @@
+{
+  "screenId": "CWB-107",
+  "transactionCode": "CWB107",
+  "title": "Statement Artifact History",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "statement",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["STATEMENT_ARTIFACT_HISTORY_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/customer/statements/artifacts",
+    "clientMethod": "customerStatementArtifacts",
+    "fields": [
+      {
+        "name": "sessionCustomerId",
+        "label": "Customer",
+        "type": "session-customer-id",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["statementId", "statementScope", "from", "to", "payloadHash", "lastViewedAt"]
+  },
+  "api": {
+    "query": "GET /api/customer/statements/artifacts",
+    "clientMethod": "customerStatementArtifacts",
+    "ownershipEnforced": true,
+    "syntheticOnly": true,
+    "ledgerReadOnly": true,
+    "sourceLedgerOnly": true,
+    "snapshotArtifact": true
+  }
+}

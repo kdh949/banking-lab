@@ -1,5 +1,202 @@
 @import "../../../../packages/channel-ui/src/channel-ui.css";
 
+.channel-app-customer-web .channel-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.self-service-home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.self-service-home-primary {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  min-height: 170px;
+  border-left: 4px solid var(--primary);
+  padding: 10px 14px;
+}
+
+.self-service-home-eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.self-service-home-primary h2 {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 900;
+}
+
+.self-service-home-primary p,
+.self-service-session-card small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.self-service-home-actions,
+.self-service-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.self-service-home-actions a,
+.self-service-session-card button,
+.self-service-segments button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  color: var(--text);
+  padding: 0 10px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.self-service-home-actions a:first-child,
+.self-service-segments button.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.self-service-session-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  padding: 12px;
+}
+
+.self-service-session-card span,
+.self-service-readiness-step span,
+.self-service-home-card span,
+.self-service-manifest-strip span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.self-service-session-card strong {
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.self-service-session-card button {
+  width: fit-content;
+}
+
+.self-service-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.self-service-readiness-step {
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 10px;
+}
+
+.self-service-readiness-step strong {
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 21px;
+}
+
+.self-service-readiness-success {
+  border-left: 4px solid var(--success);
+}
+
+.self-service-readiness-warning {
+  border-left: 4px solid var(--warning);
+}
+
+.self-service-segments {
+  margin-bottom: 12px;
+}
+
+.self-service-home-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.self-service-home-card {
+  display: grid;
+  gap: 6px;
+  min-height: 120px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-bright);
+  color: var(--text);
+  padding: 12px;
+  text-decoration: none;
+}
+
+.self-service-home-card:focus-visible,
+.self-service-home-card:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  outline: none;
+}
+
+.self-service-home-card strong {
+  font-size: 16px;
+  line-height: 21px;
+}
+
+.self-service-home-card em {
+  color: var(--primary-strong);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.self-service-home-card small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.self-service-manifest-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.self-service-manifest-strip a {
+  display: grid;
+  gap: 4px;
+  min-height: 54px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  color: var(--text);
+  padding: 8px;
+  text-decoration: none;
+}
+
 .self-service-nav {
   display: flex;
   flex-wrap: wrap;
@@ -113,8 +310,18 @@
 }
 
 @media (max-width: 820px) {
+  .channel-app-customer-web .channel-metric-grid,
+  .self-service-home-hero,
+  .self-service-readiness-grid,
+  .self-service-home-card-grid,
+  .self-service-manifest-strip,
   .self-service-form,
   .self-service-definition-list {
     grid-template-columns: 1fr;
+  }
+
+  .self-service-home-primary h2 {
+    font-size: 22px;
+    line-height: 28px;
   }
 }

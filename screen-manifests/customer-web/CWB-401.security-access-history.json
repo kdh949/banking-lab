@@ -15,10 +15,12 @@
     "reasonRequired": false,
     "piiAccess": false,
     "selfService": true,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["ACCESS_HISTORY_VIEW"]
   },
   "query": {
     "endpoint": "GET /api/customers/{customerId}/access-history",
+    "clientMethod": "customerAccessHistory",
     "fields": [
       {
         "name": "fromDate",
@@ -35,5 +37,11 @@
   "resultTable": {
     "columns": ["eventId", "eventType", "channel", "createdAt", "status"]
   },
-  "actions": []
+  "actions": [],
+  "api": {
+    "query": "GET /api/customers/{customerId}/access-history",
+    "clientMethod": "customerAccessHistory",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
 }

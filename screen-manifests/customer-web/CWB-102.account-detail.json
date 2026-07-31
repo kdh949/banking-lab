@@ -14,10 +14,13 @@
     "enabled": true,
     "reasonRequired": false,
     "piiAccess": false,
-    "maskingPolicy": "CUSTOMER_SELF"
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["ACCOUNT_VIEW"]
   },
   "query": {
     "endpoint": "GET /api/customer/accounts/{accountId}/detail",
+    "clientMethod": "customerAccountDetail",
     "fields": [
       {
         "name": "accountId",
@@ -37,5 +40,11 @@
       "type": "navigate",
       "target": "CWB-103"
     }
-  ]
+  ],
+  "api": {
+    "query": "GET /api/customer/accounts/{accountId}/detail",
+    "clientMethod": "customerAccountDetail",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
 }

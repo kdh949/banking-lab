@@ -27,6 +27,9 @@ data class CustomerAuthResponse(
     val tokenType: String = "Bearer",
     val expiresAt: OffsetDateTime,
     val replayed: Boolean,
+    val onboardingStatus: String = "UNKNOWN",
+    val duplicateCheckStatus: String = "UNKNOWN",
+    val nextRequiredAction: String = "UNKNOWN",
     val syntheticOnly: Boolean = true
 )
 
@@ -35,6 +38,9 @@ data class CustomerAuthCustomerDto(
     val authSubject: String,
     val username: String,
     val kycStatus: String,
+    val onboardingStatus: String = "UNKNOWN",
+    val duplicateCheckStatus: String = "UNKNOWN",
+    val nextRequiredAction: String = "UNKNOWN",
     val syntheticOnly: Boolean = true
 )
 

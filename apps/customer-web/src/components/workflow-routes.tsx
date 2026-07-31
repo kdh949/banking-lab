@@ -36,8 +36,13 @@ type CustomerWorkflowRoute = {
 export type CustomerWorkflowRouteKey =
   | "signup"
   | "login"
+  | "profile"
+  | "onboarding"
+  | "customer360"
   | "accounts"
   | "accountDetail"
+  | "accountStatement"
+  | "statements"
   | "transferNew"
   | "transferResult"
   | "complaints"
@@ -92,6 +97,49 @@ export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWo
       { label: "Disabled", value: "SYNTHETIC_CUSTOMER_AUTH_DISABLED", detail: "Synthetic token issuance is disabled.", tone: "critical" }
     ]
   },
+  profile: {
+    key: "profile",
+    href: "/profile",
+    title: "Profile",
+    eyebrow: "Masked profile",
+    screenIds: ["CWB-003"],
+    apiMethods: ["customerProfile"],
+    controls: ["StructuredErrorPanel", "OnboardingChecksTable", "SessionBanner"],
+    states: [
+      { label: "Loading", value: "PROFILE_LOADING", detail: "Token-owned profile is loading." },
+      { label: "Loaded", value: "MASKED_PROFILE_LOADED", detail: "Masked PII and onboarding status are visible.", tone: "success" },
+      { label: "Authorization", value: "AUTHORIZATION_POLICY_VIOLATION", detail: "Missing or mismatched customer token is blocked.", tone: "critical" }
+    ]
+  },
+  onboarding: {
+    key: "onboarding",
+    href: "/onboarding",
+    title: "Onboarding",
+    eyebrow: "Self-service intake",
+    screenIds: ["CWB-003", "CWB-004"],
+    apiMethods: ["customerProfile", "requestCustomerAccountOpening", "customerAccountOpeningRequests"],
+    controls: ["IdempotencyResultPanel", "OnboardingChecksTable", "StructuredErrorPanel"],
+    states: [
+      { label: "Ready", value: "CUSTOMER_SUBMITTED_READY", detail: "Customer can submit an intake request." },
+      { label: "Submitted", value: "CUSTOMER_SUBMITTED", detail: "No account or ledger row is created.", tone: "success" },
+      { label: "Replay", value: "REPLAYED", detail: "Same idempotency key returns the first request.", tone: "success" },
+      { label: "Pending duplicate", value: "CUSTOMER_ACCOUNT_OPENING_ALREADY_PENDING", detail: "Duplicate pending request is structured.", tone: "critical" }
+    ]
+  },
+  customer360: {
+    key: "customer-360",
+    href: "/360",
+    title: "Customer 360",
+    eyebrow: "Customer 360",
+    screenIds: ["CWB-104"],
+    apiMethods: ["customer360"],
+    controls: ["SummaryCards", "AccountTable", "RecentLedgerActivityTable"],
+    states: [
+      { label: "Loading", value: "CUSTOMER_360_LOADING", detail: "Canonical read model is loading." },
+      { label: "Loaded", value: "CUSTOMER_360_LOADED", detail: "Profile, accounts, cases, cards, and activity are visible.", tone: "success" },
+      { label: "Authorization", value: "AUTHORIZATION_POLICY_VIOLATION", detail: "Only token-owned customer data is returned.", tone: "critical" }
+    ]
+  },
   accounts: {
     key: "accounts",
     href: "/accounts",
@@ -123,6 +171,36 @@ export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWo
       { label: "Authorization", value: "CUSTOMER_OWNERSHIP_DENIED", detail: "Cross-customer account lookup is blocked.", tone: "critical" }
     ],
     demoSeed: ["route parameter supplies accountId"]
+  },
+  accountStatement: {
+    key: "account-statement",
+    href: "/accounts/[accountId]/statement",
+    title: "Account Statement",
+    eyebrow: "Statement artifact",
+    screenIds: ["CWB-105", "CWB-107"],
+    apiMethods: ["customerAccountStatement", "customerStatementArtifacts"],
+    controls: ["DateRangeFilter", "StatementSummary", "ArtifactHistoryTable"],
+    states: [
+      { label: "Ready", value: "STATEMENT_RANGE_READY", detail: "Date range can be submitted." },
+      { label: "Generated", value: "ACCOUNT_STATEMENT_GENERATED", detail: "Deterministic account statement artifact is returned.", tone: "success" },
+      { label: "Read-only", value: "LEDGER_READ_ONLY", detail: "Ledger rows are not mutated.", tone: "success" },
+      { label: "Authorization", value: "AUTHORIZATION_POLICY_VIOLATION", detail: "Cross-customer account statement is blocked.", tone: "critical" }
+    ],
+    demoSeed: ["route parameter supplies accountId"]
+  },
+  statements: {
+    key: "statements",
+    href: "/statements",
+    title: "Statements",
+    eyebrow: "Consolidated statement",
+    screenIds: ["CWB-106", "CWB-107"],
+    apiMethods: ["customerConsolidatedStatement", "customerStatementArtifacts"],
+    controls: ["DateRangeFilter", "StatementSummary", "ArtifactHistoryTable"],
+    states: [
+      { label: "Ready", value: "STATEMENT_RANGE_READY", detail: "Date range can be submitted." },
+      { label: "Generated", value: "CONSOLIDATED_STATEMENT_GENERATED", detail: "Deterministic consolidated statement artifact is returned.", tone: "success" },
+      { label: "Read-only", value: "LEDGER_READ_ONLY", detail: "Ledger rows are not mutated.", tone: "success" }
+    ]
   },
   transferNew: {
     key: "transfer-new",

@@ -25,7 +25,9 @@ test("customer web renders account, transfer, and complaint controls from manife
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Customer Web Banking" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Self-Service Workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Self-service starts here" })).toBeVisible();
+  await expect(page.getByText("Service Hub")).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true }).first()).toBeVisible();
   }
@@ -45,6 +47,7 @@ test("customer web exposes form-backed self-service routes and shared workflow m
   const files = readdirSync(appDir).sort();
 
   expect(files).toEqual([
+    "360",
     "accounts",
     "api",
     "cards",
@@ -54,18 +57,30 @@ test("customer web exposes form-backed self-service routes and shared workflow m
     "loans",
     "login",
     "notifications",
+    "onboarding",
     "page.tsx",
     "payments",
+    "profile",
     "security",
     "signup",
+    "statements",
     "transfers"
   ]);
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
   expect(pageSource).toContain("loadCustomerWebManifests");
   expect(pageSource).toContain("customerWorkflowRouteSummaries");
   expect(routeComponent).toContain("CustomerWorkflowRoutePage");
+  expect(selfService).toContain("CustomerSelfServiceHomeSurface");
+  expect(selfService).toContain("Service Hub");
+  expect(selfService).toContain("Default PII masking");
   expect(routeComponent).toContain("CWB-001");
   expect(routeComponent).toContain("CWB-002");
+  expect(routeComponent).toContain("CWB-003");
+  expect(routeComponent).toContain("CWB-004");
+  expect(routeComponent).toContain("CWB-104");
+  expect(routeComponent).toContain("CWB-105");
+  expect(routeComponent).toContain("CWB-106");
+  expect(routeComponent).toContain("CWB-107");
   expect(routeComponent).toContain("CWB-201");
   expect(routeComponent).toContain("POSTED");
   expect(routeComponent).toContain("HELD");
@@ -76,6 +91,12 @@ test("customer web exposes form-backed self-service routes and shared workflow m
   expect(selfService).toContain("signupCustomer");
   expect(selfService).toContain("loginCustomer");
   expect(selfService).toContain("customerAccounts");
+  expect(selfService).toContain("customerProfile");
+  expect(selfService).toContain("requestCustomerAccountOpening");
+  expect(selfService).toContain("customer360");
+  expect(selfService).toContain("customerAccountStatement");
+  expect(selfService).toContain("customerConsolidatedStatement");
+  expect(selfService).toContain("customerStatementArtifacts");
   expect(selfService).toContain("internalRecipientLookup");
   expect(selfService).toContain("requestCustomerTransfer");
   expect(pageSource).not.toContain("fetch(\"/api/customer/transfers\"");
@@ -91,6 +112,22 @@ test("customer web route pages render signup login transfer forms and complaint 
   await page.goto(`${baseUrl}/login`);
   await expect(page.getByRole("heading", { name: "Customer Login" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+
+  await page.goto(`${baseUrl}/profile`);
+  await expect(page.getByRole("heading", { name: "Customer Profile" }).first()).toBeVisible();
+  await expect(page.getByText("DEMO_FALLBACK_API_NOT_CONFIGURED").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/onboarding`);
+  await expect(page.getByRole("heading", { name: "Onboarding" }).first()).toBeVisible();
+  await expect(page.getByText("DEMO_FALLBACK_API_NOT_CONFIGURED").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/360`);
+  await expect(page.getByRole("heading", { name: "Customer 360" }).first()).toBeVisible();
+  await expect(page.getByText("DEMO_FALLBACK_API_NOT_CONFIGURED").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/statements`);
+  await expect(page.getByRole("heading", { name: "Consolidated Statements" }).first()).toBeVisible();
+  await expect(page.getByText("DEMO_FALLBACK_API_NOT_CONFIGURED").first()).toBeVisible();
 
   await page.goto(`${baseUrl}/accounts`);
   await expect(page.getByRole("heading", { name: "Accounts" }).first()).toBeVisible();

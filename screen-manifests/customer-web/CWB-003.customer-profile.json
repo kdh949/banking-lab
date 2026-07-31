@@ -1,0 +1,42 @@
+{
+  "screenId": "CWB-003",
+  "transactionCode": "CWB003",
+  "title": "Customer Profile",
+  "app": "customer-web",
+  "type": "INQUIRY",
+  "domain": "customer",
+  "requiredRoles": ["CUSTOMER"],
+  "layout": {
+    "template": "inquiry",
+    "customerContext": true
+  },
+  "audit": {
+    "enabled": true,
+    "reasonRequired": false,
+    "piiAccess": false,
+    "selfService": true,
+    "maskingPolicy": "CUSTOMER_SELF",
+    "eventTypes": ["CUSTOMER_PROFILE_VIEW"]
+  },
+  "query": {
+    "endpoint": "GET /api/customer/me",
+    "clientMethod": "customerProfile",
+    "fields": [
+      {
+        "name": "sessionCustomerId",
+        "label": "Customer",
+        "type": "session-customer-id",
+        "required": true
+      }
+    ]
+  },
+  "resultTable": {
+    "columns": ["maskedCustomerName", "maskedPhone", "kycStatus", "onboardingStatus", "duplicateCheckStatus"]
+  },
+  "api": {
+    "query": "GET /api/customer/me",
+    "clientMethod": "customerProfile",
+    "ownershipEnforced": true,
+    "syntheticOnly": true
+  }
+}
