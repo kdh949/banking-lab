@@ -1,4 +1,3 @@
-
 package lab.banking.core.ledger.evidence
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -92,43 +91,22 @@ class PaymentLedgerEvidenceIntegrationTest {
             .andExpect(jsonPath("$.items[0].postingCount").value(2))
             .andExpect(jsonPath("$.items[0].balanced").value(true))
 
-        assertEquals(
-            1,
-            jdbc.queryForObject(
-                """
-                SELECT count(*)
-                FROM audit_events
-                WHERE event_type = 'PAYMENT_LEDGER_EVIDENCE_VIEW'
-                  AND reason = 'Three-way payment reconciliation'
-                """.trimIndent(),
-                emptyMap<String, Any?>(),
-                Int::class.java
-            )
-        )
+        val auditCount = jdbc.queryForObject(
+            """
+            SELECT count(*)
+            FROM audit_events
+            WHERE event_type = 'PAYMENT_LEDGER_EVIDENCE_VIEW'
+              AND reason = 'Three-way payment reconciliation'
+            """.trimIndent(),
+            emptyMap<String, Any?>(),
+            Int::class.java
+        ) ?: 0
+        assertEquals(1, auditCount)
     }
 
     private fun seedLedgerEvidence() {
-        jdbc.update(
-            """
-            INSERT INTO customers (customer_id, customer_name, customer_grade, risk_grade)
-            VALUES ('CUS-PAY-EVIDENCE', 'Synthetic Evidence Customer', 'STANDARD', 'LOW')
-            ON CONFLICT (customer_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
-        )
-        jdbc.update(
-            """
-            INSERT INTO accounts (
-              account_id, customer_id, account_no, currency, status,
-              account_class, system_account_kind, synthetic_system_account
-            ) VALUES (
-              'ACC-PAY-EVIDENCE', 'CUS-PAY-EVIDENCE', 'LAB-EVIDENCE-001', 'KRW', 'ACTIVE',
-              'LIABILITY', NULL, false
-            )
-            ON CONFLICT (account_id) DO NOTHING
-            """.trimIndent(),
-            emptyMap<String, Any?>()
-        )
+        // Reuse migration-owned synthetic system accounts so this evidence test is
+        // isolated from customer/account fixture schema changes in the full suite.
         TransactionTemplate(transactionManager).execute {
             jdbc.update(
                 """
@@ -151,7 +129,7 @@ class PaymentLedgerEvidenceIntegrationTest {
                   ledger_posting_id, ledger_transaction_id, account_id,
                   currency, direction, amount_minor, posting_type
                 ) VALUES
-                  ('LP-PAY-EVIDENCE-001-D', 'TX-PAY-EVIDENCE-001', 'ACC-PAY-EVIDENCE', 'KRW', 'DEBIT', 45000, 'PAYMENT'),
+                  ('LP-PAY-EVIDENCE-001-D', 'TX-PAY-EVIDENCE-001', 'BANK-CARD-CLEARING', 'KRW', 'DEBIT', 45000, 'PAYMENT'),
                   ('LP-PAY-EVIDENCE-001-C', 'TX-PAY-EVIDENCE-001', 'BANK-SETTLEMENT', 'KRW', 'CREDIT', 45000, 'PAYMENT')
                 ON CONFLICT (ledger_posting_id) DO NOTHING
                 """.trimIndent(),
