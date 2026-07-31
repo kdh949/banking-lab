@@ -1,6 +1,7 @@
 package lab.banking.core.ledger.evidence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.nio.file.Paths
 import java.time.LocalDate
 import java.util.Base64
 import lab.banking.core.ledger.application.BillPaymentCommand
@@ -161,6 +162,13 @@ class PaymentLedgerEvidenceIntegrationTest {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
+            registry.add("spring.flyway.locations") {
+                val userDir = Paths.get(System.getProperty("user.dir"))
+                listOf(
+                    "filesystem:${userDir.resolve("db/migrations").normalize()}",
+                    "filesystem:${userDir.resolve("../../db/migrations").normalize()}"
+                ).joinToString(",")
+            }
         }
     }
 }
