@@ -3,6 +3,10 @@ package lab.banking.core.ledger.evidence
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.LocalDate
 import java.util.Base64
+import lab.banking.core.ledger.application.BillPaymentCommand
+import lab.banking.core.ledger.application.DepositCommand
+import lab.banking.core.ledger.application.LedgerCommandService
+import lab.banking.core.ledger.domain.BANK_CARD_CLEARING_ACCOUNT_ID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,8 +20,6 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -42,11 +44,11 @@ class PaymentLedgerEvidenceIntegrationTest {
     lateinit var jdbc: NamedParameterJdbcTemplate
 
     @Autowired
-    lateinit var transactionManager: PlatformTransactionManager
+    lateinit var ledgerCommandService: LedgerCommandService
 
     @Test
     fun `payment service reads balanced bill-payment evidence by business date with audited reason`() {
-        seedLedgerEvidence()
+        val ledgerTransactionId = seedLedgerEvidence()
 
         mockMvc.perform(
             get("/api/ledger/payment-postings/evidence")
@@ -81,7 +83,7 @@ class PaymentLedgerEvidenceIntegrationTest {
             .andExpect(jsonPath("$.syntheticOnly").value(true))
             .andExpect(jsonPath("$.auditEventId").value(org.hamcrest.Matchers.startsWith("AUD-")))
             .andExpect(jsonPath("$.items.length()").value(1))
-            .andExpect(jsonPath("$.items[0].ledgerTransactionId").value("TX-PAY-EVIDENCE-001"))
+            .andExpect(jsonPath("$.items[0].ledgerTransactionId").value(ledgerTransactionId))
             .andExpect(jsonPath("$.items[0].paymentInstructionId").value("PAY-EVIDENCE-001"))
             .andExpect(jsonPath("$.items[0].transactionType").value("BILL_PAYMENT"))
             .andExpect(jsonPath("$.items[0].status").value("POSTED"))
@@ -104,38 +106,37 @@ class PaymentLedgerEvidenceIntegrationTest {
         assertEquals(1, auditCount)
     }
 
-    private fun seedLedgerEvidence() {
-        // Reuse migration-owned synthetic system accounts so this evidence test is
-        // isolated from customer/account fixture schema changes in the full suite.
-        TransactionTemplate(transactionManager).execute {
-            jdbc.update(
-                """
-                INSERT INTO ledger_transactions (
-                  ledger_transaction_id, transaction_type, business_reference_id,
-                  idempotency_key, business_date, status, requested_by,
-                  requested_channel, posted_at, reason
-                ) VALUES (
-                  'TX-PAY-EVIDENCE-001', 'BILL_PAYMENT', 'PAY-EVIDENCE-001',
-                  'IDEMP-PAY-EVIDENCE-001', :businessDate, 'POSTED', 'payment-service',
-                  'PAYMENT_SERVICE', now(), 'Synthetic reconciliation evidence fixture'
-                )
-                ON CONFLICT (ledger_transaction_id) DO NOTHING
-                """.trimIndent(),
-                mapOf("businessDate" to LocalDate.of(2026, 7, 30))
+    private fun seedLedgerEvidence(): String {
+        val businessDate = LocalDate.of(2026, 7, 30)
+
+        // Exercise the production posting path rather than reproducing ledger rows
+        // with raw SQL. The migration-owned synthetic clearing account is funded
+        // first, then debited by the real bill-payment command.
+        ledgerCommandService.deposit(
+            DepositCommand(
+                accountId = BANK_CARD_CLEARING_ACCOUNT_ID,
+                amountMinor = 45_000,
+                idempotencyKey = "IDEMP-PAY-EVIDENCE-SEED",
+                requestedBy = "payment-evidence-test",
+                requestedChannel = "CORE_BANKING",
+                businessDate = businessDate,
+                reason = "Synthetic payment ledger evidence seed"
             )
-            jdbc.update(
-                """
-                INSERT INTO ledger_postings (
-                  ledger_posting_id, ledger_transaction_id, account_id,
-                  currency, direction, amount_minor, posting_type
-                ) VALUES
-                  ('LP-PAY-EVIDENCE-001-D', 'TX-PAY-EVIDENCE-001', 'BANK-CARD-CLEARING', 'KRW', 'DEBIT', 45000, 'PAYMENT'),
-                  ('LP-PAY-EVIDENCE-001-C', 'TX-PAY-EVIDENCE-001', 'BANK-SETTLEMENT', 'KRW', 'CREDIT', 45000, 'PAYMENT')
-                ON CONFLICT (ledger_posting_id) DO NOTHING
-                """.trimIndent(),
-                emptyMap<String, Any?>()
+        )
+
+        return ledgerCommandService.billPayment(
+            BillPaymentCommand(
+                paymentInstructionId = "PAY-EVIDENCE-001",
+                debitAccountId = BANK_CARD_CLEARING_ACCOUNT_ID,
+                syntheticBillerId = "BILLER-EVIDENCE-001",
+                amountMinor = 45_000,
+                idempotencyKey = "IDEMP-PAY-EVIDENCE-001",
+                requestedBy = "payment-service",
+                requestedChannel = "PAYMENT_SERVICE",
+                businessDate = businessDate,
+                reason = "Synthetic reconciliation evidence fixture"
             )
-        }
+        ).value.id
     }
 
     private fun bearer(subject: String, roles: List<String>): String {
