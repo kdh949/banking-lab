@@ -36,13 +36,39 @@ For each group:
 
 ```text
 gross_amount_minor
-- fee_amount_minor       (gross × fee_rate_bps, half-up to minor units)
-- vat_amount_minor       (fee × vat_rate_bps, half-up to minor units)
+- fee_amount_minor        (gross × fee_rate_bps, half-up to minor units)
+- vat_amount_minor        (fee × vat_rate_bps, half-up to minor units)
 + adjustment_amount_minor (zero in this foundation slice)
 = net_amount_minor
 ```
 
 The database repeats this arithmetic as a check constraint. `INCLUDED_IN_BATCH` means only that the external rows were included in a durable synthetic position. It does not mean payout was requested, money moved through a real payment network, or external settlement finality was reached.
+
+## API and authorization boundary
+
+```text
+POST /api/payments/settlement/imports
+GET  /api/payments/settlement/imports/{importId}
+POST /api/payments/settlement/batch-runs
+GET  /api/payments/settlement/batch-runs/{batchRunId}
+```
+
+Import and batch commands require `OPS_OPERATOR` or `OPS_MANAGER`. Read paths also allow `AUDITOR` and `COMPLIANCE_MANAGER`. Command `requestedBy` is bound to the authenticated token subject.
+
+## Verification
+
+`PaymentSettlementIntegrationTest` uses PostgreSQL Testcontainers and proves:
+
+- unauthenticated and customer-role commands are denied
+- spoofed command actors are rejected
+- the same idempotency key replays one import and one batch run
+- the same file SHA-256 cannot be re-imported under a different key
+- raw staging rows are preserved while internal payment rows are not synthesized
+- rejected rows remain staged but are excluded from payable positions
+- utility gross `150000` becomes fee `1500`, VAT `150`, and net `148350`
+- telco gross `20000` becomes fee `200`, VAT `20`, and net `19780`
+
+`paymentSettlementFoundation.test.mjs`, OpenAPI source diffing, API-client exemption checks, and the V007 arithmetic constraint provide repository-level regression coverage.
 
 ## Deliberate boundary
 
