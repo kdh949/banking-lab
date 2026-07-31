@@ -96,7 +96,7 @@ class PaymentOutboxWorkerIntegrationTest {
         assertEquals("TX-PAY-WORKER-002", paymentInstructionService.instruction(second.item.paymentInstructionId).ledgerTransactionId)
         assertEquals("TX-PAY-WORKER-003", paymentInstructionService.instruction(third.item.paymentInstructionId).ledgerTransactionId)
         assertEquals(3, countRows("payment_outbox_events WHERE event_type = 'PaymentLedgerPostingRequested' AND status = 'PUBLISHED'"))
-        assertEquals(3, countRows("payment_instructions WHERE status = 'SETTLED'"))
+        assertEquals(3, countRows("payment_instructions WHERE status = 'LEDGER_POSTED'"))
     }
 
     private fun sampleCreate(idempotencyKey: String): CreatePaymentInstructionRequest =

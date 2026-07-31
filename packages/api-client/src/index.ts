@@ -1640,12 +1640,15 @@ export interface CreatePaymentInstructionRequest {
   readonly reason?: string | null;
 }
 
-export interface RecordPaymentSettlementRequest {
+export interface RecordPaymentLedgerPostingRequest {
   readonly ledgerTransactionId: string;
   readonly idempotencyKey: string;
   readonly requestedBy: string;
   readonly reason: string;
 }
+
+/** @deprecated Use RecordPaymentLedgerPostingRequest. */
+export type RecordPaymentSettlementRequest = RecordPaymentLedgerPostingRequest;
 
 export interface CancelPaymentInstructionRequest {
   readonly idempotencyKey: string;
@@ -3433,6 +3436,18 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    recordPaymentLedgerPosting(instructionId: string, command: RecordPaymentLedgerPostingRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/ledger-postings`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    /** @deprecated Use recordPaymentLedgerPosting. */
     recordPaymentSettlement(instructionId: string, command: RecordPaymentSettlementRequest) {
       return request<PaymentInstructionResponse>(
         fetchImpl,

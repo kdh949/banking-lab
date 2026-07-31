@@ -46,6 +46,12 @@ channels:
       PaymentInstructionCanceled:
         payload:
           $ref: ../events/payment-instruction-canceled.schema.json
+  payment.instruction.ledger-posted:
+    address: payment.instruction.ledger-posted
+    messages:
+      PaymentInstructionLedgerPosted:
+        payload:
+          $ref: ../events/payment-instruction-ledger-posted.schema.json
   payment.instruction.settled:
     address: payment.instruction.settled
     messages:
@@ -141,6 +147,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/payment.instruction.canceled'
+  publishPaymentInstructionLedgerPosted:
+    action: send
+    channel:
+      $ref: '#/channels/payment.instruction.ledger-posted'
   publishPaymentInstructionSettled:
     action: send
     channel:

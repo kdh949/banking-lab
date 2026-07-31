@@ -423,7 +423,7 @@ class LivePaymentDomainEventPublisherComposeSmokeIntegrationTest {
             put("BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS", "5000")
             put(
                 "BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES",
-                "PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated"
+                "PaymentInstructionLedgerPosted,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated"
             )
             putOrCopyEnvironment("BANKING_LAB_TRACING_ENABLED", "false")
             putOrCopyEnvironment("BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED", "false")

@@ -38,7 +38,7 @@ banking-lab:
         timeout-millis: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS:5000}
         dead-letter-threshold: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD:3}
         retry-delay-seconds: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS:60}
-        event-types: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated}
+        event-types: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:PaymentInstructionLedgerPosted,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}

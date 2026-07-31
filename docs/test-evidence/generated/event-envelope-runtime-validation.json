@@ -3,8 +3,8 @@
   "syntheticOnly": true,
   "status": "pass",
   "asyncApiContract": "contracts/asyncapi/banking-lab-events.yaml",
-  "eventSchemaCount": 17,
-  "validatedEnvelopeCount": 17,
+  "eventSchemaCount": 18,
+  "validatedEnvelopeCount": 18,
   "envelopeFields": [
     "eventId",
     "eventType",
@@ -27,6 +27,7 @@
     "PaymentInstructionCanceled",
     "PaymentInstructionDeadLettered",
     "PaymentInstructionFailed",
+    "PaymentInstructionLedgerPosted",
     "PaymentInstructionRetryScheduled",
     "PaymentInstructionSettled",
     "PaymentLedgerPostingRequested",

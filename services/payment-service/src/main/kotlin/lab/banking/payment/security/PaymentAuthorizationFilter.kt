@@ -22,7 +22,7 @@ class PaymentAuthorizationFilter(
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
     private val instructionRead = Regex("^/api/payments/instructions/[^/]+$")
-    private val instructionSettlement = Regex("^/api/payments/instructions/[^/]+/settlements$")
+    private val instructionLedgerPosting = Regex("^/api/payments/instructions/[^/]+/(ledger-postings|settlements)$")
     private val instructionCancel = Regex("^/api/payments/instructions/[^/]+/cancel$")
     private val instructionCancellationRequest = Regex("^/api/payments/instructions/[^/]+/cancellation-requests$")
     private val cancellationRequestReview = Regex("^/api/payments/cancellation-requests/[^/]+/(approve|reject)$")
@@ -70,7 +70,7 @@ class PaymentAuthorizationFilter(
             path == "/api/payments/instructions" && method == "POST" -> setOf("CUSTOMER")
             instructionRead.matches(path) && method == "GET" ->
                 setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
-            instructionSettlement.matches(path) && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
+            instructionLedgerPosting.matches(path) && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
             instructionCancel.matches(path) && method == "POST" -> setOf("CUSTOMER")
             instructionCancellationRequest.matches(path) && method == "POST" ->
                 setOf("BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "COMPLIANCE_MANAGER")

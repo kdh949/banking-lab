@@ -46,7 +46,7 @@ interface PaymentOutboxPublisherPort {
 
     companion object {
         val defaultEventTypes = setOf(
-            "PaymentInstructionSettled",
+            "PaymentInstructionLedgerPosted",
             "PaymentInstructionCanceled",
             "PaymentInstructionFailed",
             "PaymentInstructionRetryScheduled",

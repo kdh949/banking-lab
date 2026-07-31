@@ -5,7 +5,7 @@ import lab.banking.payment.domain.CreatePaymentInstructionRequest
 import lab.banking.payment.domain.PaymentDomainException
 import lab.banking.payment.domain.PaymentInstructionService
 import lab.banking.payment.domain.PaymentInstructionStatus
-import lab.banking.payment.domain.RecordPaymentSettlementRequest
+import lab.banking.payment.domain.RecordPaymentLedgerPostingRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -104,18 +104,18 @@ class PaymentInstructionIntegrationTest {
         assertEquals("PAYMENT_SYNTHETIC_BILLER_REQUIRED", forbidden.code)
 
         val settledInstruction = paymentInstructionService.createInstruction(sampleCreate("PAY-IT-SETTLE-001"))
-        val settled = paymentInstructionService.recordSettlement(
+        val settled = paymentInstructionService.recordLedgerPosting(
             settledInstruction.item.paymentInstructionId,
-            RecordPaymentSettlementRequest(
+            RecordPaymentLedgerPostingRequest(
                 ledgerTransactionId = "TX-PAYMENT-SYN-001",
                 idempotencyKey = "PAY-IT-SETTLE-CALLBACK-001",
                 requestedBy = "core-banking-ledger",
                 reason = "Synthetic core-banking ledger settlement callback"
             )
         )
-        val replayedSettlement = paymentInstructionService.recordSettlement(
+        val replayedSettlement = paymentInstructionService.recordLedgerPosting(
             settledInstruction.item.paymentInstructionId,
-            RecordPaymentSettlementRequest(
+            RecordPaymentLedgerPostingRequest(
                 ledgerTransactionId = "TX-PAYMENT-SYN-001",
                 idempotencyKey = "PAY-IT-SETTLE-CALLBACK-001",
                 requestedBy = "core-banking-ledger",
@@ -123,10 +123,10 @@ class PaymentInstructionIntegrationTest {
             )
         )
 
-        assertEquals(PaymentInstructionStatus.SETTLED, settled.item.status)
+        assertEquals(PaymentInstructionStatus.LEDGER_POSTED, settled.item.status)
         assertEquals("TX-PAYMENT-SYN-001", settled.item.ledgerTransactionId)
         assertEquals(true, replayedSettlement.replayed)
-        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionSettled'"))
+        assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionLedgerPosted'"))
 
         val cancelRejected = assertThrows(PaymentDomainException::class.java) {
             paymentInstructionService.cancelInstruction(
@@ -162,7 +162,7 @@ class PaymentInstructionIntegrationTest {
         assertEquals(true, canceledReplay.replayed)
         assertEquals(1, countRows("payment_attempts WHERE payment_instruction_id = '${cancellable.item.paymentInstructionId}' AND status = 'CANCELED'"))
         assertEquals(1, countRows("payment_outbox_events WHERE event_type = 'PaymentInstructionCanceled'"))
-        assertEquals(2, countRows("payment_status_history WHERE status = 'CANCELED' OR status = 'SETTLED'"))
+        assertEquals(2, countRows("payment_status_history WHERE status = 'CANCELED' OR status = 'LEDGER_POSTED'"))
     }
 
     private fun sampleCreate(idempotencyKey: String): CreatePaymentInstructionRequest =
