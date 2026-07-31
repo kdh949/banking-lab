@@ -6,10 +6,11 @@ import lab.banking.core.common.BankingLabDomainException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authorization.AuthorizationDeniedException
-import org.springframework.web.servlet.resource.NoResourceFoundException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.server.ResponseStatusException
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class StructuredApiErrorHandler {
@@ -51,6 +52,30 @@ class StructuredApiErrorHandler {
             )
         )
     }
+
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun missingRequestParameter(
+        error: MissingServletRequestParameterException,
+        request: HttpServletRequest
+    ): ResponseEntity<StructuredApiErrorEnvelope> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            StructuredApiErrorEnvelope(
+                error = StructuredApiError(
+                    code = "REQUEST_VALIDATION_FAILED",
+                    message = error.message,
+                    statusCode = HttpStatus.BAD_REQUEST.value(),
+                    domain = "validation",
+                    cause = "A required request parameter was missing before domain execution.",
+                    fix = "Supply the required parameter according to the OpenAPI contract.",
+                    requestId = requestId(request),
+                    route = request.requestURI,
+                    details = mapOf(
+                        "parameter" to error.parameterName,
+                        "expectedType" to error.parameterType
+                    )
+                )
+            )
+        )
 
     @ExceptionHandler(AuthorizationDeniedException::class)
     fun authorizationDenied(
