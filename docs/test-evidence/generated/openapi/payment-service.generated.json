@@ -22,6 +22,22 @@
       "responseDto": "PaymentInstructionResponse"
     },
     {
+      "method": "GET",
+      "path": "/api/payments/settlement/batch-runs/{batchRunId}",
+      "handler": "getSettlementBatchRun",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/settlement/PaymentSettlementController.kt",
+      "requestDto": null,
+      "responseDto": "SettlementBatchRunResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/settlement/imports/{importId}",
+      "handler": "getExternalSettlementImport",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/settlement/PaymentSettlementController.kt",
+      "requestDto": null,
+      "responseDto": "ExternalSettlementImportResponse"
+    },
+    {
       "method": "POST",
       "path": "/api/payments/autopay/agreements",
       "handler": "createAutopayAgreement",
@@ -124,6 +140,22 @@
       "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
       "requestDto": "DispatchPaymentLedgerPostingRequest",
       "responseDto": "PaymentOutboxDispatchResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/settlement/batch-runs",
+      "handler": "createSettlementBatchRun",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/settlement/PaymentSettlementController.kt",
+      "requestDto": "CreateSettlementBatchRunRequest",
+      "responseDto": "SettlementBatchRunResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/settlement/imports",
+      "handler": "importExternalSettlementCsv",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/settlement/PaymentSettlementController.kt",
+      "requestDto": "ImportExternalSettlementCsvRequest",
+      "responseDto": "ExternalSettlementImportResponse"
     }
   ],
   "dtoSchemas": [
@@ -393,6 +425,77 @@
       "enumValues": []
     },
     {
+      "name": "CreateSettlementBatchRunRequest",
+      "kind": "object",
+      "required": [
+        "externalSettlementImportId",
+        "feeRateBps",
+        "cutoffAt",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "feeRateBps",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "vatRateBps",
+          "kotlinType": "Int",
+          "required": false,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "cutoffAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
       "name": "DispatchPaymentLedgerPostingRequest",
       "kind": "object",
       "required": [
@@ -508,6 +611,396 @@
         {
           "name": "replayed",
           "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExternalSettlementImportDto",
+      "kind": "object",
+      "required": [
+        "externalSettlementImportId",
+        "originalFileName",
+        "institutionCode",
+        "fileSha256",
+        "fileByteSize",
+        "businessDate",
+        "status",
+        "lineCount",
+        "acceptedLineCount",
+        "rejectedLineCount",
+        "requestedBy",
+        "reason",
+        "lines",
+        "syntheticOnly",
+        "receivedAt"
+      ],
+      "properties": [
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "originalFileName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "institutionCode",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fileSha256",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "fileByteSize",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "ExternalSettlementImportStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "ExternalSettlementImportStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "lineCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "acceptedLineCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "rejectedLineCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "lines",
+          "kotlinType": "List<ExternalSettlementLineDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "ExternalSettlementLineDto",
+          "itemsRef": "ExternalSettlementLineDto"
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "receivedAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExternalSettlementImportResponse",
+      "kind": "object",
+      "required": [
+        "item",
+        "replayed"
+      ],
+      "properties": [
+        {
+          "name": "item",
+          "kotlinType": "ExternalSettlementImportDto",
+          "required": true,
+          "nullable": false,
+          "ref": "ExternalSettlementImportDto",
+          "itemsRef": null
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExternalSettlementImportStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "IMPORTED",
+        "BATCHED"
+      ]
+    },
+    {
+      "name": "ExternalSettlementLineDto",
+      "kind": "object",
+      "required": [
+        "externalSettlementLineId",
+        "lineNumber",
+        "externalReference",
+        "paymentInstructionId",
+        "billerId",
+        "amountMinor",
+        "currency",
+        "businessDate",
+        "valueDate",
+        "status",
+        "rawLine",
+        "syntheticOnly",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "externalSettlementLineId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "lineNumber",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalReference",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "paymentInstructionId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "amountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "valueDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "ExternalSettlementLineStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "ExternalSettlementLineStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "rawLine",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "ExternalSettlementLineStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "ACCEPTED",
+        "REJECTED",
+        "RETURNED"
+      ]
+    },
+    {
+      "name": "ImportExternalSettlementCsvRequest",
+      "kind": "object",
+      "required": [
+        "originalFileName",
+        "institutionCode",
+        "businessDate",
+        "csvContent",
+        "idempotencyKey",
+        "requestedBy",
+        "reason"
+      ],
+      "properties": [
+        {
+          "name": "originalFileName",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "institutionCode",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "csvContent",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "idempotencyKey",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "requestedBy",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "reason",
+          "kotlinType": "String",
           "required": true,
           "nullable": false,
           "ref": null,
@@ -1373,6 +1866,257 @@
         }
       ],
       "enumValues": []
+    },
+    {
+      "name": "SettlementBatchDto",
+      "kind": "object",
+      "required": [
+        "settlementBatchId",
+        "settlementBatchRunId",
+        "externalSettlementImportId",
+        "billerId",
+        "currency",
+        "businessDate",
+        "valueDate",
+        "cutoffAt",
+        "grossAmountMinor",
+        "feeRateBps",
+        "feeAmountMinor",
+        "vatRateBps",
+        "vatAmountMinor",
+        "adjustmentAmountMinor",
+        "netAmountMinor",
+        "itemCount",
+        "status",
+        "syntheticOnly",
+        "createdAt"
+      ],
+      "properties": [
+        {
+          "name": "settlementBatchId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "settlementBatchRunId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "billerId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "currency",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "businessDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "valueDate",
+          "kotlinType": "LocalDate",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "cutoffAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "grossAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "feeRateBps",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "feeAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "vatRateBps",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "vatAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "adjustmentAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "netAmountMinor",
+          "kotlinType": "Long",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "itemCount",
+          "kotlinType": "Int",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "status",
+          "kotlinType": "SettlementBatchStatus",
+          "required": true,
+          "nullable": false,
+          "ref": "SettlementBatchStatus",
+          "itemsRef": null
+        },
+        {
+          "name": "externalPayoutReference",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "createdAt",
+          "kotlinType": "OffsetDateTime",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "SettlementBatchRunResponse",
+      "kind": "object",
+      "required": [
+        "settlementBatchRunId",
+        "externalSettlementImportId",
+        "items",
+        "replayed",
+        "syntheticOnly"
+      ],
+      "properties": [
+        {
+          "name": "settlementBatchRunId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "externalSettlementImportId",
+          "kotlinType": "String",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "items",
+          "kotlinType": "List<SettlementBatchDto>",
+          "required": true,
+          "nullable": false,
+          "ref": "SettlementBatchDto",
+          "itemsRef": "SettlementBatchDto"
+        },
+        {
+          "name": "replayed",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "syntheticOnly",
+          "kotlinType": "Boolean",
+          "required": true,
+          "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        }
+      ],
+      "enumValues": []
+    },
+    {
+      "name": "SettlementBatchStatus",
+      "kind": "enum",
+      "required": [],
+      "properties": [],
+      "enumValues": [
+        "INCLUDED_IN_BATCH"
+      ]
     }
   ]
 }

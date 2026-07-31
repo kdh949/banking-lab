@@ -307,6 +307,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExecuteDueAutopayResponse'
+  /api/payments/settlement/imports:
+    post:
+      summary: Import an independent synthetic external settlement CSV
+      operationId: importExternalSettlementCsv
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportExternalSettlementCsvRequest'
+      responses:
+        '201':
+          description: Independent external file provenance and raw staging lines persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+        '200':
+          description: Idempotent replay of the same external settlement import
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+        '409':
+          description: Reused idempotency key or duplicate SHA-256 file digest
+  /api/payments/settlement/imports/{importId}:
+    get:
+      summary: Read external settlement import provenance and raw staging lines
+      operationId: getExternalSettlementImport
+      x-api-client-required: false
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^ESI-'
+      responses:
+        '200':
+          description: External settlement import and preserved raw rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+  /api/payments/settlement/batch-runs:
+    post:
+      summary: Build per-biller settlement positions from accepted external rows
+      operationId: createSettlementBatchRun
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSettlementBatchRunRequest'
+      responses:
+        '201':
+          description: Gross, fee, VAT, and net positions created with INCLUDED_IN_BATCH status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+        '200':
+          description: Idempotent replay of the same settlement batch run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+        '409':
+          description: Import already batched or no accepted external lines
+  /api/payments/settlement/batch-runs/{batchRunId}:
+    get:
+      summary: Read a durable synthetic settlement batch run
+      operationId: getSettlementBatchRun
+      x-api-client-required: false
+      parameters:
+        - name: batchRunId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^SBR-'
+      responses:
+        '200':
+          description: Per-biller positions; payout or final settlement is not implied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+
 components:
   responses:
     StructuredErrorResponse:
@@ -338,6 +437,308 @@ components:
         type: string
         pattern: '^PCR-'
   schemas:
+    ImportExternalSettlementCsvRequest:
+      type: object
+      required:
+        - originalFileName
+        - institutionCode
+        - businessDate
+        - csvContent
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        originalFileName:
+          type: string
+          maxLength: 255
+          pattern: '^[^/\\]+[.]csv$'
+        institutionCode:
+          type: string
+          pattern: '^[A-Z0-9][A-Z0-9_-]{2,39}$'
+        businessDate:
+          type: string
+          format: date
+        csvContent:
+          type: string
+          description: Exact independent synthetic external CSV content; SHA-256 is calculated over its UTF-8 bytes.
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason:
+          type: string
+    CreateSettlementBatchRunRequest:
+      type: object
+      required:
+        - externalSettlementImportId
+        - feeRateBps
+        - cutoffAt
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        feeRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        vatRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 1000
+        cutoffAt:
+          type: string
+          format: date-time
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason:
+          type: string
+    ExternalSettlementImportStatus:
+      type: string
+      enum: [IMPORTED, BATCHED]
+    ExternalSettlementLineStatus:
+      type: string
+      enum: [ACCEPTED, REJECTED, RETURNED]
+    SettlementBatchStatus:
+      type: string
+      enum: [INCLUDED_IN_BATCH]
+      description: The external rows are included in a durable position; payout and settlement finality are not implied.
+    ExternalSettlementLineDto:
+      type: object
+      required:
+        - externalSettlementLineId
+        - lineNumber
+        - externalReference
+        - paymentInstructionId
+        - billerId
+        - amountMinor
+        - currency
+        - businessDate
+        - valueDate
+        - status
+        - rawLine
+        - syntheticOnly
+        - createdAt
+      properties:
+        externalSettlementLineId:
+          type: string
+          pattern: '^ESL-'
+        lineNumber:
+          type: integer
+          minimum: 2
+        externalReference:
+          type: string
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        businessDate:
+          type: string
+          format: date
+        valueDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ExternalSettlementLineStatus'
+        rawLine:
+          type: string
+          description: Original staging row retained independently of internal payment or ledger data.
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    ExternalSettlementImportDto:
+      type: object
+      required:
+        - externalSettlementImportId
+        - originalFileName
+        - institutionCode
+        - fileSha256
+        - fileByteSize
+        - businessDate
+        - status
+        - lineCount
+        - acceptedLineCount
+        - rejectedLineCount
+        - requestedBy
+        - reason
+        - lines
+        - syntheticOnly
+        - receivedAt
+      properties:
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        originalFileName:
+          type: string
+        institutionCode:
+          type: string
+        fileSha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        fileByteSize:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        businessDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ExternalSettlementImportStatus'
+        lineCount:
+          type: integer
+          minimum: 1
+        acceptedLineCount:
+          type: integer
+          minimum: 0
+        rejectedLineCount:
+          type: integer
+          minimum: 0
+          description: Count of non-accepted rows, including REJECTED and RETURNED rows preserved for reconciliation.
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalSettlementLineDto'
+        syntheticOnly:
+          const: true
+        receivedAt:
+          type: string
+          format: date-time
+    ExternalSettlementImportResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/ExternalSettlementImportDto'
+        replayed:
+          type: boolean
+    SettlementBatchDto:
+      type: object
+      required:
+        - settlementBatchId
+        - settlementBatchRunId
+        - externalSettlementImportId
+        - billerId
+        - currency
+        - businessDate
+        - valueDate
+        - cutoffAt
+        - grossAmountMinor
+        - feeRateBps
+        - feeAmountMinor
+        - vatRateBps
+        - vatAmountMinor
+        - adjustmentAmountMinor
+        - netAmountMinor
+        - itemCount
+        - status
+        - syntheticOnly
+        - createdAt
+      properties:
+        settlementBatchId:
+          type: string
+          pattern: '^STB-'
+        settlementBatchRunId:
+          type: string
+          pattern: '^SBR-'
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        businessDate:
+          type: string
+          format: date
+        valueDate:
+          type: string
+          format: date
+        cutoffAt:
+          type: string
+          format: date-time
+        grossAmountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        feeRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        feeAmountMinor:
+          type: integer
+          minimum: 0
+        vatRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        vatAmountMinor:
+          type: integer
+          minimum: 0
+        adjustmentAmountMinor:
+          type: integer
+        netAmountMinor:
+          type: integer
+          minimum: 0
+        itemCount:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/SettlementBatchStatus'
+        externalPayoutReference:
+          type: string
+          nullable: true
+          description: Null in this foundation slice; no external payout is claimed.
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    SettlementBatchRunResponse:
+      type: object
+      required:
+        - settlementBatchRunId
+        - externalSettlementImportId
+        - items
+        - replayed
+        - syntheticOnly
+      properties:
+        settlementBatchRunId:
+          type: string
+          pattern: '^SBR-'
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SettlementBatchDto'
+        replayed:
+          type: boolean
+        syntheticOnly:
+          const: true
     StructuredError:
       type: object
       required: [code, message, traceId, syntheticOnly]
