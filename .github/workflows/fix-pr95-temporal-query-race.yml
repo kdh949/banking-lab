@@ -1,0 +1,67 @@
+name: Fix PR 95 Temporal query race
+
+on:
+  push:
+    branches:
+      - agent/payment-customer-ownership
+    paths:
+      - .github/workflows/fix-pr95-temporal-query-race.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden-temporal-query-wait:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/payment-customer-ownership
+          fetch-depth: 0
+      - name: Retry transient Temporal query unavailability
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('services/core-banking/src/integrationTest/kotlin/lab/banking/core/temporal/BankingCaseTemporalWorkflowIntegrationTest.kt')
+          text = path.read_text()
+          old = '''    private fun waitForStatus(workflow: BankingCaseTemporalWorkflow, status: String) {
+              val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+              while (System.nanoTime() < deadline) {
+                  if (workflow.status() == status) {
+                      return
+                  }
+                  Thread.sleep(25)
+              }
+              assertEquals(status, workflow.status())
+          }'''
+          new = '''    private fun waitForStatus(workflow: BankingCaseTemporalWorkflow, status: String) {
+              val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+              var lastObservedStatus: String? = null
+              var lastQueryFailure: WorkflowException? = null
+              while (System.nanoTime() < deadline) {
+                  try {
+                      lastObservedStatus = workflow.status()
+                      if (lastObservedStatus == status) {
+                          return
+                      }
+                      lastQueryFailure = null
+                  } catch (error: WorkflowException) {
+                      lastQueryFailure = error
+                  }
+                  Thread.sleep(50)
+              }
+              lastQueryFailure?.let { throw it }
+              assertEquals(status, lastObservedStatus)
+          }'''
+          if old not in text:
+              raise SystemExit('expected waitForStatus helper was not found')
+          path.write_text(text.replace(old, new))
+          PY
+          rm .github/workflows/fix-pr95-temporal-query-race.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/core-banking/src/integrationTest/kotlin/lab/banking/core/temporal/BankingCaseTemporalWorkflowIntegrationTest.kt .github/workflows/fix-pr95-temporal-query-race.yml
+          git commit -m "test: Temporal 상태 query 레이스 안정화"
+          git push origin HEAD:agent/payment-customer-ownership
