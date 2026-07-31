@@ -62,7 +62,7 @@ class StructuredApiErrorHandler {
             StructuredApiErrorEnvelope(
                 error = StructuredApiError(
                     code = "REQUEST_VALIDATION_FAILED",
-                    message = error.message,
+                    message = error.message ?: "required request parameter is missing",
                     statusCode = HttpStatus.BAD_REQUEST.value(),
                     domain = "validation",
                     cause = "A required request parameter was missing before domain execution.",
