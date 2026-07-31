@@ -62,19 +62,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
-      - run: >-
-          scripts/run-core-banking-tests.sh
-          :services:core-banking:integrationTest
-          --tests lab.banking.core.ledger.evidence.PaymentLedgerEvidenceIntegrationTest
-          --stacktrace
-          --info
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pr98-core-ledger-evidence-results
-          path: |
-            services/core-banking/build/test-results/integrationTest/
-            services/core-banking/build/reports/tests/integrationTest/
+      - run: scripts/run-core-banking-tests.sh :services:core-banking:test
+      - run: scripts/run-core-banking-tests.sh :services:core-banking:integrationTest
 
   backend-payment-service:
     name: Kotlin Spring payment service
