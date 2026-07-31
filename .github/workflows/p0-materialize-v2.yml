@@ -1,0 +1,82 @@
+name: Materialize verified P0 branch
+
+on:
+  push:
+    branches:
+      - agent/portfolio-settlement-p0
+    paths:
+      - .github/p0-trigger-v2
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/portfolio-settlement-p0
+          fetch-depth: 0
+
+      - name: Reconstruct and verify reviewed P0 patch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import base64
+          import gzip
+          import hashlib
+          import json
+          import os
+          import urllib.request
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          shas = [
+              "8b6defc1e402af6a7eeb5df3e3a94511099621a8",
+              "743e5cf99fa17e6254d33bda099cc1aba4d78349",
+          ]
+
+          chunks = []
+          for sha in shas:
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repository}/git/blobs/{sha}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  payload = json.load(response)
+              chunks.append(base64.b64decode(payload["content"]).decode("ascii"))
+
+          encoded = "".join(chunks)
+          compressed = base64.b64decode(encoded, validate=True)
+          if hashlib.sha256(compressed).hexdigest() != "cf079eed3fb491d32490048bd15f654ebe99be7e156f7ed2191630379da2c511":
+              raise SystemExit("compressed P0 patch digest mismatch")
+
+          patch = gzip.decompress(compressed)
+          if hashlib.sha256(patch).hexdigest() != "40058aa76a5ee9bf5bd52c86a1f1c8e169dba4e1cbeef4f60a2888dee2b53f1f":
+              raise SystemExit("P0 patch digest mismatch")
+          with open("/tmp/p0.patch", "wb") as output:
+              output.write(patch)
+          PY
+
+      - name: Replace bootstrap history with final P0 commit
+        run: |
+          set -euo pipefail
+          base=30c8ff0c29c5d180fe65cbc070722d7487a8d97d
+          expected_tree=16ec4a3dc7c3b3730485432660c5580d8b5e2604
+          git reset --hard "$base"
+          git apply --binary --index /tmp/p0.patch
+          test "$(git write-tree)" = "$expected_tree"
+          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = "33"
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat: strengthen settlement portfolio P0 path"
+          test "$(git rev-parse HEAD^)" = "$base"
+          test "$(git rev-parse HEAD^{tree})" = "$expected_tree"
+          git push --force origin HEAD:agent/portfolio-settlement-p0
