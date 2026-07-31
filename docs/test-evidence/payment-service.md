@@ -298,7 +298,7 @@ need local file-lock socket and Docker access.
   `realPaymentNetworkUsed=false`, and
   `realFinancialInstitutionApiUsed=false`;
 - settled instructions cannot be canceled;
-- pre-settlement cancellation is idempotent and audited through status history,
+- pre-ledger-posting cancellation is idempotent and audited through status history,
   with `PaymentInstructionCanceled` payloads preserving synthetic-only and
   no-real-network boundary metadata.
 
@@ -399,7 +399,7 @@ Manifest and API client coverage verifies:
   rows and return `PAU-*` `auditEventId` values for PAY-101 evidence;
 - branch staff direct payment cancellation is rejected with
   `PAYMENT_AUTHORIZATION_POLICY_VIOLATION`, while customer self-cancel remains
-  allowed for pre-settlement instructions;
+  allowed for pre-ledger-posting instructions;
 - staff/ops cancellation correction creation is forbidden to CUSTOMER tokens and
   allowed to staff/ops maker roles only;
 - maker cancellation requests persist durable `PCR-*` pending rows without
@@ -409,7 +409,7 @@ Manifest and API client coverage verifies:
 - self-approval is rejected with `PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED`
   before instruction mutation;
 - an independent manager approval marks the request `APPROVED`, cancels the
-  pre-settlement instruction, appends `CANCELED` status history with the checker
+  pre-ledger-posting instruction, appends `CANCELED` status history with the checker
   actor, and emits one `PaymentInstructionCanceled` durable Outbox event;
 - idempotent checker approval replay returns the same approved result without a
   duplicate cancellation event;

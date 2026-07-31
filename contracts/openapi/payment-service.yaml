@@ -113,7 +113,7 @@ paths:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/cancellation-requests:
     post:
-      summary: Request staff maker-checker approval for pre-settlement payment cancellation
+      summary: Request staff maker-checker approval for pre-ledger-posting payment cancellation
       operationId: requestPaymentCancellationApproval
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -152,7 +152,7 @@ paths:
               $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
       responses:
         '200':
-          description: Cancellation request approved and the payment instruction canceled if still pre-settlement
+          description: Cancellation request approved and the payment instruction canceled if still pre-ledger-posting
           content:
             application/json:
               schema:

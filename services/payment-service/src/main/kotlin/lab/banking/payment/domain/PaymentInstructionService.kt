@@ -362,7 +362,7 @@ class PaymentInstructionService(
                 fix = "Pass the TX-* transaction id returned by core-banking ledger posting."
             )
         }
-        // Keep the legacy discriminator so V005 idempotency hashes remain replayable after V006.
+        // Keep the legacy discriminator so pre-V006 idempotency hashes remain replayable.
         val requestHash = requestHash("SETTLE", instructionId, request.ledgerTransactionId, request.requestedBy)
         replayIfPresent(request.idempotencyKey, "RECORD_PAYMENT_LEDGER_POSTING", requestHash)?.let { return it }
 
