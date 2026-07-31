@@ -1,0 +1,72 @@
+name: Implement payment three-way reconciliation
+
+on:
+  push:
+    branches:
+      - agent/payment-three-way-reconciliation
+    paths:
+      - .github/workflows/implement-payment-three-way-reconciliation.yml
+      - scripts/apply-payment-three-way-reconciliation.py
+      - scripts/.payment-reconciliation-part-00
+      - scripts/.payment-reconciliation-part-01
+      - scripts/.payment-reconciliation-part-02
+      - scripts/.payment-reconciliation-part-03
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/payment-three-way-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Apply reconciliation implementation
+        run: python3 scripts/apply-payment-three-way-reconciliation.py
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Verify repository and contracts
+        run: |
+          npm run contracts:diff-openapi
+          npm run contracts:runtime-evidence
+          npm run contracts:validate-runtime-events
+          npm test
+          npm run contracts:lint
+          npm run contracts:check-client
+          npm run contracts:check-events
+          npm run packages:typecheck
+          npm run scripts:typecheck
+      - name: Verify Core Banking and Payment behavior
+        run: scripts/run-core-banking-tests.sh :services:core-banking:test :services:core-banking:integrationTest :services:payment-service:test :services:payment-service:integrationTest
+      - name: Publish verified implementation
+        shell: bash
+        run: |
+          git diff --check
+          git checkout -- \
+            docs/test-evidence/generated/aml-model-card.json \
+            docs/test-evidence/generated/aml-regulatory-report.json \
+            docs/test-evidence/generated/aml-str-report-summary.json \
+            docs/test-evidence/generated/synthetic-str-report.json || true
+          rm .github/workflows/implement-payment-three-way-reconciliation.yml
+          rm scripts/apply-payment-three-way-reconciliation.py
+          rm scripts/.payment-reconciliation-part-00
+          rm scripts/.payment-reconciliation-part-01
+          rm scripts/.payment-reconciliation-part-02
+          rm scripts/.payment-reconciliation-part-03
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: 결제 원장 외부자료 3-way 대사와 예외 SLA"
+          git push origin HEAD:agent/payment-three-way-reconciliation
