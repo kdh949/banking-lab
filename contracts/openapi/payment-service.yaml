@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Banking Lab Synthetic Payment Service API
   version: 0.1.0
-  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly.
+  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly. LEDGER_POSTED means the internal core ledger accepted the posting; it does not mean external clearing or settlement completed.
 x-banking-lab-contract:
   syntheticOnly: true
   structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
@@ -53,9 +53,29 @@ paths:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
         '400':
           description: Staff payment lookup reason missing
+  /api/payments/instructions/{instructionId}/ledger-postings:
+    post:
+      summary: Record the successful core-banking ledger posting reference
+      operationId: recordPaymentLedgerPosting
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentLedgerPostingRequest'
+      responses:
+        '200':
+          description: Ledger posting recorded as LEDGER_POSTED; external clearing and settlement are not implied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/settlements:
     post:
-      summary: Record core-banking ledger settlement reference
+      deprecated: true
+      summary: Compatibility alias for recording the core-banking ledger posting reference
       operationId: recordPaymentSettlement
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -64,17 +84,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RecordPaymentSettlementRequest'
+              $ref: '#/components/schemas/RecordPaymentLedgerPostingRequest'
       responses:
         '200':
-          description: Settlement recorded
+          description: Compatibility response using LEDGER_POSTED semantics
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/cancel:
     post:
-      summary: Cancel before ledger settlement
+      summary: Cancel before ledger posting
       operationId: cancelPaymentInstruction
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -360,7 +380,7 @@ components:
           type: string
         reason:
           type: string
-    RecordPaymentSettlementRequest:
+    RecordPaymentLedgerPostingRequest:
       type: object
       required: [ledgerTransactionId, idempotencyKey, requestedBy, reason]
       properties:
@@ -685,7 +705,7 @@ components:
         currency:
           type: string
         status:
-          enum: [POSTING_REQUESTED, SETTLED, CANCELED, FAILED]
+          enum: [POSTING_REQUESTED, LEDGER_POSTED, CANCELED, FAILED]
         ledgerTransactionId:
           type: string
           nullable: true

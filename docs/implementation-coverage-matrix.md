@@ -1,6 +1,6 @@
 # Implementation Coverage Matrix
 
-Review date: 2026-06-10
+Review date: 2026-07-31
 
 Scope: target-stack Banking Lab implementation only. The synthetic runtime helper is retained for bounded scenario evidence and is not counted as target-path implementation coverage.
 
@@ -33,6 +33,10 @@ The Phase 1 CI hardening evidence is recorded in `docs/test-evidence/ci-coverage
 ## Phase 2 Spring Security Resource Server Hardening
 
 The Phase 2 security hardening evidence is recorded in `docs/test-evidence/spring-security-resource-server-hardening.md`. Core-banking, payment-service, notification-service, and reporting-service now include Spring Security OAuth2 Resource Server dependencies and stateless filter-chain configuration. Signed JWT verification goes through Spring/Nimbus with issuer/audience validation, simulator tokens require dev/test double opt-in and fail in prod-like profiles, and selected high-risk core APIs have method-level authorization gates while preserving existing route policy, structured error, audit, step-up, trusted-device, and session-revocation behavior.
+
+## Payment Ledger Posting Semantics
+
+Payment instructions now use `LEDGER_POSTED` only after core-banking returns a synthetic `TX-*` double-entry transaction. This state explicitly excludes external clearing or settlement completion. The canonical `/ledger-postings` callback, V006 migration, `PaymentInstructionLedgerPosted` event contract, deprecated `/settlements` compatibility alias, and migration/integration tests are documented in `docs/architecture/payment-ledger-posted-semantics.md`.
 
 ## Phase 5 Ledger Projection Integrity Workflow
 

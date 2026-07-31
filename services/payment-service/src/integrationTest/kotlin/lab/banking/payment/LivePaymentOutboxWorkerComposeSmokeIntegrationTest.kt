@@ -169,7 +169,7 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
             )
             workerKilled = false
 
-            val ledgerTransactionId = waitForPaymentSettlement(
+            val ledgerTransactionId = waitForPaymentLedgerPosting(
                 databaseUrl = databaseUrl,
                 databaseUser = databaseUser,
                 databasePassword = databasePassword,
@@ -457,7 +457,7 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
         return objectMapper.readTree(response.body())
     }
 
-    private fun waitForPaymentSettlement(
+    private fun waitForPaymentLedgerPosting(
         databaseUrl: String,
         databaseUser: String,
         databasePassword: String,
@@ -475,7 +475,7 @@ class LivePaymentOutboxWorkerComposeSmokeIntegrationTest {
                 databasePassword,
                 paymentInstructionId
             )
-            if (lastStatus == "SETTLED" && !lastLedgerTransactionId.isNullOrBlank()) {
+            if (lastStatus == "LEDGER_POSTED" && !lastLedgerTransactionId.isNullOrBlank()) {
                 return lastLedgerTransactionId
             }
             Thread.sleep(500)

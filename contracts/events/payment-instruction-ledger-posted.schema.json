@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/payment-instruction-ledger-posted.schema.json",
+  "title": "PaymentInstructionLedgerPosted",
+  "description": "The internal core-banking ledger posting completed. This event does not represent external clearing or settlement completion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "paymentInstructionId",
+    "ledgerTransactionId",
+    "status",
+    "syntheticOnly",
+    "directLedgerWrite",
+    "ledgerPostedViaCoreBanking",
+    "externalSettlementCompleted",
+    "realPaymentNetworkUsed",
+    "realFinancialInstitutionApiUsed"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "2026-07-31"
+    },
+    "paymentInstructionId": {
+      "type": "string",
+      "pattern": "^PAY-"
+    },
+    "ledgerTransactionId": {
+      "type": "string",
+      "pattern": "^TX-"
+    },
+    "status": {
+      "const": "LEDGER_POSTED"
+    },
+    "syntheticOnly": {
+      "const": true
+    },
+    "directLedgerWrite": {
+      "const": false
+    },
+    "ledgerPostedViaCoreBanking": {
+      "const": true
+    },
+    "externalSettlementCompleted": {
+      "const": false
+    },
+    "realPaymentNetworkUsed": {
+      "const": false
+    },
+    "realFinancialInstitutionApiUsed": {
+      "const": false
+    }
+  }
+}

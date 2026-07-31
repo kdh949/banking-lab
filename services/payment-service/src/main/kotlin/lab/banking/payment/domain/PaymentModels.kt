@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus
 
 enum class PaymentInstructionStatus {
     POSTING_REQUESTED,
-    SETTLED,
+    LEDGER_POSTED,
     CANCELED,
     FAILED
 }
@@ -23,7 +23,7 @@ data class CreatePaymentInstructionRequest(
     val reason: String? = null
 )
 
-data class RecordPaymentSettlementRequest(
+data class RecordPaymentLedgerPostingRequest(
     val ledgerTransactionId: String,
     val idempotencyKey: String,
     val requestedBy: String,

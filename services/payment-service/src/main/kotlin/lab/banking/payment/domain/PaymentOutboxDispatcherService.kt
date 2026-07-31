@@ -25,11 +25,11 @@ class PaymentOutboxDispatcherService(
         return try {
             val command = event.toCoreCommand(request)
             val result = coreLedgerPostingClient.postBillPayment(command)
-            paymentInstructionService.recordSettlement(
+            paymentInstructionService.recordLedgerPosting(
                 event.aggregateId,
-                RecordPaymentSettlementRequest(
+                RecordPaymentLedgerPostingRequest(
                     ledgerTransactionId = result.ledgerTransactionId,
-                    idempotencyKey = settlementIdempotencyKey(event.outboxEventId),
+                    idempotencyKey = ledgerPostingResultIdempotencyKey(event.outboxEventId),
                     requestedBy = request.requestedBy,
                     reason = request.reason
                 )
@@ -222,7 +222,7 @@ class PaymentOutboxDispatcherService(
 
     private fun ledgerIdempotencyKey(outboxEventId: String): String = "PAY-LEDGER-$outboxEventId"
 
-    private fun settlementIdempotencyKey(outboxEventId: String): String = "PAY-SETTLEMENT-$outboxEventId"
+    private fun ledgerPostingResultIdempotencyKey(outboxEventId: String): String = "PAY-LEDGER-POSTED-$outboxEventId"
 
     private fun lifecycleIdempotencyKey(prefix: String, outboxEventId: String, retryCount: Int): String =
         "PAY-$prefix-$outboxEventId-$retryCount"

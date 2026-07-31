@@ -248,10 +248,10 @@ test("payment-service instruction lifecycle events have checked-in AsyncAPI cont
   const helmValues = await readFile("infra/helm/banking-lab/values.yaml", "utf8");
   const lifecycleSchemas = [
     [
-      "payment.instruction.settled",
-      "PaymentInstructionSettled",
-      "payment-instruction-settled.schema.json",
-      "SETTLED",
+      "payment.instruction.ledger-posted",
+      "PaymentInstructionLedgerPosted",
+      "payment-instruction-ledger-posted.schema.json",
+      "LEDGER_POSTED",
       undefined
     ],
     [
@@ -277,8 +277,9 @@ test("payment-service instruction lifecycle events have checked-in AsyncAPI cont
     ]
   ];
 
-  assert.match(service, /eventType = "PaymentInstructionSettled"/);
+  assert.match(service, /eventType = "PaymentInstructionLedgerPosted"/);
   assert.match(service, /"ledgerPostedViaCoreBanking" to true/);
+  assert.match(service, /"externalSettlementCompleted" to false/);
   assert.match(service, /"realFinancialInstitutionApiUsed" to false/);
   assert.match(dispatcher, /eventType = "PaymentInstructionFailed"/);
   assert.match(dispatcher, /eventType = "PaymentInstructionRetryScheduled"/);

@@ -103,10 +103,18 @@
     },
     {
       "method": "POST",
-      "path": "/api/payments/instructions/{instructionId}/settlements",
-      "handler": "recordSettlement",
+      "path": "/api/payments/instructions/{instructionId}/ledger-postings",
+      "handler": "recordLedgerPosting",
       "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
-      "requestDto": "RecordPaymentSettlementRequest",
+      "requestDto": "RecordPaymentLedgerPostingRequest",
+      "responseDto": "PaymentInstructionResponse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/instructions/{instructionId}/settlements",
+      "handler": "recordSettlementCompatibility",
+      "controllerFile": "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
+      "requestDto": "RecordPaymentLedgerPostingRequest",
       "responseDto": "PaymentInstructionResponse"
     },
     {
@@ -1141,7 +1149,7 @@
       "properties": [],
       "enumValues": [
         "POSTING_REQUESTED",
-        "SETTLED",
+        "LEDGER_POSTED",
         "CANCELED",
         "FAILED"
       ]
@@ -1206,7 +1214,7 @@
       "enumValues": []
     },
     {
-      "name": "RecordPaymentSettlementRequest",
+      "name": "RecordPaymentLedgerPostingRequest",
       "kind": "object",
       "required": [
         "ledgerTransactionId",

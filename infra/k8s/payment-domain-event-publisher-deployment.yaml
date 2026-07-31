@@ -68,7 +68,7 @@ spec:
             - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS
               value: "60"
             - name: BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES
-              value: "PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated"
+              value: "PaymentInstructionLedgerPosted,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated"
             - name: BANKING_LAB_OTEL_SERVICE_NAME
               value: "banking-lab-payment-domain-event-publisher"
             - name: BANKING_LAB_SECURITY_AUDIENCE

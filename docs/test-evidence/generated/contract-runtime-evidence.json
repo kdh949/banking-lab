@@ -10,8 +10,8 @@
       "contracts/openapi/notification-service.yaml",
       "contracts/openapi/reporting-service.yaml"
     ],
-    "operationCount": 186,
-    "clientMethodCount": 157,
+    "operationCount": 187,
+    "clientMethodCount": 158,
     "structuralGateScripts": [
       "contracts:lint",
       "contracts:check-client",
@@ -25,7 +25,7 @@
   },
   "asyncApi": {
     "contractFile": "contracts/asyncapi/banking-lab-events.yaml",
-    "eventSchemaCount": 17,
+    "eventSchemaCount": 18,
     "envelopeFields": [
       "syntheticOnly",
       "sourceService",

@@ -16,7 +16,7 @@ import lab.banking.payment.domain.PaymentInstructionResponse
 import lab.banking.payment.domain.PaymentInstructionService
 import lab.banking.payment.domain.PaymentOutboxDispatchResponse
 import lab.banking.payment.domain.PaymentOutboxDispatcherService
-import lab.banking.payment.domain.RecordPaymentSettlementRequest
+import lab.banking.payment.domain.RecordPaymentLedgerPostingRequest
 import lab.banking.payment.domain.RequestPaymentCancellationApprovalRequest
 import lab.banking.payment.domain.ResumeAutopayAgreementRequest
 import lab.banking.payment.domain.ReviewPaymentCancellationRequest
@@ -66,12 +66,20 @@ class PaymentController(
             principal = request.getAttribute(PaymentAuthorizationFilter.PRINCIPAL_ATTRIBUTE) as? PaymentPrincipal
         )
 
-    @PostMapping("/instructions/{instructionId}/settlements")
-    fun recordSettlement(
+    @PostMapping("/instructions/{instructionId}/ledger-postings")
+    fun recordLedgerPosting(
         @PathVariable instructionId: String,
-        @RequestBody request: RecordPaymentSettlementRequest
+        @RequestBody request: RecordPaymentLedgerPostingRequest
     ): PaymentInstructionResponse =
-        paymentInstructionService.recordSettlement(instructionId, request)
+        paymentInstructionService.recordLedgerPosting(instructionId, request)
+
+    @Deprecated("Use /api/payments/instructions/{instructionId}/ledger-postings")
+    @PostMapping("/instructions/{instructionId}/settlements")
+    fun recordSettlementCompatibility(
+        @PathVariable instructionId: String,
+        @RequestBody request: RecordPaymentLedgerPostingRequest
+    ): PaymentInstructionResponse =
+        paymentInstructionService.recordLedgerPosting(instructionId, request)
 
     @PostMapping("/instructions/{instructionId}/cancel")
     fun cancel(
