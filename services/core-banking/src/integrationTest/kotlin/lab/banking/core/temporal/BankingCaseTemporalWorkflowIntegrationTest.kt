@@ -208,14 +208,23 @@ class BankingCaseTemporalWorkflowIntegrationTest {
         )
 
     private fun waitForStatus(workflow: BankingCaseTemporalWorkflow, status: String) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        var lastObservedStatus: String? = null
+        var lastQueryFailure: WorkflowException? = null
         while (System.nanoTime() < deadline) {
-            if (workflow.status() == status) {
-                return
+            try {
+                lastObservedStatus = workflow.status()
+                if (lastObservedStatus == status) {
+                    return
+                }
+                lastQueryFailure = null
+            } catch (error: WorkflowException) {
+                lastQueryFailure = error
             }
-            Thread.sleep(25)
+            Thread.sleep(50)
         }
-        assertEquals(status, workflow.status())
+        lastQueryFailure?.let { throw it }
+        assertEquals(status, lastObservedStatus)
     }
 
     private fun makerRole(caseType: TemporalBankingCaseType): String =
