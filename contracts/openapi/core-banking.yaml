@@ -1449,6 +1449,34 @@ paths:
       x-synthetic-only: true
       x-test-profile-only: api-error-parity
       responses: { '400': { $ref: '#/components/responses/StructuredErrorResponse' }, '403': { $ref: '#/components/responses/StructuredErrorResponse' }, '404': { $ref: '#/components/responses/StructuredErrorResponse' }, '409': { $ref: '#/components/responses/StructuredErrorResponse' }, '500': { $ref: '#/components/responses/StructuredErrorResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+
+  /api/ledger/payment-postings/evidence:
+    get:
+      operationId: paymentLedgerEvidence
+      x-api-client-required: false
+      x-synthetic-only: true
+      x-reason-required: true
+      parameters:
+        - name: businessDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audited balanced bill-payment ledger evidence for three-way reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentLedgerEvidenceResponse'
+        default:
+          $ref: '#/components/responses/StructuredErrorResponse'
 components:
   responses:
     AnyJsonResponse:
@@ -1464,6 +1492,46 @@ components:
           schema:
             $ref: '#/components/schemas/StructuredError'
   schemas:
+
+    PaymentLedgerEvidenceDto:
+      type: object
+      required:
+        - ledgerTransactionId
+        - paymentInstructionId
+        - businessDate
+        - transactionType
+        - status
+        - currency
+        - amountMinor
+        - totalDebitMinor
+        - totalCreditMinor
+        - postingCount
+        - balanced
+        - syntheticOnly
+      properties:
+        ledgerTransactionId: { type: string, pattern: '^TX-' }
+        paymentInstructionId: { type: string, pattern: '^PAY-' }
+        businessDate: { type: string, format: date }
+        transactionType: { const: BILL_PAYMENT }
+        status: { type: string }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        amountMinor: { type: integer, minimum: 1 }
+        totalDebitMinor: { type: integer, minimum: 1 }
+        totalCreditMinor: { type: integer, minimum: 1 }
+        postingCount: { type: integer, minimum: 2 }
+        balanced: { type: boolean }
+        postedAt: { type: string, format: date-time, nullable: true }
+        syntheticOnly: { const: true }
+    PaymentLedgerEvidenceResponse:
+      type: object
+      required: [items, auditEventId, syntheticOnly]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentLedgerEvidenceDto'
+        auditEventId: { type: string, pattern: '^AUD-' }
+        syntheticOnly: { const: true }
     AnyJson:
       type: object
       additionalProperties: true
