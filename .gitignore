@@ -20,3 +20,4 @@ services/**/bin/
 .next/
 *.tsbuildinfo
 tmp/
+.gstack/
