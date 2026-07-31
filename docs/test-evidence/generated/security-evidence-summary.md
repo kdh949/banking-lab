@@ -1,8 +1,8 @@
 # Security Evidence Summary
 
-Generated at: 2026-06-06T11:22:55.262Z
+Generated at: 2026-06-14T10:49:52.891Z
 
-Forced Docker scanner fallbacks: true
+Forced Docker scanner fallbacks: false
 
 | Check | Status | Evidence | Reason |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Forced Docker scanner fallbacks: true
 | semgrep-sast | pass | docs/test-evidence/generated/semgrep.json |  |
 | trivy-fs | pass | docs/test-evidence/generated/trivy-fs.json |  |
 | sbom-cyclonedx | pass | docs/test-evidence/generated/sbom.cdx.json |  |
-| dast-zap-baseline | pass | docs/test-evidence/generated/zap-baseline.log |  |
+| dast-zap-baseline | skipped |  | BANKING_LAB_DAST_URL is not set; no live target was supplied for DAST. |
 
-Totals: 5 passed, 0 failed, 0 skipped.
+Totals: 4 passed, 0 failed, 1 skipped.
 

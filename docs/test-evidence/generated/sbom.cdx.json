@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:f01cef3d-c4cc-4bb2-8ad7-93d84bb335f1",
+  "serialNumber": "urn:uuid:08ca162e-9cca-4a4f-981e-1cd7e2b9fc4e",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-06-06T11:22:26+00:00",
+    "timestamp": "2026-06-14T10:49:52+00:00",
     "tools": {
       "components": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     "component": {
-      "bom-ref": "ef306bac-2112-43ea-948b-83d9d237f9dd",
+      "bom-ref": "79e05046-bda2-41ff-b281-705b309d7f96",
       "type": "application",
       "name": "/workspace",
       "properties": [
@@ -33,7 +33,7 @@
   },
   "components": [
     {
-      "bom-ref": "3d98f471-2c21-4e49-b575-b74bb83fd67e",
+      "bom-ref": "5d047238-66ff-4570-870e-66dfb6e26fab",
       "type": "application",
       "name": "package-lock.json",
       "properties": [
@@ -48,7 +48,7 @@
       ]
     },
     {
-      "bom-ref": "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780",
+      "bom-ref": "763e7cc1-478f-434a-be2f-56449d65108d",
       "type": "application",
       "name": "analytics/aml-fds-python/uv.lock",
       "properties": [
@@ -127,6 +127,24 @@
         {
           "name": "aquasecurity:trivy:PkgID",
           "value": "@banking-lab/auth-client@0.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "npm"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/%40banking-lab/call-center-console@0.1.0",
+      "type": "library",
+      "group": "@banking-lab",
+      "name": "call-center-console",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40banking-lab/call-center-console@0.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "@banking-lab/call-center-console@0.1.0"
         },
         {
           "name": "aquasecurity:trivy:PkgType",
@@ -1874,12 +1892,13 @@
   ],
   "dependencies": [
     {
-      "ref": "3d98f471-2c21-4e49-b575-b74bb83fd67e",
+      "ref": "5d047238-66ff-4570-870e-66dfb6e26fab",
       "dependsOn": [
         "pkg:npm/%40banking-lab/admin-console@0.1.0",
         "pkg:npm/%40banking-lab/api-client@0.1.0",
         "pkg:npm/%40banking-lab/audit-console@0.1.0",
         "pkg:npm/%40banking-lab/auth-client@0.1.0",
+        "pkg:npm/%40banking-lab/call-center-console@0.1.0",
         "pkg:npm/%40banking-lab/complaint-portal@0.1.0",
         "pkg:npm/%40banking-lab/customer-web@0.1.0",
         "pkg:npm/%40banking-lab/fds-aml-console@0.1.0",
@@ -1891,16 +1910,16 @@
       ]
     },
     {
-      "ref": "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780",
+      "ref": "763e7cc1-478f-434a-be2f-56449d65108d",
       "dependsOn": [
         "pkg:pypi/banking-lab-aml-fds@0.1.0"
       ]
     },
     {
-      "ref": "ef306bac-2112-43ea-948b-83d9d237f9dd",
+      "ref": "79e05046-bda2-41ff-b281-705b309d7f96",
       "dependsOn": [
-        "3d98f471-2c21-4e49-b575-b74bb83fd67e",
-        "6c6ec6d7-c6f2-4b7c-8c2f-739d087a6780"
+        "5d047238-66ff-4570-870e-66dfb6e26fab",
+        "763e7cc1-478f-434a-be2f-56449d65108d"
       ]
     },
     {
@@ -1930,6 +1949,16 @@
     {
       "ref": "pkg:npm/%40banking-lab/auth-client@0.1.0",
       "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40banking-lab/call-center-console@0.1.0",
+      "dependsOn": [
+        "pkg:npm/%40banking-lab/api-client@0.1.0",
+        "pkg:npm/%40banking-lab/auth-client@0.1.0",
+        "pkg:npm/next@16.2.7",
+        "pkg:npm/react-dom@19.2.7",
+        "pkg:npm/react@19.2.7"
+      ]
     },
     {
       "ref": "pkg:npm/%40banking-lab/complaint-portal@0.1.0",

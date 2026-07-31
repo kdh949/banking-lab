@@ -3,16 +3,16 @@
   "Trivy": {
     "Version": "0.71.0"
   },
-  "ReportID": "019e9cab-6a1c-70ef-9177-21a5a6f70856",
-  "CreatedAt": "2026-06-06T11:22:20.060062468Z",
-  "ArtifactID": "sha256:e548bfa48fe31ea3831c62c9f2f43f7eff11e038fc2ac4d4783bf76b47f1a8e3",
+  "ReportID": "019ec5c0-6ec8-7b21-9e8b-be0f98080649",
+  "CreatedAt": "2026-06-14T10:49:43.368731004Z",
+  "ArtifactID": "sha256:321e37884c37bf727d5e38ce533581c9e76d7ba82baeb33f4281c26b0e30c618",
   "ArtifactName": "/workspace",
   "ArtifactType": "repository",
   "Metadata": {
     "RepoURL": "https://github.com/kdh949/banking-lab.git",
-    "Branch": "codex/remaining-hardening-phase-6-ops-security",
-    "Commit": "68c2976844bba2be7c4f75cd78a2cff82c8f435b",
-    "CommitMsg": "feat: 운영 관측성 지표 추가",
+    "Branch": "feat/next-gen",
+    "Commit": "f2b200a9f59958e2ad6c1ae6bf3316051283aa37",
+    "CommitMsg": "test: 고객 360 런타임 검증 보강",
     "Author": "Donghyun Kim \u003ckdh949@naver.com\u003e",
     "Committer": "Donghyun Kim \u003ckdh949@naver.com\u003e"
   },
@@ -244,14 +244,14 @@
           "Name": "@banking-lab/api-client",
           "Identifier": {
             "PURL": "pkg:npm/%40banking-lab/api-client@0.1.0",
-            "UID": "ed97a8db25fee1fe"
+            "UID": "79da71f2e1a5a7de"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
           "Locations": [
             {
-              "StartLine": 1260,
-              "EndLine": 1263
+              "StartLine": 1281,
+              "EndLine": 1284
             }
           ],
           "AnalyzedBy": "npm"
@@ -285,24 +285,24 @@
           "Name": "@banking-lab/auth-client",
           "Identifier": {
             "PURL": "pkg:npm/%40banking-lab/auth-client@0.1.0",
-            "UID": "2f2baf295407904b"
+            "UID": "d2d267ecef2fee4"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
           "Locations": [
             {
-              "StartLine": 1264,
-              "EndLine": 1267
+              "StartLine": 1285,
+              "EndLine": 1288
             }
           ],
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/complaint-portal@0.1.0",
-          "Name": "@banking-lab/complaint-portal",
+          "ID": "@banking-lab/call-center-console@0.1.0",
+          "Name": "@banking-lab/call-center-console",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/complaint-portal@0.1.0",
-            "UID": "3ddb3ae0cac118de"
+            "PURL": "pkg:npm/%40banking-lab/call-center-console@0.1.0",
+            "UID": "12cf89c6513c908b"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
@@ -322,11 +322,11 @@
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/customer-web@0.1.0",
-          "Name": "@banking-lab/customer-web",
+          "ID": "@banking-lab/complaint-portal@0.1.0",
+          "Name": "@banking-lab/complaint-portal",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/customer-web@0.1.0",
-            "UID": "143dedd191feb0d6"
+            "PURL": "pkg:npm/%40banking-lab/complaint-portal@0.1.0",
+            "UID": "b2b008655c61b829"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
@@ -346,11 +346,11 @@
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/fds-aml-console@0.1.0",
-          "Name": "@banking-lab/fds-aml-console",
+          "ID": "@banking-lab/customer-web@0.1.0",
+          "Name": "@banking-lab/customer-web",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/fds-aml-console@0.1.0",
-            "UID": "3e33dd9ba6068b30"
+            "PURL": "pkg:npm/%40banking-lab/customer-web@0.1.0",
+            "UID": "c56c7174d813cc51"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
@@ -370,28 +370,11 @@
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/form-engine@0.1.0",
-          "Name": "@banking-lab/form-engine",
+          "ID": "@banking-lab/fds-aml-console@0.1.0",
+          "Name": "@banking-lab/fds-aml-console",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/form-engine@0.1.0",
-            "UID": "624c172f2e663e48"
-          },
-          "Version": "0.1.0",
-          "Relationship": "direct",
-          "Locations": [
-            {
-              "StartLine": 1268,
-              "EndLine": 1271
-            }
-          ],
-          "AnalyzedBy": "npm"
-        },
-        {
-          "ID": "@banking-lab/ops-console@0.1.0",
-          "Name": "@banking-lab/ops-console",
-          "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/ops-console@0.1.0",
-            "UID": "d0b7d4c5fc47e0fd"
+            "PURL": "pkg:npm/%40banking-lab/fds-aml-console@0.1.0",
+            "UID": "f0e45634d6933c41"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
@@ -411,28 +394,28 @@
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/screen-engine@0.1.0",
-          "Name": "@banking-lab/screen-engine",
+          "ID": "@banking-lab/form-engine@0.1.0",
+          "Name": "@banking-lab/form-engine",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/screen-engine@0.1.0",
-            "UID": "9041a9b04d4a5a91"
+            "PURL": "pkg:npm/%40banking-lab/form-engine@0.1.0",
+            "UID": "c69c712b62788331"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
           "Locations": [
             {
-              "StartLine": 1272,
-              "EndLine": 1275
+              "StartLine": 1289,
+              "EndLine": 1292
             }
           ],
           "AnalyzedBy": "npm"
         },
         {
-          "ID": "@banking-lab/staff-terminal@0.1.0",
-          "Name": "@banking-lab/staff-terminal",
+          "ID": "@banking-lab/ops-console@0.1.0",
+          "Name": "@banking-lab/ops-console",
           "Identifier": {
-            "PURL": "pkg:npm/%40banking-lab/staff-terminal@0.1.0",
-            "UID": "1bf3a7c320f64823"
+            "PURL": "pkg:npm/%40banking-lab/ops-console@0.1.0",
+            "UID": "f0039c7541582359"
           },
           "Version": "0.1.0",
           "Relationship": "direct",
@@ -452,11 +435,52 @@
           "AnalyzedBy": "npm"
         },
         {
+          "ID": "@banking-lab/screen-engine@0.1.0",
+          "Name": "@banking-lab/screen-engine",
+          "Identifier": {
+            "PURL": "pkg:npm/%40banking-lab/screen-engine@0.1.0",
+            "UID": "4d65b0e1346fd380"
+          },
+          "Version": "0.1.0",
+          "Relationship": "direct",
+          "Locations": [
+            {
+              "StartLine": 1293,
+              "EndLine": 1296
+            }
+          ],
+          "AnalyzedBy": "npm"
+        },
+        {
+          "ID": "@banking-lab/staff-terminal@0.1.0",
+          "Name": "@banking-lab/staff-terminal",
+          "Identifier": {
+            "PURL": "pkg:npm/%40banking-lab/staff-terminal@0.1.0",
+            "UID": "502da7fac4e02290"
+          },
+          "Version": "0.1.0",
+          "Relationship": "direct",
+          "DependsOn": [
+            "@banking-lab/api-client@0.1.0",
+            "@banking-lab/auth-client@0.1.0",
+            "next@16.2.7",
+            "react-dom@19.2.7",
+            "react@19.2.7"
+          ],
+          "Locations": [
+            {
+              "StartLine": 141,
+              "EndLine": 157
+            }
+          ],
+          "AnalyzedBy": "npm"
+        },
+        {
           "ID": "@playwright/test@1.60.0",
           "Name": "@playwright/test",
           "Identifier": {
             "PURL": "pkg:npm/%40playwright/test@1.60.0",
-            "UID": "75e8c1adcf234c4f"
+            "UID": "eac1c322fa6d952"
           },
           "Version": "1.60.0",
           "Licenses": [
@@ -468,8 +492,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 855,
-              "EndLine": 870
+              "StartLine": 876,
+              "EndLine": 891
             }
           ],
           "AnalyzedBy": "npm"
@@ -479,7 +503,7 @@
           "Name": "@emnapi/runtime",
           "Identifier": {
             "PURL": "pkg:npm/%40emnapi/runtime@1.10.0",
-            "UID": "75a7aeda080d93aa"
+            "UID": "66e6df396dcb3bc"
           },
           "Version": "1.10.0",
           "Licenses": [
@@ -492,8 +516,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 185,
-              "EndLine": 194
+              "StartLine": 206,
+              "EndLine": 215
             }
           ],
           "AnalyzedBy": "npm"
@@ -503,7 +527,7 @@
           "Name": "@img/colour",
           "Identifier": {
             "PURL": "pkg:npm/%40img/colour@1.1.0",
-            "UID": "e2edcab4f8180af4"
+            "UID": "a58ade02e71c4450"
           },
           "Version": "1.1.0",
           "Licenses": [
@@ -513,8 +537,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 195,
-              "EndLine": 204
+              "StartLine": 216,
+              "EndLine": 225
             }
           ],
           "AnalyzedBy": "npm"
@@ -524,7 +548,7 @@
           "Name": "@img/sharp-darwin-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-darwin-arm64@0.34.5",
-            "UID": "712316bf5140f454"
+            "UID": "8e0e286dec0aaa90"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -537,8 +561,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 205,
-              "EndLine": 226
+              "StartLine": 226,
+              "EndLine": 247
             }
           ],
           "AnalyzedBy": "npm"
@@ -548,7 +572,7 @@
           "Name": "@img/sharp-darwin-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-darwin-x64@0.34.5",
-            "UID": "97c06976cc1c6fec"
+            "UID": "276b581812fb2d9d"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -561,8 +585,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 227,
-              "EndLine": 248
+              "StartLine": 248,
+              "EndLine": 269
             }
           ],
           "AnalyzedBy": "npm"
@@ -572,7 +596,7 @@
           "Name": "@img/sharp-libvips-darwin-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.2.4",
-            "UID": "a00ee9f3ad38298e"
+            "UID": "86fe7e14a96a02e2"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -582,8 +606,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 249,
-              "EndLine": 264
+              "StartLine": 270,
+              "EndLine": 285
             }
           ],
           "AnalyzedBy": "npm"
@@ -593,7 +617,7 @@
           "Name": "@img/sharp-libvips-darwin-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-darwin-x64@1.2.4",
-            "UID": "17d669d4d1a9699d"
+            "UID": "810f13161c77c910"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -603,8 +627,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 265,
-              "EndLine": 280
+              "StartLine": 286,
+              "EndLine": 301
             }
           ],
           "AnalyzedBy": "npm"
@@ -614,7 +638,7 @@
           "Name": "@img/sharp-libvips-linux-arm",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-arm@1.2.4",
-            "UID": "cd87d579bfec16d6"
+            "UID": "b760d59bd98b05a0"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -624,8 +648,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 281,
-              "EndLine": 299
+              "StartLine": 302,
+              "EndLine": 320
             }
           ],
           "AnalyzedBy": "npm"
@@ -635,7 +659,7 @@
           "Name": "@img/sharp-libvips-linux-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-arm64@1.2.4",
-            "UID": "34f48eae3476535c"
+            "UID": "db710e4246fcbd3f"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -645,8 +669,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 300,
-              "EndLine": 318
+              "StartLine": 321,
+              "EndLine": 339
             }
           ],
           "AnalyzedBy": "npm"
@@ -656,7 +680,7 @@
           "Name": "@img/sharp-libvips-linux-ppc64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.2.4",
-            "UID": "7112fa470222b60"
+            "UID": "9f90445b6ea27ecb"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -666,8 +690,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 319,
-              "EndLine": 337
+              "StartLine": 340,
+              "EndLine": 358
             }
           ],
           "AnalyzedBy": "npm"
@@ -677,7 +701,7 @@
           "Name": "@img/sharp-libvips-linux-riscv64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.2.4",
-            "UID": "12d27d06ec70d00f"
+            "UID": "47c7f0ca4cbc3548"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -687,8 +711,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 338,
-              "EndLine": 356
+              "StartLine": 359,
+              "EndLine": 377
             }
           ],
           "AnalyzedBy": "npm"
@@ -698,7 +722,7 @@
           "Name": "@img/sharp-libvips-linux-s390x",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-s390x@1.2.4",
-            "UID": "de29d9ca1f5b93e8"
+            "UID": "79d3c2d747590383"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -708,8 +732,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 357,
-              "EndLine": 375
+              "StartLine": 378,
+              "EndLine": 396
             }
           ],
           "AnalyzedBy": "npm"
@@ -719,7 +743,7 @@
           "Name": "@img/sharp-libvips-linux-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linux-x64@1.2.4",
-            "UID": "29b341555e7377ed"
+            "UID": "e48221689855723f"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -729,8 +753,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 376,
-              "EndLine": 394
+              "StartLine": 397,
+              "EndLine": 415
             }
           ],
           "AnalyzedBy": "npm"
@@ -740,7 +764,7 @@
           "Name": "@img/sharp-libvips-linuxmusl-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.2.4",
-            "UID": "332fab9aff106733"
+            "UID": "7c380127c6fa6cb6"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -750,8 +774,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 395,
-              "EndLine": 413
+              "StartLine": 416,
+              "EndLine": 434
             }
           ],
           "AnalyzedBy": "npm"
@@ -761,7 +785,7 @@
           "Name": "@img/sharp-libvips-linuxmusl-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.2.4",
-            "UID": "96b7323b5d77f31d"
+            "UID": "d4307c66e4bb4edb"
           },
           "Version": "1.2.4",
           "Licenses": [
@@ -771,8 +795,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 414,
-              "EndLine": 432
+              "StartLine": 435,
+              "EndLine": 453
             }
           ],
           "AnalyzedBy": "npm"
@@ -782,7 +806,7 @@
           "Name": "@img/sharp-linux-arm",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-arm@0.34.5",
-            "UID": "2fa6dc5ffcd2c070"
+            "UID": "328a675015631201"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -795,8 +819,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 433,
-              "EndLine": 457
+              "StartLine": 454,
+              "EndLine": 478
             }
           ],
           "AnalyzedBy": "npm"
@@ -806,7 +830,7 @@
           "Name": "@img/sharp-linux-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-arm64@0.34.5",
-            "UID": "2d950ffcfc50f447"
+            "UID": "5c33e4f0df131f15"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -819,8 +843,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 458,
-              "EndLine": 482
+              "StartLine": 479,
+              "EndLine": 503
             }
           ],
           "AnalyzedBy": "npm"
@@ -830,7 +854,7 @@
           "Name": "@img/sharp-linux-ppc64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-ppc64@0.34.5",
-            "UID": "39e76a2c9d041ca0"
+            "UID": "e208a7f900c39ba4"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -843,8 +867,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 483,
-              "EndLine": 507
+              "StartLine": 504,
+              "EndLine": 528
             }
           ],
           "AnalyzedBy": "npm"
@@ -854,7 +878,7 @@
           "Name": "@img/sharp-linux-riscv64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-riscv64@0.34.5",
-            "UID": "44be28711dbd2b03"
+            "UID": "d7b0aafbef22f420"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -867,8 +891,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 508,
-              "EndLine": 532
+              "StartLine": 529,
+              "EndLine": 553
             }
           ],
           "AnalyzedBy": "npm"
@@ -878,7 +902,7 @@
           "Name": "@img/sharp-linux-s390x",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-s390x@0.34.5",
-            "UID": "3d7e4f7bf72df465"
+            "UID": "61f5f51b6051f2d5"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -891,8 +915,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 533,
-              "EndLine": 557
+              "StartLine": 554,
+              "EndLine": 578
             }
           ],
           "AnalyzedBy": "npm"
@@ -902,7 +926,7 @@
           "Name": "@img/sharp-linux-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linux-x64@0.34.5",
-            "UID": "89ca6fa3e1f8e5c5"
+            "UID": "67f7fe0ad555d260"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -915,8 +939,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 558,
-              "EndLine": 582
+              "StartLine": 579,
+              "EndLine": 603
             }
           ],
           "AnalyzedBy": "npm"
@@ -926,7 +950,7 @@
           "Name": "@img/sharp-linuxmusl-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linuxmusl-arm64@0.34.5",
-            "UID": "ab827aa98324ec42"
+            "UID": "84b4d3c3e13fd543"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -939,8 +963,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 583,
-              "EndLine": 607
+              "StartLine": 604,
+              "EndLine": 628
             }
           ],
           "AnalyzedBy": "npm"
@@ -950,7 +974,7 @@
           "Name": "@img/sharp-linuxmusl-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-linuxmusl-x64@0.34.5",
-            "UID": "bcd6f9f84ee7f9d6"
+            "UID": "9e8dd023708d0a6f"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -963,8 +987,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 608,
-              "EndLine": 632
+              "StartLine": 629,
+              "EndLine": 653
             }
           ],
           "AnalyzedBy": "npm"
@@ -974,7 +998,7 @@
           "Name": "@img/sharp-wasm32",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-wasm32@0.34.5",
-            "UID": "d567d2e4b16b9cf"
+            "UID": "ff92cfc603c82ddf"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -987,8 +1011,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 633,
-              "EndLine": 651
+              "StartLine": 654,
+              "EndLine": 672
             }
           ],
           "AnalyzedBy": "npm"
@@ -998,7 +1022,7 @@
           "Name": "@img/sharp-win32-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-win32-arm64@0.34.5",
-            "UID": "7944f6344209bd17"
+            "UID": "6dbaca4bfe02df90"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -1008,8 +1032,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 652,
-              "EndLine": 670
+              "StartLine": 673,
+              "EndLine": 691
             }
           ],
           "AnalyzedBy": "npm"
@@ -1019,7 +1043,7 @@
           "Name": "@img/sharp-win32-ia32",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-win32-ia32@0.34.5",
-            "UID": "1ffabf3015f98645"
+            "UID": "3708d7e0f664b36c"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -1029,8 +1053,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 671,
-              "EndLine": 689
+              "StartLine": 692,
+              "EndLine": 710
             }
           ],
           "AnalyzedBy": "npm"
@@ -1040,7 +1064,7 @@
           "Name": "@img/sharp-win32-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40img/sharp-win32-x64@0.34.5",
-            "UID": "e3173cbb76eee7da"
+            "UID": "19a8a43e1caf8283"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -1050,8 +1074,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 690,
-              "EndLine": 708
+              "StartLine": 711,
+              "EndLine": 729
             }
           ],
           "AnalyzedBy": "npm"
@@ -1061,7 +1085,7 @@
           "Name": "@next/env",
           "Identifier": {
             "PURL": "pkg:npm/%40next/env@16.2.7",
-            "UID": "e93b9d14bac1fae8"
+            "UID": "f3f8a0443a543201"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1071,8 +1095,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 709,
-              "EndLine": 714
+              "StartLine": 730,
+              "EndLine": 735
             }
           ],
           "AnalyzedBy": "npm"
@@ -1082,7 +1106,7 @@
           "Name": "@next/swc-darwin-arm64",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-darwin-arm64@16.2.7",
-            "UID": "ceca2d4732cd48b6"
+            "UID": "c555c8cf638ce9af"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1092,8 +1116,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 715,
-              "EndLine": 730
+              "StartLine": 736,
+              "EndLine": 751
             }
           ],
           "AnalyzedBy": "npm"
@@ -1103,7 +1127,7 @@
           "Name": "@next/swc-darwin-x64",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-darwin-x64@16.2.7",
-            "UID": "32eb5f1516f156e0"
+            "UID": "3fe75ef0420a6da3"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1113,8 +1137,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 731,
-              "EndLine": 746
+              "StartLine": 752,
+              "EndLine": 767
             }
           ],
           "AnalyzedBy": "npm"
@@ -1124,7 +1148,7 @@
           "Name": "@next/swc-linux-arm64-gnu",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-linux-arm64-gnu@16.2.7",
-            "UID": "8afca6fb9fa5b5e8"
+            "UID": "ed2f8b9cdcd97d0d"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1134,8 +1158,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 747,
-              "EndLine": 765
+              "StartLine": 768,
+              "EndLine": 786
             }
           ],
           "AnalyzedBy": "npm"
@@ -1145,7 +1169,7 @@
           "Name": "@next/swc-linux-arm64-musl",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-linux-arm64-musl@16.2.7",
-            "UID": "240981cbc3bcd387"
+            "UID": "b968f4f77dcae2f1"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1155,8 +1179,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 766,
-              "EndLine": 784
+              "StartLine": 787,
+              "EndLine": 805
             }
           ],
           "AnalyzedBy": "npm"
@@ -1166,7 +1190,7 @@
           "Name": "@next/swc-linux-x64-gnu",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-linux-x64-gnu@16.2.7",
-            "UID": "20acffbb6c13cb3e"
+            "UID": "cf6f30863e060ecb"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1176,8 +1200,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 785,
-              "EndLine": 803
+              "StartLine": 806,
+              "EndLine": 824
             }
           ],
           "AnalyzedBy": "npm"
@@ -1187,7 +1211,7 @@
           "Name": "@next/swc-linux-x64-musl",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-linux-x64-musl@16.2.7",
-            "UID": "36cb093e85c1202b"
+            "UID": "49854db4904219cb"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1197,8 +1221,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 804,
-              "EndLine": 822
+              "StartLine": 825,
+              "EndLine": 843
             }
           ],
           "AnalyzedBy": "npm"
@@ -1208,7 +1232,7 @@
           "Name": "@next/swc-win32-arm64-msvc",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-win32-arm64-msvc@16.2.7",
-            "UID": "7f381824f07c0c19"
+            "UID": "25447d5390f8a801"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1218,8 +1242,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 823,
-              "EndLine": 838
+              "StartLine": 844,
+              "EndLine": 859
             }
           ],
           "AnalyzedBy": "npm"
@@ -1229,7 +1253,7 @@
           "Name": "@next/swc-win32-x64-msvc",
           "Identifier": {
             "PURL": "pkg:npm/%40next/swc-win32-x64-msvc@16.2.7",
-            "UID": "331d78596f0d4a4d"
+            "UID": "a9b24dcf025ec649"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1239,8 +1263,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 839,
-              "EndLine": 854
+              "StartLine": 860,
+              "EndLine": 875
             }
           ],
           "AnalyzedBy": "npm"
@@ -1250,7 +1274,7 @@
           "Name": "@swc/helpers",
           "Identifier": {
             "PURL": "pkg:npm/%40swc/helpers@0.5.15",
-            "UID": "7852b11ac43433b"
+            "UID": "64d267cba95ef65e"
           },
           "Version": "0.5.15",
           "Licenses": [
@@ -1263,8 +1287,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 871,
-              "EndLine": 879
+              "StartLine": 892,
+              "EndLine": 900
             }
           ],
           "AnalyzedBy": "npm"
@@ -1274,7 +1298,7 @@
           "Name": "baseline-browser-mapping",
           "Identifier": {
             "PURL": "pkg:npm/baseline-browser-mapping@2.10.33",
-            "UID": "7b3fe02408c87d65"
+            "UID": "23a6e03a5eb69ab7"
           },
           "Version": "2.10.33",
           "Licenses": [
@@ -1284,8 +1308,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 910,
-              "EndLine": 921
+              "StartLine": 931,
+              "EndLine": 942
             }
           ],
           "AnalyzedBy": "npm"
@@ -1295,7 +1319,7 @@
           "Name": "caniuse-lite",
           "Identifier": {
             "PURL": "pkg:npm/caniuse-lite@1.0.30001793",
-            "UID": "135b24dc78988efd"
+            "UID": "90773044dbb0e2ee"
           },
           "Version": "1.0.30001793",
           "Licenses": [
@@ -1305,8 +1329,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 922,
-              "EndLine": 941
+              "StartLine": 943,
+              "EndLine": 962
             }
           ],
           "AnalyzedBy": "npm"
@@ -1316,7 +1340,7 @@
           "Name": "client-only",
           "Identifier": {
             "PURL": "pkg:npm/client-only@0.0.1",
-            "UID": "85c4ae1cec7891d4"
+            "UID": "2767aa1bbb752a65"
           },
           "Version": "0.0.1",
           "Licenses": [
@@ -1326,8 +1350,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 942,
-              "EndLine": 947
+              "StartLine": 963,
+              "EndLine": 968
             }
           ],
           "AnalyzedBy": "npm"
@@ -1337,7 +1361,7 @@
           "Name": "detect-libc",
           "Identifier": {
             "PURL": "pkg:npm/detect-libc@2.1.2",
-            "UID": "eb0dc502f270abe2"
+            "UID": "2cddc5d354c3c050"
           },
           "Version": "2.1.2",
           "Licenses": [
@@ -1347,8 +1371,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 955,
-              "EndLine": 964
+              "StartLine": 976,
+              "EndLine": 985
             }
           ],
           "AnalyzedBy": "npm"
@@ -1358,7 +1382,7 @@
           "Name": "fsevents",
           "Identifier": {
             "PURL": "pkg:npm/fsevents@2.3.2",
-            "UID": "2fc2fcc6c2eab0eb"
+            "UID": "69435a44812fe3ce"
           },
           "Version": "2.3.2",
           "Licenses": [
@@ -1368,8 +1392,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 965,
-              "EndLine": 978
+              "StartLine": 986,
+              "EndLine": 999
             }
           ],
           "AnalyzedBy": "npm"
@@ -1379,7 +1403,7 @@
           "Name": "nanoid",
           "Identifier": {
             "PURL": "pkg:npm/nanoid@3.3.12",
-            "UID": "ebaba0759eaf8893"
+            "UID": "5efaff497fb8822d"
           },
           "Version": "3.3.12",
           "Licenses": [
@@ -1389,8 +1413,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 979,
-              "EndLine": 996
+              "StartLine": 1000,
+              "EndLine": 1017
             }
           ],
           "AnalyzedBy": "npm"
@@ -1400,7 +1424,7 @@
           "Name": "next",
           "Identifier": {
             "PURL": "pkg:npm/next@16.2.7",
-            "UID": "5f9da8366b40efed"
+            "UID": "5a2351bc145c3f0d"
           },
           "Version": "16.2.7",
           "Licenses": [
@@ -1430,8 +1454,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 997,
-              "EndLine": 1049
+              "StartLine": 1018,
+              "EndLine": 1070
             }
           ],
           "AnalyzedBy": "npm"
@@ -1441,7 +1465,7 @@
           "Name": "picocolors",
           "Identifier": {
             "PURL": "pkg:npm/picocolors@1.1.1",
-            "UID": "45ce0a696eedf0b8"
+            "UID": "ffa9284ae2cb4459"
           },
           "Version": "1.1.1",
           "Licenses": [
@@ -1451,8 +1475,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1050,
-              "EndLine": 1055
+              "StartLine": 1071,
+              "EndLine": 1076
             }
           ],
           "AnalyzedBy": "npm"
@@ -1462,7 +1486,7 @@
           "Name": "playwright",
           "Identifier": {
             "PURL": "pkg:npm/playwright@1.60.0",
-            "UID": "816af74e85ff4b2b"
+            "UID": "1d96f3d50cf70471"
           },
           "Version": "1.60.0",
           "Licenses": [
@@ -1476,8 +1500,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 1056,
-              "EndLine": 1074
+              "StartLine": 1077,
+              "EndLine": 1095
             }
           ],
           "AnalyzedBy": "npm"
@@ -1487,7 +1511,7 @@
           "Name": "playwright-core",
           "Identifier": {
             "PURL": "pkg:npm/playwright-core@1.60.0",
-            "UID": "9f41cfadf806fccd"
+            "UID": "fd62fa3da0f201fe"
           },
           "Version": "1.60.0",
           "Licenses": [
@@ -1497,8 +1521,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1075,
-              "EndLine": 1087
+              "StartLine": 1096,
+              "EndLine": 1108
             }
           ],
           "AnalyzedBy": "npm"
@@ -1508,7 +1532,7 @@
           "Name": "postcss",
           "Identifier": {
             "PURL": "pkg:npm/postcss@8.5.10",
-            "UID": "907a6020fcb0199c"
+            "UID": "bc8ae90932156d35"
           },
           "Version": "8.5.10",
           "Licenses": [
@@ -1523,8 +1547,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 1088,
-              "EndLine": 1115
+              "StartLine": 1109,
+              "EndLine": 1136
             }
           ],
           "AnalyzedBy": "npm"
@@ -1534,7 +1558,7 @@
           "Name": "react",
           "Identifier": {
             "PURL": "pkg:npm/react@19.2.7",
-            "UID": "18022545a89ba235"
+            "UID": "6eb7b985a354bd3e"
           },
           "Version": "19.2.7",
           "Licenses": [
@@ -1544,8 +1568,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1116,
-              "EndLine": 1124
+              "StartLine": 1137,
+              "EndLine": 1145
             }
           ],
           "AnalyzedBy": "npm"
@@ -1555,7 +1579,7 @@
           "Name": "react-dom",
           "Identifier": {
             "PURL": "pkg:npm/react-dom@19.2.7",
-            "UID": "b43795fd6b8ce3b4"
+            "UID": "636336c999bf5349"
           },
           "Version": "19.2.7",
           "Licenses": [
@@ -1569,8 +1593,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 1125,
-              "EndLine": 1136
+              "StartLine": 1146,
+              "EndLine": 1157
             }
           ],
           "AnalyzedBy": "npm"
@@ -1580,7 +1604,7 @@
           "Name": "scheduler",
           "Identifier": {
             "PURL": "pkg:npm/scheduler@0.27.0",
-            "UID": "da1c037541037e0c"
+            "UID": "615db2dc1aab89d3"
           },
           "Version": "0.27.0",
           "Licenses": [
@@ -1590,8 +1614,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1137,
-              "EndLine": 1142
+              "StartLine": 1158,
+              "EndLine": 1163
             }
           ],
           "AnalyzedBy": "npm"
@@ -1601,7 +1625,7 @@
           "Name": "semver",
           "Identifier": {
             "PURL": "pkg:npm/semver@7.8.1",
-            "UID": "66ce70fe75960ceb"
+            "UID": "e9a1932d6b83a248"
           },
           "Version": "7.8.1",
           "Licenses": [
@@ -1611,8 +1635,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1143,
-              "EndLine": 1155
+              "StartLine": 1164,
+              "EndLine": 1176
             }
           ],
           "AnalyzedBy": "npm"
@@ -1622,7 +1646,7 @@
           "Name": "sharp",
           "Identifier": {
             "PURL": "pkg:npm/sharp@0.34.5",
-            "UID": "a5693dc899e0eb30"
+            "UID": "c78b82fbde41fee"
           },
           "Version": "0.34.5",
           "Licenses": [
@@ -1661,8 +1685,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 1156,
-              "EndLine": 1200
+              "StartLine": 1177,
+              "EndLine": 1221
             }
           ],
           "AnalyzedBy": "npm"
@@ -1672,7 +1696,7 @@
           "Name": "source-map-js",
           "Identifier": {
             "PURL": "pkg:npm/source-map-js@1.2.1",
-            "UID": "4dd0a5bb835a792d"
+            "UID": "df89e61f1e1899d7"
           },
           "Version": "1.2.1",
           "Licenses": [
@@ -1682,8 +1706,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1201,
-              "EndLine": 1209
+              "StartLine": 1222,
+              "EndLine": 1230
             }
           ],
           "AnalyzedBy": "npm"
@@ -1693,7 +1717,7 @@
           "Name": "styled-jsx",
           "Identifier": {
             "PURL": "pkg:npm/styled-jsx@5.1.6",
-            "UID": "b3b16d0d7b280d07"
+            "UID": "8cbe22e3b035d947"
           },
           "Version": "5.1.6",
           "Licenses": [
@@ -1707,8 +1731,8 @@
           ],
           "Locations": [
             {
-              "StartLine": 1210,
-              "EndLine": 1232
+              "StartLine": 1231,
+              "EndLine": 1253
             }
           ],
           "AnalyzedBy": "npm"
@@ -1718,7 +1742,7 @@
           "Name": "tslib",
           "Identifier": {
             "PURL": "pkg:npm/tslib@2.8.1",
-            "UID": "6ebd0b2eee2863f"
+            "UID": "53ac06bf77aef47a"
           },
           "Version": "2.8.1",
           "Licenses": [
@@ -1728,8 +1752,8 @@
           "Relationship": "indirect",
           "Locations": [
             {
-              "StartLine": 1233,
-              "EndLine": 1238
+              "StartLine": 1254,
+              "EndLine": 1259
             }
           ],
           "AnalyzedBy": "npm"
