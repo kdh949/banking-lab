@@ -127,7 +127,7 @@ class PaymentInstructionService(
 
         val current = repository.findInstructionForUpdate(instructionId) ?: throw notFound(instructionId)
         if (current.status != PaymentInstructionStatus.POSTING_REQUESTED) {
-            throw invalidState(instructionId, current.status, "only pre-settlement payment instructions can be submitted for staff cancellation")
+            throw invalidState(instructionId, current.status, "only pre-ledger-posting payment instructions can be submitted for staff cancellation")
         }
         repository.findPendingCancellationRequest(instructionId)?.let { pending ->
             throw paymentError(
@@ -200,8 +200,8 @@ class PaymentInstructionService(
 
         val current = repository.findInstructionForUpdate(correction.paymentInstructionId)
             ?: throw notFound(correction.paymentInstructionId)
-        if (current.status == PaymentInstructionStatus.SETTLED) {
-            throw invalidState(correction.paymentInstructionId, current.status, "settled payment instruction cannot be staff-canceled")
+        if (current.status == PaymentInstructionStatus.LEDGER_POSTED) {
+            throw invalidState(correction.paymentInstructionId, current.status, "ledger-posted payment instruction cannot be staff-canceled")
         }
         if (current.status !in setOf(PaymentInstructionStatus.POSTING_REQUESTED, PaymentInstructionStatus.CANCELED)) {
             throw invalidState(correction.paymentInstructionId, current.status, "payment instruction status cannot be staff-canceled")
@@ -343,9 +343,9 @@ class PaymentInstructionService(
     }
 
     @Transactional
-    fun recordSettlement(
+    fun recordLedgerPosting(
         instructionId: String,
-        request: RecordPaymentSettlementRequest
+        request: RecordPaymentLedgerPostingRequest
     ): PaymentInstructionResponse {
         validateIdempotentCommand(
             idempotencyKey = request.idempotencyKey,
@@ -356,46 +356,48 @@ class PaymentInstructionService(
             throw paymentError(
                 code = "PAYMENT_LEDGER_REFERENCE_INVALID",
                 status = HttpStatus.BAD_REQUEST,
-                invariant = "successful payment settlement must reference a core-banking ledger transaction",
+                invariant = "successful payment ledger posting must reference a core-banking ledger transaction",
                 message = "ledgerTransactionId must be a synthetic core-banking transaction id",
-                cause = "Payment Service records settlement only after core-banking posts a ledger transaction.",
+                cause = "Payment Service records the ledger-posted state only after core-banking posts a ledger transaction.",
                 fix = "Pass the TX-* transaction id returned by core-banking ledger posting."
             )
         }
+        // Keep the legacy discriminator so pre-V006 idempotency hashes remain replayable.
         val requestHash = requestHash("SETTLE", instructionId, request.ledgerTransactionId, request.requestedBy)
-        replayIfPresent(request.idempotencyKey, "RECORD_PAYMENT_SETTLEMENT", requestHash)?.let { return it }
+        replayIfPresent(request.idempotencyKey, "RECORD_PAYMENT_LEDGER_POSTING", requestHash)?.let { return it }
 
         val current = repository.findInstructionForUpdate(instructionId) ?: throw notFound(instructionId)
         if (current.status == PaymentInstructionStatus.CANCELED) {
-            throw invalidState(instructionId, current.status, "canceled payment instruction cannot be settled")
+            throw invalidState(instructionId, current.status, "canceled payment instruction cannot be ledger-posted")
         }
-        if (current.status == PaymentInstructionStatus.SETTLED && current.ledgerTransactionId != request.ledgerTransactionId) {
-            throw invalidState(instructionId, current.status, "settled payment instruction cannot change ledger transaction reference")
+        if (current.status == PaymentInstructionStatus.LEDGER_POSTED && current.ledgerTransactionId != request.ledgerTransactionId) {
+            throw invalidState(instructionId, current.status, "ledger-posted payment instruction cannot change ledger transaction reference")
         }
-        if (current.status != PaymentInstructionStatus.SETTLED) {
-            repository.updateSettlement(
+        if (current.status != PaymentInstructionStatus.LEDGER_POSTED) {
+            repository.updateLedgerPosting(
                 instructionId = instructionId,
                 ledgerTransactionId = request.ledgerTransactionId
             )
-            repository.markLatestAttemptSettled(instructionId)
+            repository.markLatestAttemptLedgerPosted(instructionId)
             repository.insertStatusHistory(
                 instructionId = instructionId,
-                status = PaymentInstructionStatus.SETTLED,
+                status = PaymentInstructionStatus.LEDGER_POSTED,
                 actorId = request.requestedBy,
                 reason = request.reason
             )
             repository.insertOutboxEvent(
                 aggregateId = instructionId,
-                eventType = "PaymentInstructionSettled",
+                eventType = "PaymentInstructionLedgerPosted",
                 idempotencyKey = request.idempotencyKey,
                 payload = mapOf(
-                    "contractVersion" to "2026-06-05",
+                    "contractVersion" to "2026-07-31",
                     "paymentInstructionId" to instructionId,
                     "ledgerTransactionId" to request.ledgerTransactionId,
-                    "status" to "SETTLED",
+                    "status" to "LEDGER_POSTED",
                     "syntheticOnly" to true,
                     "directLedgerWrite" to false,
                     "ledgerPostedViaCoreBanking" to true,
+                    "externalSettlementCompleted" to false,
                     "realPaymentNetworkUsed" to false,
                     "realFinancialInstitutionApiUsed" to false
                 )
@@ -405,7 +407,7 @@ class PaymentInstructionService(
         val response = PaymentInstructionResponse(item = instruction(instructionId), replayed = false)
         repository.insertIdempotency(
             idempotencyKey = request.idempotencyKey,
-            commandType = "RECORD_PAYMENT_SETTLEMENT",
+            commandType = "RECORD_PAYMENT_LEDGER_POSTING",
             requestHash = requestHash,
             aggregateId = instructionId,
             response = response
@@ -427,8 +429,8 @@ class PaymentInstructionService(
         replayIfPresent(request.idempotencyKey, "CANCEL_PAYMENT_INSTRUCTION", requestHash)?.let { return it }
 
         val current = repository.findInstructionForUpdate(instructionId) ?: throw notFound(instructionId)
-        if (current.status == PaymentInstructionStatus.SETTLED) {
-            throw invalidState(instructionId, current.status, "settled payment instruction cannot be canceled")
+        if (current.status == PaymentInstructionStatus.LEDGER_POSTED) {
+            throw invalidState(instructionId, current.status, "ledger-posted payment instruction cannot be canceled")
         }
         if (current.status != PaymentInstructionStatus.CANCELED) {
             repository.updateStatus(instructionId, PaymentInstructionStatus.CANCELED)

@@ -50,3 +50,16 @@ class HttpCoreLedgerPostingClient(
         val id: String
     )
 }
+
+@Component
+@ConditionalOnProperty(
+    prefix = "banking-lab.payment-service.core-banking",
+    name = ["http-enabled"],
+    havingValue = "false"
+)
+class DisabledCoreLedgerPostingClient : CoreLedgerPostingClient {
+    @Suppress("UNUSED_PARAMETER")
+    override fun postBillPayment(command: CoreLedgerPaymentPostingCommand): CoreLedgerPostingResult {
+        throw IllegalStateException("core-banking HTTP ledger posting is disabled by configuration")
+    }
+}

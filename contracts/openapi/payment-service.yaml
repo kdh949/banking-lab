@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Banking Lab Synthetic Payment Service API
   version: 0.1.0
-  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly.
+  description: Synthetic-only bill payment instruction API. It persists payment state and emits durable ledger command requests instead of writing core ledger tables directly. LEDGER_POSTED means the internal core ledger accepted the posting; it does not mean external clearing or settlement completed.
 x-banking-lab-contract:
   syntheticOnly: true
   structuredErrorDefault: '#/components/responses/StructuredErrorResponse'
@@ -53,9 +53,29 @@ paths:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
         '400':
           description: Staff payment lookup reason missing
+  /api/payments/instructions/{instructionId}/ledger-postings:
+    post:
+      summary: Record the successful core-banking ledger posting reference
+      operationId: recordPaymentLedgerPosting
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentLedgerPostingRequest'
+      responses:
+        '200':
+          description: Ledger posting recorded as LEDGER_POSTED; external clearing and settlement are not implied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/settlements:
     post:
-      summary: Record core-banking ledger settlement reference
+      deprecated: true
+      summary: Compatibility alias for recording the core-banking ledger posting reference
       operationId: recordPaymentSettlement
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -64,17 +84,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RecordPaymentSettlementRequest'
+              $ref: '#/components/schemas/RecordPaymentLedgerPostingRequest'
       responses:
         '200':
-          description: Settlement recorded
+          description: Compatibility response using LEDGER_POSTED semantics
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/cancel:
     post:
-      summary: Cancel before ledger settlement
+      summary: Cancel before ledger posting
       operationId: cancelPaymentInstruction
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -93,7 +113,7 @@ paths:
                 $ref: '#/components/schemas/PaymentInstructionResponse'
   /api/payments/instructions/{instructionId}/cancellation-requests:
     post:
-      summary: Request staff maker-checker approval for pre-settlement payment cancellation
+      summary: Request staff maker-checker approval for pre-ledger-posting payment cancellation
       operationId: requestPaymentCancellationApproval
       parameters:
         - $ref: '#/components/parameters/InstructionId'
@@ -132,7 +152,7 @@ paths:
               $ref: '#/components/schemas/ReviewPaymentCancellationRequest'
       responses:
         '200':
-          description: Cancellation request approved and the payment instruction canceled if still pre-settlement
+          description: Cancellation request approved and the payment instruction canceled if still pre-ledger-posting
           content:
             application/json:
               schema:
@@ -287,6 +307,191 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExecuteDueAutopayResponse'
+  /api/payments/settlement/imports:
+    post:
+      summary: Import an independent synthetic external settlement CSV
+      operationId: importExternalSettlementCsv
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportExternalSettlementCsvRequest'
+      responses:
+        '201':
+          description: Independent external file provenance and raw staging lines persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+        '200':
+          description: Idempotent replay of the same external settlement import
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+        '409':
+          description: Reused idempotency key or duplicate SHA-256 file digest
+  /api/payments/settlement/imports/{importId}:
+    get:
+      summary: Read external settlement import provenance and raw staging lines
+      operationId: getExternalSettlementImport
+      x-api-client-required: false
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^ESI-'
+      responses:
+        '200':
+          description: External settlement import and preserved raw rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSettlementImportResponse'
+  /api/payments/settlement/batch-runs:
+    post:
+      summary: Build per-biller settlement positions from accepted external rows
+      operationId: createSettlementBatchRun
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSettlementBatchRunRequest'
+      responses:
+        '201':
+          description: Gross, fee, VAT, and net positions created with INCLUDED_IN_BATCH status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+        '200':
+          description: Idempotent replay of the same settlement batch run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+        '409':
+          description: Import already batched or no accepted external lines
+  /api/payments/settlement/batch-runs/{batchRunId}:
+    get:
+      summary: Read a durable synthetic settlement batch run
+      operationId: getSettlementBatchRun
+      x-api-client-required: false
+      parameters:
+        - name: batchRunId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^SBR-'
+      responses:
+        '200':
+          description: Per-biller positions; payout or final settlement is not implied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementBatchRunResponse'
+
+
+  /api/payments/reconciliation/runs:
+    post:
+      summary: Create an idempotent payment-ledger-external three-way reconciliation run
+      operationId: createPaymentReconciliationRun
+      x-api-client-required: false
+      x-idempotent-command: true
+      x-idempotency-policy: body.idempotencyKey
+      x-reason-required: true
+      x-reason-policy: body.reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentReconciliationRunRequest'
+      responses:
+        '201':
+          description: Reconciliation run finalized with matched results or durable exceptions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+        '200':
+          description: Idempotent replay of a terminal reconciliation run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+        '409':
+          description: Conflicting idempotency, duplicate import run, or an active evidence claim
+        '503':
+          description: Core Banking ledger evidence unavailable; replay the same idempotency key
+  /api/payments/reconciliation/runs/{runId}:
+    get:
+      summary: Read a reconciliation run and its reason-audited results
+      operationId: getPaymentReconciliationRun
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^PRR-' }
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Reconciliation run, mismatch snapshots, owner, SLA, and aging state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationRunResponse'
+  /api/payments/reconciliation/exceptions:
+    get:
+      summary: List open payment reconciliation exceptions with owner and SLA aging
+      operationId: listPaymentReconciliationExceptions
+      x-api-client-required: false
+      x-reason-required: true
+      parameters:
+        - name: ownerId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentReconciliationResultStatus'
+        - name: overdueOnly
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+        - name: reason
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Reason-audited reconciliation exception queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReconciliationExceptionListResponse'
 components:
   responses:
     StructuredErrorResponse:
@@ -318,6 +523,447 @@ components:
         type: string
         pattern: '^PCR-'
   schemas:
+
+    PaymentReconciliationRunStatus:
+      type: string
+      enum: [EVIDENCE_PENDING, MATCHED, EXCEPTIONS_OPEN, FAILED]
+    PaymentReconciliationMismatchType:
+      type: string
+      enum:
+        - MATCHED
+        - MISSING_PAYMENT
+        - MISSING_LEDGER
+        - MISSING_EXTERNAL
+        - AMOUNT_MISMATCH
+        - STATUS_MISMATCH
+        - DUPLICATE_EXTERNAL
+        - VALUE_DATE_MISMATCH
+        - LATE_SETTLEMENT
+    PaymentReconciliationResultStatus:
+      type: string
+      enum: [MATCHED, OPEN, INVESTIGATING, RESOLVED]
+    CreatePaymentReconciliationRunRequest:
+      type: object
+      required:
+        - externalSettlementImportId
+        - expectedValueDate
+        - ownerId
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        externalSettlementImportId: { type: string, pattern: '^ESI-' }
+        expectedValueDate: { type: string, format: date }
+        allowedValueDateLagDays: { type: integer, minimum: 0, maximum: 30, default: 0 }
+        slaDays: { type: integer, minimum: 1, maximum: 30, default: 2 }
+        ownerId: { type: string }
+        idempotencyKey: { type: string }
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason: { type: string }
+    PaymentReconciliationRunDto:
+      type: object
+      required:
+        - paymentReconciliationRunId
+        - externalSettlementImportId
+        - businessDate
+        - expectedValueDate
+        - allowedValueDateLagDays
+        - slaDays
+        - ownerId
+        - status
+        - externalLineCount
+        - ledgerEvidenceCount
+        - matchedCount
+        - exceptionCount
+        - attemptCount
+        - syntheticOnly
+        - createdAt
+        - updatedAt
+      properties:
+        paymentReconciliationRunId: { type: string, pattern: '^PRR-' }
+        externalSettlementImportId: { type: string, pattern: '^ESI-' }
+        businessDate: { type: string, format: date }
+        expectedValueDate: { type: string, format: date }
+        allowedValueDateLagDays: { type: integer, minimum: 0 }
+        slaDays: { type: integer, minimum: 1 }
+        ownerId: { type: string }
+        status: { $ref: '#/components/schemas/PaymentReconciliationRunStatus' }
+        externalLineCount: { type: integer, minimum: 0 }
+        ledgerEvidenceCount: { type: integer, minimum: 0 }
+        matchedCount: { type: integer, minimum: 0 }
+        exceptionCount: { type: integer, minimum: 0 }
+        attemptCount: { type: integer, minimum: 1 }
+        failureMessage: { type: string, nullable: true }
+        syntheticOnly: { const: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    PaymentReconciliationResultDto:
+      type: object
+      required:
+        - paymentReconciliationResultId
+        - paymentReconciliationRunId
+        - paymentInstructionId
+        - mismatchType
+        - resultStatus
+        - businessDate
+        - expectedValueDate
+        - ownerId
+        - detectedReason
+        - detectedAt
+        - agingDays
+        - overdue
+        - syntheticOnly
+      properties:
+        paymentReconciliationResultId: { type: string, pattern: '^PRC-' }
+        paymentReconciliationRunId: { type: string, pattern: '^PRR-' }
+        externalSettlementLineId: { type: string, pattern: '^ESL-', nullable: true }
+        paymentInstructionId: { type: string, pattern: '^PAY-' }
+        ledgerTransactionId: { type: string, pattern: '^TX-', nullable: true }
+        mismatchType: { $ref: '#/components/schemas/PaymentReconciliationMismatchType' }
+        resultStatus: { $ref: '#/components/schemas/PaymentReconciliationResultStatus' }
+        internalAmountMinor: { type: integer, minimum: 1, nullable: true }
+        ledgerAmountMinor: { type: integer, minimum: 1, nullable: true }
+        externalAmountMinor: { type: integer, minimum: 1, nullable: true }
+        currency: { type: string, pattern: '^[A-Z]{3}$', nullable: true }
+        externalStatus: { type: string, nullable: true }
+        businessDate: { type: string, format: date }
+        expectedValueDate: { type: string, format: date }
+        actualValueDate: { type: string, format: date, nullable: true }
+        ownerId: { type: string }
+        detectedReason: { type: string }
+        detectedAt: { type: string, format: date-time }
+        dueAt: { type: string, format: date-time, nullable: true }
+        agingDays: { type: integer, minimum: 0 }
+        overdue: { type: boolean }
+        resolution: { type: string, nullable: true }
+        approvalId: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        syntheticOnly: { const: true }
+    PaymentReconciliationRunResponse:
+      type: object
+      required: [item, results, replayed, syntheticOnly]
+      properties:
+        item: { $ref: '#/components/schemas/PaymentReconciliationRunDto' }
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentReconciliationResultDto' }
+        replayed: { type: boolean }
+        auditEventId: { type: string, nullable: true }
+        syntheticOnly: { const: true }
+    PaymentReconciliationExceptionListResponse:
+      type: object
+      required: [items, auditEventId, syntheticOnly]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentReconciliationResultDto' }
+        auditEventId: { type: string, pattern: '^PRA-' }
+        syntheticOnly: { const: true }
+    ImportExternalSettlementCsvRequest:
+      type: object
+      required:
+        - originalFileName
+        - institutionCode
+        - businessDate
+        - csvContent
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        originalFileName:
+          type: string
+          maxLength: 255
+          pattern: '^[^/\\]+[.]csv$'
+        institutionCode:
+          type: string
+          pattern: '^[A-Z0-9][A-Z0-9_-]{2,39}$'
+        businessDate:
+          type: string
+          format: date
+        csvContent:
+          type: string
+          description: Exact independent synthetic external CSV content; SHA-256 is calculated over its UTF-8 bytes.
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason:
+          type: string
+    CreateSettlementBatchRunRequest:
+      type: object
+      required:
+        - externalSettlementImportId
+        - feeRateBps
+        - cutoffAt
+        - idempotencyKey
+        - requestedBy
+        - reason
+      properties:
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        feeRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        vatRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 1000
+        cutoffAt:
+          type: string
+          format: date-time
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+          description: Must match the authenticated operations subject.
+        reason:
+          type: string
+    ExternalSettlementImportStatus:
+      type: string
+      enum: [IMPORTED, BATCHED]
+    ExternalSettlementLineStatus:
+      type: string
+      enum: [ACCEPTED, REJECTED, RETURNED]
+    SettlementBatchStatus:
+      type: string
+      enum: [INCLUDED_IN_BATCH]
+      description: The external rows are included in a durable position; payout and settlement finality are not implied.
+    ExternalSettlementLineDto:
+      type: object
+      required:
+        - externalSettlementLineId
+        - lineNumber
+        - externalReference
+        - paymentInstructionId
+        - billerId
+        - amountMinor
+        - currency
+        - businessDate
+        - valueDate
+        - status
+        - rawLine
+        - syntheticOnly
+        - createdAt
+      properties:
+        externalSettlementLineId:
+          type: string
+          pattern: '^ESL-'
+        lineNumber:
+          type: integer
+          minimum: 2
+        externalReference:
+          type: string
+        paymentInstructionId:
+          type: string
+          pattern: '^PAY-'
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        amountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        businessDate:
+          type: string
+          format: date
+        valueDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ExternalSettlementLineStatus'
+        rawLine:
+          type: string
+          description: Original staging row retained independently of internal payment or ledger data.
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    ExternalSettlementImportDto:
+      type: object
+      required:
+        - externalSettlementImportId
+        - originalFileName
+        - institutionCode
+        - fileSha256
+        - fileByteSize
+        - businessDate
+        - status
+        - lineCount
+        - acceptedLineCount
+        - rejectedLineCount
+        - requestedBy
+        - reason
+        - lines
+        - syntheticOnly
+        - receivedAt
+      properties:
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        originalFileName:
+          type: string
+        institutionCode:
+          type: string
+        fileSha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        fileByteSize:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        businessDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ExternalSettlementImportStatus'
+        lineCount:
+          type: integer
+          minimum: 1
+        acceptedLineCount:
+          type: integer
+          minimum: 0
+        rejectedLineCount:
+          type: integer
+          minimum: 0
+          description: Count of non-accepted rows, including REJECTED and RETURNED rows preserved for reconciliation.
+        requestedBy:
+          type: string
+        reason:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalSettlementLineDto'
+        syntheticOnly:
+          const: true
+        receivedAt:
+          type: string
+          format: date-time
+    ExternalSettlementImportResponse:
+      type: object
+      required: [item, replayed]
+      properties:
+        item:
+          $ref: '#/components/schemas/ExternalSettlementImportDto'
+        replayed:
+          type: boolean
+    SettlementBatchDto:
+      type: object
+      required:
+        - settlementBatchId
+        - settlementBatchRunId
+        - externalSettlementImportId
+        - billerId
+        - currency
+        - businessDate
+        - valueDate
+        - cutoffAt
+        - grossAmountMinor
+        - feeRateBps
+        - feeAmountMinor
+        - vatRateBps
+        - vatAmountMinor
+        - adjustmentAmountMinor
+        - netAmountMinor
+        - itemCount
+        - status
+        - syntheticOnly
+        - createdAt
+      properties:
+        settlementBatchId:
+          type: string
+          pattern: '^STB-'
+        settlementBatchRunId:
+          type: string
+          pattern: '^SBR-'
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        billerId:
+          type: string
+          pattern: '^SYN-BILLER-'
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        businessDate:
+          type: string
+          format: date
+        valueDate:
+          type: string
+          format: date
+        cutoffAt:
+          type: string
+          format: date-time
+        grossAmountMinor:
+          type: integer
+          exclusiveMinimum: 0
+        feeRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        feeAmountMinor:
+          type: integer
+          minimum: 0
+        vatRateBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        vatAmountMinor:
+          type: integer
+          minimum: 0
+        adjustmentAmountMinor:
+          type: integer
+        netAmountMinor:
+          type: integer
+          minimum: 0
+        itemCount:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/SettlementBatchStatus'
+        externalPayoutReference:
+          type: string
+          nullable: true
+          description: Null in this foundation slice; no external payout is claimed.
+        syntheticOnly:
+          const: true
+        createdAt:
+          type: string
+          format: date-time
+    SettlementBatchRunResponse:
+      type: object
+      required:
+        - settlementBatchRunId
+        - externalSettlementImportId
+        - items
+        - replayed
+        - syntheticOnly
+      properties:
+        settlementBatchRunId:
+          type: string
+          pattern: '^SBR-'
+        externalSettlementImportId:
+          type: string
+          pattern: '^ESI-'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SettlementBatchDto'
+        replayed:
+          type: boolean
+        syntheticOnly:
+          const: true
     StructuredError:
       type: object
       required: [code, message, traceId, syntheticOnly]
@@ -360,7 +1006,7 @@ components:
           type: string
         reason:
           type: string
-    RecordPaymentSettlementRequest:
+    RecordPaymentLedgerPostingRequest:
       type: object
       required: [ledgerTransactionId, idempotencyKey, requestedBy, reason]
       properties:
@@ -685,7 +1331,7 @@ components:
         currency:
           type: string
         status:
-          enum: [POSTING_REQUESTED, SETTLED, CANCELED, FAILED]
+          enum: [POSTING_REQUESTED, LEDGER_POSTED, CANCELED, FAILED]
         ledgerTransactionId:
           type: string
           nullable: true

@@ -107,6 +107,15 @@ export interface CallCenterCustomerSearchResponse {
   readonly items: readonly CallCenterCustomerSummaryDto[];
 }
 
+export interface MaskedCustomerDto {
+  readonly customerId: string;
+  readonly maskedName: string;
+  readonly maskedPhone?: string | null;
+  readonly maskedAddress?: string | null;
+  readonly customerGrade: string;
+  readonly riskGrade: string;
+}
+
 export interface StartCallCenterInteractionCommand {
   readonly customerId?: string | null;
   readonly accountId?: string | null;
@@ -266,6 +275,31 @@ export interface StaffCustomerDetailDto {
   readonly name?: string | null;
   readonly phone?: string | null;
   readonly address?: string | null;
+}
+
+export interface StaffAccountDto {
+  readonly customerId: string;
+  readonly accountId: string;
+  readonly maskedAccountNo: string;
+  readonly status: string;
+  readonly currency: string;
+  readonly ledgerBalanceMinor: number;
+  readonly availableBalanceMinor: number;
+  readonly holdAmountMinor: number;
+}
+
+export interface StaffTransactionDto {
+  readonly ledgerTransactionId: string;
+  readonly transactionType: string;
+  readonly status: string;
+  readonly businessDate: string;
+  readonly postedAt?: string | null;
+  readonly accountId: string;
+  readonly direction: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly requestedChannel: string;
+  readonly reason?: string | null;
 }
 
 export interface CustomerAccountDetailDto {
@@ -1818,12 +1852,15 @@ export interface CreatePaymentInstructionRequest {
   readonly reason?: string | null;
 }
 
-export interface RecordPaymentSettlementRequest {
+export interface RecordPaymentLedgerPostingRequest {
   readonly ledgerTransactionId: string;
   readonly idempotencyKey: string;
   readonly requestedBy: string;
   readonly reason: string;
 }
+
+/** @deprecated Use RecordPaymentLedgerPostingRequest. */
+export type RecordPaymentSettlementRequest = RecordPaymentLedgerPostingRequest;
 
 export interface CancelPaymentInstructionRequest {
   readonly idempotencyKey: string;
@@ -3036,12 +3073,49 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    staffCustomerSearch(query: string, reason: string) {
+      return request<StaffAccessListResponse<MaskedCustomerDto>>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/customers/search",
+        { query, reason },
+        options.bearerToken
+      );
+    },
+
     staffCustomerDetail(customerId: string, reason: string) {
       return request<StaffAccessItemResponse<StaffCustomerDetailDto>>(
         fetchImpl,
         baseUrl,
         `/api/staff/customers/${encodeURIComponent(customerId)}/detail`,
         { reason },
+        options.bearerToken
+      );
+    },
+
+    staffAccountSearch(params: { readonly customerId?: string; readonly accountId?: string; readonly reason: string }) {
+      return request<StaffAccessListResponse<StaffAccountDto>>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/accounts/search",
+        {
+          ...(params.customerId ? { customerId: params.customerId } : {}),
+          ...(params.accountId ? { accountId: params.accountId } : {}),
+          reason: params.reason
+        },
+        options.bearerToken
+      );
+    },
+
+    staffTransactionSearch(params: { readonly accountId?: string; readonly reason: string }) {
+      return request<StaffAccessListResponse<StaffTransactionDto>>(
+        fetchImpl,
+        baseUrl,
+        "/api/staff/transactions/search",
+        {
+          ...(params.accountId ? { accountId: params.accountId } : {}),
+          reason: params.reason
+        },
         options.bearerToken
       );
     },
@@ -3615,6 +3689,18 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
       );
     },
 
+    recordPaymentLedgerPosting(instructionId: string, command: RecordPaymentLedgerPostingRequest) {
+      return request<PaymentInstructionResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/payments/instructions/${encodeURIComponent(instructionId)}/ledger-postings`,
+        {},
+        options.bearerToken,
+        { method: "POST", body: command }
+      );
+    },
+
+    /** @deprecated Use recordPaymentLedgerPosting. */
     recordPaymentSettlement(instructionId: string, command: RecordPaymentSettlementRequest) {
       return request<PaymentInstructionResponse>(
         fetchImpl,

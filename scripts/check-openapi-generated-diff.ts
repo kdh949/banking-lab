@@ -76,6 +76,7 @@ const services: ServiceConfig[] = [
 ];
 const dtoSchemaServiceIds = new Set<ServiceId>(["core-banking", "payment-service", "notification-service", "reporting-service"]);
 const coreBankingDtoSchemaOperationKeys = new Set([
+  "GET /api/ledger/payment-postings/evidence",
   "GET /api/customer/accounts",
   "GET /api/customer/accounts/{accountId}/detail",
   "GET /api/customer/complaint-types",

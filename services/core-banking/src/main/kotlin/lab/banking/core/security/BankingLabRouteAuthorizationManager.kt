@@ -42,6 +42,7 @@ class BankingLabRouteAuthorizationManager {
             path.startsWith("/api/auth/session") -> ALL_INTERACTIVE_ROLES
             path.startsWith("/api/approvals/") && method == "POST" -> setOf("BRANCH_MANAGER", "COMPLIANCE_MANAGER")
             path.startsWith("/api/approvals") -> setOf("BRANCH_STAFF", "BRANCH_MANAGER", "CALL_CENTER_MANAGER", "OPS_MANAGER", "COMPLIANCE_MANAGER", "OPS_OPERATOR", "FDS_REVIEWER", "AML_REVIEWER", "COMPLAINT_HANDLER")
+            path == "/api/ledger/payment-postings/evidence" && method == "GET" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             path == "/api/ledger/payment-postings" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR")
             path.startsWith("/api/ledger/") -> setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR")
             else -> emptySet()

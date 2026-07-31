@@ -92,14 +92,17 @@ test("customer-web Next page is manifest-driven and customer journey routes are 
   assert.equal(notificationDeliveryManifest.audit.eventTypes[0], "NOTIFICATION_CUSTOMER_DELIVERY_HISTORY_VIEW");
 });
 
-test("Next dependency lock uses the postcss security override", async () => {
+test("Next dependency lock uses patched framework and image dependencies", async () => {
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
 
-  assert.equal(rootPackage.overrides.postcss, "8.5.10");
-  assert.equal(rootPackage.overrides.next.postcss, "8.5.10");
-  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.10");
-  assert.equal(lock.packages["node_modules/next"].dependencies.postcss, "8.5.10");
+  assert.equal(rootPackage.overrides.postcss, "8.5.22");
+  assert.equal(rootPackage.overrides.next.postcss, "8.5.22");
+  assert.equal(rootPackage.overrides.sharp, "0.35.3");
+  assert.equal(rootPackage.overrides.next.sharp, "0.35.3");
+  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.22");
+  assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
+  assert.equal(lock.packages["node_modules/next"].version, "16.2.12");
 });
 
 test("admin-console Next workspace renders manifests and has a dedicated port", async () => {

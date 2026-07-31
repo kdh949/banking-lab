@@ -6,6 +6,8 @@ banking-lab:
   migration-target: kotlin-spring-boot
   payment-service:
     core-ledger-command-topic: ${BANKING_LAB_PAYMENT_LEDGER_COMMAND_TOPIC:banking.lab.core-banking.ledger-commands}
+    customer-account-ownership:
+      enabled: ${BANKING_LAB_PAYMENT_CUSTOMER_ACCOUNT_OWNERSHIP_ENABLED:true}
     real-payment-network-enabled: false
     core-banking:
       http-enabled: ${BANKING_LAB_PAYMENT_CORE_BANKING_HTTP_ENABLED:true}
@@ -36,7 +38,7 @@ banking-lab:
         timeout-millis: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_TIMEOUT_MILLIS:5000}
         dead-letter-threshold: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_DEAD_LETTER_THRESHOLD:3}
         retry-delay-seconds: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_RETRY_DELAY_SECONDS:60}
-        event-types: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:PaymentInstructionSettled,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated}
+        event-types: ${BANKING_LAB_PAYMENT_DOMAIN_EVENT_PUBLISHER_EVENT_TYPES:PaymentInstructionLedgerPosted,PaymentInstructionCanceled,PaymentInstructionFailed,PaymentInstructionRetryScheduled,PaymentInstructionDeadLettered,PaymentAutopayExecutionCreated}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}

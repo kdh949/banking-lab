@@ -186,7 +186,7 @@ class PaymentAuthorizationIntegrationTest {
         """.trimIndent()
 
         mockMvc.perform(
-            post("/api/payments/instructions/$instructionId/settlements")
+            post("/api/payments/instructions/$instructionId/ledger-postings")
                 .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "CUS-PAY-AUTH-001"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(settlementBody)
@@ -194,15 +194,15 @@ class PaymentAuthorizationIntegrationTest {
             .andExpect(status().isForbidden)
 
         mockMvc.perform(
-            post("/api/payments/instructions/$instructionId/settlements")
+            post("/api/payments/instructions/$instructionId/ledger-postings")
                 .header("Authorization", bearer("payment-service", listOf("PAYMENT_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(settlementBody)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.item.status").value("SETTLED"))
+            .andExpect(jsonPath("$.item.status").value("LEDGER_POSTED"))
 
-        assertEquals(1, countRows("payment_instructions WHERE status = 'SETTLED'"))
+        assertEquals(1, countRows("payment_instructions WHERE status = 'LEDGER_POSTED'"))
     }
 
     @Test

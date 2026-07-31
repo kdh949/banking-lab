@@ -14,8 +14,8 @@ test("runtime event envelope validation gate checks schemas headers and producer
   const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
   assert.equal(evidence.syntheticOnly, true);
   assert.equal(evidence.status, "pass");
-  assert.equal(evidence.eventSchemaCount, 17);
-  assert.equal(evidence.validatedEnvelopeCount, 17);
+  assert.equal(evidence.eventSchemaCount, 18);
+  assert.equal(evidence.validatedEnvelopeCount, 18);
   assert.deepEqual(evidence.envelopeFields, [
     "eventId",
     "eventType",
@@ -30,6 +30,7 @@ test("runtime event envelope validation gate checks schemas headers and producer
 
   for (const eventType of [
     "LedgerTransactionPosted",
+    "PaymentInstructionLedgerPosted",
     "PaymentInstructionDeadLettered",
     "NotificationDeliveryFailed",
     "ReportRetentionSweepCompleted"

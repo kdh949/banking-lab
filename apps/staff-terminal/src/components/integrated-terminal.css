@@ -972,6 +972,204 @@
   white-space: nowrap;
 }
 
+.api-workbench {
+  display: grid;
+  gap: 10px;
+}
+
+.api-connection-strip {
+  display: grid;
+  grid-template-columns: 150px minmax(220px, 1fr) 170px;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid #9dbdd0;
+  border-radius: 3px;
+  background: #eef5fb;
+  color: #173e72;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.api-connection-strip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-connection-strip span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.api-connection-strip.is-offline {
+  border-color: #d7a48c;
+  background: #fff5ef;
+  color: #884521;
+}
+
+.api-form-panel .panel-body {
+  padding: 10px;
+}
+
+.api-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  align-items: end;
+  gap: 8px 14px;
+}
+
+.api-field,
+.reason-required-panel {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.api-field span,
+.reason-required-panel span {
+  color: #0075aa;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.api-field input,
+.api-field select,
+.reason-required-panel input {
+  height: 25px;
+  min-width: 0;
+  border: 1px solid #cad2da;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #263648;
+  padding: 0 7px;
+}
+
+.reason-required-panel {
+  grid-column: span 2;
+}
+
+.reason-required-panel input {
+  background: #fff8d8;
+}
+
+.api-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-action-button,
+.approval-action-panel button {
+  min-width: 76px;
+  height: 26px;
+  border: 1px solid #7aa9ca;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffffff, #dcecf8);
+  color: #17466e;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.api-action-button:disabled,
+.approval-action-panel button:disabled {
+  border-color: #c4cbd2;
+  background: #e9edf1;
+  color: #808a94;
+}
+
+.api-result-panel .panel-body {
+  padding: 8px;
+}
+
+.api-kv-grid,
+.structured-error-panel dl,
+.approval-action-panel dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  margin: 0;
+  gap: 1px;
+}
+
+.api-kv-grid div,
+.structured-error-panel dl div,
+.approval-action-panel dl div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  min-height: 29px;
+  border: 1px solid #d7dde4;
+  background: #ffffff;
+}
+
+.api-kv-grid dt,
+.structured-error-panel dt,
+.approval-action-panel dt {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #d7dde4;
+  background: #eef5fb;
+  color: #3f4d66;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 7px;
+}
+
+.api-kv-grid dd,
+.structured-error-panel dd,
+.approval-action-panel dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #263648;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.structured-error-panel {
+  display: grid;
+  border: 1px solid #d99b91;
+  border-radius: 3px;
+  background: #fff8f5;
+  gap: 7px;
+  padding: 8px;
+}
+
+.structured-error-panel strong {
+  color: #9b2f24;
+  font-size: 13px;
+}
+
+.structured-error-panel dt {
+  background: #ffe5df;
+  color: #8d3427;
+}
+
+.approval-action-panel {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto;
+  align-items: center;
+  border: 1px solid #9dbdd0;
+  border-radius: 3px;
+  background: #f6fbff;
+  gap: 10px;
+  padding: 8px;
+}
+
+.approval-action-panel > div:last-child {
+  display: flex;
+  gap: 6px;
+}
+
 .progress-row {
   display: grid;
   grid-template-columns: 72px 1fr 36px;

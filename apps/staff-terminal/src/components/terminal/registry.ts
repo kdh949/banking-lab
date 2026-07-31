@@ -3,6 +3,7 @@ import type { MenuGroup, MenuTarget, ScreenDefinition, ScreenKey, TableColumn, T
 const depositTabs = ["업무포탈", "신규", "입금", "출금", "해지", "정산", "등록/해제", "조회", "통장/증명서/기타", "자기앞수표", "기타별단", "수신거래흐름도", "BPR흐름도"] as const;
 const fundTabs = ["펀드흐름도", "펀드(공지)", "펀드상담", "신규", "입금/출금", "제신고/제변경", "판매사이동", "대고객발급/통장", "연금/사모펀드", "계좌정보"] as const;
 const queryTabs = ["정산", "등록/해제", "조회", "통장/증명서/기타", "자기앞수표", "기타별단", "수신거래흐름도", "BPR흐름도"] as const;
+const staffApiTabs = ["조회", "승인", "운영예외", "상담", "감사"] as const;
 
 export const topModules: readonly TopModule[] = [
   { label: "수신", icon: "account_balance_wallet", screen: "deposit" },
@@ -10,7 +11,7 @@ export const topModules: readonly TopModule[] = [
   { label: "여신종합", icon: "manage_search", implemented: false },
   { label: "외환", icon: "currency_exchange", screen: "fee" },
   { label: "고객", icon: "groups", screen: "inheritance" },
-  { label: "CRM", icon: "campaign", implemented: false },
+  { label: "CRM", icon: "campaign", screen: "callCenter" },
   { label: "방카", icon: "business_center", implemented: false },
   { label: "펀드", icon: "account_balance", screen: "fund" },
   { label: "신용카드", icon: "credit_card", implemented: false },
@@ -117,6 +118,134 @@ export const screenDefinitions: Record<ScreenKey, ScreenDefinition> = {
       approvalRequired: false,
       workflowVisible: true
     }
+  },
+  staffCustomer: {
+    key: "staffCustomer",
+    code: "CUS101",
+    title: "직원 고객 상세 조회",
+    module: "CUS101",
+    moduleLabel: "고객",
+    tabs: staffApiTabs,
+    controls: {
+      template: "inquiry",
+      reasonRequired: true,
+      piiAccess: true,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: false,
+      workflowVisible: true
+    }
+  },
+  staffAccount: {
+    key: "staffAccount",
+    code: "ACC101",
+    title: "직원 계좌 조회",
+    module: "ACC101",
+    moduleLabel: "고객",
+    tabs: staffApiTabs,
+    controls: {
+      template: "inquiry",
+      reasonRequired: true,
+      piiAccess: true,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: false,
+      workflowVisible: true
+    }
+  },
+  staffTransaction: {
+    key: "staffTransaction",
+    code: "TX101",
+    title: "직원 거래 조회",
+    module: "TX101",
+    moduleLabel: "고객",
+    tabs: staffApiTabs,
+    controls: {
+      template: "inquiry",
+      reasonRequired: true,
+      piiAccess: false,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: false,
+      workflowVisible: true
+    }
+  },
+  approvalInbox: {
+    key: "approvalInbox",
+    code: "APR101",
+    title: "승인함 목록/상세",
+    module: "APR101",
+    moduleLabel: "내부통제",
+    tabs: staffApiTabs,
+    controls: {
+      template: "case",
+      reasonRequired: false,
+      piiAccess: true,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: true,
+      workflowVisible: true
+    }
+  },
+  opsRetry: {
+    key: "opsRetry",
+    code: "WRK002",
+    title: "운영 retry queue",
+    module: "WRK002",
+    moduleLabel: "운영",
+    tabs: staffApiTabs,
+    controls: {
+      template: "case",
+      reasonRequired: true,
+      piiAccess: false,
+      maskingPolicy: "NONE",
+      approvalRequired: false,
+      workflowVisible: true
+    }
+  },
+  workflowTimeline: {
+    key: "workflowTimeline",
+    code: "WRK003",
+    title: "workflow timeline",
+    module: "WRK003",
+    moduleLabel: "운영",
+    tabs: staffApiTabs,
+    controls: {
+      template: "case",
+      reasonRequired: true,
+      piiAccess: false,
+      maskingPolicy: "NONE",
+      approvalRequired: false,
+      workflowVisible: true
+    }
+  },
+  callCenter: {
+    key: "callCenter",
+    code: "CALL101",
+    title: "상담센터 compact 업무",
+    module: "CALL101",
+    moduleLabel: "CRM",
+    tabs: staffApiTabs,
+    controls: {
+      template: "case",
+      reasonRequired: true,
+      piiAccess: true,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: true,
+      workflowVisible: true
+    }
+  },
+  commandWorkbench: {
+    key: "commandWorkbench",
+    code: "CMD101",
+    title: "고위험 command workbench",
+    module: "CMD101",
+    moduleLabel: "내부통제",
+    tabs: staffApiTabs,
+    controls: {
+      template: "command",
+      reasonRequired: true,
+      piiAccess: true,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: true,
+      workflowVisible: true
+    }
   }
 };
 
@@ -125,7 +254,15 @@ export const screenList: readonly ScreenDefinition[] = [
   screenDefinitions.deposit,
   screenDefinitions.fee,
   screenDefinitions.inheritance,
-  screenDefinitions.fund
+  screenDefinitions.fund,
+  screenDefinitions.staffCustomer,
+  screenDefinitions.staffAccount,
+  screenDefinitions.staffTransaction,
+  screenDefinitions.approvalInbox,
+  screenDefinitions.opsRetry,
+  screenDefinitions.workflowTimeline,
+  screenDefinitions.callCenter,
+  screenDefinitions.commandWorkbench
 ];
 
 export function screenDefinitionFor(screen: ScreenKey) {
@@ -177,6 +314,25 @@ export const menuTree = [
     label: "펀드",
     open: false,
     items: [{ code: "F0000", label: "펀드 네비게이션", screen: "fund", moduleLabel: "펀드" }]
+  },
+  {
+    label: "직원 API 업무",
+    open: true,
+    items: [
+      { code: "CUS101", label: "고객 상세 조회", screen: "staffCustomer", moduleLabel: "고객" },
+      { code: "ACC101", label: "계좌 조회", screen: "staffAccount", moduleLabel: "고객" },
+      { code: "TX101", label: "거래 조회", screen: "staffTransaction", moduleLabel: "고객" },
+      { code: "APR101", label: "승인함 목록/상세", screen: "approvalInbox", moduleLabel: "내부통제" },
+      { code: "CMD101", label: "고위험 command workbench", screen: "commandWorkbench", moduleLabel: "내부통제" },
+      { code: "WRK002", label: "운영 retry queue", screen: "opsRetry", moduleLabel: "운영" },
+      { code: "WRK003", label: "workflow timeline", screen: "workflowTimeline", moduleLabel: "운영" },
+      { code: "CALL101", label: "상담 고객 검색", screen: "callCenter", moduleLabel: "CRM" },
+      { code: "CALL102", label: "상담 interaction 시작/상세", screen: "callCenter", moduleLabel: "CRM" },
+      { code: "CALL103", label: "redacted note", screen: "callCenter", moduleLabel: "CRM" },
+      { code: "CALL104", label: "aftercall task", screen: "callCenter", moduleLabel: "CRM" },
+      { code: "CALL105", label: "상담 이력", screen: "callCenter", moduleLabel: "CRM" },
+      { code: "CALL106", label: "상담 escalation", screen: "callCenter", moduleLabel: "CRM" }
+    ]
   }
 ] satisfies readonly MenuGroup[];
 

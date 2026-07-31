@@ -230,11 +230,11 @@ class PaymentRepository(
             instructionId
         )
 
-    fun updateSettlement(instructionId: String, ledgerTransactionId: String) {
+    fun updateLedgerPosting(instructionId: String, ledgerTransactionId: String) {
         jdbc.update(
             """
             UPDATE payment_instructions
-            SET status = 'SETTLED',
+            SET status = 'LEDGER_POSTED',
                 ledger_transaction_id = :ledgerTransactionId,
                 updated_at = now()
             WHERE payment_instruction_id = :instructionId
@@ -243,11 +243,11 @@ class PaymentRepository(
         )
     }
 
-    fun markLatestAttemptSettled(instructionId: String) {
+    fun markLatestAttemptLedgerPosted(instructionId: String) {
         jdbc.update(
             """
             UPDATE payment_attempts
-            SET status = 'SETTLED',
+            SET status = 'LEDGER_POSTED',
                 completed_at = now()
             WHERE payment_attempt_id = (
               SELECT payment_attempt_id

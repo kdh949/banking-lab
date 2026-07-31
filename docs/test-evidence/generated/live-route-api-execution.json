@@ -90,27 +90,59 @@
       ],
       "apiMethods": [
         "terminalStatus",
+        "staffCustomerSearch",
         "staffCustomerDetail",
-        "staffApprovals"
+        "staffAccountSearch",
+        "staffTransactionSearch",
+        "staffApprovals",
+        "staffApproval",
+        "approveStaffApproval",
+        "rejectStaffApproval",
+        "staffOperationalRetryQueue",
+        "staffWorkflowTimeline",
+        "requestAccountHold",
+        "requestAccountHoldRelease",
+        "requestTransferLimitChange",
+        "requestCustomerKycReview",
+        "requestFeeWaiver",
+        "requestTransactionCorrection",
+        "searchCallCenterCustomers",
+        "startCallCenterInteraction",
+        "callCenterInteraction",
+        "addCallCenterNote",
+        "createCallCenterAftercallTask",
+        "callCenterCustomerHistory",
+        "escalateCallCenterInteraction",
+        "closeCallCenterInteraction"
       ],
       "states": [
         "integrated-terminal",
         "route-backed-live-gated",
         "reason-required audit",
-        "masked staff customer read"
+        "masked staff customer read",
+        "maker-checker approval",
+        "outbox retry/dead-letter",
+        "workflow timeline",
+        "redacted call-center note"
       ],
       "controls": [
         "iWorks shell rendering",
         "terminal status route",
         "source boundary excludes retired staff route set",
         "bounded Spring API evidence panel",
+        "CUS101/ACC101/TX101 reason-required staff inquiries",
+        "APR101 approval inbox approve/reject actions",
+        "CMD101 idempotent high-risk command workbench",
+        "WRK002 outbox retry/dead-letter visibility",
+        "WRK003 workflow/audit/approval timeline visibility",
+        "CALL101-CALL106 compact call-center workflow",
         "simulator token opt-in required",
         "reason-required staff customer detail",
         "approval inbox read through Spring API"
       ],
       "notes": [
         "Current staff-terminal keeps the iWorks shell and does not restore the retired accounts, approvals, audit, customer, transaction, or workflow app route set.",
-        "The bounded evidence panel is the only staff-terminal frontend Spring API caller in this slice.",
+        "The integrated terminal exposes API-backed transaction-code screens inside the existing iWorks page instead of creating new Next routes or staff-terminal screen manifests.",
         "The local disposable Compose smoke executed the bounded staff customer detail and approval inbox route/API flow."
       ]
     }

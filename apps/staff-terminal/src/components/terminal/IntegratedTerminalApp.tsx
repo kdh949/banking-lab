@@ -1,7 +1,21 @@
 "use client";
 
 import { AppDialog, MaterialIcon } from "./primitives";
-import { DepositNavigationScreen, FeeInquiryScreen, FundNavigationScreen, InheritanceScreen, PortalScreen } from "./screens";
+import {
+  ApprovalInboxScreen,
+  CallCenterWorkspaceScreen,
+  CommandWorkbenchScreen,
+  DepositNavigationScreen,
+  FeeInquiryScreen,
+  FundNavigationScreen,
+  InheritanceScreen,
+  OperationalRetryQueueScreen,
+  PortalScreen,
+  StaffAccountInquiryScreen,
+  StaffCustomerInquiryScreen,
+  StaffTransactionInquiryScreen,
+  WorkflowTimelineScreen
+} from "./screens";
 import { BusinessTabs, RightRail, ScreenToolbar, SideDrawer, StatusBar, TerminalHeader, UtilityRail } from "./shell";
 import { useTerminalNavigation } from "./use-terminal-navigation";
 import type { MenuTarget, ScreenControlMetadata, ScreenKey } from "./types";
@@ -70,5 +84,29 @@ function ActiveScreen({
   if (screen === "inheritance") {
     return <InheritanceScreen controls={controls} />;
   }
-  return <FundNavigationScreen onMenuSelect={onMenuSelect} />;
+  if (screen === "fund") {
+    return <FundNavigationScreen onMenuSelect={onMenuSelect} />;
+  }
+  if (screen === "staffCustomer") {
+    return <StaffCustomerInquiryScreen />;
+  }
+  if (screen === "staffAccount") {
+    return <StaffAccountInquiryScreen />;
+  }
+  if (screen === "staffTransaction") {
+    return <StaffTransactionInquiryScreen />;
+  }
+  if (screen === "approvalInbox") {
+    return <ApprovalInboxScreen />;
+  }
+  if (screen === "opsRetry") {
+    return <OperationalRetryQueueScreen />;
+  }
+  if (screen === "workflowTimeline") {
+    return <WorkflowTimelineScreen />;
+  }
+  if (screen === "callCenter") {
+    return <CallCenterWorkspaceScreen />;
+  }
+  return <CommandWorkbenchScreen />;
 }

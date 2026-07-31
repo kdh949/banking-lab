@@ -4,6 +4,12 @@ Status: partial target-stack progress.
 
 Review date: 2026-06-06.
 
+## 2026-07-31 Ledger Posting Semantics Hardening
+
+Payment instruction `SETTLED` terminology was replaced with `LEDGER_POSTED` across Kotlin state, PostgreSQL constraints/data migration, OpenAPI, the shared TypeScript client, AsyncAPI, active publisher configuration, and Testcontainers coverage. The canonical route is `/ledger-postings`; `/settlements` remains a deprecated compatibility alias. `PaymentInstructionLedgerPosted` explicitly carries `externalSettlementCompleted=false`, while the historical settled-event schema remains only for already-published compatibility.
+
+This closes a portfolio credibility gap: an internal double-entry ledger posting is now distinguishable from future external clearing, value-date settlement, payout, and three-way reconciliation work.
+
 ## Scope
 
 This evidence covers the first synthetic Payment Service slice:
@@ -14,21 +20,21 @@ This evidence covers the first synthetic Payment Service slice:
   with service-specific Flyway history that can initialize after core-banking
   has already populated the shared synthetic PostgreSQL schema.
 - Payment instruction API and service logic for create, idempotent replay,
-  settlement reference recording, and pre-settlement cancellation.
+  core-ledger posting reference recording, and pre-ledger-posting cancellation.
 - Direct customer self-cancel remains allowed and audited, while direct staff or
   ops payment cancellation remains denied on the customer cancel endpoint.
 - Staff and ops payment cancellation now goes through durable maker-checker
   correction requests with independent checker approval before the payment
   instruction is canceled.
 - Event, AsyncAPI, and OpenAPI contracts for payment-to-core-ledger posting
-  requests, settlement, autopay execution, payment instruction cancellation, and
-  payment instruction lifecycle events for settled, failed, retry-scheduled, and
+  requests, internal ledger-posted outcomes, autopay execution, payment instruction cancellation, and
+  payment instruction lifecycle events for ledger-posted, failed, retry-scheduled, and
   dead-lettered outcomes.
 - Core-banking bill-payment ledger command and service-to-service API for
   posting successful synthetic payments as balanced `PAYMENT` ledger entries.
 - Payment-service outbox dispatcher that locks durable
   `PaymentLedgerPostingRequested` events, calls a core-banking posting port,
-  records settlement, emits failed/retry-scheduled/dead-lettered lifecycle
+  records the internal ledger posting result, emits failed/retry-scheduled/dead-lettered lifecycle
   events, and marks retry/dead-letter state without real payment network
   integration.
 - Payment-service Kafka outbox publisher that publishes non-ledger payment
@@ -60,7 +66,7 @@ This evidence covers the first synthetic Payment Service slice:
   no-pending-event outcomes.
 - Payment-service route-level authorization filter, signed JWKS JWT decoder,
   dev-only simulator token decoder, and route role policies for instruction,
-  autopay, settlement, due-execution, Outbox dispatch, and staff cancellation
+  autopay, ledger-posting-result, due-execution, Outbox dispatch, and staff cancellation
   maker-checker APIs.
 - Live Keycloak client-credentials smoke coverage proving the imported
   `payment-service-api` service account receives a signed `PAYMENT_SERVICE`
@@ -75,7 +81,7 @@ This evidence covers the first synthetic Payment Service slice:
   `PaymentLedgerPostingRequested` events in bounded batches after commit.
 - Live Docker Compose smoke coverage for `payment-service` plus
   `payment-outbox-worker` against live Keycloak and `core-banking`, proving an
-  API-created payment can be settled as balanced core ledger postings through
+  API-created payment can be marked `LEDGER_POSTED` after balanced core ledger postings through
   the worker with simulator token fallback disabled and the worker fetching its
   own `payment-service-api` client-credentials token.
 - Docker Compose platform services for the payment REST API, the enabled
@@ -292,7 +298,7 @@ need local file-lock socket and Docker access.
   `realPaymentNetworkUsed=false`, and
   `realFinancialInstitutionApiUsed=false`;
 - settled instructions cannot be canceled;
-- pre-settlement cancellation is idempotent and audited through status history,
+- pre-ledger-posting cancellation is idempotent and audited through status history,
   with `PaymentInstructionCanceled` payloads preserving synthetic-only and
   no-real-network boundary metadata.
 
@@ -393,7 +399,7 @@ Manifest and API client coverage verifies:
   rows and return `PAU-*` `auditEventId` values for PAY-101 evidence;
 - branch staff direct payment cancellation is rejected with
   `PAYMENT_AUTHORIZATION_POLICY_VIOLATION`, while customer self-cancel remains
-  allowed for pre-settlement instructions;
+  allowed for pre-ledger-posting instructions;
 - staff/ops cancellation correction creation is forbidden to CUSTOMER tokens and
   allowed to staff/ops maker roles only;
 - maker cancellation requests persist durable `PCR-*` pending rows without
@@ -403,7 +409,7 @@ Manifest and API client coverage verifies:
 - self-approval is rejected with `PAYMENT_MAKER_CHECKER_SEPARATION_REQUIRED`
   before instruction mutation;
 - an independent manager approval marks the request `APPROVED`, cancels the
-  pre-settlement instruction, appends `CANCELED` status history with the checker
+  pre-ledger-posting instruction, appends `CANCELED` status history with the checker
   actor, and emits one `PaymentInstructionCanceled` durable Outbox event;
 - idempotent checker approval replay returns the same approved result without a
   duplicate cancellation event;
