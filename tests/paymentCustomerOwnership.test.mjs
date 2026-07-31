@@ -3,8 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("customer payment bodies are rebound to the authenticated customer", async () => {
-  const advice = await readFile(
+  const binder = await readFile(
     "services/payment-service/src/main/kotlin/lab/banking/payment/security/PaymentCustomerRequestBindingAdvice.kt",
+    "utf8"
+  );
+  const controller = await readFile(
+    "services/payment-service/src/main/kotlin/lab/banking/payment/api/PaymentController.kt",
     "utf8"
   );
   const authorization = await readFile(
@@ -15,10 +19,17 @@ test("customer payment bodies are rebound to the authenticated customer", async 
 
   assert.match(authorization, /fun PaymentPrincipal\?\.requirePaymentCustomer\(\)/u);
   assert.match(authorization, /PAYMENT_CUSTOMER_CLAIM_REQUIRED/u);
-  assert.match(advice, /customerId = actor\.customerId/u);
-  assert.match(advice, /requestedBy = actor\.subject/u);
-  assert.match(advice, /requestedChannel = "CUSTOMER_WEB"/u);
-  assert.match(advice, /accountOwnershipVerifier\.requireOwned/u);
+  assert.match(binder, /class PaymentCustomerRequestBinder/u);
+  assert.match(binder, /customerId = actor\.customerId/u);
+  assert.match(binder, /requestedBy = actor\.subject/u);
+  assert.match(binder, /requestedChannel = "CUSTOMER_WEB"/u);
+  assert.match(binder, /accountOwnershipVerifier\.requireOwned/u);
+  assert.match(controller, /bindCreateInstruction\(request, servletRequest\)/u);
+  assert.match(controller, /bindCancelInstruction\(request, servletRequest\)/u);
+  assert.match(controller, /bindCreateAutopayAgreement\(request, servletRequest\)/u);
+  assert.match(controller, /bindPauseAutopayAgreement\(request, servletRequest\)/u);
+  assert.match(controller, /bindResumeAutopayAgreement\(request, servletRequest\)/u);
+  assert.match(controller, /bindCancelAutopayAgreement\(request, servletRequest\)/u);
   assert.match(application, /BANKING_LAB_PAYMENT_CUSTOMER_ACCOUNT_OWNERSHIP_ENABLED:true/u);
 });
 
