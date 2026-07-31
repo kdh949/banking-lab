@@ -28,6 +28,8 @@ class PaymentAuthorizationFilter(
     private val cancellationRequestReview = Regex("^/api/payments/cancellation-requests/[^/]+/(approve|reject)$")
     private val autopayRead = Regex("^/api/payments/autopay/agreements/[^/]+$")
     private val autopayCommand = Regex("^/api/payments/autopay/agreements/[^/]+/(pause|resume|cancel)$")
+    private val paymentSettlementImport = Regex("^/api/payments/settlement/imports/[^/]+$")
+    private val paymentSettlementBatchRun = Regex("^/api/payments/settlement/batch-runs/[^/]+$")
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -81,6 +83,12 @@ class PaymentAuthorizationFilter(
                 setOf("CUSTOMER", "BRANCH_STAFF", "BRANCH_MANAGER", "OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             autopayCommand.matches(path) && method == "POST" -> setOf("CUSTOMER")
             path == "/api/payments/autopay/executions/due" && method == "POST" -> setOf("PAYMENT_SERVICE", "OPS_OPERATOR", "OPS_MANAGER")
+            path == "/api/payments/settlement/imports" && method == "POST" -> setOf("OPS_OPERATOR", "OPS_MANAGER")
+            paymentSettlementImport.matches(path) && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
+            path == "/api/payments/settlement/batch-runs" && method == "POST" -> setOf("OPS_OPERATOR", "OPS_MANAGER")
+            paymentSettlementBatchRun.matches(path) && method == "GET" ->
+                setOf("OPS_OPERATOR", "OPS_MANAGER", "AUDITOR", "COMPLIANCE_MANAGER")
             else -> emptySet()
         }
     }
