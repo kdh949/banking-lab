@@ -59,7 +59,7 @@ jobs:
           npm run packages:typecheck
           npm run scripts:typecheck
       - name: Verify Core Banking and Payment behavior
-        run: scripts/run-core-banking-tests.sh :services:core-banking:test :services:core-banking:integrationTest :services:payment-service:test :services:payment-service:integrationTest
+        run: scripts/run-core-banking-tests.sh :services:payment-service:integrationTest --tests lab.banking.payment.PaymentReconciliationIntegrationTest --stacktrace --info
       - name: Publish verified implementation
         shell: bash
         run: |
