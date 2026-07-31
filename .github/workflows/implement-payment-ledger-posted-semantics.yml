@@ -1,0 +1,64 @@
+name: Implement payment ledger-posted semantics
+
+on:
+  push:
+    branches:
+      - agent/payment-ledger-posted-semantics
+    paths:
+      - .github/workflows/implement-payment-ledger-posted-semantics.yml
+      - .github/automation/implement-payment-ledger-posted-semantics.py
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/implement-payment-ledger-posted-semantics.yml
+      - .github/automation/implement-payment-ledger-posted-semantics.py
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/payment-ledger-posted-semantics
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Apply ledger-posted semantics
+        run: python3 .github/automation/implement-payment-ledger-posted-semantics.py
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Run repository and contract tests
+        run: |
+          npm test
+          npm run contracts:lint
+          npm run contracts:check-client
+          npm run contracts:check-events
+          npm run contracts:diff-openapi
+          npm run contracts:validate-runtime-events
+          npm run packages:typecheck
+      - name: Run payment-service unit and integration tests
+        run: scripts/run-core-banking-tests.sh :services:payment-service:test :services:payment-service:integrationTest
+      - name: Verify patch and publish branch
+        shell: bash
+        run: |
+          git diff --check
+          rm .github/workflows/implement-payment-ledger-posted-semantics.yml
+          rm .github/automation/implement-payment-ledger-posted-semantics.py
+          rmdir .github/automation 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor: 결제 원장 반영 상태를 정산 완료와 분리"
+          git push origin HEAD:agent/payment-ledger-posted-semantics
