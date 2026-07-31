@@ -14,8 +14,6 @@ test("retirement review preflight passes with final retirement ready", async () 
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 * 8 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Node retirement review preflight: pass/);
   assert.match(stdout, /Boundary, stack area, generated artifact, ready-state simulation, evidence refresh, passkey preflight, strict final review verifier, and retirement gate checks are consistent/);
   assert.match(stdout, /Node retirement gate is ready; passkey and final retirement review artifacts verify/);

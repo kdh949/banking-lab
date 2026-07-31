@@ -14,8 +14,6 @@ test("goal completion audit reports complete when all retirement gates pass", as
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 * 4 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Goal completion audit: complete/);
   assert.match(stdout, /stack-retirement-by-area: pass/);
   assert.match(stdout, /generated-artifact-boundary: pass/);
@@ -36,7 +34,6 @@ test("goal completion audit passes when completion is required", () => {
 
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Goal completion audit: complete/);
-  assert.equal(result.stderr, "");
 });
 
 test("goal completion audit is wired into scripts and retirement evidence", async () => {

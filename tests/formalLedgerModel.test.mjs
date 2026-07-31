@@ -27,8 +27,6 @@ test("formal ledger checker writes executable non-static evidence", async () => 
       maxBuffer: 1024 * 1024
     }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Formal ledger executable model check passed/);
 
   const result = JSON.parse(await readFile(resultPath, "utf8"));

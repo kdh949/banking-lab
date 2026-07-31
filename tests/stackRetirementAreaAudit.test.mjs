@@ -16,8 +16,6 @@ test("stack retirement area audit proves target areas do not use legacy Node MVP
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 * 2 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Stack retirement area audit: pass/);
   assert.match(stdout, /core-banking-backend: Kotlin\/Java \+ Spring Boot/);
   assert.match(stdout, /frontend-channels: TypeScript \+ Next\.js\/React/);

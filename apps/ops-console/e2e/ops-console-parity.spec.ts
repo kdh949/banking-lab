@@ -35,12 +35,12 @@ test("ops console renders closing, reconciliation, approval, and workflow contro
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Closing and reconciliation controls" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payment settlement and ledger reconciliation" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.locator(".channel-card-heading > span", { hasText: screen.screenId })).toBeVisible();
   }
 
-  await expect(page.getByText("Balanced adjustments only")).toBeVisible();
+  await expect(page.getByText("Independent evidence · balanced ledger · SLA exceptions")).toBeVisible();
   await expect(page.getByText("Mismatch corrections require approval")).toBeVisible();
   await expect(page.getByText("RECONCILIATION_ADJUSTMENT").first()).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true }).first()).toBeVisible();

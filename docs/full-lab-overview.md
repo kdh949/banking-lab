@@ -1,0 +1,338 @@
+# Full Banking Lab Overview
+
+> This document preserves the broad platform overview. The repository front page now focuses on the payment, ledger, settlement, and reconciliation vertical slice used for portfolio review.
+
+# Bank-grade Core Banking Lab
+
+Synthetic core banking lab focused on ledger integrity, auditability, maker-checker control, manifest-driven operations, complaint workflow, AML/FDS simulation, reconciliation, and evidence.
+
+This project does not handle real customer money, real personal data, or real payment networks. All data is synthetic and all external providers are simulators.
+
+## 1. Project Overview
+
+The lab models a simulated digital bank with:
+
+- customer web banking
+- staff integrated terminal
+- electronic complaint portal
+- call-center console
+- FDS/AML review console
+- operations and reconciliation console
+- audit console
+- core banking ledger service
+- workflow and maker-checker control
+- iWorks-style staff terminal shell plus manifest-driven channel screens
+- evidence documents and generated test reports
+
+## 2. Why This Is Not a Simple Bank Clone
+
+The implementation prioritizes bank-grade controls over UI breadth:
+
+- every financial movement is represented as balanced double-entry postings
+- balances are projections, not source-of-truth fields
+- externally retried commands are idempotent
+- finalized ledger transactions are reversed or adjusted, not mutated
+- staff sensitive access is reason-required and audited
+- high-risk operations require maker-checker approval
+- screens scale through manifests and reusable templates
+- screen manifests are validated for the current synthetic catalog breadth and unique transaction codes
+- every phase has tests and evidence
+
+## 3. Overall Architecture
+
+```text
+apps/*                    TypeScript/Next.js target channel apps
+services/core-banking     Kotlin/Spring Boot core ledger, customer, staff, complaint, FDS/AML, reconciliation, admin, parameter, loan, card, statement, workflow, and audit APIs
+services/payment-service  Kotlin/Spring Boot payment instruction, autopay, cancellation, outbox worker, and domain-event publisher
+services/notification-service Kotlin/Spring Boot notification delivery, preference, template, and event-consumer service
+services/reporting-service Kotlin/Spring Boot report artifact, export, retention, and domain-event publisher service
+analytics/aml-fds-python  Python/DuckDB/scikit-learn synthetic AML/FDS analytics
+packages/*                TypeScript API, auth, channel UI, screen, and form packages
+screen-manifests          manifest-driven channel and operations screens
+contracts                 OpenAPI, AsyncAPI, event, and Temporal contracts
+db/migrations             Flyway PostgreSQL schema V001-V040
+infra                     Docker Compose, Kubernetes, Helm, Terraform, Argo CD, observability, and security assets
+legacy-node-reference     archived Node oracle modules and static reference shells
+runtime                   local Node reference HTTP runtime for parity/oracle comparison
+docs                      ADRs, evidence, mappings, drills, demo scripts
+```
+
+## 4. Core Ledger Design
+
+Implemented controls:
+
+- `DEPOSIT`, `WITHDRAWAL`, `INTERNAL_TRANSFER`, `REVERSAL`, and `ADJUSTMENT` commands
+- balanced postings enforced by `assertTransactionBalanced`
+- projected balances from `projectBalances`
+- serialized command execution for concurrent withdrawals
+- idempotency store for retried commands
+- reversal references to original transaction
+- closed business date guard
+- reconciliation adjustments as balanced ledger transactions
+
+## 5. Staff Integrated Terminal
+
+The current target staff-terminal frontend is the iWorks integrated terminal
+shell. It includes:
+
+- transaction code input
+- module and work-menu navigation
+- shared screen components for the current terminal workspace
+- unavailable-work modal behavior for unimplemented modules
+- lookup modal behavior
+- digit-only operator input
+- status bar client IP and server time from `/api/terminal-status`
+- bounded Spring API evidence panel for reason-required customer detail and
+  approval-inbox reads when local API and simulator-token opt-in are configured
+
+The retired staff manifest routes and broad API-backed staff route set are not
+part of the current frontend. Spring staff-control APIs remain target-stack
+backend coverage for privileged unmask, approvals, account hold/release, limit
+changes, KYC review, fee waiver, transaction correction,
+complaint/FDS/AML/reconciliation controls, audit, and maker-checker behavior.
+
+## 6. Customer Web Banking
+
+The customer web includes:
+
+- Keycloak/OIDC-backed synthetic login paths in the target channel apps, with the Node reference retaining mock login only for oracle tests
+- account list and detail from projected ledger balances
+- transaction history from the same ledger source used by staff inquiry
+- idempotent transfer submission
+- transfer results for `POSTED`, `HELD`, `FAILED`, and `BLOCKED`
+- complaint entry navigation
+
+## 7. Electronic Complaint Workflow
+
+The complaint workflow includes:
+
+- customer complaint intake
+- shared customer/staff complaint case source
+- SLA due date and timeline
+- staff classify, assign, review, and answer draft
+- answer approval before customer-visible response
+- customer confirmation and case closure
+
+## 8. AML/FDS Simulation
+
+FDS controls:
+
+- high amount rule
+- new device and high amount rule
+- first-time beneficiary rule
+- velocity rule
+- transaction hold without ledger posting
+- release/block review through maker-checker approval
+
+AML controls:
+
+- customer risk grade evaluation
+- suspicious transfer candidate generation
+- STR simulation case
+- reviewer assignment
+- comments
+- approval-controlled closure
+
+## 9. Reconciliation
+
+Operations controls:
+
+- EOD daily closing
+- ledger invariant validation
+- synthetic external institution file
+- unmatched reconciliation item creation
+- owner-required mismatch cases
+- closed-day direct posting rejection
+- maker-checker adjustment request
+- balanced `ADJUSTMENT` transaction on an open business date
+
+## 10. Security, Audit, and Internal Control
+
+Implemented controls:
+
+- append-only audit hash chain
+- Keycloak/OIDC role and claim enforcement in target Spring services, with simulator tokens allowed only through explicit development profiles
+- PII masking and privileged unmask path
+- reason-required sensitive staff access
+- high-risk approval business types
+- manifest-declared roles, audit, masking, workflow, and approval metadata
+- synthetic-only external simulator boundary
+
+## 11. Test Strategy
+
+Run:
+
+```bash
+npm run parity
+npm test
+npm run validate:manifests
+npm run test:screen-engine
+npm run packages:typecheck
+npm run scripts:typecheck
+npm run formal:ledger
+npm run evidence:phase1
+npm run evidence:phase2
+npm run evidence:phase3
+npm run evidence:phase4
+npm run evidence:phase5
+npm run evidence:phase6
+npm run evidence:pack
+docker compose config
+```
+
+Current automated coverage includes ledger invariants, runtime APIs, customer web, staff terminal, complaint workflow, FDS/AML, reconciliation, manifests, masking, audit, idempotency, reversal, and maker-checker.
+
+The current manifest catalog contains 73 synthetic screens across customer web,
+complaint portal, FDS/AML, ops, audit, admin, and call-center consoles.
+Staff-terminal manifests are intentionally absent from the current iWorks shell
+model.
+
+`npm run formal:ledger` checks the TLA+ ledger and idempotency artifacts, attempts TLC through a local `tlc` command, `BANKING_LAB_TLC_CMD`, `BANKING_LAB_TLC_JAR`, a repo-local TLC jar, or `~/Downloads/tla2tools.jar`, resolves Java through `BANKING_LAB_JAVA_CMD`, `JAVA_HOME`, or a local OpenJDK fallback when a TLC jar is used, and then runs the built-in bounded state-search checker. Static-only mode requires `BANKING_LAB_ALLOW_FORMAL_STATIC_ONLY=true` and is not accepted in CI.
+
+CI is defined in `.github/workflows/ci.yml` for Node/reference tests, manifest validation, package/script typechecks, Next.js channel builds, all Spring service unit/integration jobs, platform/contract validation, Compose profile rendering, Playwright manifest E2E, security evidence, and formal model checks.
+
+## 11.1 Current Coverage And Gaps
+
+The current implementation coverage is tracked in `docs/implementation-coverage-matrix.md`.
+
+The coverage matrix uses explicit status values to avoid mixing structural
+coverage with live execution evidence. `api-backed-read` and
+`api-backed-command` mean a target API path exists for the stated scope.
+`browser-e2e-backed` and `live-keycloak-backed` are stronger browser/runtime
+claims. `route-backed-live-gated`, `backend-control-covered`,
+`manifest-only`, and `partial` are not completion claims for live route
+execution. A skipped env-gated Playwright smoke is not counted as a live API
+pass.
+
+Important current gaps are intentionally not marked complete:
+
+- staff-terminal has a bounded Spring API evidence panel for reason-required customer detail and approval-inbox reads, while broader staff command depth should be expanded only as later platform/operations workflows add targeted operator commands;
+- deposit product, fee policy, interest accrual, and fee/interest posting modules are implemented for the current synthetic lab scope;
+- Python AML/FDS analytics has a DuckDB mart, generated batch evidence, a Spring read API, and an FDS/AML console evidence panel;
+- `npm run formal:ledger` now records actual TLC evidence when a TLC jar is available and always rejects static-only output as CI/milestone evidence;
+- Kubernetes/Helm files have executable structural validation through `npm run k8s:validate` and `npm run helm:template`, plus disposable kind/Helm live deployment smoke evidence for PostgreSQL and core banking;
+- `npm run security:evidence:docker` exists for Docker-available Semgrep/Trivy/SBOM/DAST reruns; DAST requires `BANKING_LAB_DAST_URL`;
+- `npm run load:synthetic` now produces local synthetic load-smoke evidence, and `npm run postgres:backup-drill:docker-live` records live PostgreSQL restore proof against disposable databases.
+
+The Node retirement evidence remains valid for the previous target-stack migration scope. The broader missing-features goal in `docs/codex/implementation_missing_features_goals.md` is now covered through phased implementation evidence, with future hardening items called out separately where they are not claimed.
+
+## 11.2 Kotlin + Next.js Migration
+
+The Node.js `.mjs` runtime is now archived oracle/reference material. The current retirement gate is ready for the synthetic lab scope, and target-path behavior belongs in Kotlin/Spring Boot, TypeScript/Next.js, Python analytics, PostgreSQL/Flyway, Redpanda/Kafka, Temporal, and the platform assets.
+
+Migration entrypoints:
+
+```bash
+npm run parity
+npm run node:retirement-gate
+```
+
+Read `docs/migration/kotlin-next-playbook.md` before changing parity-sensitive behavior. The migration must preserve the 43 mapped Node reference scenarios in `docs/migration/parity-scenarios.json`, use the structured error contract in `docs/migration/structured-api-error-contract.md`, and keep `docs/migration/node-retirement-gate.json` ready by rerunning the gate after material target-stack changes.
+
+Target Spring Boot services live under `services/*/src/main/kotlin`. Use JDK 21 for Gradle commands on this workstation. Verify the target backend with:
+
+```bash
+npm run test:core-banking:unit
+npm run test:core-banking:integration
+npm run test:payment-service:unit
+npm run test:notification-service:unit
+npm run test:reporting-service:unit
+```
+
+Target Next.js channel apps live under `apps/*/src`. Legacy static app shells live under `legacy-node-reference/apps` for the Node reference runtime, not under the target Next app directories. Verify the target frontend with:
+
+```bash
+npm run next:customer-web:typecheck
+npm run next:staff-terminal:typecheck
+npm run next:complaint-portal:typecheck
+npm run next:ops-console:typecheck
+npm run next:audit-console:typecheck
+npm run next:fds-aml-console:typecheck
+npm run next:admin-console:typecheck
+npm run packages:typecheck
+npm audit --omit=dev
+```
+
+## 12. Failure Drills
+
+Failure drill documents live under `docs/failure-drills`.
+
+Covered drills include:
+
+- duplicate idempotent transfer
+- concurrent withdrawal
+- staff lookup without reason
+- maker self-approval
+- complaint answer before approval
+- FDS release/block
+- closed-day posting attempt
+- reconciliation adjustment
+
+## 13. Run Locally
+
+Reference/oracle runtime only:
+
+```bash
+npm start
+```
+
+Open:
+
+- `http://127.0.0.1:8080/staff-terminal`
+- `http://127.0.0.1:8080/customer-web`
+- `http://127.0.0.1:8080/complaint-portal`
+- `http://127.0.0.1:8080/ops-console`
+- `http://127.0.0.1:8080/audit-console`
+- `http://127.0.0.1:8080/fds-aml-console`
+
+Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Target Next.js channel apps use their workspace scripts, for example
+`npm run next:customer-web` and `npm run next:staff-terminal`.
+
+## 14. Demo Scenario
+
+Primary walkthrough:
+
+1. Run `npm test` and `npm run evidence:pack`.
+2. Show ledger code and invariant tests.
+3. Open staff terminal and perform reason-required lookup.
+4. Open customer web and submit idempotent transfer.
+5. Open complaint portal and staff workflow.
+6. Open FDS/AML console and release a held transfer.
+7. Open ops console and run EOD reconciliation.
+8. Show `docs/test-evidence/evidence-pack-summary.md`.
+
+Detailed script: `docs/demo-scenarios/demo-video-script.md`.
+
+## 15. Limits and Legal Boundary
+
+This is a local simulation:
+
+- no real deposits
+- no real transfers
+- no real payment networks
+- no real KYC provider
+- no real customer PII
+- no public complaint service
+
+The target Spring services use PostgreSQL/Flyway-backed state for ledger, audit, approvals, workflows, FDS/AML, reconciliation, payment, notification, and reporting slices covered by current evidence. The local `npm start` Node runtime remains an in-memory archived reference/oracle path only.
+
+## 16. Remaining Hardening Work
+
+Next engineering slices:
+
+- normalize docs and evidence after each hardening phase so README, the coverage matrix, and evidence reports describe the same implementation state
+- add hosted GitHub Actions run evidence or explicit blocked evidence without treating local commands as hosted green
+- refresh customer-web live route-to-API evidence for the major demo flows, and keep staff-control API evidence separate from the current iWorks terminal boundary unless a new operator route is added
+- extend springdoc/Jackson DTO schema generation beyond the core-banking ledger command, inquiry, and case workflow subsets plus payment-service, notification-service, and reporting-service, and broaden live broker-backed event-envelope coverage beyond the current contract gates
+- rerun the call-center live synthetic API/Keycloak browser wrapper before demo or release evidence refreshes, keeping the local-only Compose evidence boundary explicit
+- broaden live platform hardening from structural/kind smoke to ingress traffic, TLS termination, Argo CD controller sync health, canary promotion, and multi-node storage behavior
+- extend high-contention retry or operator-visible failure policy to every future financial command path
+- add live browser evidence for broader session/device UX and authorization exception paths
+- add native source-table partitioning only after composite foreign-key planning is complete
+- keep rerunning security, observability, parity, and node-retirement gates before release evidence refreshes

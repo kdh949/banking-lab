@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bank-grade Core Banking Lab foundation scaffold with synthetic data only.",
+  "description": "Synthetic payment settlement, double-entry ledger, and three-way reconciliation portfolio lab.",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -50,6 +50,10 @@
     "governance:evidence": "node --experimental-strip-types scripts/run-governance-evidence.ts",
     "test:screen-engine": "npm --workspace @banking-lab/screen-engine run test",
     "ci:check-workflow": "node --experimental-strip-types scripts/check-ci-workflow.ts",
+    "portfolio:verify:node": "node --test tests/paymentCustomerOwnership.test.mjs tests/paymentLedgerPostedSemantics.test.mjs tests/paymentSettlementFoundation.test.mjs tests/paymentThreeWayReconciliation.test.mjs tests/portfolioSettlementSurface.test.mjs tests/ciHardening.test.mjs tests/platformDeployment.test.mjs && npm run validate:manifests && npm run packages:typecheck && npm run scripts:typecheck && npm run contracts:lint && npm run contracts:check-client && npm run contracts:diff-openapi",
+    "portfolio:verify:backend": "scripts/run-core-banking-tests.sh :services:core-banking:test :services:payment-service:test && scripts/run-core-banking-tests.sh :services:core-banking:integrationTest --tests lab.banking.core.ledger.application.LedgerDatabaseIntegrityIntegrationTest --tests lab.banking.core.ledger.evidence.PaymentLedgerEvidenceIntegrationTest && scripts/run-core-banking-tests.sh :services:payment-service:integrationTest --tests lab.banking.payment.PaymentSettlementIntegrationTest --tests lab.banking.payment.PaymentReconciliationIntegrationTest",
+    "portfolio:verify:web": "npm run next:ops-console:typecheck && npm run next:ops-console:build && npm run test:e2e:portfolio",
+    "portfolio:verify": "npm run portfolio:verify:node && npm run portfolio:verify:backend && npm run portfolio:verify:web",
     "contracts:lint": "node --experimental-strip-types scripts/lint-contracts.ts",
     "contracts:check-client": "node --experimental-strip-types scripts/check-api-client-contract.ts",
     "contracts:check-events": "node --experimental-strip-types scripts/check-event-contracts.ts",
@@ -104,6 +108,7 @@
     "packages:typecheck": "npm --workspace @banking-lab/screen-engine run typecheck && npm --workspace @banking-lab/form-engine run typecheck && npm --workspace @banking-lab/api-client run typecheck && npm --workspace @banking-lab/auth-client run typecheck",
     "scripts:typecheck": "tsc -p scripts/tsconfig.json --noEmit",
     "test:e2e": "playwright test",
+    "test:e2e:portfolio": "playwright test --config=playwright.portfolio.config.ts",
     "validate:manifests": "node --experimental-strip-types scripts/validate-manifests.ts",
     "formal:ledger": "node --experimental-strip-types scripts/check-tla-model.ts",
     "security:secrets-check": "node --experimental-strip-types scripts/check-secret-placeholders.ts",
@@ -135,6 +140,7 @@
     "@playwright/test": "^1.51.1"
   },
   "engines": {
-    "node": ">=20"
-  }
+    "node": ">=24 <25"
+  },
+  "packageManager": "npm@10.9.2"
 }

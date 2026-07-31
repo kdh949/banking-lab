@@ -1,3 +1,7 @@
+import { createPaymentSettlementMethods } from "./payment-settlement";
+
+export * from "./payment-settlement";
+
 export interface BankingApiClientOptions {
   readonly baseUrl: string;
   readonly bearerToken?: string;
@@ -1834,7 +1838,7 @@ export interface CardLossReportCommand {
   readonly reason?: string | null;
 }
 
-export type PaymentInstructionStatus = "POSTING_REQUESTED" | "SETTLED" | "CANCELED" | "FAILED";
+export type PaymentInstructionStatus = "POSTING_REQUESTED" | "LEDGER_POSTED" | "CANCELED" | "FAILED";
 export type PaymentAutopayFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
 export type PaymentAutopayStatus = "ACTIVE" | "PAUSED" | "CANCELED";
 export type PaymentOutboxDispatchStatus = "PUBLISHED" | "FAILED" | "DEAD_LETTER" | "NO_PENDING_EVENT";
@@ -2900,8 +2904,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
     request<ParameterHistoryResponse>(fetchImpl, baseUrl, path, { reason }, options.bearerToken);
   const requestParameterChange = (path: string, command: ParameterChangeRequestCommand) =>
     request<ParameterChangeRequestResponse>(fetchImpl, baseUrl, path, {}, options.bearerToken, { method: "POST", body: command });
+  const paymentSettlementMethods = createPaymentSettlementMethods({
+    request: <T>(
+      path: string,
+      searchParams: Record<string, string> = {},
+      requestOptions: { readonly method?: "GET" | "POST" | "PUT"; readonly body?: unknown } = {}
+    ) => request<T>(fetchImpl, baseUrl, path, searchParams, options.bearerToken, requestOptions)
+  });
 
   return {
+    ...paymentSettlementMethods,
     signupCustomer(command: CustomerSignupCommand) {
       return request<CustomerAuthResponse>(
         fetchImpl,

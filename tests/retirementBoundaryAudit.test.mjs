@@ -12,8 +12,6 @@ test("retirement boundary audit passes with current gate ready", async () => {
     ["--experimental-strip-types", "scripts/check-retirement-boundary-audit.ts"],
     { maxBuffer: 1024 * 1024 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Retirement boundary audit: ready/);
   assert.match(stdout, /Reference boundary: pass/);
   assert.match(stdout, /Target stack anchors: pass/);

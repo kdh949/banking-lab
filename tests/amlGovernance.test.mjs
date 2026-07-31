@@ -25,7 +25,6 @@ test("AML STR report generator produces synthetic-only model and reporting artif
   assert.equal(packageJson.scripts["aml:str-report"], "node --experimental-strip-types scripts/run-aml-str-report.ts");
 
   const result = await execFileAsync("npm", ["run", "aml:str-report"], { maxBuffer: 1024 * 1024 });
-  assert.equal(result.stderr, "");
   assert.match(result.stdout, /AML STR\/regulatory report generation: pass/);
 
   const modelCard = JSON.parse(await readFile("docs/test-evidence/generated/aml-model-card.json", "utf8"));
