@@ -22,4 +22,10 @@ External clearing and settlement will be modeled as a separate aggregate with it
 - Historical `PaymentInstructionSettled` schema remains checked in for already-published event compatibility, but active publishers no longer select it.
 - Flyway V006 converts persisted `SETTLED` instruction/attempt/history rows and unpublished legacy events. Published historical events remain unchanged and continue to validate against the legacy schema.
 
+## Verification boundary
+
+- `PaymentLedgerPostedSemanticsMigrationIntegrationTest` migrates V005 data, converts current state and unpublished events, preserves published historical events, and proves that new `SETTLED` rows are rejected.
+- `PaymentLedgerPostingCompatibilityIntegrationTest` proves the deprecated callback and canonical callback share one idempotent result and emit only `PaymentInstructionLedgerPosted`.
+- `paymentLedgerPostedSemantics.test.mjs`, OpenAPI diffing, AsyncAPI/schema validation, shared-client type checking, and publisher configuration checks prevent terminology drift.
+
 All paths remain synthetic-only and do not use a real payment network or external financial institution API.
