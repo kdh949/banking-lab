@@ -1,0 +1,72 @@
+name: Cleanup payment ledger-posted terminology
+
+on:
+  push:
+    branches:
+      - agent/payment-ledger-posted-semantics
+    paths:
+      - .github/workflows/cleanup-payment-ledger-posted-terminology.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-payment-ledger-posted-terminology.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/payment-ledger-posted-semantics
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Normalize remaining payment terminology
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path('contracts/openapi/payment-service.yaml'): [
+                  ('pre-settlement payment cancellation', 'pre-ledger-posting payment cancellation'),
+                  ('if still pre-settlement', 'if still pre-ledger-posting'),
+              ],
+              Path('docs/test-evidence/payment-service.md'): [
+                  ('pre-settlement', 'pre-ledger-posting'),
+              ],
+              Path('services/payment-service/src/main/kotlin/lab/banking/payment/domain/PaymentInstructionService.kt'): [
+                  ('so V005 idempotency hashes remain replayable after V006', 'so pre-V006 idempotency hashes remain replayable'),
+              ],
+          }
+          for path, pairs in replacements.items():
+              text = path.read_text()
+              for old, new in pairs:
+                  if old not in text:
+                      raise SystemExit(f'{path}: expected terminology not found: {old}')
+                  text = text.replace(old, new)
+              path.write_text(text)
+          PY
+      - run: npm ci
+      - name: Verify contracts and regression guard
+        run: |
+          npm run contracts:lint
+          npm run contracts:diff-openapi
+          node --test tests/paymentLedgerPostedSemantics.test.mjs tests/springScaffold.test.mjs
+          git diff --check
+      - name: Commit terminology cleanup
+        shell: bash
+        run: |
+          rm .github/workflows/cleanup-payment-ledger-posted-terminology.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: 결제 원장 반영 용어 정합성 정리"
+          git push origin HEAD:agent/payment-ledger-posted-semantics
