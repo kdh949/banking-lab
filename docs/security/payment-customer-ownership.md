@@ -12,6 +12,12 @@ Customer-facing payment and autopay requests are authorized from the validated b
 - Existing active autopay agreements created before this binding are paused by Flyway V005.
 - Existing pending ledger-posting outbox events created before this binding are quarantined as dead-letter events by Flyway V005.
 
+## Regression coverage
+
+- Customer request binding is invoked explicitly by `PaymentController`; it does not rely on implicit `RequestBodyAdvice` argument replacement.
+- MockMvc integration tests verify token-derived customer identity for payment and autopay creation and conceal cross-customer resources.
+- The dependency lock pins patched Next.js, PostCSS, and sharp releases, and the repository test suite verifies those resolved versions.
+
 The legacy request fields remain in the public request schema temporarily for client compatibility, but the server treats them as untrusted and overwrites them. A later contract cleanup can remove those fields after clients migrate.
 
 All accounts, customers, tokens, billers, and payment flows remain synthetic-only.
