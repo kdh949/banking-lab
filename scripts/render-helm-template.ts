@@ -3,7 +3,6 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   parseKubernetesDocuments,
-  scalarFromSection,
   writeJsonPreservingTimestamp
 } from "./k8s-yaml-utils.ts";
 
@@ -160,133 +159,74 @@ async function renderTemplatesWithNodeFallback(): Promise<string> {
 }
 
 function applySimpleTemplate(source: string): string {
-  return source.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, expression: string) => {
-    const normalized = expression.trim();
-    const quote = normalized.endsWith("| quote");
-    const key = quote ? normalized.replace(/\s*\|\s*quote$/, "").trim() : normalized;
+  const rendered = source.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, expression: string) => {
+    const [key, ...filters] = expression
+      .trim()
+      .split(/\s*\|\s*/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
     const raw = replacements[key];
     if (raw === undefined) {
-      throw new Error(`Unsupported Helm template expression in fallback renderer: ${expression}`);
+      throw new Error(`Unsupported Helm value in fallback renderer: ${key}`);
     }
-    return quote ? JSON.stringify(raw) : raw;
+    return filters.reduce((value, filter) => {
+      if (filter === "quote") {
+        return JSON.stringify(value);
+      }
+      throw new Error(`Unsupported Helm template filter in fallback renderer: ${filter}`);
+    }, raw);
   });
+  if (/\{\{|\}\}/u.test(rendered)) {
+    throw new Error("Fallback Helm renderer left unresolved template delimiters.");
+  }
+  return rendered;
 }
 
 function buildReplacementMap(source: string): Record<string, string> {
-  const topLevel = (key: string) => {
-    const value = new RegExp(`^${key}:\\s*(.+)$`, "m").exec(source)?.[1]?.trim();
-    if (!value) {
-      throw new Error(`Missing values key: ${key}`);
-    }
-    return value.replace(/^["']|["']$/g, "");
-  };
-
+  const values = parseSimpleYamlScalars(source);
   return {
     ".Release.Name": releaseName,
-    ".Values.namespace": topLevel("namespace"),
-    ".Values.syntheticOnly": topLevel("syntheticOnly"),
-    ".Values.coreBanking.replicas": scalarFromSection(source, "coreBanking", ["replicas"]),
-    ".Values.coreBanking.image": scalarFromSection(source, "coreBanking", ["image"]),
-    ".Values.coreBanking.port": scalarFromSection(source, "coreBanking", ["port"]),
-    ".Values.coreBanking.resources.requests.cpu": scalarFromSection(source, "coreBanking", ["resources", "requests", "cpu"]),
-    ".Values.coreBanking.resources.requests.memory": scalarFromSection(source, "coreBanking", ["resources", "requests", "memory"]),
-    ".Values.coreBanking.resources.limits.cpu": scalarFromSection(source, "coreBanking", ["resources", "limits", "cpu"]),
-    ".Values.coreBanking.resources.limits.memory": scalarFromSection(source, "coreBanking", ["resources", "limits", "memory"]),
-    ".Values.reportingService.replicas": scalarFromSection(source, "reportingService", ["replicas"]),
-    ".Values.reportingService.domainEventPublisherReplicas": scalarFromSection(source, "reportingService", ["domainEventPublisherReplicas"]),
-    ".Values.reportingService.image": scalarFromSection(source, "reportingService", ["image"]),
-    ".Values.reportingService.port": scalarFromSection(source, "reportingService", ["port"]),
-    ".Values.reportingService.securityAudience": scalarFromSection(source, "reportingService", ["securityAudience"]),
-    ".Values.reportingService.domainEventPublisherBootstrapServers": scalarFromSection(source, "reportingService", ["domainEventPublisherBootstrapServers"]),
-    ".Values.reportingService.domainEventPublisherTopic": scalarFromSection(source, "reportingService", ["domainEventPublisherTopic"]),
-    ".Values.reportingService.domainEventPublisherClientId": scalarFromSection(source, "reportingService", ["domainEventPublisherClientId"]),
-    ".Values.reportingService.domainEventPublisherDeadLetterThreshold": scalarFromSection(source, "reportingService", ["domainEventPublisherDeadLetterThreshold"]),
-    ".Values.reportingService.domainEventPublisherRetryDelaySeconds": scalarFromSection(source, "reportingService", ["domainEventPublisherRetryDelaySeconds"]),
-    ".Values.reportingService.domainEventPublisherEventTypes": scalarFromSection(source, "reportingService", ["domainEventPublisherEventTypes"]),
-    ".Values.reportingService.resources.requests.cpu": scalarFromSection(source, "reportingService", ["resources", "requests", "cpu"]),
-    ".Values.reportingService.resources.requests.memory": scalarFromSection(source, "reportingService", ["resources", "requests", "memory"]),
-    ".Values.reportingService.resources.limits.cpu": scalarFromSection(source, "reportingService", ["resources", "limits", "cpu"]),
-    ".Values.reportingService.resources.limits.memory": scalarFromSection(source, "reportingService", ["resources", "limits", "memory"]),
-    ".Values.reportingService.workerResources.requests.cpu": scalarFromSection(source, "reportingService", ["workerResources", "requests", "cpu"]),
-    ".Values.reportingService.workerResources.requests.memory": scalarFromSection(source, "reportingService", ["workerResources", "requests", "memory"]),
-    ".Values.reportingService.workerResources.limits.cpu": scalarFromSection(source, "reportingService", ["workerResources", "limits", "cpu"]),
-    ".Values.reportingService.workerResources.limits.memory": scalarFromSection(source, "reportingService", ["workerResources", "limits", "memory"]),
-    ".Values.paymentService.replicas": scalarFromSection(source, "paymentService", ["replicas"]),
-    ".Values.paymentService.outboxWorkerReplicas": scalarFromSection(source, "paymentService", ["outboxWorkerReplicas"]),
-    ".Values.paymentService.domainEventPublisherReplicas": scalarFromSection(source, "paymentService", ["domainEventPublisherReplicas"]),
-    ".Values.paymentService.image": scalarFromSection(source, "paymentService", ["image"]),
-    ".Values.paymentService.port": scalarFromSection(source, "paymentService", ["port"]),
-    ".Values.paymentService.securityAudience": scalarFromSection(source, "paymentService", ["securityAudience"]),
-    ".Values.paymentService.ledgerCommandTopic": scalarFromSection(source, "paymentService", ["ledgerCommandTopic"]),
-    ".Values.paymentService.domainEventPublisherBootstrapServers": scalarFromSection(source, "paymentService", ["domainEventPublisherBootstrapServers"]),
-    ".Values.paymentService.domainEventPublisherTopic": scalarFromSection(source, "paymentService", ["domainEventPublisherTopic"]),
-    ".Values.paymentService.domainEventPublisherClientId": scalarFromSection(source, "paymentService", ["domainEventPublisherClientId"]),
-    ".Values.paymentService.domainEventPublisherEventTypes": scalarFromSection(source, "paymentService", ["domainEventPublisherEventTypes"]),
-    ".Values.paymentService.resources.requests.cpu": scalarFromSection(source, "paymentService", ["resources", "requests", "cpu"]),
-    ".Values.paymentService.resources.requests.memory": scalarFromSection(source, "paymentService", ["resources", "requests", "memory"]),
-    ".Values.paymentService.resources.limits.cpu": scalarFromSection(source, "paymentService", ["resources", "limits", "cpu"]),
-    ".Values.paymentService.resources.limits.memory": scalarFromSection(source, "paymentService", ["resources", "limits", "memory"]),
-    ".Values.paymentService.workerResources.requests.cpu": scalarFromSection(source, "paymentService", ["workerResources", "requests", "cpu"]),
-    ".Values.paymentService.workerResources.requests.memory": scalarFromSection(source, "paymentService", ["workerResources", "requests", "memory"]),
-    ".Values.paymentService.workerResources.limits.cpu": scalarFromSection(source, "paymentService", ["workerResources", "limits", "cpu"]),
-    ".Values.paymentService.workerResources.limits.memory": scalarFromSection(source, "paymentService", ["workerResources", "limits", "memory"]),
-    ".Values.notificationService.replicas": scalarFromSection(source, "notificationService", ["replicas"]),
-    ".Values.notificationService.eventConsumerReplicas": scalarFromSection(source, "notificationService", ["eventConsumerReplicas"]),
-    ".Values.notificationService.image": scalarFromSection(source, "notificationService", ["image"]),
-    ".Values.notificationService.port": scalarFromSection(source, "notificationService", ["port"]),
-    ".Values.notificationService.securityAudience": scalarFromSection(source, "notificationService", ["securityAudience"]),
-    ".Values.notificationService.eventConsumerBootstrapServers": scalarFromSection(source, "notificationService", ["eventConsumerBootstrapServers"]),
-    ".Values.notificationService.eventConsumerTopic": scalarFromSection(source, "notificationService", ["eventConsumerTopic"]),
-    ".Values.notificationService.eventConsumerClientId": scalarFromSection(source, "notificationService", ["eventConsumerClientId"]),
-    ".Values.notificationService.eventConsumerGroupId": scalarFromSection(source, "notificationService", ["eventConsumerGroupId"]),
-    ".Values.notificationService.resources.requests.cpu": scalarFromSection(source, "notificationService", ["resources", "requests", "cpu"]),
-    ".Values.notificationService.resources.requests.memory": scalarFromSection(source, "notificationService", ["resources", "requests", "memory"]),
-    ".Values.notificationService.resources.limits.cpu": scalarFromSection(source, "notificationService", ["resources", "limits", "cpu"]),
-    ".Values.notificationService.resources.limits.memory": scalarFromSection(source, "notificationService", ["resources", "limits", "memory"]),
-    ".Values.notificationService.workerResources.requests.cpu": scalarFromSection(source, "notificationService", ["workerResources", "requests", "cpu"]),
-    ".Values.notificationService.workerResources.requests.memory": scalarFromSection(source, "notificationService", ["workerResources", "requests", "memory"]),
-    ".Values.notificationService.workerResources.limits.cpu": scalarFromSection(source, "notificationService", ["workerResources", "limits", "cpu"]),
-    ".Values.notificationService.workerResources.limits.memory": scalarFromSection(source, "notificationService", ["workerResources", "limits", "memory"]),
-    ".Values.temporalWorker.replicas": scalarFromSection(source, "temporalWorker", ["replicas"]),
-    ".Values.temporalWorker.image": scalarFromSection(source, "temporalWorker", ["image"]),
-    ".Values.temporalWorker.resources.requests.cpu": scalarFromSection(source, "temporalWorker", ["resources", "requests", "cpu"]),
-    ".Values.temporalWorker.resources.requests.memory": scalarFromSection(source, "temporalWorker", ["resources", "requests", "memory"]),
-    ".Values.temporalWorker.resources.limits.cpu": scalarFromSection(source, "temporalWorker", ["resources", "limits", "cpu"]),
-    ".Values.temporalWorker.resources.limits.memory": scalarFromSection(source, "temporalWorker", ["resources", "limits", "memory"]),
-    ".Values.keycloak.replicas": scalarFromSection(source, "keycloak", ["replicas"]),
-    ".Values.keycloak.image": scalarFromSection(source, "keycloak", ["image"]),
-    ".Values.keycloak.port": scalarFromSection(source, "keycloak", ["port"]),
-    ".Values.keycloak.managementPort": scalarFromSection(source, "keycloak", ["managementPort"]),
-    ".Values.redpanda.replicas": scalarFromSection(source, "redpanda", ["replicas"]),
-    ".Values.redpanda.image": scalarFromSection(source, "redpanda", ["image"]),
-    ".Values.redpanda.kafkaPort": scalarFromSection(source, "redpanda", ["kafkaPort"]),
-    ".Values.redpanda.adminPort": scalarFromSection(source, "redpanda", ["adminPort"]),
-    ".Values.redpanda.memory": scalarFromSection(source, "redpanda", ["memory"]),
-    ".Values.temporalServer.replicas": scalarFromSection(source, "temporalServer", ["replicas"]),
-    ".Values.temporalServer.image": scalarFromSection(source, "temporalServer", ["image"]),
-    ".Values.temporalServer.port": scalarFromSection(source, "temporalServer", ["port"]),
-    ".Values.ingress.className": scalarFromSection(source, "ingress", ["className"]),
-    ".Values.ingress.tlsSecretName": scalarFromSection(source, "ingress", ["tlsSecretName"]),
-    ".Values.ingress.appHost": scalarFromSection(source, "ingress", ["appHost"]),
-    ".Values.ingress.authHost": scalarFromSection(source, "ingress", ["authHost"]),
-    ".Values.ingress.reportingHost": scalarFromSection(source, "ingress", ["reportingHost"]),
-    ".Values.ingress.paymentHost": scalarFromSection(source, "ingress", ["paymentHost"]),
-    ".Values.ingress.notificationHost": scalarFromSection(source, "ingress", ["notificationHost"]),
-    ".Values.postgres.image": scalarFromSection(source, "postgres", ["image"]),
-    ".Values.postgres.database": scalarFromSection(source, "postgres", ["database"]),
-    ".Values.postgres.username": scalarFromSection(source, "postgres", ["username"]),
-    ".Values.postgres.storage": scalarFromSection(source, "postgres", ["storage"]),
-    ".Values.temporal.target": scalarFromSection(source, "temporal", ["target"]),
-    ".Values.outbox.bootstrapServers": scalarFromSection(source, "outbox", ["bootstrapServers"]),
-    ".Values.outbox.topic": scalarFromSection(source, "outbox", ["topic"]),
-    ".Values.security.enabled": scalarFromSection(source, "security", ["enabled"]),
-    ".Values.security.simulatorTokensEnabled": scalarFromSection(source, "security", ["simulatorTokensEnabled"]),
-    ".Values.security.devSimulatorToken": scalarFromSection(source, "security", ["devSimulatorToken"]),
-    ".Values.security.jwksUri": scalarFromSection(source, "security", ["jwksUri"]),
-    ".Values.security.issuer": scalarFromSection(source, "security", ["issuer"]),
-    ".Values.security.audience": scalarFromSection(source, "security", ["audience"]),
-    ".Values.security.trustedDeviceEnforcementEnabled": scalarFromSection(source, "security", ["trustedDeviceEnforcementEnabled"]),
-    ".Values.security.stepUpEnforcementEnabled": scalarFromSection(source, "security", ["stepUpEnforcementEnabled"]),
-    ".Values.security.sessionEnforcementEnabled": scalarFromSection(source, "security", ["sessionEnforcementEnabled"])
+    ...Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [`.Values.${key}`, value])
+    )
   };
+}
+
+function parseSimpleYamlScalars(source: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  const parents: Array<{ readonly indent: number; readonly key: string }> = [];
+
+  for (const [index, line] of source.split(/\r?\n/u).entries()) {
+    if (!line.trim() || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    const match = /^(\s*)([A-Za-z0-9_-]+):(?:\s*(.*))?$/u.exec(line);
+    if (!match) {
+      throw new Error(`Unsupported values.yaml syntax at line ${index + 1}: ${line}`);
+    }
+    const indent = match[1].replaceAll("\t", "  ").length;
+    const key = match[2];
+    const rawValue = match[3]?.trim() ?? "";
+    while (parents.length > 0 && parents[parents.length - 1].indent >= indent) {
+      parents.pop();
+    }
+    if (!rawValue) {
+      parents.push({ indent, key });
+      continue;
+    }
+    const path = [...parents.map((parent) => parent.key), key].join(".");
+    result[path] = normalizeYamlScalar(rawValue);
+  }
+  return result;
+}
+
+function normalizeYamlScalar(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  const commentIndex = value.indexOf(" #");
+  return (commentIndex >= 0 ? value.slice(0, commentIndex) : value).trim();
 }

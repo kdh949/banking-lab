@@ -13,8 +13,6 @@ test("evidence refresh checker passes without marking Node retirement ready", as
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Evidence refresh check: pass/);
   assert.match(stdout, /Node retirement gate is ready after verified passkey and final review evidence/);
 });

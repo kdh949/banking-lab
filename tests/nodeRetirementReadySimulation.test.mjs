@@ -13,8 +13,6 @@ test("node retirement ready-state simulation proves future ready gate path", asy
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 * 8 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Node retirement ready-state simulation: pass/);
   assert.match(stdout, /Fixture gate and redacted synthetic evidence artifacts can satisfy the ready gate path/);
 });

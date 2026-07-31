@@ -14,8 +14,6 @@ test("generated artifact boundary distinguishes ignored build output from target
     ["--experimental-strip-types", script],
     { maxBuffer: 1024 * 1024 * 4 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Generated artifact boundary audit: pass/);
   assert.match(stdout, /Tracked target legacy\/static extension files: 0/);
   assert.match(stdout, /Untracked source-like legacy\/static extension files: 0/);

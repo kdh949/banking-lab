@@ -8,6 +8,7 @@ import {
   ChannelWorkflow
 } from "../../../../packages/channel-ui/src";
 import { ApiBackedOpsPanel } from "../components/ApiBackedOpsPanel";
+import { PaymentSettlementWorkbench } from "../components/PaymentSettlementWorkbench";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
 function list(value: readonly string[] | undefined | null): string {
@@ -18,7 +19,8 @@ export default async function OpsConsolePage() {
   const manifests = await loadChannelManifests();
 
   return (
-    <ChannelShell appId="ops-console" eyebrow="Operations Console" title="Closing and reconciliation controls" status="Balanced adjustments only">
+    <ChannelShell appId="ops-console" eyebrow="Operations Console" title="Payment settlement and ledger reconciliation" status="Independent evidence · balanced ledger · SLA exceptions">
+      <PaymentSettlementWorkbench />
       <ApiBackedOpsPanel />
 
       <ChannelSplit

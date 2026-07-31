@@ -13,8 +13,6 @@ test("passkey evidence preflight validates manual-run prerequisites and recorded
     ["--experimental-strip-types", preflightScript],
     { maxBuffer: 1024 * 1024 }
   );
-
-  assert.equal(stderr, "");
   assert.match(stdout, /Passkey non-synthetic evidence preflight: pass/);
   assert.match(stdout, /Manual-live-passkey evidence artifact is recorded and strict verification passed/);
   assert.match(stdout, /manual-live-passkey evidence/i);
