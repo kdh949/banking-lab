@@ -3,8 +3,6 @@ import {
   ChannelCard,
   ChannelCardGrid,
   ChannelDefinitionList,
-  ChannelMetric,
-  ChannelMetricGrid,
   ChannelPanel,
   ChannelShell,
   ChannelSplit,
@@ -12,6 +10,7 @@ import {
   ChannelWorkflow
 } from "../../../../packages/channel-ui/src";
 import { ApiBackedCustomerPanel } from "../components/ApiBackedCustomerPanel";
+import { CustomerSelfServiceHomeSurface } from "../components/CustomerSelfService";
 import { customerWorkflowRouteSummaries } from "../components/workflow-routes";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
@@ -22,12 +21,13 @@ export default async function CustomerWebPage() {
   const workflowManifests = manifests.filter((manifest) => "workflow" in manifest);
 
   return (
-    <ChannelShell appId="customer-web" eyebrow="Customer channel" title="Customer Web Banking" status="Synthetic only · Node reference retained">
-      <ChannelMetricGrid>
-        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" />
-        <ChannelMetric label="Reason-required manifests" value={reasonRequired} />
-        <ChannelMetric label="Maker-checker manifests" value={makerChecker} />
-      </ChannelMetricGrid>
+    <ChannelShell appId="customer-web" eyebrow="Customer self-service" title="Self-Service Workspace" status="Synthetic only · token-owned">
+      <CustomerSelfServiceHomeSurface
+        manifestCount={manifests.length}
+        reasonRequiredCount={reasonRequired}
+        makerCheckerCount={makerChecker}
+        routeSummaries={customerWorkflowRouteSummaries}
+      />
 
       <ApiBackedCustomerPanel />
 

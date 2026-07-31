@@ -25,7 +25,9 @@ test("customer web renders account, transfer, and complaint controls from manife
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Customer Web Banking" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Self-Service Workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Self-service starts here" })).toBeVisible();
+  await expect(page.getByText("Service Hub")).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true }).first()).toBeVisible();
   }
@@ -68,6 +70,9 @@ test("customer web exposes form-backed self-service routes and shared workflow m
   expect(pageSource).toContain("loadCustomerWebManifests");
   expect(pageSource).toContain("customerWorkflowRouteSummaries");
   expect(routeComponent).toContain("CustomerWorkflowRoutePage");
+  expect(selfService).toContain("CustomerSelfServiceHomeSurface");
+  expect(selfService).toContain("Service Hub");
+  expect(selfService).toContain("Default PII masking");
   expect(routeComponent).toContain("CWB-001");
   expect(routeComponent).toContain("CWB-002");
   expect(routeComponent).toContain("CWB-003");

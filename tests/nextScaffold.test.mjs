@@ -40,6 +40,7 @@ test("customer-web Next page is manifest-driven and customer journey routes are 
 
   assert.match(page, /loadCustomerWebManifests/);
   assert.match(page, /customerWorkflowRouteSummaries/);
+  assert.match(page, /CustomerSelfServiceHomeSurface/);
   assert.match(loader, /screen-manifests/);
   assert.match(loader, /customer-web/);
   assert.match(loader, /manifest\.app === "customer-web"/);
@@ -58,6 +59,8 @@ test("customer-web Next page is manifest-driven and customer journey routes are 
   assert.match(accountRoute, /CustomerAccountDetailView/);
   assert.match(selfService, /signupCustomer/);
   assert.match(selfService, /loginCustomer/);
+  assert.match(selfService, /Service Hub/);
+  assert.match(selfService, /CustomerSelfServiceHomeSurface/);
   assert.match(selfService, /customerAccounts/);
   assert.match(selfService, /internalRecipientLookup/);
   assert.match(selfService, /requestCustomerTransfer/);

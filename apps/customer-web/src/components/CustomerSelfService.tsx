@@ -19,6 +19,8 @@ import {
 } from "@banking-lab/api-client";
 import {
   ChannelBadge,
+  ChannelCard,
+  ChannelCardGrid,
   ChannelMetric,
   ChannelMetricGrid,
   ChannelPanel,
@@ -42,6 +44,19 @@ type UiError = {
   readonly route?: string;
 };
 
+type HomeRouteSummary = {
+  readonly href: string;
+  readonly title: string;
+  readonly screenIds: readonly string[];
+};
+
+type CustomerSelfServiceHomeSurfaceProps = {
+  readonly manifestCount: number;
+  readonly reasonRequiredCount: number;
+  readonly makerCheckerCount: number;
+  readonly routeSummaries: readonly HomeRouteSummary[];
+};
+
 type LoadState<T> =
   | { readonly status: "idle" }
   | { readonly status: "loading" }
@@ -51,6 +66,267 @@ type LoadState<T> =
 const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const sessionStorageKey = "bankingLabCustomerSyntheticSession";
 const transferResultStorageKey = "bankingLabCustomerTransferResults";
+
+export function CustomerSelfServiceHomeSurface({
+  manifestCount,
+  reasonRequiredCount,
+  makerCheckerCount,
+  routeSummaries
+}: CustomerSelfServiceHomeSurfaceProps) {
+  const [session, setSession] = useStoredSession();
+  const [filter, setFilter] = useState<"priority" | "money" | "support" | "security">("priority");
+  const [profileState, setProfileState] = useState<LoadState<CustomerProfileDto>>({ status: "idle" });
+  const [customer360State, setCustomer360State] = useState<LoadState<Customer360Dto>>({ status: "idle" });
+  const [requestsState, setRequestsState] = useState<LoadState<readonly CustomerSelfServiceAccountOpeningRequestDto[]>>({ status: "idle" });
+  const [artifactState, setArtifactState] = useState<LoadState<readonly CustomerStatementArtifactDto[]>>({ status: "idle" });
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      const error = demoFallbackError();
+      setProfileState({ status: "failed", error });
+      setCustomer360State({ status: "failed", error });
+      setRequestsState({ status: "failed", error });
+      setArtifactState({ status: "failed", error });
+      return;
+    }
+    if (!session) {
+      const error = authRequiredError();
+      setProfileState({ status: "failed", error });
+      setCustomer360State({ status: "failed", error });
+      setRequestsState({ status: "failed", error });
+      setArtifactState({ status: "failed", error });
+      return;
+    }
+
+    const client = authedClient(session);
+    setProfileState({ status: "loading" });
+    setCustomer360State({ status: "loading" });
+    setRequestsState({ status: "loading" });
+    setArtifactState({ status: "loading" });
+    client.customerProfile()
+      .then((profile) => setProfileState({ status: "loaded", value: profile }))
+      .catch((error: unknown) => setProfileState({ status: "failed", error: parseError(error) }));
+    client.customer360()
+      .then((value) => setCustomer360State({ status: "loaded", value }))
+      .catch((error: unknown) => setCustomer360State({ status: "failed", error: parseError(error) }));
+    client.customerAccountOpeningRequests()
+      .then((response) => setRequestsState({ status: "loaded", value: response.items }))
+      .catch((error: unknown) => setRequestsState({ status: "failed", error: parseError(error) }));
+    client.customerStatementArtifacts()
+      .then((response) => setArtifactState({ status: "loaded", value: response.items }))
+      .catch((error: unknown) => setArtifactState({ status: "failed", error: parseError(error) }));
+  }, [session]);
+
+  const profile = profileState.status === "loaded" ? profileState.value : null;
+  const customer360 = customer360State.status === "loaded" ? customer360State.value : null;
+  const requests = requestsState.status === "loaded" ? requestsState.value : [];
+  const artifacts = artifactState.status === "loaded" ? artifactState.value : [];
+  const accountSummary = customer360?.accountSummary;
+  const recentActivity = customer360?.recentLedgerActivity.slice(0, 5) ?? [];
+  const pendingRequests = requests.filter((item) => ["CUSTOMER_SUBMITTED", "STAFF_REVIEWING"].includes(item.status)).length;
+  const nextAction = profile?.nextRequiredAction ?? (session ? stateSummary(profileState) : "Sign in");
+  const sessionStatus = session ? `Signed in · ${session.username}` : "No local session";
+  const profileReadiness = session ? profile?.kycStatus ?? stateSummary(profileState) : "Required";
+  const balanceValue = session
+    ? accountSummary ? formatMinor(accountSummary.totalAvailableBalanceMinor, accountSummary.currency) : stateSummary(customer360State)
+    : "Sign in";
+  const customer360Value = session
+    ? accountSummary ? `${accountSummary.totalAccounts} accounts` : stateSummary(customer360State)
+    : "Sign in";
+  const recentActivityState = session ? stateSummary(customer360State) : "Sign in";
+
+  const cards = [
+    {
+      group: "priority",
+      href: session ? "/profile" : "/login",
+      title: "Profile readiness",
+      eyebrow: "CWB-003",
+      value: profile?.onboardingStatus ?? sessionStatus,
+      detail: profile?.duplicateCheckStatus ?? nextAction
+    },
+    {
+      group: "priority",
+      href: "/onboarding",
+      title: "Account opening",
+      eyebrow: "CWB-004",
+      value: `${pendingRequests} pending`,
+      detail: requests[0]?.status ?? "Intake before staff execution"
+    },
+    {
+      group: "money",
+      href: "/360",
+      title: "Customer 360",
+      eyebrow: "CWB-104",
+      value: customer360Value,
+      detail: accountSummary ? `${accountSummary.activeAccounts} active` : "Profile, accounts, activity"
+    },
+    {
+      group: "money",
+      href: "/statements",
+      title: "Statements",
+      eyebrow: "CWB-106 · CWB-107",
+      value: `${artifacts.length} artifacts`,
+      detail: "Ledger read-only"
+    },
+    {
+      group: "money",
+      href: "/transfers/new",
+      title: "Transfer",
+      eyebrow: "CWB-201",
+      value: "Internal only",
+      detail: "Idempotent command"
+    },
+    {
+      group: "support",
+      href: "/complaints",
+      title: "Complaints",
+      eyebrow: "CWB-301",
+      value: customer360?.complaintSummary.totalCount ?? "Case intake",
+      detail: "Timeline and answer confirmation"
+    },
+    {
+      group: "support",
+      href: "/payments",
+      title: "Payments",
+      eyebrow: "CWB-701",
+      value: customer360?.paymentSummary.totalCount ?? "Synthetic bill pay",
+      detail: "No real network"
+    },
+    {
+      group: "support",
+      href: "/notifications",
+      title: "Notifications",
+      eyebrow: "CWB-801",
+      value: customer360?.notificationSummary.totalCount ?? "Preferences",
+      detail: "Masked delivery history"
+    },
+    {
+      group: "security",
+      href: "/security",
+      title: "Access history",
+      eyebrow: "CWB-401",
+      value: customer360?.accessHistorySummary.totalEvents ?? "Session events",
+      detail: customer360?.accessHistorySummary.lastAccessAt ?? "Step-up aware"
+    }
+  ] as const;
+
+  const visibleCards = cards.filter((card) => card.group === filter);
+  const clearSession = () => {
+    clearStoredSession();
+    setSession(null);
+  };
+
+  return (
+    <>
+      <section className="self-service-home-hero" aria-label="Customer self-service home">
+        <div className="self-service-home-primary">
+          <p className="self-service-home-eyebrow">Customer workspace</p>
+          <h2>{profile?.maskedCustomerName ?? "Self-service starts here"}</h2>
+          <p>{session ? nextAction : "Sign in or create a synthetic customer profile to continue."}</p>
+          <div className="self-service-home-actions">
+            <a href={session ? "/profile" : "/login"}>{session ? "Review profile" : "Sign in"}</a>
+            <a href="/onboarding">Open account</a>
+            <a href="/360">View 360</a>
+            <a href="/statements">Statements</a>
+          </div>
+        </div>
+        <aside className="self-service-session-card" aria-label="Customer session">
+          <span>Session</span>
+          <strong>{sessionStatus}</strong>
+          <small>{session?.expiresAt ?? "Token-owned customer routes only"}</small>
+          <button type="button" onClick={clearSession} disabled={!session}>Clear</button>
+        </aside>
+      </section>
+
+      <ChannelMetricGrid>
+        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" detail={`${manifestCount} manifests`} />
+        <ChannelMetric
+          label="Available balance"
+          value={balanceValue}
+          detail={accountSummary ? `${accountSummary.totalHoldAmountMinor.toLocaleString("en-US")} ${accountSummary.currency} held` : "Customer 360"}
+        />
+        <ChannelMetric label="Pending intake" value={pendingRequests} detail="No account before checker execution" />
+        <ChannelMetric label="Statement artifacts" value={artifacts.length} detail="Deterministic payload hashes" />
+      </ChannelMetricGrid>
+
+      <section className="self-service-readiness-grid" aria-label="Self-service readiness">
+        <ReadinessStep label="Session" value={session ? "Active" : "Required"} tone={session ? "success" : "warning"} />
+        <ReadinessStep label="Profile" value={profileReadiness} tone={profile ? "success" : "warning"} />
+        <ReadinessStep label="Account intake" value={pendingRequests > 0 ? "Pending" : "Ready"} tone={pendingRequests > 0 ? "warning" : "success"} />
+        <ReadinessStep label="Statements" value={artifacts.length > 0 ? "Available" : "Ready"} tone="success" />
+      </section>
+
+      <ChannelPanel
+        title="Service Hub"
+        eyebrow="Profile · money · support · security"
+        meta={<ChannelBadge>{reasonRequiredCount} reason-gated</ChannelBadge>}
+      >
+        <div className="self-service-segments" role="tablist" aria-label="Service categories">
+          {(["priority", "money", "support", "security"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={filter === item ? "is-active" : undefined}
+              onClick={() => setFilter(item)}
+              role="tab"
+              aria-selected={filter === item}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="self-service-home-card-grid">
+          {visibleCards.map((card) => (
+            <a className="self-service-home-card" href={card.href} key={`${card.group}-${card.href}`}>
+              <span>{card.eyebrow}</span>
+              <strong>{card.title}</strong>
+              <em>{card.value}</em>
+              <small>{card.detail}</small>
+            </a>
+          ))}
+        </div>
+      </ChannelPanel>
+
+      <ChannelPanel
+        title="Recent Activity"
+        eyebrow="Ledger read model"
+        meta={<ChannelBadge tone={makerCheckerCount > 0 ? "critical" : "neutral"}>{makerCheckerCount} maker-checker</ChannelBadge>}
+      >
+        {recentActivity.length > 0 ? (
+          <RecentLedgerActivityTable items={recentActivity} />
+        ) : (
+          <p className="self-service-muted">{recentActivityState}</p>
+        )}
+      </ChannelPanel>
+
+      <ChannelCardGrid density="wide">
+        <ChannelCard screenId="CUSTOMER_SELF" title="Masked Data" meta="profile · account · audit">
+          <p className="self-service-muted">Raw PII and raw account numbers stay out of the customer UI.</p>
+        </ChannelCard>
+        <ChannelCard screenId="LEDGER_READ_ONLY" title="Statements" meta="source postings">
+          <p className="self-service-muted">Statement views use ledger projections and snapshot hashes.</p>
+        </ChannelCard>
+        <ChannelCard screenId="MAKER_CHECKER" title="Account Opening" meta="intake boundary">
+          <p className="self-service-muted">Customer requests wait for independent staff execution.</p>
+        </ChannelCard>
+      </ChannelCardGrid>
+
+      <ChannelPanel title="Manifest Route Map" eyebrow="customer-web">
+        <nav className="self-service-manifest-strip" aria-label="Customer manifest routes">
+          {routeSummaries.map((route) => (
+            <a
+              href={route.href.replace("[accountId]", "ACC-SELECTED").replace("[resultId]", "TRF-RESULT").replace("[caseId]", "CMP-CASE").replace("[cardId]", "CARD-SELECTED")}
+              key={route.href}
+            >
+              <strong>{route.title}</strong>
+              <span>{route.screenIds.join(", ")}</span>
+            </a>
+          ))}
+        </nav>
+      </ChannelPanel>
+    </>
+  );
+}
 
 export function CustomerSignupForm() {
   const [session, setSession] = useStoredSession();
@@ -1079,6 +1355,36 @@ function TransferStatusSummary({ value }: { readonly value: CustomerTransferResp
 function StatusBadge({ status }: { readonly status: string }) {
   const critical = ["FAILED", "BLOCKED", "AUTHORIZATION_DENIED", "REQUEST_VALIDATION_FAILED"].includes(status);
   return <ChannelBadge tone={critical ? "critical" : "neutral"}>{status}</ChannelBadge>;
+}
+
+function ReadinessStep({
+  label,
+  value,
+  tone
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly tone: "success" | "warning";
+}) {
+  return (
+    <article className={`self-service-readiness-step self-service-readiness-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function stateSummary<T>(state: LoadState<T>): string {
+  if (state.status === "loading") {
+    return "Loading";
+  }
+  if (state.status === "failed") {
+    return state.error.code;
+  }
+  if (state.status === "loaded") {
+    return "Ready";
+  }
+  return "Ready";
 }
 
 function LoadBoundary<T>({
