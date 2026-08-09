@@ -7,7 +7,7 @@ description: Generate or review banking-lab screen manifest definitions and reus
 
 ## Scope
 
-Use for manifest-driven screens in `/Users/donghyunkim/Documents/banking-lab`.
+Use for manifest-driven screens from the repository root (`${REPO_ROOT}`).
 
 Read first:
 
