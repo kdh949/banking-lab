@@ -9,6 +9,7 @@ import {
   type OperatorApproval,
   type StaffAccountDto,
   type StaffCustomerDetailDto,
+  type StaffJourneyResponse,
   type StaffTransactionDto,
   type StaffWorkflowTimelineEntryDto
 } from "@banking-lab/api-client/staff";
@@ -17,6 +18,7 @@ import {
   type CallCenterCustomerSummaryDto,
   type CallCenterInteractionDto
 } from "@banking-lab/api-client/call-center";
+import { createRiskApiClient, type FdsCaseDto } from "@banking-lab/api-client/risk";
 import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import { DataTable, MaterialIcon, Panel } from "./primitives";
 import type { IconName, TableColumn, TableRow } from "./types";
@@ -47,11 +49,13 @@ type AccountResult = {
 type TransactionResult = {
   readonly auditEventId: string;
   readonly transactions: readonly StaffTransactionDto[];
+  readonly journey?: StaffJourneyResponse;
 };
 
 type ApprovalResult = {
   readonly approvals: readonly OperatorApproval[];
   readonly selected?: OperatorApproval;
+  readonly journey?: StaffJourneyResponse;
   readonly action?: {
     readonly status: string;
     readonly approvalId: string;
@@ -59,7 +63,19 @@ type ApprovalResult = {
     readonly executed?: boolean;
     readonly rejected?: boolean;
     readonly auditEventId?: string | null;
+    readonly journeyId?: string | null;
+    readonly fdsStatus?: string | null;
+    readonly ledgerTransactionId?: string | null;
+    readonly ledgerMutation?: string;
   };
+};
+
+type FdsReviewResult = {
+  readonly cases: readonly FdsCaseDto[];
+  readonly selected?: FdsCaseDto;
+  readonly journey?: StaffJourneyResponse;
+  readonly approvalId?: string | null;
+  readonly lastAction?: string;
 };
 
 type CommandResult = {
@@ -124,6 +140,23 @@ function callCenterClient() {
       subject: "call-agent01",
       audience: "core-banking-api",
       roles: ["CALL_CENTER_AGENT"]
+    })
+  });
+}
+
+function riskClient(actor: "reviewer" | "manager" = "reviewer") {
+  if (!apiReady) {
+    throw new Error("Spring API base URL 또는 simulator token opt-in이 필요합니다.");
+  }
+  const actorConfig = actor === "manager"
+    ? { subject: "branch-manager01", roles: ["BRANCH_MANAGER"] as const }
+    : { subject: "fds-reviewer01", roles: ["FDS_REVIEWER"] as const };
+  return createRiskApiClient({
+    baseUrl: apiBaseUrl,
+    bearerToken: createSimulatorBearerToken({
+      subject: actorConfig.subject,
+      audience: "core-banking-api",
+      roles: actorConfig.roles
     })
   });
 }
@@ -244,6 +277,41 @@ function TimelinePanel({ entries }: { readonly entries: readonly StaffWorkflowTi
   );
 }
 
+function JourneyPanel({ journey }: { readonly journey?: StaffJourneyResponse }) {
+  return (
+    <Panel title="cross-channel journey" className="api-result-panel">
+      <KeyValueGrid
+        rows={[
+          ["journeyId", journey?.item.journeyId ?? "-"],
+          ["journeyStatus", journey?.item.status ?? "-"],
+          ["journeyType", journey?.item.journeyType ?? "-"],
+          ["customerId", journey?.item.customerId ?? "-"],
+          ["auditEventId", journey?.auditEventId ?? "-"]
+        ]}
+      />
+      <DataTable
+        columns={[
+          { key: "sequence", label: "순서", width: "64px" },
+          { key: "eventType", label: "event", width: "190px" },
+          { key: "status", label: "상태", width: "130px" },
+          { key: "reference", label: "참조", width: "250px" },
+          { key: "actor", label: "actor", width: "180px" },
+          { key: "reason", label: "사유" }
+        ]}
+        rows={journey?.item.events.map((event) => ({
+          sequence: String(event.sequence),
+          eventType: event.eventType,
+          status: event.status,
+          reference: [event.sourceReferenceType, event.sourceReferenceId].filter(Boolean).join(" / ") || "-",
+          actor: event.actorRole ?? "-",
+          reason: event.reason ?? "-"
+        })) ?? []}
+        minRows={4}
+      />
+    </Panel>
+  );
+}
+
 export function StaffCustomerInquiryScreen() {
   const [query, setQuery] = useState("SYN");
   const [customerId, setCustomerId] = useState("SYN-CUS-001");
@@ -341,14 +409,19 @@ export function StaffAccountInquiryScreen() {
 
 export function StaffTransactionInquiryScreen() {
   const [accountId, setAccountId] = useState("ACC-RUNTIME-FROM");
+  const [journeyId, setJourneyId] = useState("");
   const [reason, setReason] = useState("통합 단말 TX101 거래 확인");
   const [state, setState] = useState<ApiState<TransactionResult>>({ status: "idle" });
 
   const runSearch = async () => {
     setState({ status: "running", message: "TX101 조회 중" });
     try {
-      const response = await staffClient("staff").staffTransactionSearch({ accountId, reason });
-      setState({ status: "loaded", data: { auditEventId: response.auditEventId, transactions: response.items } });
+      const client = staffClient("staff");
+      const [response, journey] = await Promise.all([
+        client.staffTransactionSearch({ accountId, reason }),
+        journeyId ? client.staffJourney(journeyId, reason) : Promise.resolve(undefined)
+      ]);
+      setState({ status: "loaded", data: { auditEventId: response.auditEventId, transactions: response.items, journey } });
     } catch (error) {
       setState({ status: "failed", error });
     }
@@ -358,6 +431,7 @@ export function StaffTransactionInquiryScreen() {
     <TerminalApiClientProvider>
       <ApiForm title="TX101 거래 조회" icon="receipt_long">
         <ApiTextField label="계좌ID" value={accountId} onChange={setAccountId} />
+        <ApiTextField label="journeyId" value={journeyId} onChange={setJourneyId} />
         <ReasonRequiredPanel reason={reason} onReasonChange={setReason} />
         <ApiButton onClick={runSearch} loading={state.status === "running"}>
           조회
@@ -380,7 +454,111 @@ export function StaffTransactionInquiryScreen() {
           minRows={6}
         />
       </Panel>
+      <JourneyPanel journey={state.status === "loaded" ? state.data.journey : undefined} />
       <KeyValuePanel title="감사" rows={[["auditEventId", state.status === "loaded" ? state.data.auditEventId : "-"]]} />
+    </TerminalApiClientProvider>
+  );
+}
+
+export function FdsReviewScreen() {
+  const [caseId, setCaseId] = useState("");
+  const [reason, setReason] = useState("통합 단말 FDS201 보류 이체 심사");
+  const [state, setState] = useState<ApiState<FdsReviewResult>>({ status: "idle" });
+
+  const runAction = async (action: "load" | "assign" | "release" | "block") => {
+    setState({ status: "running", message: `FDS201 ${action} 처리 중` });
+    try {
+      const client = riskClient();
+      let selected: FdsCaseDto | undefined;
+      let approvalId: string | null | undefined;
+      if (action === "assign") {
+        selected = await client.assignFdsCase(caseId, {
+          actorId: "fds-reviewer01",
+          actorRole: "FDS_REVIEWER",
+          owner: "fds-reviewer01",
+          reason
+        });
+      } else if (action === "release") {
+        const response = await client.requestFdsRelease(caseId, {
+          actorId: "fds-reviewer01",
+          requestedByRole: "FDS_REVIEWER",
+          reason
+        });
+        selected = response.item;
+        approvalId = response.approval.approvalId;
+      } else if (action === "block") {
+        const response = await client.requestFdsBlock(caseId, {
+          actorId: "fds-reviewer01",
+          requestedByRole: "FDS_REVIEWER",
+          reason
+        });
+        selected = response.item;
+        approvalId = response.approval.approvalId;
+      }
+      const cases = await client.fdsCases();
+      selected = selected ?? cases.find((item) => item.caseId === caseId) ?? cases[0];
+      if (selected) {
+        setCaseId(selected.caseId);
+      }
+      const journey = selected?.journeyId ? await client.staffJourney(selected.journeyId, reason) : undefined;
+      setState({ status: "loaded", data: { cases, selected, journey, approvalId, lastAction: action } });
+    } catch (error) {
+      setState({ status: "failed", error });
+    }
+  };
+
+  const data = state.status === "loaded" ? state.data : undefined;
+
+  return (
+    <TerminalApiClientProvider>
+      <ApiForm title="FDS201 보류 이체 심사" icon="manage_search">
+        <ApiTextField label="caseId" value={caseId} onChange={setCaseId} />
+        <ReasonRequiredPanel reason={reason} onReasonChange={setReason} />
+        <div className="api-button-row">
+          <ApiButton onClick={() => runAction("load")} loading={state.status === "running"}>목록/상세</ApiButton>
+          <ApiButton onClick={() => runAction("assign")} loading={state.status === "running"}>담당 지정</ApiButton>
+          <ApiButton onClick={() => runAction("release")} loading={state.status === "running"}>release 승인요청</ApiButton>
+          <ApiButton onClick={() => runAction("block")} loading={state.status === "running"}>block 승인요청</ApiButton>
+        </div>
+      </ApiForm>
+      <StructuredErrorPanel error={state.status === "failed" ? state.error : null} />
+      <Panel title="FDS 보류 사건" className="api-result-panel">
+        <DataTable
+          columns={[
+            { key: "caseId", label: "caseId", width: "180px" },
+            { key: "journeyId", label: "journeyId", width: "180px" },
+            { key: "status", label: "사건상태", width: "140px" },
+            { key: "transferStatus", label: "이체상태", width: "120px" },
+            { key: "riskScore", label: "risk", width: "80px" },
+            { key: "owner", label: "담당자", width: "150px" },
+            { key: "approvalId", label: "approvalId" }
+          ]}
+          rows={data?.cases.map((item) => ({
+            caseId: item.caseId,
+            journeyId: item.journeyId ?? "-",
+            status: <span className="state-pill blue">{item.status}</span>,
+            transferStatus: item.transferStatus ?? "-",
+            riskScore: String(item.riskScore),
+            owner: item.owner ?? "-",
+            approvalId: item.approvalId ?? "-"
+          })) ?? []}
+          minRows={5}
+        />
+      </Panel>
+      <KeyValuePanel
+        title="선택 사건 통제"
+        rows={[
+          ["lastAction", data?.lastAction ?? "-"],
+          ["caseId", data?.selected?.caseId ?? "-"],
+          ["journeyId", data?.selected?.journeyId ?? "-"],
+          ["transferReferenceId", data?.selected?.transferReferenceId ?? "-"],
+          ["approvalId", data?.approvalId ?? data?.selected?.approvalId ?? "-"],
+          ["alerts", data?.selected?.alerts.map((alert) => alert.ruleId).join(", ") ?? "-"],
+          ["ledger mutation", data?.selected?.transferStatus === "POSTED" ? "checker 승인 후 balanced posting 1건" : "없음"],
+          ["maker/checker", "fds-reviewer01 / branch-manager01"]
+        ]}
+      />
+      <JourneyPanel journey={data?.journey} />
     </TerminalApiClientProvider>
   );
 }
@@ -390,13 +568,23 @@ export function ApprovalInboxScreen() {
   const [rejectReason, setRejectReason] = useState("통합 단말 APR101 반려 검토");
   const [state, setState] = useState<ApiState<ApprovalResult>>({ status: "idle" });
 
+  const journeyForApproval = async (approval?: OperatorApproval) => {
+    if (!approval || (approval.businessType !== "FDS_RELEASE" && approval.businessType !== "FDS_BLOCK")) {
+      return undefined;
+    }
+    const cases = await riskClient("manager").fdsCases();
+    const fdsCase = cases.find((item) => item.caseId === approval.businessReferenceId);
+    return fdsCase?.journeyId ? staffClient("manager").staffJourney(fdsCase.journeyId, "APR101 FDS 승인 여정 확인") : undefined;
+  };
+
   const loadApprovals = async () => {
     setState({ status: "running", message: "APR101 승인함 조회 중" });
     try {
       const approvals = await staffClient("manager").staffApprovals();
       const selected = approvalId ? approvals.find((approval) => approval.approvalId === approvalId) : approvals[0];
       setApprovalId(selected?.approvalId ?? approvalId);
-      setState({ status: "loaded", data: { approvals, selected } });
+      const journey = await journeyForApproval(selected);
+      setState({ status: "loaded", data: { approvals, selected, journey } });
     } catch (error) {
       setState({ status: "failed", error });
     }
@@ -406,7 +594,8 @@ export function ApprovalInboxScreen() {
     setState({ status: "running", message: "승인 상세 조회 중" });
     try {
       const [approvals, selected] = await Promise.all([staffClient("manager").staffApprovals(), staffClient("manager").staffApproval(approvalId)]);
-      setState({ status: "loaded", data: { approvals, selected } });
+      const journey = await journeyForApproval(selected);
+      setState({ status: "loaded", data: { approvals, selected, journey } });
     } catch (error) {
       setState({ status: "failed", error });
     }
@@ -425,18 +614,30 @@ export function ApprovalInboxScreen() {
           ? await client.approveStaffApproval(selected.approvalId, { approvedBy: "branch-manager01", approvedByRole: "BRANCH_MANAGER", screenId: "APR101" })
           : await client.rejectStaffApproval(selected.approvalId, { rejectedBy: "branch-manager01", rejectedByRole: "BRANCH_MANAGER", rejectReason, screenId: "APR101" });
       const approvals = await client.staffApprovals();
+      const fdsCase = response.fdsCase ?? undefined;
+      const ledgerTransaction = "ledgerTransaction" in response ? response.ledgerTransaction : undefined;
+      const journey = fdsCase?.journeyId
+        ? await client.staffJourney(fdsCase.journeyId, "APR101 checker 결정 결과 확인")
+        : await journeyForApproval(response.item);
       setState({
         status: "loaded",
         data: {
           approvals,
           selected: response.item,
+          journey,
           action: {
             status: response.item.status,
             approvalId: response.item.approvalId,
             businessType: response.item.businessType,
             executed: "executed" in response ? response.executed : undefined,
             rejected: "rejected" in response ? response.rejected : undefined,
-            auditEventId: response.item.auditEventId
+            auditEventId: response.item.auditEventId,
+            journeyId: fdsCase?.journeyId,
+            fdsStatus: fdsCase?.status,
+            ledgerTransactionId: ledgerTransaction?.value.id,
+            ledgerMutation: ledgerTransaction
+              ? `balanced double-entry 1건 / ${ledgerTransaction.replayed ? "idempotent replay" : "new posting"}`
+              : "원장 변경 없음"
           }
         }
       });
@@ -472,9 +673,14 @@ export function ApprovalInboxScreen() {
           ["businessReferenceId", selected?.businessReferenceId ?? "-"],
           ["requestReason", selected?.requestReason ?? "-"],
           ["status", selected?.status ?? "-"],
-          ["lastAction", state.status === "loaded" && state.data.action ? `${state.data.action.status} / ${state.data.action.auditEventId ?? "-"}` : "-"]
+          ["lastAction", state.status === "loaded" && state.data.action ? `${state.data.action.status} / ${state.data.action.auditEventId ?? "-"}` : "-"],
+          ["journeyId", state.status === "loaded" ? state.data.action?.journeyId ?? state.data.journey?.item.journeyId ?? "-" : "-"],
+          ["FDS status", state.status === "loaded" ? state.data.action?.fdsStatus ?? "-" : "-"],
+          ["ledgerTransactionId", state.status === "loaded" ? state.data.action?.ledgerTransactionId ?? "-" : "-"],
+          ["ledger mutation", state.status === "loaded" ? state.data.action?.ledgerMutation ?? "승인 결정 전 없음" : "-"]
         ]}
       />
+      <JourneyPanel journey={state.status === "loaded" ? state.data.journey : undefined} />
     </TerminalApiClientProvider>
   );
 }
@@ -527,14 +733,19 @@ export function OperationalRetryQueueScreen() {
 
 export function WorkflowTimelineScreen() {
   const [businessReferenceId, setBusinessReferenceId] = useState("TX-SYN-CORR-001");
+  const [journeyId, setJourneyId] = useState("");
   const [reason, setReason] = useState("통합 단말 WRK003 workflow timeline 확인");
-  const [state, setState] = useState<ApiState<{ readonly auditEventId: string; readonly entries: readonly StaffWorkflowTimelineEntryDto[] }>>({ status: "idle" });
+  const [state, setState] = useState<ApiState<{ readonly auditEventId: string; readonly entries: readonly StaffWorkflowTimelineEntryDto[]; readonly journey?: StaffJourneyResponse }>>({ status: "idle" });
 
   const runSearch = async () => {
     setState({ status: "running", message: "WRK003 조회 중" });
     try {
-      const response = await staffClient("staff").staffWorkflowTimeline(businessReferenceId, reason);
-      setState({ status: "loaded", data: { auditEventId: response.auditEventId, entries: response.items } });
+      const client = staffClient("staff");
+      const [response, journey] = await Promise.all([
+        client.staffWorkflowTimeline(businessReferenceId, reason),
+        journeyId ? client.staffJourney(journeyId, reason) : Promise.resolve(undefined)
+      ]);
+      setState({ status: "loaded", data: { auditEventId: response.auditEventId, entries: response.items, journey } });
     } catch (error) {
       setState({ status: "failed", error });
     }
@@ -544,6 +755,7 @@ export function WorkflowTimelineScreen() {
     <TerminalApiClientProvider>
       <ApiForm title="WRK003 workflow timeline" icon="history">
         <ApiTextField label="businessReferenceId" value={businessReferenceId} onChange={setBusinessReferenceId} />
+        <ApiTextField label="journeyId" value={journeyId} onChange={setJourneyId} />
         <ReasonRequiredPanel reason={reason} onReasonChange={setReason} />
         <ApiButton onClick={runSearch} loading={state.status === "running"}>
           조회
@@ -551,6 +763,7 @@ export function WorkflowTimelineScreen() {
       </ApiForm>
       <StructuredErrorPanel error={state.status === "failed" ? state.error : null} />
       <TimelinePanel entries={state.status === "loaded" ? state.data.entries : []} />
+      <JourneyPanel journey={state.status === "loaded" ? state.data.journey : undefined} />
       <KeyValuePanel title="감사" rows={[["auditEventId", state.status === "loaded" ? state.data.auditEventId : "-"]]} />
     </TerminalApiClientProvider>
   );

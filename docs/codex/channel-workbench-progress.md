@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 6 are complete. Checkpoint 7 (`FDS201` plus journey-aware staff workbench and maker-checker execution) is next. The product call-center workspace now links a masked interaction, redacted note, and controlled FDS handoff to the held-transfer journey without posting. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
+Checkpoints 1 through 7 are complete. Checkpoint 8 (OIDC code+PKCE and opaque BFF session enforcement) is next. The registry-driven staff terminal now links `FDS201`, `TX101`, `APR101`, and `WRK003` to the same held-transfer journey and displays independent checker decisions with explicit ledger impact. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
 
 ## Inspected baseline
 
@@ -44,7 +44,7 @@ Checkpoints 1 through 6 are complete. Checkpoint 7 (`FDS201` plus journey-aware 
 | 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | complete | Flyway + JUnit/Testcontainers negative and correlation tests |
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | complete | customer-web typecheck/build, structural and browser route tests |
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | complete | call-center typecheck/build, workflow integration and browser route tests |
-| 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | pending | staff-terminal typecheck/build, JUnit and Playwright |
+| 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | complete | staff-terminal typecheck/build, FDS PostgreSQL integration tests, Playwright |
 | 8 | OIDC code+PKCE with opaque BFF session; negative security tests | pending | ownership/reason/masking/redaction/SoD/session tests |
 | 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | pending | automated accessibility checks, keyboard Playwright, trace/audit tests |
 | 10 | Deterministic seed/up/test/demo, portfolio link, screenshots/video script | pending | `npm run demo:test:channels` plus full goal gates |
@@ -121,6 +121,11 @@ npm run portfolio:verify
 | 2026-08-10 | `CallCenterWorkflowIntegrationTest` with JDK 21 and PostgreSQL | pass | 2/2 passed: reason/masking, redaction, maker-checker complaint path, journey-linked FDS handoff, and zero ledger posting. |
 | 2026-08-10 | `npm run next:call-center-console:build` | pass | Eight static-generation items; product `/workspace` and isolated `/lab/*` routes compiled. |
 | 2026-08-10 | call-center Playwright parity spec with approved local bind | pass | 3/3 configured product/lab/workspace browser tests passed; two live API/Keycloak cases skipped because opt-in endpoints were not configured. |
+| 2026-08-10 | `FdsCaseApiParityIntegrationTest` with JDK 21 and PostgreSQL | pass | 3/3 passed: release posts once and balanced, block posts zero, checker rejection returns to investigation with zero ledger mutations and permits re-review. |
+| 2026-08-10 | staff-terminal typecheck, package typecheck, and integrated-terminal boundary check | pass | New risk client usage and registry screen compiled; seven app routes and 18 terminal source files retained the product/lab boundary. |
+| 2026-08-10 | live-route evidence source check and staff-terminal production build | pass | Static evidence metadata includes FDS journey methods; seven staff-terminal routes generated successfully. |
+| 2026-08-10 | staff-terminal Playwright checkpoint 7 first run | fail | 4 passed, one live API case skipped, and one legacy shell assertion still expected the product API-evidence widget removed at checkpoint 2. |
+| 2026-08-10 | staff-terminal Playwright checkpoint 7 corrected rerun | pass | 5/5 configured browser tests passed, including FDS201/APR101/WRK003 navigation; one live API case skipped because its opt-in endpoint was not configured. |
 
 ## Domain and security invariants affected
 
@@ -258,6 +263,24 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Reason/audit: search, interaction, note, handoff, and staff journey read all require a business reason; missing journey-read reason returns `POLICY_REASON_REQUIRED`.
 - Correlation: the same `journeyId` maps `CALL_CENTER_INTERACTION` and `CALL_CENTER_ESCALATION` references and ordered events without changing the HELD status.
 - Auth boundary: product source contains no bearer token or browser storage. Full opaque BFF/OIDC enforcement across all channel calls remains checkpoint 8.
+
+## Checkpoint 7 changed files
+
+- Spring `FdsCaseService` and staff approval execution now support independent-checker rejection of FDS release/block requests, returning the case to investigation without posting.
+- FDS integration coverage proves rejection is recoverable, correlated to the original journey, customer-safe, and ledger-free.
+- The API client exposes the rejected FDS case alongside the approval result.
+- Staff terminal registry and navigation add `FDS201`; its case workbench lists held cases, assigns an owner, and requests release or block approval with a mandatory reason.
+- `TX101`, `APR101`, and `WRK003` accept/render `journeyId`; `APR101` displays FDS status, ledger transaction identity, and whether the decision produced a balanced posting or no mutation.
+- Browser and live-route evidence guards now include the FDS workbench and retain the product/lab route boundary.
+
+## Checkpoint 7 invariant/control review
+
+- Ledger: release remains the only FDS path that posts, and only after independent approval; block and checker rejection retain zero transfer postings. The release integration assertion still proves balanced double-entry and one stable idempotency key.
+- Maker-checker: FDS reviewer `fds-reviewer01` is the maker and branch manager `branch-manager01` is the checker in the UI; the API self-approval negative test remains enforced before posting.
+- Rejection: a rejected decision clears the stale approval reference, returns the case to `INVESTIGATING`, keeps transfer status `HELD`, appends `FDS_DECISION_REJECTED`, and permits a fresh controlled decision request.
+- Correlation: FDS case, approval, staff inquiry, workflow, and any eventual ledger transaction render from the same durable `journeyId`; customer projection continues to hide internal references and reasons.
+- Registry: `FDS201` is defined once in the existing staff registry using the case template; no copied Next route or staff screen manifest was introduced.
+- Evidence: the stale Playwright expectation failure and corrected rerun are both recorded. The opt-in live API browser case remains skipped and is not claimed as passed.
 - Evidence: local browser product tests passed; the two opt-in live API/Keycloak browser cases were skipped and are not claimed as passed.
 
 ## Next checkpoint

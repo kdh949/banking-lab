@@ -7,6 +7,7 @@ import {
   CommandWorkbenchScreen,
   DepositNavigationScreen,
   FeeInquiryScreen,
+  FdsReviewScreen,
   FundNavigationScreen,
   InheritanceScreen,
   OperationalRetryQueueScreen,
@@ -95,6 +96,9 @@ function ActiveScreen({
   }
   if (screen === "staffTransaction") {
     return <StaffTransactionInquiryScreen />;
+  }
+  if (screen === "fdsReview") {
+    return <FdsReviewScreen />;
   }
   if (screen === "approvalInbox") {
     return <ApprovalInboxScreen />;

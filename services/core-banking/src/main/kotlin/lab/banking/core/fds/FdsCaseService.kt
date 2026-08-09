@@ -9,6 +9,7 @@ import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApprovalStatus
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
+import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
@@ -124,6 +125,61 @@ class FdsCaseService(
             ApprovalBusinessTypes.FDS_BLOCK -> applyApprovedBlock(approval)
             else -> throw WorkflowErrors.stateViolation("approval is not an FDS decision approval")
         }
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun applyRejectedDecision(approval: OperatorApproval, command: RejectApprovalCommand): FdsCaseDto {
+        if (approval.status != ApprovalStatus.REJECTED) {
+            throw WorkflowErrors.stateViolation("approval is not rejected: ${approval.status}")
+        }
+        val expectedStatus = when (approval.businessType) {
+            ApprovalBusinessTypes.FDS_RELEASE -> "RELEASE_REQUESTED"
+            ApprovalBusinessTypes.FDS_BLOCK -> "BLOCK_REQUESTED"
+            else -> throw WorkflowErrors.stateViolation("approval is not an FDS decision approval")
+        }
+        val fdsCase = findForUpdate(approval.businessReferenceId)
+        if (fdsCase.status != expectedStatus) {
+            throw WorkflowErrors.stateViolation("FDS case is not decision requested: ${fdsCase.status}")
+        }
+        if (fdsCase.approvalId != approval.approvalId) {
+            throw WorkflowErrors.stateViolation("approval does not match FDS case")
+        }
+        jdbc.update(
+            """
+            UPDATE fds_cases
+            SET status = 'INVESTIGATING',
+                approval_id = NULL,
+                updated_at = now()
+            WHERE fds_case_id = :caseId
+            """.trimIndent(),
+            mapOf("caseId" to fdsCase.caseId)
+        )
+        appendTimeline(
+            caseId = fdsCase.caseId,
+            eventType = "DECISION_REJECTED",
+            fromStatus = fdsCase.status,
+            toStatus = "INVESTIGATING",
+            actorId = command.rejectedBy,
+            note = command.rejectReason
+        )
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "APPROVAL",
+                referenceId = approval.approvalId,
+                eventType = "FDS_DECISION_REJECTED",
+                status = "INVESTIGATING",
+                actorId = command.rejectedBy,
+                actorRole = command.rejectedByRole,
+                reason = command.rejectReason,
+                payload = mapOf(
+                    "decision" to if (approval.businessType == ApprovalBusinessTypes.FDS_RELEASE) "RELEASE" else "BLOCK",
+                    "approvalDecision" to "REJECTED",
+                    "ledgerTransactionCount" to 0
+                )
+            )
+        }
+        return findForRead(fdsCase.caseId)
     }
 
     private fun requestDecision(

@@ -1027,6 +1027,8 @@ class StaffAccessService(
             pendingApproval.businessType != ApprovalBusinessTypes.EOD_CLOSING &&
             pendingApproval.businessType != ApprovalBusinessTypes.LOAN_EXECUTION &&
             pendingApproval.businessType != ApprovalBusinessTypes.CALL_CENTER_ESCALATION &&
+            pendingApproval.businessType != ApprovalBusinessTypes.FDS_RELEASE &&
+            pendingApproval.businessType != ApprovalBusinessTypes.FDS_BLOCK &&
             pendingApproval.businessType !in PARAMETER_CHANGE_BUSINESS_TYPES
         ) {
             throw WorkflowErrors.stateViolation("staff rejection route does not support ${pendingApproval.businessType}")
@@ -1083,6 +1085,14 @@ class StaffAccessService(
         } else {
             null
         }
+        val fdsCase = if (
+            pendingApproval.businessType == ApprovalBusinessTypes.FDS_RELEASE ||
+            pendingApproval.businessType == ApprovalBusinessTypes.FDS_BLOCK
+        ) {
+            fdsCaseService.applyRejectedDecision(approval, command)
+        } else {
+            null
+        }
         return StaffApprovalRejectionResponse(
             item = approval,
             rejected = true,
@@ -1092,7 +1102,8 @@ class StaffAccessService(
             depositRateChangeRequest = depositRateChangeRequest,
             feePolicyChangeRequest = feePolicyChangeRequest,
             parameterChangeRequest = parameterChangeRequest,
-            callCenterEscalation = callCenterEscalation
+            callCenterEscalation = callCenterEscalation,
+            fdsCase = fdsCase
         )
     }
 

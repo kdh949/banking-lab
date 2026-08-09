@@ -307,6 +307,7 @@ export {
   ApprovalInboxScreen,
   CallCenterWorkspaceScreen,
   CommandWorkbenchScreen,
+  FdsReviewScreen,
   OperationalRetryQueueScreen,
   StaffAccountInquiryScreen,
   StaffCustomerInquiryScreen,

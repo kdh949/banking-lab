@@ -57,6 +57,7 @@ export type ScreenKey =
   | "staffCustomer"
   | "staffAccount"
   | "staffTransaction"
+  | "fdsReview"
   | "approvalInbox"
   | "opsRetry"
   | "workflowTimeline"

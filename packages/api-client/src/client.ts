@@ -2637,6 +2637,7 @@ export interface StaffApprovalRejectionResponse {
   readonly depositRateChangeRequest?: DepositRateChangeRequestDto | null;
   readonly feePolicyChangeRequest?: FeePolicyChangeRequestDto | null;
   readonly callCenterEscalation?: CallCenterEscalationDto | null;
+  readonly fdsCase?: FdsCaseDto | null;
 }
 
 export interface ReconciliationItemsResponse {

@@ -341,7 +341,8 @@ data class StaffApprovalRejectionResponse(
     val depositRateChangeRequest: DepositRateChangeRequestDto?,
     val feePolicyChangeRequest: FeePolicyChangeRequestDto?,
     val parameterChangeRequest: ParameterChangeRequestDto?,
-    val callCenterEscalation: CallCenterEscalationDto?
+    val callCenterEscalation: CallCenterEscalationDto?,
+    val fdsCase: FdsCaseDto?
 )
 
 data class StaffCustomerRecord(

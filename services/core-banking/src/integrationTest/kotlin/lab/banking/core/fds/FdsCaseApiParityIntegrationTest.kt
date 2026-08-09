@@ -48,6 +48,9 @@ class FdsCaseApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              business_journey_events,
+              business_journey_references,
+              business_journeys,
               customer_transfer_results,
               fds_case_timeline,
               fds_cases,
@@ -328,6 +331,110 @@ class FdsCaseApiParityIntegrationTest {
             .andExpect(jsonPath("$.status").value("BLOCKED"))
             .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
         assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_BLOCKED'"))
+    }
+
+    @Test
+    fun `FDS checker rejection returns case to investigation without ledger posting`() {
+        val beforeCount = countRows("ledger_transactions")
+        val heldResponse = mockMvc.perform(
+            post("/api/customer/transfers")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "fromAccountId": "ACC-SYN-001-001",
+                      "toAccountId": "ACC-SYN-002-001",
+                      "amountMinor": 5500000,
+                      "idempotencyKey": "FDS-REJECT-FLOW-001",
+                      "requestedBy": "SYN-CUS-001",
+                      "reason": "Synthetic high-risk transfer rejection parity",
+                      "firstTimeBeneficiary": true
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.item.status").value("HELD"))
+            .andReturn()
+
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/assign")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"actorId":"fds01","owner":"fds01","reason":"Synthetic FDS rejection assignment"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("INVESTIGATING"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "actorId": "fds01",
+                      "requestedByRole": "FDS_REVIEWER",
+                      "reason": "Synthetic release request for checker rejection"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("RELEASE_REQUESTED"))
+            .andReturn()
+
+        val approvalId = objectMapper.readTree(requestResponse.response.contentAsString)
+            .path("approval")
+            .path("approvalId")
+            .asText()
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/reject")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "rejectedBy": "manager01",
+                      "rejectedByRole": "BRANCH_MANAGER",
+                      "rejectReason": "Additional synthetic evidence required",
+                      "screenId": "APR101"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rejected").value(true))
+            .andExpect(jsonPath("$.item.status").value("REJECTED"))
+            .andExpect(jsonPath("$.fdsCase.status").value("INVESTIGATING"))
+            .andExpect(jsonPath("$.fdsCase.transferStatus").value("HELD"))
+            .andExpect(jsonPath("$.fdsCase.approvalId").doesNotExist())
+
+        assertEquals(beforeCount, countRows("ledger_transactions"))
+        assertEquals(0, countRows("ledger_transactions WHERE transaction_type = 'INTERNAL_TRANSFER'"))
+        assertEquals(10_000_000L, balance("ACC-SYN-001-001"))
+        assertEquals(0L, balance("ACC-SYN-002-001"))
+        assertEquals("INVESTIGATING", fdsStatus(caseId))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'FDS_DECISION_REJECTED'"))
+
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("INVESTIGATING"))
+            .andExpect(jsonPath("$.statusMessage").value("Security review in progress"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
+
+        mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/block-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"actorId":"fds01","reason":"Synthetic re-review requests block"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("BLOCK_REQUESTED"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+        assertEquals(beforeCount, countRows("ledger_transactions"))
     }
 
     private fun seedAccountsAndBalances() {

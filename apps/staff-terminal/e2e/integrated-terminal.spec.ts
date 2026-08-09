@@ -31,8 +31,8 @@ test("iWorks integrated terminal renders the shell and terminal-status data", as
   await expect(page.locator(".iworks-statusbar time")).not.toHaveText("2019-08-01 13:37:45");
 
   await page.getByRole("button", { name: "여신", exact: true }).click();
-  await expect(page.getByTestId("staff-terminal-api-evidence")).toBeVisible();
-  await expect(page.getByText("Spring API").first()).toBeVisible();
+  await expect(page.locator(".screen-title")).toContainText("[SY-Starts.scn] 통합 포털");
+  await expect(page.getByTestId("staff-terminal-api-evidence")).toHaveCount(0);
 });
 
 test("iWorks integrated terminal executes Spring staff API evidence when configured", async ({ page }) => {
@@ -42,14 +42,14 @@ test("iWorks integrated terminal executes Spring staff API evidence when configu
   );
 
   await page.goto(baseUrl);
-  await page.getByRole("button", { name: "여신", exact: true }).click();
-  const evidence = page.getByTestId("staff-terminal-api-evidence");
-  await evidence.getByRole("button", { name: "조회" }).click();
+  await page.getByRole("button", { name: "업무메뉴" }).click();
+  await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
+  const workbench = page.getByTestId("terminal-api-client-provider");
+  await page.locator(".api-form-panel").getByRole("button", { name: "조회" }).click();
 
-  await expect(evidence).toContainText("API-backed", { timeout: 15_000 });
-  await expect(evidence).toContainText("SYN-CUS-001");
-  await expect(evidence).toContainText(/010-\*\*\*\*/u);
-  await expect(evidence).toContainText(/건/u);
+  await expect(workbench).toContainText("SYN-CUS-001", { timeout: 15_000 });
+  await expect(workbench).toContainText(/010-\*\*\*\*/u);
+  await expect(workbench).toContainText("MASKED");
 });
 
 test("iWorks integrated terminal handles implemented navigation and unavailable module dialogs", async ({ page }) => {
@@ -78,6 +78,11 @@ test("iWorks integrated terminal exposes API-backed transaction codes inside the
   await expect(page.locator(".screen-title")).toContainText("[CUS101] 고객 상세 조회");
   await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Spring API");
 
+  await page.getByRole("button", { name: /\[FDS201\].*FDS 보류 이체 심사/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[FDS201] FDS 보류 이체 심사");
+  await expect(page.getByText("release 승인요청").first()).toBeVisible();
+  await expect(page.getByText("maker/checker").first()).toBeVisible();
+
   await page.getByRole("button", { name: /\[APR101\].*승인함 목록\/상세/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[APR101] 승인함 목록/상세");
   await expect(page.getByText("maker").first()).toBeVisible();
@@ -85,6 +90,7 @@ test("iWorks integrated terminal exposes API-backed transaction codes inside the
   await page.getByRole("button", { name: /\[WRK003\].*workflow timeline/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[WRK003] workflow timeline");
   await expect(page.getByText("businessReferenceId").first()).toBeVisible();
+  await expect(page.getByText("journeyId").first()).toBeVisible();
 
   await page.getByRole("button", { name: /\[CALL101\].*상담 고객 검색/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[CALL101] 상담 고객 검색");

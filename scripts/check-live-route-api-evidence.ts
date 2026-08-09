@@ -249,6 +249,7 @@ for (const marker of [
   "staff-terminal Spring API evidence smoke",
   "staff-terminal-api-evidence",
   "CUS101",
+  "FDS201",
   "APR101",
   "WRK003",
   "CALL101",
@@ -300,6 +301,9 @@ for (const marker of [
   "staffTransactionSearch",
   "staffOperationalRetryQueue",
   "staffWorkflowTimeline",
+  "fdsCases",
+  "requestFdsRelease",
+  "requestFdsBlock",
   "requestAccountHold",
   "requestAccountHoldRelease",
   "requestTransferLimitChange",
@@ -316,7 +320,8 @@ for (const marker of [
   "ReasonRequiredPanel",
   "StructuredErrorPanel",
   "ApprovalActionPanel",
-  "TimelinePanel"
+  "TimelinePanel",
+  "JourneyPanel"
 ]) {
   requireIncludes(staffTerminalApiScreens, marker, `staff-terminal API screens are missing workflow marker: ${marker}`, errors);
 }
@@ -325,6 +330,7 @@ for (const marker of [
   "CUS101",
   "ACC101",
   "TX101",
+  "FDS201",
   "APR101",
   "WRK002",
   "WRK003",
@@ -476,6 +482,11 @@ const evidence: EvidenceDocument = {
         "rejectStaffApproval",
         "staffOperationalRetryQueue",
         "staffWorkflowTimeline",
+        "staffJourney",
+        "fdsCases",
+        "assignFdsCase",
+        "requestFdsRelease",
+        "requestFdsBlock",
         "requestAccountHold",
         "requestAccountHoldRelease",
         "requestTransferLimitChange",
@@ -507,6 +518,7 @@ const evidence: EvidenceDocument = {
         "source boundary excludes retired staff route set",
         "bounded Spring API evidence panel",
         "CUS101/ACC101/TX101 reason-required staff inquiries",
+        "FDS201 held-transfer review and release/block approval requests",
         "APR101 approval inbox approve/reject actions",
         "CMD101 idempotent high-risk command workbench",
         "WRK002 outbox retry/dead-letter visibility",

@@ -167,6 +167,22 @@ export const screenDefinitions: Record<ScreenKey, ScreenDefinition> = {
       workflowVisible: true
     }
   },
+  fdsReview: {
+    key: "fdsReview",
+    code: "FDS201",
+    title: "FDS 보류 이체 심사",
+    module: "FDS201",
+    moduleLabel: "리스크",
+    tabs: staffApiTabs,
+    controls: {
+      template: "case",
+      reasonRequired: true,
+      piiAccess: false,
+      maskingPolicy: "DEFAULT_MASKED",
+      approvalRequired: true,
+      workflowVisible: true
+    }
+  },
   approvalInbox: {
     key: "approvalInbox",
     code: "APR101",
@@ -258,6 +274,7 @@ export const screenList: readonly ScreenDefinition[] = [
   screenDefinitions.staffCustomer,
   screenDefinitions.staffAccount,
   screenDefinitions.staffTransaction,
+  screenDefinitions.fdsReview,
   screenDefinitions.approvalInbox,
   screenDefinitions.opsRetry,
   screenDefinitions.workflowTimeline,
@@ -322,6 +339,7 @@ export const menuTree = [
       { code: "CUS101", label: "고객 상세 조회", screen: "staffCustomer", moduleLabel: "고객" },
       { code: "ACC101", label: "계좌 조회", screen: "staffAccount", moduleLabel: "고객" },
       { code: "TX101", label: "거래 조회", screen: "staffTransaction", moduleLabel: "고객" },
+      { code: "FDS201", label: "FDS 보류 이체 심사", screen: "fdsReview", moduleLabel: "리스크" },
       { code: "APR101", label: "승인함 목록/상세", screen: "approvalInbox", moduleLabel: "내부통제" },
       { code: "CMD101", label: "고위험 command workbench", screen: "commandWorkbench", moduleLabel: "내부통제" },
       { code: "WRK002", label: "운영 retry queue", screen: "opsRetry", moduleLabel: "운영" },
