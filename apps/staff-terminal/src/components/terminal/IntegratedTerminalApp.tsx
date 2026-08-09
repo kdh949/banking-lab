@@ -18,6 +18,7 @@ import {
   WorkflowTimelineScreen
 } from "./screens";
 import { BusinessTabs, RightRail, ScreenToolbar, SideDrawer, StatusBar, TerminalHeader, UtilityRail } from "./shell";
+import { StaffSessionBoundary } from "./session-boundary";
 import { useTerminalNavigation } from "./use-terminal-navigation";
 import type { MenuTarget, ScreenControlMetadata, ScreenKey } from "./types";
 
@@ -26,6 +27,7 @@ export function IntegratedTerminalApp() {
 
   return (
     <main className="iworks-root">
+      <StaffSessionBoundary />
       <section className="iworks-window" aria-label="통합단말 프로토타입">
         <TerminalHeader
           activeScreen={terminal.activeScreen}

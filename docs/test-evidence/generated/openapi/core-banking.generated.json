@@ -183,6 +183,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/customer/journeys/{journeyId}",
+      "handler": "journey",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/journey/BusinessJourneyController.kt",
+      "requestDto": null,
+      "responseDto": "CustomerJourneyDto"
+    },
+    {
+      "method": "GET",
       "path": "/api/customer/me",
       "handler": "profile",
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt",
@@ -540,6 +548,14 @@
       "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/product/FeePolicyController.kt",
       "requestDto": null,
       "responseDto": "StaffFeePolicyListResponse"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/journeys/{journeyId}",
+      "handler": "journey",
+      "controllerFile": "services/core-banking/src/main/kotlin/lab/banking/core/journey/BusinessJourneyController.kt",
+      "requestDto": null,
+      "responseDto": "StaffJourneyResponse"
     },
     {
       "method": "GET",
@@ -3414,6 +3430,14 @@
           "kotlinType": "String",
           "required": true,
           "nullable": false,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
+          "name": "journeyId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
           "ref": null,
           "itemsRef": null
         },

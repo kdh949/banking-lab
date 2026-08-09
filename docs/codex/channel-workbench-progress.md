@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 7 are complete. Checkpoint 8 (OIDC code+PKCE and opaque BFF session enforcement) is next. The registry-driven staff terminal now links `FDS201`, `TX101`, `APR101`, and `WRK003` to the same held-transfer journey and displays independent checker decisions with explicit ledger impact. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
+Checkpoints 1 through 8 are complete. Checkpoint 9 (accessibility, keyboard operation, and safe trace correlation) is next. Customer, call-center, and staff product JavaScript now call same-origin Next BFF routes and receive only non-secret session metadata; OIDC code exchange, PKCE verifier, bearer credential, and opaque session key remain server-side/HttpOnly. No Definition of Done item is marked complete yet; no end-to-end claim will be made before accessibility, trace correlation, all three product channels, and the deterministic demo gate pass.
 
 ## Inspected baseline
 
@@ -45,7 +45,7 @@ Checkpoints 1 through 7 are complete. Checkpoint 8 (OIDC code+PKCE and opaque BF
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | complete | customer-web typecheck/build, structural and browser route tests |
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | complete | call-center typecheck/build, workflow integration and browser route tests |
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | complete | staff-terminal typecheck/build, FDS PostgreSQL integration tests, Playwright |
-| 8 | OIDC code+PKCE with opaque BFF session; negative security tests | pending | ownership/reason/masking/redaction/SoD/session tests |
+| 8 | OIDC code+PKCE with opaque BFF session; negative security tests | complete | three live BFF Compose smokes plus 10 Spring/PostgreSQL negative-control tests |
 | 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | pending | automated accessibility checks, keyboard Playwright, trace/audit tests |
 | 10 | Deterministic seed/up/test/demo, portfolio link, screenshots/video script | pending | `npm run demo:test:channels` plus full goal gates |
 
@@ -126,6 +126,24 @@ npm run portfolio:verify
 | 2026-08-10 | live-route evidence source check and staff-terminal production build | pass | Static evidence metadata includes FDS journey methods; seven staff-terminal routes generated successfully. |
 | 2026-08-10 | staff-terminal Playwright checkpoint 7 first run | fail | 4 passed, one live API case skipped, and one legacy shell assertion still expected the product API-evidence widget removed at checkpoint 2. |
 | 2026-08-10 | staff-terminal Playwright checkpoint 7 corrected rerun | pass | 5/5 configured browser tests passed, including FDS201/APR101/WRK003 navigation; one live API case skipped because its opt-in endpoint was not configured. |
+| 2026-08-10 | checkpoint 8 static/route bundle, first run | fail | 30/32 passed; two assertions still required browser-public API configuration and direct customer auth-client calls from the product component. |
+| 2026-08-10 | corrected checkpoint 8 static/route bundle | pass | 35/35 passed, including new server-side PKCE, opaque cookie, route allowlist, simulator opt-in, and no-browser-bearer guards. |
+| 2026-08-10 | integrated-terminal boundary and live-route evidence checks | pass | Twelve staff app route files accepted; BFF routes are bounded and generated live-route metadata passed. This source check alone is not live evidence. |
+| 2026-08-10 | package, script, and three channel typechecks | pass | Auth server/BFF modules, channel products, Playwright changes, and repository scripts compiled. |
+| 2026-08-10 | three channel production builds | pass | Customer (26), call-center (12), and staff (11) static-generation items include the new server-rendered BFF/session routes. |
+| 2026-08-10 | targeted Spring integration suites in restricted sandbox | fail | Gradle could not open its local lock-contention socket (`EPERM`); no test executed. |
+| 2026-08-10 | same three targeted Spring/PostgreSQL suites with approved execution | pass | 10/10 passed: customer ownership denial, reason/masking/redaction, self-approval denial, HELD/BLOCKED zero postings, and exactly-once release. |
+| 2026-08-10 | customer self-service BFF Compose smoke, restricted sandbox | fail | Gradle lock socket was denied before the app/test started. |
+| 2026-08-10 | customer self-service BFF Compose smoke, first approved run | fail | Authentication/session succeeded; the live test found that catch-all proxy reconstruction omitted the `/api` prefix and the capability allowlist correctly denied the route. |
+| 2026-08-10 | customer self-service BFF Compose smoke after proxy correction | pass | 1/1 live Chromium flow passed through customer-auth BFF, HttpOnly session, owned accounts, POSTED transfer, HELD transfer, and customer journey timeline. |
+| 2026-08-10 | staff-terminal BFF Compose smoke, first approved run | fail | The API succeeded but the migrated assertion scoped itself to the connection strip instead of the result workbench. |
+| 2026-08-10 | staff-terminal BFF Compose smoke, second approved run | fail | The corrected assertion exposed concurrent CUS101 audit writes colliding under SERIALIZABLE isolation; no ledger mutation was involved. |
+| 2026-08-10 | staff-terminal BFF Compose smoke after ordered audited reads | pass | 1/1 live Chromium flow passed with an explicitly opted-in branch-staff BFF session, reason-required masked result, and audit fields. |
+| 2026-08-10 | call-center Keycloak BFF Compose smoke | pass | 1/1 live Chromium flow completed Keycloak Authorization Code + PKCE, returned through the opaque BFF callback, and performed a reason-gated masked customer lookup. |
+| 2026-08-10 | first checkpoint 8 full `npm test` after route migration | fail | 223/224 passed; the live-route evidence guard still expected the retired staff evidence-panel test label. |
+| 2026-08-10 | corrected live-route evidence test | pass | 2/2 passed with customer/staff opaque BFF routes, controls, and actual Compose pass stamps. |
+| 2026-08-10 | second full `npm test` in restricted sandbox | fail | 201/224 passed; all 23 failures were legacy Node oracle HTTP tests denied local `127.0.0.1` bind (`EPERM`). |
+| 2026-08-10 | identical full `npm test` with approved local bind | pass | 224/224 passed, 0 skipped. Generated current OpenAPI/journey evidence was retained; unrelated AML timestamp noise was restored. |
 
 ## Domain and security invariants affected
 
@@ -139,6 +157,7 @@ npm run portfolio:verify
 - Maker and checker remain different actors, at API and UI boundaries.
 - Domain events remain durable outbox writes; notification consumption remains idempotent and synthetic-only.
 - Product browser JavaScript must not read or store bearer tokens after the BFF checkpoint.
+- OIDC state, PKCE verifier, access token, and opaque session key must remain server-side/HttpOnly; BFF route capability lists cannot be widened by browser input.
 
 ## Existing implementation to reuse
 
@@ -283,6 +302,27 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Evidence: the stale Playwright expectation failure and corrected rerun are both recorded. The opt-in live API browser case remains skipped and is not claimed as passed.
 - Evidence: local browser product tests passed; the two opt-in live API/Keycloak browser cases were skipped and are not claimed as passed.
 
+## Checkpoint 8 changed files
+
+- Shared auth-client server modules now create random opaque sessions, retain OIDC state and PKCE verifier server-side, exchange authorization codes server-side, and proxy only channel-allowed Spring routes with the server-held bearer credential.
+- Customer, call-center, and staff Next apps expose same-origin `/api/session` login/callback/logout routes plus bounded catch-all BFF proxies; customer synthetic signup/login is exchanged server-side and returned without bearer or upstream session IDs.
+- Product components consume only public session metadata and no longer construct bearer headers, persist auth in Web Storage, or depend on a public Spring base URL.
+- Staff and call-center simulated actors are explicit dev/test-only BFF logins guarded by three opt-ins; legacy lab browser exchange requires its own disabled-by-default opt-in.
+- Customer and staff live Playwright flows now authenticate through the BFF. Call-center live Playwright completes real Keycloak code+PKCE through the product callback instead of inspecting a bearer in the lab panel.
+- CUS101 orders its two audited reads to avoid racing global audit hash-chain writes under SERIALIZABLE isolation.
+- Static security tests and boundary scripts assert HttpOnly/SameSite cookies, state/verifier lifetime, same-origin mutations, no redirects, no public upstream fallback, least-capability paths, and absence of browser credential storage.
+
+## Checkpoint 8 invariant/control review
+
+- Ledger: no posting service or balance projection changed. Ten PostgreSQL integration tests reconfirm HELD/BLOCKED/rejected paths create zero transfer postings and independent release creates one stable balanced transaction.
+- Ownership: another-customer transfer/account use is rejected before ledger posting; customer product API calls derive identity from the BFF-held token.
+- Reason/masking/audit: CUS101 and call-center live smokes use reason-required masked reads. The call-center integration suite rejects missing reason, verifies default masking, and records access audit.
+- Redaction: raw note content is redacted before persistence and is excluded from audit/journey payloads in the passing call-center integration suite.
+- Maker-checker: FDS and call-center self-approval attempts return `MAKER_CHECKER_SELF_APPROVAL_REJECTED`; separate branch manager approval remains required.
+- Session security: browser product code receives neither bearer tokens nor opaque credential IDs. Cookies are `HttpOnly`, `SameSite=Lax`, and HTTPS-secure; mutation requests require same origin and upstream redirects are not followed.
+- Deployment limit: the current server session map is a lab-only single-process implementation. Multi-instance deployment requires an expiring encrypted shared server-side store before production use.
+- Evidence: all three channel Compose smokes ran against disposable Spring/PostgreSQL state; call-center additionally used a real disposable Keycloak realm. Failed attempts and corrections remain recorded above.
+
 ## Next checkpoint
 
-Add registry-driven `FDS201` and journey-aware `TX101`, `APR101`, and `WRK003` staff views; support release/block requests, independent checker approval/rejection, and explicit release/block ledger outcomes under one `journeyId`.
+Add automated and manual WCAG 2.2 AA evidence for customer/call-center product screens, keyboard-only staff terminal coverage, and W3C `traceparent` propagation through BFF, audit, journey, and logs without raw PII or credentials.

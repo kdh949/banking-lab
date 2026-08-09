@@ -7,7 +7,6 @@ import {
   type CustomerAccountDetailDto,
   type CustomerAccountListItemDto,
   type Customer360Dto,
-  type CustomerAuthResponse,
   type CustomerJourneyDto,
   type CustomerProfileDto,
   type CustomerSelfServiceAccountOpeningRequestDto,
@@ -32,9 +31,29 @@ import {
 type StoredCustomerSession = {
   readonly customerId: string;
   readonly username: string;
-  readonly authorizationHeader: string;
   readonly expiresAt: string;
-  readonly sessionId: string;
+  readonly roles: readonly string[];
+  readonly mode: string;
+};
+
+type CustomerBffAuthResponse = {
+  readonly customer: {
+    readonly customerId: string;
+    readonly username: string;
+    readonly kycStatus: string;
+  };
+  readonly session: {
+    readonly customerId: string;
+  };
+  readonly expiresAt: string;
+  readonly replayed: boolean;
+  readonly bffSession: {
+    readonly customerId: string;
+    readonly displayName: string;
+    readonly roles: readonly string[];
+    readonly expiresAt: string;
+    readonly mode: string;
+  };
 };
 
 type UiError = {
@@ -51,8 +70,7 @@ type LoadState<T> =
   | { readonly status: "loaded"; readonly value: T }
   | { readonly status: "failed"; readonly error: UiError };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
-const sessionStorageKey = "bankingLabCustomerSyntheticSession";
+const apiBaseUrl = "same-origin opaque BFF";
 const transferResultStorageKey = "bankingLabCustomerTransferResults";
 
 export function CustomerSelfServiceHomeSurface() {
@@ -195,7 +213,7 @@ export function CustomerSelfServiceHomeSurface() {
 
   const visibleCards = cards.filter((card) => card.group === filter);
   const clearSession = () => {
-    clearStoredSession();
+    void clearStoredSession();
     setSession(null);
   };
 
@@ -306,7 +324,7 @@ export function CustomerSignupForm() {
   const [syntheticPhone, setSyntheticPhone] = useState("010-0000-0000");
   const [syntheticAddress, setSyntheticAddress] = useState("Synthetic self-service address");
   const [idempotencyKey, setIdempotencyKey] = useState(() => nextIdempotencyKey("CWB-SIGNUP"));
-  const [result, setResult] = useState<LoadState<CustomerAuthResponse>>({ status: "idle" });
+  const [result, setResult] = useState<LoadState<CustomerBffAuthResponse>>({ status: "idle" });
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -316,7 +334,7 @@ export function CustomerSignupForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createCustomerApiClient({ baseUrl: apiBaseUrl }).signupCustomer({
+      const response = await customerBffAuth("signup", {
         idempotencyKey,
         username,
         password,
@@ -324,8 +342,7 @@ export function CustomerSignupForm() {
         syntheticPhone,
         syntheticAddress
       });
-      saveSessionFromAuth(response);
-      setSession(readStoredSession());
+      setSession(storedSessionFromBff(response));
       setResult({ status: "loaded", value: response });
     } catch (error: unknown) {
       setResult({ status: "failed", error: parseError(error) });
@@ -382,7 +399,7 @@ export function CustomerLoginForm() {
   const [session, setSession] = useStoredSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [result, setResult] = useState<LoadState<CustomerAuthResponse>>({ status: "idle" });
+  const [result, setResult] = useState<LoadState<CustomerBffAuthResponse>>({ status: "idle" });
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -392,9 +409,8 @@ export function CustomerLoginForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createCustomerApiClient({ baseUrl: apiBaseUrl }).loginCustomer({ username, password });
-      saveSessionFromAuth(response);
-      setSession(readStoredSession());
+      const response = await customerBffAuth("login", { username, password });
+      setSession(storedSessionFromBff(response));
       setResult({ status: "loaded", value: response });
     } catch (error: unknown) {
       setResult({ status: "failed", error: parseError(error) });
@@ -402,12 +418,12 @@ export function CustomerLoginForm() {
   };
 
   const signOut = () => {
-    clearStoredSession();
+    void clearStoredSession();
     setSession(null);
   };
 
   return (
-    <SelfServiceShell title="Customer Login" status={session ? `Signed in · ${session.username}` : "No local session"}>
+    <SelfServiceShell title="Customer Login" status={session ? `Signed in · ${session.username}` : "No BFF session"}>
       <DemoFallbackBanner />
       <SelfServiceNav />
       <ChannelPanel title="Login" eyebrow="CWB-002">
@@ -423,6 +439,7 @@ export function CustomerLoginForm() {
           <div className="self-service-actions">
             <button type="submit" disabled={result.status === "loading"}>{result.status === "loading" ? "Signing in" : "Sign in"}</button>
             <button type="button" onClick={signOut} disabled={!session}>Clear session</button>
+            <a href="/api/session/login?returnTo=/">Sign in with Keycloak</a>
           </div>
         </form>
       </ChannelPanel>
@@ -1295,7 +1312,7 @@ function DemoFallbackBanner() {
   return (
     <ChannelPanel title="Demo Fallback" eyebrow="configuration">
       <p className="self-service-muted">
-        Live customer self-service calls are disabled because NEXT_PUBLIC_BANKING_API_BASE_URL is not configured. No hard-coded customer or account IDs are used on this route.
+        Live customer self-service calls are disabled because the same-origin BFF is unavailable. No hard-coded customer or account IDs are used on this route.
       </p>
     </ChannelPanel>
   );
@@ -1303,18 +1320,19 @@ function DemoFallbackBanner() {
 
 function SessionPanel({ session }: { readonly session: StoredCustomerSession }) {
   return (
-    <ChannelPanel title="Session" eyebrow="local synthetic token">
+    <ChannelPanel title="Session" eyebrow="opaque HttpOnly BFF session">
       <dl className="self-service-definition-list">
         <div><dt>Customer</dt><dd>{session.customerId}</dd></div>
         <div><dt>Username</dt><dd>{session.username}</dd></div>
-        <div><dt>Session</dt><dd>{session.sessionId}</dd></div>
+        <div><dt>Credential</dt><dd>HttpOnly cookie · not readable by browser JavaScript</dd></div>
         <div><dt>Expires</dt><dd>{session.expiresAt}</dd></div>
+        <div><dt>Mode</dt><dd>{session.mode}</dd></div>
       </dl>
     </ChannelPanel>
   );
 }
 
-function AuthResultPanel({ state }: { readonly state: LoadState<CustomerAuthResponse> }) {
+function AuthResultPanel({ state }: { readonly state: LoadState<CustomerBffAuthResponse> }) {
   return (
     <ChannelPanel title="Auth Result" eyebrow="structured state">
       <LoadBoundary state={state} idle="Submit credentials to create a session.">
@@ -1487,48 +1505,60 @@ function StructuredErrorPanel({ error }: { readonly error: UiError }) {
 function useStoredSession(): readonly [StoredCustomerSession | null, (session: StoredCustomerSession | null) => void] {
   const [session, setSession] = useState<StoredCustomerSession | null>(null);
   useEffect(() => {
-    setSession(readStoredSession());
+    fetch("/api/session", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => response.json() as Promise<{ readonly authenticated?: boolean; readonly customerId?: string; readonly displayName?: string; readonly roles?: readonly string[]; readonly expiresAt?: string; readonly mode?: string }>)
+      .then((value) => {
+        setSession(value.authenticated && value.customerId && value.expiresAt
+          ? {
+              customerId: value.customerId,
+              username: value.displayName ?? value.customerId,
+              roles: value.roles ?? ["CUSTOMER"],
+              expiresAt: value.expiresAt,
+              mode: value.mode ?? "OIDC"
+            }
+          : null);
+      })
+      .catch(() => setSession(null));
   }, []);
   return [session, setSession] as const;
 }
 
-function readStoredSession(): StoredCustomerSession | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const raw = window.localStorage.getItem(sessionStorageKey);
-  if (!raw) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as StoredCustomerSession;
-  } catch {
-    return null;
-  }
-}
-
-function saveSessionFromAuth(response: CustomerAuthResponse) {
-  const session: StoredCustomerSession = {
-    customerId: response.session.customerId,
-    username: response.customer.username,
-    authorizationHeader: `${response.tokenType} ${response.bearerToken}`,
-    expiresAt: response.expiresAt,
-    sessionId: response.session.sessionId
+function storedSessionFromBff(response: CustomerBffAuthResponse): StoredCustomerSession {
+  return {
+    customerId: response.bffSession.customerId,
+    username: response.bffSession.displayName,
+    roles: response.bffSession.roles,
+    expiresAt: response.bffSession.expiresAt,
+    mode: response.bffSession.mode
   };
-  window.localStorage.setItem(sessionStorageKey, JSON.stringify(session));
 }
 
-function clearStoredSession() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(sessionStorageKey);
-  }
+async function clearStoredSession() {
+  await fetch("/api/session", { method: "DELETE", credentials: "same-origin" });
 }
 
-function authedClient(session: StoredCustomerSession) {
+function authedClient(_session: StoredCustomerSession) {
   return createCustomerApiClient({
-    baseUrl: apiBaseUrl,
-    bearerToken: session.authorizationHeader
+    baseUrl: browserBffBaseUrl()
   });
+}
+
+async function customerBffAuth(action: "login" | "signup", command: Record<string, unknown>): Promise<CustomerBffAuthResponse> {
+  const response = await fetch("/api/session/customer-auth", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ action, command })
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new BankingApiError(response.status, body);
+  }
+  return JSON.parse(body) as CustomerBffAuthResponse;
+}
+
+function browserBffBaseUrl() {
+  return window.location.origin;
 }
 
 function rememberTransferResult(response: CustomerTransferResponse) {
@@ -1583,7 +1613,7 @@ function parseError(error: unknown): UiError {
 function demoFallbackError(): UiError {
   return {
     code: "DEMO_FALLBACK_API_NOT_CONFIGURED",
-    message: "NEXT_PUBLIC_BANKING_API_BASE_URL is not configured for this browser route."
+    message: "The same-origin customer BFF is not available for this browser route."
   };
 }
 

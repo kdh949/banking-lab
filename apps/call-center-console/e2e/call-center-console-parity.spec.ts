@@ -44,7 +44,7 @@ test("call-center console product workspace excludes lab evidence controls", asy
   await expect(page.getByLabel("Journey ID")).toBeVisible();
   await expect(page.getByRole("button", { name: "Search masked customer" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Request FDS handoff" })).toBeDisabled();
-  await expect(page.getByText("API configuration required")).toBeVisible();
+  await expect(page.getByText("Authenticated BFF session required")).toBeVisible();
 });
 
 test("call-center console lab catalog renders masked interaction manifests", async ({ page }) => {
@@ -98,31 +98,21 @@ test("call-center console executes Spring API-backed synthetic workflow when con
   await expect(workflowPanel).toContainText("COMPLAINT CMP-");
 });
 
-test("call-center console propagates live Keycloak agent and manager tokens when configured", async ({ page }) => {
+test("call-center console completes live Keycloak PKCE login through the opaque product BFF", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live call-center Keycloak browser smoke.");
 
-  await page.goto(`${baseUrl}/lab/evidence`);
+  await page.goto(`${baseUrl}/workspace`);
 
-  await page.getByRole("button", { name: "Sign in call-center agent with Keycloak" }).click();
+  await page.getByRole("link", { name: "Sign in with Keycloak" }).click();
   await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
   await signInWithKeycloak(page, "call-agent01", "call-agent01-pass");
 
-  const panel = page.getByTestId("api-backed-call-center-keycloak-login");
-  await expect(panel).toContainText("Keycloak call-center agent loaded", { timeout: 20_000 });
-  await expect(panel).toContainText("Bearer");
-  await expect(panel).toContainText("SYN-CUS");
-
-  await page.getByRole("button", { name: "Sign in call-center manager with Keycloak" }).click();
-  await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
-  await signInWithKeycloak(page, "call-manager01", "call-manager01-pass");
-
-  await expect(panel).toContainText("Keycloak call-center manager loaded", { timeout: 20_000 });
-  await expect(panel).toContainText("call-manager01");
-
-  await page.getByRole("button", { name: "Run Keycloak call-center workflow smoke" }).click();
-  await expect(panel).toContainText("Keycloak call-center workflow completed", { timeout: 20_000 });
-  await expect(panel).toContainText("CALL-");
-  await expect(panel).toContainText("CLOSED");
-  await expect(panel).toContainText("applied");
-  await expect(panel).toContainText("COMPLAINT CMP-");
+  await expect(page).toHaveURL(`${baseUrl}/workspace`, { timeout: 20_000 });
+  await expect(page.getByText(/call-agent01 · CALL_CENTER_AGENT · OIDC/u)).toBeVisible();
+  await page.getByRole("button", { name: "Simulate inbound call" }).click();
+  await page.getByLabel("Business reason").fill("Live Keycloak BFF masked lookup verification");
+  await page.getByLabel("Customer query").fill("SYN-CUS");
+  await page.getByRole("button", { name: "Search masked customer" }).click();
+  await expect(page.getByText("Masked customer context loaded and audited.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/010-\*\*\*\*/u).first()).toBeVisible();
 });

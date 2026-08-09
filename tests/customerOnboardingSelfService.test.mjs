@@ -214,11 +214,14 @@ test("Phase 4 customer account list recipient lookup and form routes are wired",
   assert.match(accountDetailPage, /CustomerAccountDetailView/);
   assert.match(transferPage, /CustomerTransferForm/);
   assert.match(resultPage, /CustomerTransferResultView/);
-  assert.match(selfService, /NEXT_PUBLIC_BANKING_API_BASE_URL/);
+  assert.match(selfService, /browserBffBaseUrl/);
+  assert.match(selfService, /\/api\/session\/customer-auth/);
+  assert.match(selfService, /opaque HttpOnly BFF session/);
   assert.match(selfService, /localStorage/);
   assert.match(selfService, /DEMO_FALLBACK_API_NOT_CONFIGURED/);
   assert.match(selfService, /CUSTOMER_SESSION_REQUIRED/);
   assert.match(selfService, /RECIPIENT_LOOKUP_REQUIRED/);
+  assert.doesNotMatch(selfService, /NEXT_PUBLIC_BANKING_API_BASE_URL|bearerToken|authorizationHeader|sessionStorage/);
   assert.doesNotMatch(selfService, /SYN-CUS-001/);
   assert.doesNotMatch(selfService, /ACC-SYN-001-001/);
 });

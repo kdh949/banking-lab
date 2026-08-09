@@ -7,7 +7,7 @@ const specDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..");
 const baseUrl = "http://localhost:3002";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
-const simulatorTokensEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED === "true";
+const simulatorLoginEnabled = process.env.BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED === "true";
 
 test("iWorks integrated terminal renders the shell and terminal-status data", async ({ page, request }) => {
   const terminalStatus = await request.get(`${baseUrl}/api/terminal-status`);
@@ -37,14 +37,16 @@ test("iWorks integrated terminal renders the shell and terminal-status data", as
 
 test("iWorks integrated terminal executes Spring staff API evidence when configured", async ({ page }) => {
   test.skip(
-    !apiBaseUrl || !simulatorTokensEnabled,
-    "Set BANKING_LAB_E2E_API_BASE_URL and NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=true to run the staff-terminal Spring API evidence smoke."
+    !apiBaseUrl || !simulatorLoginEnabled,
+    "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED=true to run the staff-terminal Spring API smoke through the opaque BFF."
   );
 
   await page.goto(baseUrl);
+  await page.getByRole("button", { name: "DEV 직원" }).click();
+  await expect(page.getByTestId("staff-bff-session")).toContainText("BRANCH_STAFF · SIMULATED");
   await page.getByRole("button", { name: "업무메뉴" }).click();
   await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
-  const workbench = page.getByTestId("terminal-api-client-provider");
+  const workbench = page.locator(".api-workbench");
   await page.locator(".api-form-panel").getByRole("button", { name: "조회" }).click();
 
   await expect(workbench).toContainText("SYN-CUS-001", { timeout: 15_000 });
@@ -76,7 +78,7 @@ test("iWorks integrated terminal exposes API-backed transaction codes inside the
 
   await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[CUS101] 고객 상세 조회");
-  await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Spring API");
+  await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Same-origin BFF");
 
   await page.getByRole("button", { name: /\[FDS201\].*FDS 보류 이체 심사/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[FDS201] FDS 보류 이체 심사");
@@ -128,7 +130,7 @@ test("iWorks integrated terminal source boundary keeps product and lab routes se
   const componentFiles = readdirSync(componentDir).sort();
 
   expect(appFiles).toEqual(["api", "globals.css", "lab", "layout.tsx", "page.tsx"]);
-  expect(readdirSync(path.join(appDir, "api")).sort()).toEqual(["terminal-status"]);
+  expect(readdirSync(path.join(appDir, "api")).sort()).toEqual(["[...path]", "session", "terminal-status"]);
   expect(componentFiles).toEqual(["integrated-terminal.css", "integrated-terminal.tsx", "terminal"]);
   expect(pageSource).toContain("IntegratedTerminalApp");
 

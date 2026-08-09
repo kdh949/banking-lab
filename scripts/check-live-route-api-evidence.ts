@@ -168,8 +168,10 @@ for (const marker of [
 }
 
 for (const marker of [
-  "signupCustomer",
-  "loginCustomer",
+  "customerBffAuth(\"signup\"",
+  "customerBffAuth(\"login\"",
+  "/api/session/customer-auth",
+  "opaque HttpOnly BFF session",
   "customerAccounts",
   "customerTransactions",
   "internalRecipientLookup",
@@ -220,7 +222,12 @@ const requiredCustomerRoutes = [
   "apps/customer-web/src/app/complaints/page.tsx",
   "apps/customer-web/src/app/complaints/[caseId]/page.tsx",
   "apps/customer-web/src/app/security/page.tsx",
-  "apps/customer-web/src/app/api/auth/keycloak-token/route.ts"
+  "apps/customer-web/src/app/api/auth/keycloak-token/route.ts",
+  "apps/customer-web/src/app/api/[...path]/route.ts",
+  "apps/customer-web/src/app/api/session/callback/route.ts",
+  "apps/customer-web/src/app/api/session/customer-auth/route.ts",
+  "apps/customer-web/src/app/api/session/login/route.ts",
+  "apps/customer-web/src/app/api/session/route.ts"
 ];
 
 for (const route of requiredCustomerRoutes) {
@@ -230,6 +237,11 @@ for (const route of requiredCustomerRoutes) {
 }
 
 const expectedStaffAppFiles = [
+  "apps/staff-terminal/src/app/api/[...path]/route.ts",
+  "apps/staff-terminal/src/app/api/session/callback/route.ts",
+  "apps/staff-terminal/src/app/api/session/login/route.ts",
+  "apps/staff-terminal/src/app/api/session/route.ts",
+  "apps/staff-terminal/src/app/api/session/simulated/route.ts",
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/staff-terminal/src/app/globals.css",
   "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
@@ -246,7 +258,7 @@ if (JSON.stringify(staffAppFiles) !== JSON.stringify(expectedStaffAppFiles)) {
 for (const marker of [
   "IntegratedTerminalApp",
   "/api/terminal-status",
-  "staff-terminal Spring API evidence smoke",
+  "iWorks integrated terminal executes Spring staff API evidence when configured",
   "staff-terminal-api-evidence",
   "CUS101",
   "FDS201",
@@ -351,7 +363,8 @@ for (const marker of [
   "banking-lab-synthetic-customer-auth",
   "core-banking-api",
   "customer-web-self-service-api-e2e-compose-smoke.json",
-  "signup -> login -> staff maker-checker account opening",
+  "signup -> opaque BFF login -> staff maker-checker account opening",
+  "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
   "Simulator tokens are enabled only by explicit dev/test environment variables"
 ]) {
   requireIncludes(customerApiComposeSmoke, marker, `customer-web API compose smoke is missing marker: ${marker}`, errors);
@@ -377,7 +390,7 @@ if (errors.length > 0) {
 }
 
 const evidence: EvidenceDocument = {
-  reviewDate: "2026-06-11",
+  reviewDate: "2026-08-10",
   syntheticOnly: true,
   status: liveRouteStatus,
   statusReason: liveRouteStatus === "pass"
@@ -400,6 +413,9 @@ const evidence: EvidenceDocument = {
         "/complaints",
         "/complaints/[caseId]",
         "/security",
+        "/api/session",
+        "/api/session/customer-auth",
+        "/api/[...path]",
         "/api/auth/keycloak-token"
       ],
       requiredEnvironment: [
@@ -439,6 +455,7 @@ const evidence: EvidenceDocument = {
       ],
       controls: [
         "synthetic signup and login",
+        "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
         "staff maker-checker account opening for synthetic E2E accounts",
         "masked owned-account read",
         "internal synthetic recipient lookup",
@@ -449,7 +466,7 @@ const evidence: EvidenceDocument = {
       ],
       notes: [
         customerWebLivePass
-          ? "The local disposable Compose smoke executed the signup/login/account-opening/accounts/transfer/history route flow."
+          ? "The local disposable Compose smoke executed signup, opaque BFF login, account opening, owned accounts, transfer, and HELD journey/status routes."
           : "The source coverage is present and environment-gated.",
         "This generated evidence does not claim hosted CI green, real-money execution, or real-provider integration."
       ]
@@ -461,11 +478,16 @@ const evidence: EvidenceDocument = {
       lastRunEvidencePath: staffTerminalLivePass ? staffTerminalRunEvidencePath : undefined,
       routes: [
         "/",
+        "/api/session",
+        "/api/session/simulated",
+        "/api/[...path]",
         "/api/terminal-status"
       ],
       requiredEnvironment: [
         "BANKING_LAB_E2E_API_BASE_URL",
-        "NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED"
+        "BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED",
+        "BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED",
+        "BANKING_LAB_DEV_SIMULATOR_TOKEN"
       ],
       playwrightSpecs: [
         "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
@@ -516,7 +538,8 @@ const evidence: EvidenceDocument = {
         "iWorks shell rendering",
         "terminal status route",
         "source boundary excludes retired staff route set",
-        "bounded Spring API evidence panel",
+        "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
+        "explicit three-flag simulated identity opt-in",
         "CUS101/ACC101/TX101 reason-required staff inquiries",
         "FDS201 held-transfer review and release/block approval requests",
         "APR101 approval inbox approve/reject actions",
@@ -524,7 +547,7 @@ const evidence: EvidenceDocument = {
         "WRK002 outbox retry/dead-letter visibility",
         "WRK003 workflow/audit/approval timeline visibility",
         "CALL101-CALL106 compact call-center workflow",
-        "simulator token opt-in required",
+        "BFF simulator login opt-in required",
         "reason-required staff customer detail",
         "approval inbox read through Spring API"
       ],
@@ -549,7 +572,7 @@ const evidence: EvidenceDocument = {
       command: customerWebComposeCommand,
       status: customerWebLivePass ? "pass" : "not-run",
       evidencePath: customerWebLivePass ? customerWebRunEvidencePath : undefined,
-      purpose: "Execute signup->login->staff account opening->accounts->transfer->history route/API smoke against disposable Compose."
+      purpose: "Execute signup->opaque BFF login->staff account opening->accounts->transfer->HELD journey route/API smoke against disposable Compose."
     },
     {
       id: "customer-web-keycloak-live-api",
@@ -561,14 +584,14 @@ const evidence: EvidenceDocument = {
       id: "staff-terminal-boundary",
       command: "npm run integrated-terminal:boundary-check",
       status: "pass",
-      purpose: "Confirm staff-terminal remains the current iWorks integrated shell and exposes only the bounded Spring API evidence panel, not the retired staff route set."
+      purpose: "Confirm staff-terminal remains the current iWorks integrated shell with bounded BFF/session routes, not the retired business page route set."
     },
     {
       id: "staff-terminal-live-api",
       command: staffTerminalComposeCommand,
       status: staffTerminalLivePass ? "pass" : "not-run",
       evidencePath: staffTerminalLivePass ? staffTerminalRunEvidencePath : undefined,
-      purpose: "Execute the iWorks shell plus bounded staff customer detail and approval inbox Spring API evidence smoke against disposable Compose."
+      purpose: "Execute the iWorks shell plus opaque staff BFF session and masked CUS101 Spring inquiry against disposable Compose."
     }
   ],
   checks: [
@@ -576,14 +599,14 @@ const evidence: EvidenceDocument = {
       id: "customer-web-compose-route-api-execution",
       status: customerWebLivePass ? "pass" : "partial",
       details: customerWebLivePass
-        ? "Customer-web local Compose smoke pass evidence exists for signup/login/account-opening/accounts/transfer/history route-to-API execution."
+        ? "Customer-web local Compose smoke pass evidence exists for signup, opaque BFF login, account opening, owned accounts, transfer, and HELD journey execution."
         : "Customer-web source coverage is present, but local Compose pass evidence has not been recorded."
     },
     {
       id: "staff-terminal-compose-route-api-execution",
       status: staffTerminalLivePass ? "pass" : "partial",
       details: staffTerminalLivePass
-        ? "Staff-terminal local Compose smoke pass evidence exists for the bounded Spring API evidence panel."
+        ? "Staff-terminal local Compose smoke pass evidence exists for the opaque BFF session and masked CUS101 inquiry."
         : "Staff-terminal source keeps the iWorks shell boundary, but local Compose pass evidence has not been recorded."
     },
     {

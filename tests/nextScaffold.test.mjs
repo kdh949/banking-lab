@@ -66,8 +66,11 @@ test("customer-web product route is journey-backed while lab routes preserve man
   assert.match(transferRoute, /CustomerTransferForm/);
   assert.match(supportRoute, /CustomerSupportHome/);
   assert.match(accountRoute, /CustomerAccountDetailView/);
-  assert.match(selfService, /signupCustomer/);
-  assert.match(selfService, /loginCustomer/);
+  assert.match(selfService, /customerBffAuth\("signup"/);
+  assert.match(selfService, /customerBffAuth\("login"/);
+  assert.match(selfService, /\/api\/session\/customer-auth/);
+  assert.match(selfService, /opaque HttpOnly BFF session/);
+  assert.doesNotMatch(selfService, /bearerToken|authorizationHeader|sessionStorage|NEXT_PUBLIC_BANKING_API_BASE_URL/);
   assert.match(selfService, /Service Hub/);
   assert.match(selfService, /CustomerSelfServiceHomeSurface/);
   assert.match(selfService, /customerAccounts/);

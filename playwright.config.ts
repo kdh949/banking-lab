@@ -37,7 +37,7 @@ export default defineConfig({
     }
   ],
   webServer: apps.map(([, workspace, port]) => ({
-    command: `${apiBaseUrl ? `NEXT_PUBLIC_BANKING_API_BASE_URL=${shellQuote(apiBaseUrl)} ` : ""}${paymentApiBaseUrl ? `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL=${shellQuote(paymentApiBaseUrl)} ` : ""}${notificationApiBaseUrl ? `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL=${shellQuote(notificationApiBaseUrl)} ` : ""}${keycloakBaseUrl ? `NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} BANKING_LAB_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} ` : ""}npm --workspace ${workspace} run dev`,
+    command: `${apiBaseUrl ? `BANKING_LAB_API_BASE_URL=${shellQuote(apiBaseUrl)} NEXT_PUBLIC_BANKING_API_BASE_URL=${shellQuote(apiBaseUrl)} ` : ""}${paymentApiBaseUrl ? `NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL=${shellQuote(paymentApiBaseUrl)} ` : ""}${notificationApiBaseUrl ? `NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL=${shellQuote(notificationApiBaseUrl)} ` : ""}${keycloakBaseUrl ? `NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} BANKING_LAB_KEYCLOAK_BASE_URL=${shellQuote(keycloakBaseUrl)} ` : ""}npm --workspace ${workspace} run dev`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

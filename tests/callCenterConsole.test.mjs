@@ -104,7 +104,7 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   assert.match(keycloakRealm, /"username": "call-agent01"/);
   assert.match(keycloakRealm, /"username": "call-manager01"/);
   assert.match(e2eSpec, /call-center console lab catalog renders masked interaction manifests/);
-  assert.match(e2eSpec, /call-center console propagates live Keycloak agent and manager tokens when configured/);
+  assert.match(e2eSpec, /call-center console completes live Keycloak PKCE login through the opaque product BFF/);
   assert.match(e2eSpec, /BANKING_LAB_E2E_KEYCLOAK_BASE_URL/);
   assert.equal(packageJson.scripts["test:call-center-console:keycloak-e2e-compose"], "bash scripts/run-call-center-keycloak-e2e-compose-smoke.sh");
   assert.match(liveComposeScript, /BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=false/);
@@ -112,6 +112,6 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   assert.match(liveComposeScript, /docker compose --profile platform up -d --build postgres keycloak core-banking/);
   assert.match(liveComposeScript, /call-agent01/);
   assert.match(liveComposeScript, /call-manager01/);
-  assert.match(liveComposeScript, /call-center console propagates live Keycloak/);
+  assert.match(liveComposeScript, /call-center console completes live Keycloak PKCE login through the opaque product BFF/);
   assert.ok(evidence.remainingLimits.every((limit) => !/No dedicated Next\.js call-center console shell/.test(limit)));
 });

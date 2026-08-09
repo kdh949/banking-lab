@@ -19,13 +19,10 @@ import {
   type CallCenterInteractionDto
 } from "@banking-lab/api-client/call-center";
 import { createRiskApiClient, type FdsCaseDto } from "@banking-lab/api-client/risk";
-import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import { DataTable, MaterialIcon, Panel } from "./primitives";
 import type { IconName, TableColumn, TableRow } from "./types";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
-const simulatorTokensEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED === "true";
-const apiReady = Boolean(apiBaseUrl) && simulatorTokensEnabled;
+const apiReady = true;
 
 type ApiState<T> =
   | { readonly status: "idle"; readonly message?: string }
@@ -105,10 +102,10 @@ function TerminalApiClientProvider({ children }: { readonly children: ReactNode 
     <div className="api-workbench">
       <div className={`api-connection-strip ${apiReady ? "is-ready" : "is-offline"}`} data-testid="terminal-api-client-provider">
         <span>
-          <MaterialIcon name="language" /> Spring API
+          <MaterialIcon name="language" /> Same-origin BFF
         </span>
-        <span>{apiBaseUrl || "NEXT_PUBLIC_BANKING_API_BASE_URL 미설정"}</span>
-        <span>{simulatorTokensEnabled ? "simulator-token opt-in" : "simulator-token 필요"}</span>
+        <span>HttpOnly opaque session</span>
+        <span>browser bearer 없음</span>
       </div>
       {children}
     </div>
@@ -116,55 +113,23 @@ function TerminalApiClientProvider({ children }: { readonly children: ReactNode 
 }
 
 function staffClient(actor: StaffActor) {
-  if (!apiReady) {
-    throw new Error("Spring API base URL 또는 simulator token opt-in이 필요합니다.");
-  }
-  const actorConfig = staffActorConfig(actor);
+  void actor;
   return createStaffApiClient({
-    baseUrl: apiBaseUrl,
-    bearerToken: createSimulatorBearerToken({
-      subject: actorConfig.subject,
-      audience: "core-banking-api",
-      roles: actorConfig.roles
-    })
+    baseUrl: window.location.origin
   });
 }
 
 function callCenterClient() {
-  if (!apiReady) {
-    throw new Error("Spring API base URL 또는 simulator token opt-in이 필요합니다.");
-  }
   return createCallCenterApiClient({
-    baseUrl: apiBaseUrl,
-    bearerToken: createSimulatorBearerToken({
-      subject: "call-agent01",
-      audience: "core-banking-api",
-      roles: ["CALL_CENTER_AGENT"]
-    })
+    baseUrl: window.location.origin
   });
 }
 
 function riskClient(actor: "reviewer" | "manager" = "reviewer") {
-  if (!apiReady) {
-    throw new Error("Spring API base URL 또는 simulator token opt-in이 필요합니다.");
-  }
-  const actorConfig = actor === "manager"
-    ? { subject: "branch-manager01", roles: ["BRANCH_MANAGER"] as const }
-    : { subject: "fds-reviewer01", roles: ["FDS_REVIEWER"] as const };
+  void actor;
   return createRiskApiClient({
-    baseUrl: apiBaseUrl,
-    bearerToken: createSimulatorBearerToken({
-      subject: actorConfig.subject,
-      audience: "core-banking-api",
-      roles: actorConfig.roles
-    })
+    baseUrl: window.location.origin
   });
-}
-
-function staffActorConfig(actor: StaffActor) {
-  return actor === "manager"
-    ? { subject: "branch-manager01", roles: ["BRANCH_MANAGER"] as const }
-    : { subject: "branch-staff01", roles: ["BRANCH_STAFF"] as const };
 }
 
 function ReasonRequiredPanel({ reason, onReasonChange }: { readonly reason: string; readonly onReasonChange: (value: string) => void }) {
@@ -226,7 +191,7 @@ function ApprovalActionPanel({
         </div>
         <div>
           <dt>checker</dt>
-          <dd>branch-manager01</dd>
+          <dd>manager01</dd>
         </div>
         <div>
           <dt>approvalId</dt>
@@ -234,7 +199,7 @@ function ApprovalActionPanel({
         </div>
         <div>
           <dt>self approval</dt>
-          <dd>{selected?.requestedBy === "branch-manager01" ? "차단 대상" : "분리"}</dd>
+          <dd>{selected?.requestedBy === "manager01" ? "차단 대상" : "분리"}</dd>
         </div>
       </dl>
       <div>
@@ -321,10 +286,10 @@ export function StaffCustomerInquiryScreen() {
   const runSearch = async () => {
     setState({ status: "running", message: "CUS101 조회 중" });
     try {
-      const [search, detail] = await Promise.all([
-        staffClient("staff").staffCustomerSearch(query, reason),
-        staffClient("staff").staffCustomerDetail(customerId, reason)
-      ]);
+      // Both reads append to the global audit hash chain. Keep them ordered so
+      // SERIALIZABLE audit writes cannot race each other in the same screen action.
+      const search = await staffClient("staff").staffCustomerSearch(query, reason);
+      const detail = await staffClient("staff").staffCustomerDetail(customerId, reason);
       setState({ status: "loaded", data: { auditEventId: detail.auditEventId || search.auditEventId, customers: search.items, detail: detail.item } });
     } catch (error) {
       setState({ status: "failed", error });
@@ -473,14 +438,14 @@ export function FdsReviewScreen() {
       let approvalId: string | null | undefined;
       if (action === "assign") {
         selected = await client.assignFdsCase(caseId, {
-          actorId: "fds-reviewer01",
+          actorId: "risk01",
           actorRole: "FDS_REVIEWER",
-          owner: "fds-reviewer01",
+          owner: "risk01",
           reason
         });
       } else if (action === "release") {
         const response = await client.requestFdsRelease(caseId, {
-          actorId: "fds-reviewer01",
+          actorId: "risk01",
           requestedByRole: "FDS_REVIEWER",
           reason
         });
@@ -488,7 +453,7 @@ export function FdsReviewScreen() {
         approvalId = response.approval.approvalId;
       } else if (action === "block") {
         const response = await client.requestFdsBlock(caseId, {
-          actorId: "fds-reviewer01",
+          actorId: "risk01",
           requestedByRole: "FDS_REVIEWER",
           reason
         });
@@ -555,7 +520,7 @@ export function FdsReviewScreen() {
           ["approvalId", data?.approvalId ?? data?.selected?.approvalId ?? "-"],
           ["alerts", data?.selected?.alerts.map((alert) => alert.ruleId).join(", ") ?? "-"],
           ["ledger mutation", data?.selected?.transferStatus === "POSTED" ? "checker 승인 후 balanced posting 1건" : "없음"],
-          ["maker/checker", "fds-reviewer01 / branch-manager01"]
+          ["maker/checker", "risk01 / manager01"]
         ]}
       />
       <JourneyPanel journey={data?.journey} />
@@ -611,8 +576,8 @@ export function ApprovalInboxScreen() {
       const client = staffClient("manager");
       const response =
         action === "approve"
-          ? await client.approveStaffApproval(selected.approvalId, { approvedBy: "branch-manager01", approvedByRole: "BRANCH_MANAGER", screenId: "APR101" })
-          : await client.rejectStaffApproval(selected.approvalId, { rejectedBy: "branch-manager01", rejectedByRole: "BRANCH_MANAGER", rejectReason, screenId: "APR101" });
+          ? await client.approveStaffApproval(selected.approvalId, { approvedBy: "manager01", approvedByRole: "BRANCH_MANAGER", screenId: "APR101" })
+          : await client.rejectStaffApproval(selected.approvalId, { rejectedBy: "manager01", rejectedByRole: "BRANCH_MANAGER", rejectReason, screenId: "APR101" });
       const approvals = await client.staffApprovals();
       const fdsCase = response.fdsCase ?? undefined;
       const ledgerTransaction = "ledgerTransaction" in response ? response.ledgerTransaction : undefined;
@@ -784,7 +749,7 @@ export function CommandWorkbenchScreen() {
     try {
       const client = staffClient("staff");
       const baseCommand = {
-        requestedBy: "branch-staff01",
+        requestedBy: "branch01",
         requestedByRole: "BRANCH_STAFF",
         reason,
         reasonCode: "CUSTOMER_REQUEST",
@@ -812,8 +777,8 @@ export function CommandWorkbenchScreen() {
           approvalId: response.approval?.approvalId,
           status: item && "status" in item ? String(item.status) : undefined,
           idempotencyKey,
-          makerActor: "branch-staff01",
-          checkerActor: "branch-manager01",
+          makerActor: "branch01",
+          checkerActor: "manager01",
           ledgerMutation: commandType === "fee" || commandType === "correction" ? "승인 후 balanced adjustment/reversal" : "request 단계 mutation 없음",
           businessReferenceId: item && "businessReferenceId" in item ? String(item.businessReferenceId) : undefined
         }
@@ -857,7 +822,7 @@ export function CommandWorkbenchScreen() {
           ["approvalId", state.status === "loaded" ? state.data.approvalId ?? "-" : "-"],
           ["businessReferenceId", state.status === "loaded" ? state.data.businessReferenceId ?? "-" : "-"],
           ["idempotencyKey", state.status === "loaded" ? state.data.idempotencyKey : idempotencyKey],
-          ["maker/checker", state.status === "loaded" ? `${state.data.makerActor} / ${state.data.checkerActor}` : "branch-staff01 / branch-manager01"],
+          ["maker/checker", state.status === "loaded" ? `${state.data.makerActor} / ${state.data.checkerActor}` : "branch01 / manager01"],
           ["ledger mutation", state.status === "loaded" ? state.data.ledgerMutation : "승인 전 없음"],
           ["status", state.status === "loaded" ? state.data.status ?? "-" : "-"]
         ]}

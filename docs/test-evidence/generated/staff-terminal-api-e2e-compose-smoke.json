@@ -1,6 +1,6 @@
 {
   "reviewDate": "2026-06-11",
-  "executedAt": "2026-06-10T18:47:10.532Z",
+  "executedAt": "2026-08-09T23:30:34.841Z",
   "issue": "https://github.com/kdh949/banking-lab/issues/90",
   "status": "pass",
   "syntheticOnly": true,
@@ -8,16 +8,18 @@
   "hostedCiGreenClaim": false,
   "app": "staff-terminal",
   "command": "npm run test:staff-terminal:api-e2e-compose",
-  "scenario": "iWorks integrated terminal shell -> bounded Spring API evidence panel",
+  "scenario": "iWorks integrated terminal shell -> explicit dev branch-staff BFF session -> CUS101 masked Spring inquiry",
   "controls": [
     "iWorks shell rendering",
     "terminal status route",
-    "bounded Spring API evidence panel",
+    "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
+    "explicit three-flag simulated identity opt-in",
     "reason-required staff customer detail",
     "approval inbox read"
   ],
   "notes": [
     "Executed against disposable PostgreSQL and Spring Boot core-banking Compose services.",
+    "CUS101 reached Spring only through the same-origin BFF and rendered the masked, reason-audited result.",
     "Simulator tokens are enabled only by explicit dev/test environment variables in this wrapper.",
     "This evidence does not restore retired staff route pages or use real customer money, real PII, real KYC/AML providers, real card networks, real payment networks, or external financial institution APIs."
   ]

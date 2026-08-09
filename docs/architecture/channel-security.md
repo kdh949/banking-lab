@@ -6,7 +6,7 @@
 Browser product route
   -> Next.js BFF/session boundary
        -> OIDC Authorization Code + PKCE
-       -> encrypted/httpOnly/SameSite session cookie
+       -> random opaque HttpOnly/SameSite session cookie
        -> server-side bearer token handling
   -> Spring Resource Server
        -> token ownership or staff role policy
@@ -16,7 +16,11 @@ Browser product route
   -> Notification Service inbox and synthetic provider sink
 ```
 
-Browser product JavaScript must not receive, read, log, or persist bearer tokens. OIDC state and PKCE verifier are short-lived server-session data. An explicit `/lab/*` simulator may use a test token only when both dev/test opt-ins are enabled and the UI labels the mode `SIMULATED`.
+Browser product JavaScript must not receive, read, log, or persist bearer tokens. OIDC state and PKCE verifier are short-lived server-session data. The BFF forwards only a channel-specific API capability allowlist and attaches the bearer credential server-side. Mutations require a matching `Origin`, redirects are not followed across the proxy boundary, and responses are `no-store`.
+
+The current opaque-session store is intentionally process-local for the single-instance lab and disposable Compose tests. A multi-instance deployment must replace it with an encrypted, expiring shared server-side store such as Redis before production use; sticky sessions are not treated as sufficient durability. The opaque cookie contains only a random lookup key and uses `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS.
+
+Product-route simulated identity requires all three explicit dev/test opt-ins: `BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED`, `BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED`, and `BANKING_LAB_DEV_SIMULATOR_TOKEN`. Legacy browser token exchange remains restricted to `/lab/*` evidence and additionally requires `BANKING_LAB_LAB_BROWSER_TOKEN_EXCHANGE_ENABLED`; it is disabled by default.
 
 ## Customer boundary
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createCallCenterApiClient,
   type CallCenterCustomerSummaryDto,
@@ -21,9 +21,17 @@ import {
 type SoftphoneState = "IDLE" | "RINGING" | "CONNECTED" | "WRAP_UP";
 type ActionState = "IDLE" | "RUNNING" | "DONE" | "FAILED";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
+type BffSession = {
+  readonly authenticated: true;
+  readonly subject: string;
+  readonly roles: readonly string[];
+  readonly displayName: string;
+  readonly expiresAt: string;
+  readonly mode: string;
+};
 
 export function CallCenterWorkspace() {
+  const [session, setSession] = useState<BffSession | null>(null);
   const [softphone, setSoftphone] = useState<SoftphoneState>("IDLE");
   const [query, setQuery] = useState("");
   const [reason, setReason] = useState("");
@@ -37,9 +45,45 @@ export function CallCenterWorkspace() {
   const [state, setState] = useState<ActionState>("IDLE");
   const [message, setMessage] = useState("Enter a business reason before customer lookup.");
 
-  const client = () => createCallCenterApiClient({ baseUrl: apiBaseUrl });
-  const ready = Boolean(apiBaseUrl);
+  useEffect(() => {
+    void refreshSession();
+  }, []);
+
+  const client = () => createCallCenterApiClient({ baseUrl: window.location.origin });
+  const ready = Boolean(session?.roles.includes("CALL_CENTER_AGENT") || session?.roles.includes("CALL_CENTER_MANAGER"));
   const validReason = reason.trim().length >= 3;
+
+  const refreshSession = async () => {
+    try {
+      const response = await fetch("/api/session", { cache: "no-store", credentials: "same-origin" });
+      const value = await response.json() as BffSession | { readonly authenticated: false };
+      setSession(value.authenticated ? value as BffSession : null);
+    } catch {
+      setSession(null);
+      setState("FAILED");
+      setMessage("The BFF session endpoint is unavailable.");
+    }
+  };
+
+  const simulatedLogin = async () => {
+    const response = await fetch("/api/session/simulated", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ actorKey: "call-agent" })
+    });
+    if (!response.ok) {
+      setState("FAILED");
+      setMessage("Simulated BFF login is disabled; use Keycloak or explicit dev/test opt-in.");
+      return;
+    }
+    await refreshSession();
+  };
+
+  const signOut = async () => {
+    await fetch("/api/session", { method: "DELETE", credentials: "same-origin" });
+    setSession(null);
+  };
 
   const run = async (action: () => Promise<void>) => {
     setState("RUNNING");
@@ -76,9 +120,9 @@ export function CallCenterWorkspace() {
       journeyId: journeyId || null,
       channel: "PHONE",
       contactReasonCode: "HELD_TRANSFER_STATUS",
-      requestedBy: "call-agent01",
-      requestedByRole: "CALL_CENTER_AGENT",
-      assignedTo: "call-agent01",
+      requestedBy: session?.subject,
+      requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
+      assignedTo: session?.subject,
       reason,
       metadata: { syntheticOnly: true, softphone: "SIMULATED" }
     });
@@ -95,8 +139,8 @@ export function CallCenterWorkspace() {
       throw new Error("Start an interaction before adding a note.");
     }
     const response = await client().addCallCenterNote(interaction.interactionId, {
-      requestedBy: "call-agent01",
-      requestedByRole: "CALL_CENTER_AGENT",
+      requestedBy: session?.subject,
+      requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
       reason,
       noteBody
     });
@@ -114,8 +158,8 @@ export function CallCenterWorkspace() {
       throw new Error("Start an interaction before FDS handoff.");
     }
     const response = await client().escalateCallCenterInteraction(interaction.interactionId, {
-      requestedBy: "call-agent01",
-      requestedByRole: "CALL_CENTER_AGENT",
+      requestedBy: session?.subject,
+      requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
       reason,
       escalationType: "FDS",
       metadata: { journeyId: journeyId || null, syntheticOnly: true }
@@ -147,11 +191,20 @@ export function CallCenterWorkspace() {
         <ChannelMetric label="FDS handoff" value={escalation?.status ?? "Ready"} detail="Held transfer remains unposted" />
       </ChannelMetricGrid>
 
-      {!ready ? (
-        <ChannelPanel title="API configuration required" eyebrow="product boundary">
-          <p>NEXT_PUBLIC_BANKING_API_BASE_URL is not configured. Product controls remain disabled; lab API evidence stays under `/lab/evidence`.</p>
+      {!session || !ready ? (
+        <ChannelPanel title="Authenticated BFF session required" eyebrow="product boundary">
+          <p>Product controls call Spring only through a same-origin BFF. Browser JavaScript cannot read the HttpOnly session credential or bearer token.</p>
+          <div className="call-actions">
+            <a href="/api/session/login?returnTo=/workspace">Sign in with Keycloak</a>
+            <button type="button" onClick={() => void simulatedLogin()}>Dev/test simulated agent</button>
+          </div>
         </ChannelPanel>
-      ) : null}
+      ) : (
+        <ChannelPanel title="Agent session" eyebrow="opaque HttpOnly BFF session">
+          <p>{session.displayName} · {session.roles.join(", ")} · {session.mode}</p>
+          <button type="button" onClick={() => void signOut()}>Sign out</button>
+        </ChannelPanel>
+      )}
 
       <section className="call-workspace-grid" aria-label="Call-center held-transfer workspace">
         <ChannelPanel title="Softphone simulator" eyebrow="no live telephony" meta={<ChannelBadge>{softphone}</ChannelBadge>}>

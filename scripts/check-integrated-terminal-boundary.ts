@@ -7,6 +7,11 @@ const requiredPaths = [
   "apps/staff-terminal/src/app/page.tsx",
   "apps/staff-terminal/src/app/layout.tsx",
   "apps/staff-terminal/src/app/globals.css",
+  "apps/staff-terminal/src/app/api/[...path]/route.ts",
+  "apps/staff-terminal/src/app/api/session/callback/route.ts",
+  "apps/staff-terminal/src/app/api/session/login/route.ts",
+  "apps/staff-terminal/src/app/api/session/route.ts",
+  "apps/staff-terminal/src/app/api/session/simulated/route.ts",
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
   "apps/staff-terminal/src/app/lab/evidence/page.tsx",
@@ -15,7 +20,9 @@ const requiredPaths = [
   "apps/staff-terminal/src/components/integrated-terminal.css",
   "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx",
   "apps/staff-terminal/src/components/terminal/api-screens.tsx",
+  "apps/staff-terminal/src/components/terminal/session-boundary.tsx",
   "apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx",
+  "apps/staff-terminal/src/server/bff.ts",
   "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
 ];
 
@@ -43,6 +50,11 @@ const removedPaths = [
 ];
 
 const allowedAppFiles = new Set([
+  "apps/staff-terminal/src/app/api/[...path]/route.ts",
+  "apps/staff-terminal/src/app/api/session/callback/route.ts",
+  "apps/staff-terminal/src/app/api/session/login/route.ts",
+  "apps/staff-terminal/src/app/api/session/route.ts",
+  "apps/staff-terminal/src/app/api/session/simulated/route.ts",
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/staff-terminal/src/app/globals.css",
   "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
@@ -152,6 +164,18 @@ const terminalStatusSource = await readFile("apps/staff-terminal/src/app/api/ter
 for (const marker of ["clientIp", "serverTimeIso", "NextRequest"]) {
   if (!terminalStatusSource.includes(marker)) {
     errors.push(`terminal-status route must expose ${marker}.`);
+  }
+}
+
+const sessionBoundarySource = await readFile("apps/staff-terminal/src/components/terminal/session-boundary.tsx", "utf8");
+for (const marker of ["/api/session/login", "/api/session/simulated", "HttpOnly BFF session", "branch-staff", "fds-reviewer", "branch-manager"]) {
+  if (!sessionBoundarySource.includes(marker)) {
+    errors.push(`staff session boundary must expose ${marker}.`);
+  }
+}
+for (const forbidden of ["bearerToken", "authorizationHeader", "sessionStorage", "localStorage", "NEXT_PUBLIC_BANKING_API_BASE_URL"]) {
+  if (sessionBoundarySource.includes(forbidden)) {
+    errors.push(`staff session boundary must not expose browser credential marker: ${forbidden}.`);
   }
 }
 

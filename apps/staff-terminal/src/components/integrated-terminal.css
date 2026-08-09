@@ -9,6 +9,46 @@
   letter-spacing: 0;
 }
 
+.staff-bff-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1600px, calc(100vw - 24px));
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  border: 1px solid #9bb0c8;
+  background: #eef5fb;
+  color: #17324f;
+}
+
+.staff-bff-session > div:first-child,
+.staff-bff-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.staff-bff-session small {
+  color: #4b6279;
+}
+
+.staff-bff-session-actions a,
+.staff-bff-session-actions button {
+  min-height: 30px;
+  border: 1px solid #6b86a4;
+  background: #fff;
+  color: #17324f;
+  padding: 4px 8px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.staff-bff-session-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .staff-lab-root {
   min-width: 0;
   overflow: auto;

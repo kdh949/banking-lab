@@ -1,11 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { createBankingApiClient, type AccountOpeningExecuteResponse, type CustomerAuthResponse } from "@banking-lab/api-client";
+import { createBankingApiClient, type AccountOpeningExecuteResponse } from "@banking-lab/api-client";
 
 const baseUrl = "http://localhost:3001";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
 const staffMakerBearerToken = process.env.BANKING_LAB_E2E_STAFF_MAKER_BEARER_TOKEN ?? "";
 const staffCheckerBearerToken = process.env.BANKING_LAB_E2E_STAFF_CHECKER_BEARER_TOKEN ?? "";
-const sessionStorageKey = "bankingLabCustomerSyntheticSession";
 
 test("customer profile onboarding 360 statements and artifacts smoke when synthetic API is configured", async ({ page }) => {
   test.skip(
@@ -93,7 +92,7 @@ test("customer profile onboarding 360 statements and artifacts smoke when synthe
   expect(artifacts.items.some((item) => item.statementId === accountStatement.statementId)).toBe(true);
   expect(artifacts.items.some((item) => item.statementId === consolidatedStatement.statementId)).toBe(true);
 
-  await seedBrowserSession(page, login);
+  await establishBrowserBffSession(page, username, password);
   await page.goto(`${baseUrl}/profile`);
   await expect(page.getByRole("heading", { name: "Customer Profile" }).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(profile.maskedPhone ?? "CUSTOMER_SELF").first()).toBeVisible({ timeout: 15_000 });
@@ -159,20 +158,11 @@ async function openSyntheticAccount(input: {
   });
 }
 
-async function seedBrowserSession(page: Page, auth: CustomerAuthResponse) {
+async function establishBrowserBffSession(page: Page, username: string, password: string) {
   await page.goto(`${baseUrl}/login`);
-  await page.evaluate((session) => {
-    window.localStorage.setItem("bankingLabCustomerSyntheticSession", JSON.stringify(session));
-  }, {
-    customerId: auth.session.customerId,
-    username: auth.customer.username,
-    authorizationHeader: `${auth.tokenType} ${auth.bearerToken}`,
-    expiresAt: auth.expiresAt,
-    sessionId: auth.session.sessionId
-  });
-  await page.evaluate((key) => {
-    if (!window.localStorage.getItem(key)) {
-      throw new Error("Synthetic customer session was not stored.");
-    }
-  }, sessionStorageKey);
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("CUSTOMER_SESSION_ACTIVE")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("HttpOnly cookie · not readable by browser JavaScript")).toBeVisible();
 }
