@@ -278,10 +278,14 @@ class CustomerTransferApiParityIntegrationTest {
     @Test
     fun `customer transfer holds and failed attempts are durable statuses without ledger postings`() {
         val beforeCount = countRows("ledger_transactions")
+        val requestId = "REQ-CWB-TRACE-HELD"
+        val traceId = "4bf92f3577b34da6a3ce929d0e0e4736"
 
         val held = mockMvc.perform(
             post("/api/customer/transfers")
                 .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+                .header("x-request-id", requestId)
+                .header("traceparent", "00-$traceId-00f067aa0ba902b7-01")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -307,6 +311,28 @@ class CustomerTransferApiParityIntegrationTest {
         val heldItem = objectMapper.readTree(held.response.contentAsString).path("item")
         val heldCaseId = heldItem.path("caseId").asText()
         val journeyId = heldItem.path("journeyId").asText()
+        val heldResultId = heldItem.path("resultId").asText()
+
+        val journeyCorrelation = jdbc.queryForMap(
+            """
+            SELECT trace_id, request_id
+            FROM business_journey_events
+            WHERE journey_id = :journeyId AND event_type = 'TRANSFER_HELD'
+            """.trimIndent(),
+            mapOf("journeyId" to journeyId)
+        )
+        assertEquals(traceId, journeyCorrelation["trace_id"])
+        assertEquals(requestId, journeyCorrelation["request_id"])
+        val auditCorrelation = jdbc.queryForMap(
+            """
+            SELECT payload_json ->> 'traceId' AS trace_id, payload_json ->> 'requestId' AS request_id
+            FROM audit_events
+            WHERE business_reference_id = :resultId AND event_type = 'COMMAND_REQUESTED'
+            """.trimIndent(),
+            mapOf("resultId" to heldResultId)
+        )
+        assertEquals(traceId, auditCorrelation["trace_id"])
+        assertEquals(requestId, auditCorrelation["request_id"])
 
         mockMvc.perform(
             get("/api/customer/journeys/$journeyId")

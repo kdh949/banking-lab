@@ -18,7 +18,7 @@ import {
   ChannelTable
 } from "../../../../packages/channel-ui/src/operator-workbench";
 
-type SoftphoneState = "IDLE" | "RINGING" | "CONNECTED" | "WRAP_UP";
+type SoftphoneState = "IDLE" | "RINGING" | "CONNECTED" | "HOLD" | "AFTER_CALL";
 type ActionState = "IDLE" | "RUNNING" | "DONE" | "FAILED";
 
 type BffSession = {
@@ -176,8 +176,9 @@ export function CallCenterWorkspace() {
     const next: Record<SoftphoneState, SoftphoneState> = {
       IDLE: "RINGING",
       RINGING: "CONNECTED",
-      CONNECTED: "WRAP_UP",
-      WRAP_UP: "IDLE"
+      CONNECTED: "HOLD",
+      HOLD: "AFTER_CALL",
+      AFTER_CALL: "IDLE"
     };
     setSoftphone(next[softphone]);
   };
@@ -208,7 +209,7 @@ export function CallCenterWorkspace() {
 
       <section className="call-workspace-grid" aria-label="Call-center held-transfer workspace">
         <ChannelPanel title="Softphone simulator" eyebrow="no live telephony" meta={<ChannelBadge>{softphone}</ChannelBadge>}>
-          <p>Advance a synthetic inbound call through ring, connected, and wrap-up states.</p>
+          <p>Advance a synthetic inbound call through ringing, connected, hold, and after-call states.</p>
           <button type="button" onClick={advanceSoftphone}>{softphone === "IDLE" ? "Simulate inbound call" : "Advance call state"}</button>
         </ChannelPanel>
 

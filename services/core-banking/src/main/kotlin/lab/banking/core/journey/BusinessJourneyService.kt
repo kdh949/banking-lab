@@ -2,6 +2,7 @@ package lab.banking.core.journey
 
 import io.micrometer.tracing.Tracer
 import lab.banking.core.audit.AuditEventAppender
+import lab.banking.core.observability.RequestCorrelation
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.beans.factory.ObjectProvider
@@ -33,7 +34,7 @@ class BusinessJourneyService(
             actorRole = "CUSTOMER",
             reason = command.reason,
             traceId = currentTraceId(),
-            requestId = null,
+            requestId = RequestCorrelation.currentRequestId(),
             payload = mapOf("ledgerTransactionCount" to 0)
         )
         return journeyId
@@ -67,7 +68,7 @@ class BusinessJourneyService(
             actorRole = actorRole,
             reason = reason,
             traceId = currentTraceId(),
-            requestId = requestId,
+            requestId = requestId ?: RequestCorrelation.currentRequestId(),
             payload = payload
         )
     }
@@ -167,7 +168,9 @@ class BusinessJourneyService(
     }
 
     private fun currentTraceId(): String? =
-        tracerProvider.ifAvailable?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() }
+        RequestCorrelation.currentTraceId()
+            ?: tracerProvider.ifAvailable?.currentSpan()?.context()?.traceId()
+                ?.takeIf { it.length == 32 && it.any { character -> character != '0' } }
 
     private fun customerStatusMessage(status: String): String = when (status) {
         "HELD", "INVESTIGATING", "PENDING_APPROVAL" -> "Security review in progress"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "node:crypto";
 import { createOidcAuthorizationUrl, createSimulatorBearerToken } from "./index";
 import {
   authenticatedBffSession,
@@ -255,12 +256,21 @@ export function createNextBffHandlers(config: NextBffConfig) {
     }
     const targetUrl = new URL(targetPath, upstream);
     targetUrl.search = request.nextUrl.search;
-    const headers = new Headers({ Accept: request.headers.get("accept") ?? "application/json", Authorization: session.bearerToken });
-    for (const name of ["content-type", "x-request-id", "traceparent", "tracestate"]) {
-      const value = request.headers.get(name);
-      if (value) {
-        headers.set(name, value);
-      }
+    const requestId = safeRequestId(request.headers.get("x-request-id")) ?? newRequestId();
+    const traceparent = safeTraceparent(request.headers.get("traceparent")) ?? newTraceparent();
+    const headers = new Headers({
+      Accept: request.headers.get("accept") ?? "application/json",
+      Authorization: session.bearerToken,
+      "x-request-id": requestId,
+      traceparent
+    });
+    const contentType = request.headers.get("content-type");
+    if (contentType) {
+      headers.set("content-type", contentType);
+    }
+    const tracestate = safeTracestate(request.headers.get("tracestate"));
+    if (tracestate) {
+      headers.set("tracestate", tracestate);
     }
     try {
       const upstreamResponse = await fetch(targetUrl, {
@@ -274,15 +284,14 @@ export function createNextBffHandlers(config: NextBffConfig) {
         "Content-Type": upstreamResponse.headers.get("content-type") ?? "application/json",
         "Cache-Control": "no-store"
       });
-      for (const name of ["x-request-id", "traceparent"]) {
-        const value = upstreamResponse.headers.get(name);
-        if (value) {
-          responseHeaders.set(name, value);
-        }
-      }
+      responseHeaders.set("x-request-id", safeRequestId(upstreamResponse.headers.get("x-request-id")) ?? requestId);
+      responseHeaders.set("traceparent", safeTraceparent(upstreamResponse.headers.get("traceparent")) ?? traceparent);
       return new NextResponse(await upstreamResponse.arrayBuffer(), { status: upstreamResponse.status, headers: responseHeaders });
     } catch {
-      return structuredError(502, "DEPENDENCY_UNAVAILABLE", "Core banking API request failed at the BFF boundary");
+      const response = structuredError(502, "DEPENDENCY_UNAVAILABLE", "Core banking API request failed at the BFF boundary");
+      response.headers.set("x-request-id", requestId);
+      response.headers.set("traceparent", traceparent);
+      return response;
     }
   }
 
@@ -362,4 +371,34 @@ function structuredError(status: number, code: string, message: string): NextRes
 
 function csrfDenied(): NextResponse {
   return structuredError(403, "AUTHORIZATION_POLICY_VIOLATION", "Same-origin BFF request is required");
+}
+
+const requestIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const traceparentPattern = /^00-([0-9a-f]{32})-([0-9a-f]{16})-(00|01)$/u;
+
+function safeRequestId(value: string | null): string | null {
+  const normalized = value?.trim() ?? "";
+  return requestIdPattern.test(normalized) ? normalized : null;
+}
+
+function safeTraceparent(value: string | null): string | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  const match = traceparentPattern.exec(normalized);
+  if (!match || /^0{32}$/u.test(match[1]) || /^0{16}$/u.test(match[2])) {
+    return null;
+  }
+  return normalized;
+}
+
+function safeTracestate(value: string | null): string | null {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 0 && normalized.length <= 512 && /^[\x20-\x7e]+$/u.test(normalized) ? normalized : null;
+}
+
+function newRequestId(): string {
+  return `REQ-${randomBytes(12).toString("hex").toUpperCase()}`;
+}
+
+function newTraceparent(): string {
+  return `00-${randomBytes(16).toString("hex")}-${randomBytes(8).toString("hex")}-01`;
 }

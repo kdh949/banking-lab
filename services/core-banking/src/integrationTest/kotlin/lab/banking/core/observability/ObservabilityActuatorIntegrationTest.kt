@@ -111,15 +111,31 @@ class ObservabilityActuatorIntegrationTest {
 
     @Test
     fun `HTTP access log carries request trace and span correlation ids`(output: CapturedOutput) {
-        mockMvc.perform(get("/health").header("x-request-id", "REQ-OTEL-CORRELATION"))
+        val traceId = "4bf92f3577b34da6a3ce929d0e0e4736"
+        mockMvc.perform(
+            get("/health")
+                .header("x-request-id", "REQ-OTEL-CORRELATION")
+                .header("traceparent", "00-$traceId-00f067aa0ba902b7-01")
+        )
             .andExpect(status().isOk)
 
         assertThat(output.out)
             .contains("observability.access")
             .contains("path=/health")
             .contains("requestId=REQ-OTEL-CORRELATION")
-            .containsPattern("traceId=[a-f0-9]{32}")
+            .contains("traceId=$traceId")
             .containsPattern("spanId=[a-f0-9]{16}")
+    }
+
+    @Test
+    fun `HTTP access log rejects unsafe request correlation values without logging secrets`(output: CapturedOutput) {
+        mockMvc.perform(get("/health").header("x-request-id", "Bearer synthetic-secret-value"))
+            .andExpect(status().isOk)
+
+        assertThat(output.out)
+            .contains("observability.access")
+            .containsPattern("requestId=REQ-[A-F0-9-]{36}")
+            .doesNotContain("synthetic-secret-value")
     }
 
     companion object {

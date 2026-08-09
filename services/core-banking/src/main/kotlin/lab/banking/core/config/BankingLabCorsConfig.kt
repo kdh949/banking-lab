@@ -14,8 +14,8 @@ class BankingLabCorsConfig(
         registry.addMapping("/api/**")
             .allowedOrigins(*origins())
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .allowedHeaders("Authorization", "Content-Type", "Accept", "x-request-id")
-            .exposedHeaders("x-request-id")
+            .allowedHeaders("Authorization", "Content-Type", "Accept", "x-request-id", "traceparent", "tracestate")
+            .exposedHeaders("x-request-id", "traceparent")
             .maxAge(3600)
     }
 

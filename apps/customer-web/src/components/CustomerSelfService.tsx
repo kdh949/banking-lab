@@ -1484,12 +1484,12 @@ function LoadBoundary<T>({
     return <p className="self-service-muted">{idle}</p>;
   }
   if (state.status === "loading") {
-    return <p className="self-service-muted">Loading</p>;
+    return <p className="self-service-muted" role="status" aria-live="polite">Loading</p>;
   }
   if (state.status === "failed") {
     return <StructuredErrorPanel error={state.error} />;
   }
-  return <>{children(state.value)}</>;
+  return <div className="self-service-load-result" role="status" aria-live="polite">{children(state.value)}</div>;
 }
 
 function StructuredErrorPanel({ error }: { readonly error: UiError }) {

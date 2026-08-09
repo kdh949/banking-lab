@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { AppDialog, MaterialIcon } from "./primitives";
 import {
   ApprovalInboxScreen,
@@ -34,11 +35,21 @@ export function IntegratedTerminalApp() {
           activeModuleLabel={terminal.activeModuleLabel}
           searchText={terminal.searchText}
           onSearchText={terminal.setSearchText}
+          onSearchSubmit={terminal.submitSearch}
           onModuleChange={terminal.selectModule}
         />
-        <div className="iworks-workspace-tabs">
-          {terminal.openTabs.map((tab) => (
-            <button className={tab.key === terminal.activeScreen ? "is-active" : ""} type="button" key={tab.key} onClick={() => terminal.selectScreen(tab.key)}>
+        <div className="iworks-workspace-tabs" role="tablist" aria-label="열린 업무 화면">
+          {terminal.openTabs.map((tab, index) => (
+            <button
+              className={tab.key === terminal.activeScreen ? "is-active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={tab.key === terminal.activeScreen}
+              tabIndex={tab.key === terminal.activeScreen ? 0 : -1}
+              key={tab.key}
+              onClick={() => terminal.selectScreen(tab.key)}
+              onKeyDown={(event) => moveWorkspaceTab(event, index)}
+            >
               <MaterialIcon name="folder_open" />
               <span>{tab.module}</span>
               <MaterialIcon name="close" />
@@ -64,6 +75,25 @@ export function IntegratedTerminalApp() {
       {terminal.dialog ? <AppDialog dialog={terminal.dialog} onClose={terminal.closeDialog} /> : null}
     </main>
   );
+
+  function moveWorkspaceTab(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const { key } = event;
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(key)) {
+      return;
+    }
+    event.preventDefault();
+    const last = terminal.openTabs.length - 1;
+    const nextIndex = key === "Home"
+      ? 0
+      : key === "End"
+        ? last
+        : key === "ArrowLeft"
+          ? (index - 1 + terminal.openTabs.length) % terminal.openTabs.length
+          : (index + 1) % terminal.openTabs.length;
+    terminal.selectScreen(terminal.openTabs[nextIndex].key);
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role='tab']");
+    tabs?.item(nextIndex).focus();
+  }
 }
 
 function ActiveScreen({

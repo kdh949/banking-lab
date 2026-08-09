@@ -37,6 +37,12 @@ test("shared channel BFF keeps OIDC PKCE and bearer credentials server-side", as
   assert.match(handlers, /payload\.action !== "login" && payload\.action !== "signup"/);
   assert.match(handlers, /process\.env\.BANKING_LAB_API_BASE_URL \?\? ""/);
   assert.match(handlers, /process\.env\.BANKING_LAB_KEYCLOAK_BASE_URL \?\? ""/);
+  assert.match(handlers, /safeTraceparent\(request\.headers\.get\("traceparent"\)\) \?\? newTraceparent\(\)/);
+  assert.match(handlers, /safeRequestId\(request\.headers\.get\("x-request-id"\)\) \?\? newRequestId\(\)/);
+  assert.match(handlers, /normalized\.length <= 512/);
+  assert.match(handlers, /responseHeaders\.set\("traceparent"/);
+  assert.doesNotMatch(handlers, /request\.headers\.get\("authorization"\)/i);
+  assert.doesNotMatch(handlers, /console\.(?:log|info|warn|error)/);
   assert.doesNotMatch(handlers, /process\.env\.NEXT_PUBLIC_BANKING_(?:API|KEYCLOAK)_BASE_URL/);
 });
 

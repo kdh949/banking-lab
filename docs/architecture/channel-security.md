@@ -56,6 +56,8 @@ Product-route simulated identity requires all three explicit dev/test opt-ins: `
 
 Logs and trace attributes must not include raw PII, note bodies, passwords, tokens, authorization headers, risk rule details, or approval internal notes.
 
+The BFF validates W3C correlation input before forwarding it. Missing or invalid `traceparent` and `x-request-id` values are replaced with cryptographically random version-00 trace/request values; `tracestate` is printable ASCII and capped at 512 characters. The BFF does not forward browser `Authorization` or cookie headers. Spring persists the safe request/trace pair in journey events and append-only audit payloads, while access logs record only method, route, status, safe correlation values, and the synthetic-data marker. Response bodies, query strings, request headers, bearer values, and note bodies are outside the access-log schema.
+
 ## Failure behavior
 
 - Ownership/role failures use the structured authorization error family.

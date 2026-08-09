@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,16 @@ const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..
 const baseUrl = "http://localhost:3002";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
 const simulatorLoginEnabled = process.env.BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED === "true";
+
+async function keyboardFocus(page: Page, predicate: () => Promise<boolean>, reverse = false) {
+  for (let index = 0; index < 80; index += 1) {
+    await page.keyboard.press(reverse ? "Shift+Tab" : "Tab");
+    if (await predicate()) {
+      return;
+    }
+  }
+  throw new Error("Keyboard focus did not reach the expected control");
+}
 
 test("iWorks integrated terminal renders the shell and terminal-status data", async ({ page, request }) => {
   const terminalStatus = await request.get(`${baseUrl}/api/terminal-status`);
@@ -120,6 +130,32 @@ test("iWorks integrated terminal supports operator inputs and lookup dialogs", a
   await expect(page.getByRole("listbox", { name: "조회구분 선택" })).toBeVisible();
   await page.getByRole("option", { name: "3-전행고객번호" }).click();
   await expect(page.getByLabel("조회구분")).toContainText("3-전행고객번호");
+});
+
+test("iWorks integrated terminal supports transaction code, roving tabs, execute, and dialog close by keyboard only", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") === "통합검색"));
+  await page.keyboard.type("FDS201");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".screen-title")).toContainText("[FDS201] FDS 보류 이체 심사");
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("role") === "tab"));
+  const firstTabName = await page.evaluate(() => document.activeElement?.textContent?.trim());
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-selected"))).toBe("true");
+  const secondTabName = await page.evaluate(() => document.activeElement?.textContent?.trim());
+  expect(secondTabName).not.toBe(firstTabName);
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") === "통합검색"), true);
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("UNKNOWN999");
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("검색 결과 없음");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("닫기");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
 });
 
 test("iWorks integrated terminal source boundary keeps product and lab routes separated", async () => {

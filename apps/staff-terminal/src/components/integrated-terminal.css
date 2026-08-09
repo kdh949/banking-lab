@@ -224,6 +224,25 @@
   outline: none;
 }
 
+.iworks-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.iworks-root :is(button, input, select, textarea, a[href], [tabindex]):focus-visible {
+  outline: 3px solid #ffbf47;
+  outline-offset: 2px;
+}
+
+.iworks-search:focus-within {
+  box-shadow: 0 0 0 3px #ffbf47;
+}
+
 .iworks-module-nav {
   display: flex;
   align-items: center;

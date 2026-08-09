@@ -47,6 +47,15 @@ test("call-center console product workspace excludes lab evidence controls", asy
   await expect(page.getByText("Authenticated BFF session required")).toBeVisible();
 });
 
+test("call-center softphone simulator exposes every required synthetic state", async ({ page }) => {
+  await page.goto(`${baseUrl}/workspace`);
+  const advance = page.getByRole("button", { name: /Simulate inbound call|Advance call state/u });
+  for (const state of ["RINGING", "CONNECTED", "HOLD", "AFTER_CALL", "IDLE"]) {
+    await advance.click();
+    await expect(page.getByText(state, { exact: true }).first()).toBeVisible();
+  }
+});
+
 test("call-center console lab catalog renders masked interaction manifests", async ({ page }) => {
   const screens = manifests();
   await page.goto(`${baseUrl}/lab/manifests`);

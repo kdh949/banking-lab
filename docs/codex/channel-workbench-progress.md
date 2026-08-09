@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 8 are complete. Checkpoint 9 (accessibility, keyboard operation, and safe trace correlation) is next. Customer, call-center, and staff product JavaScript now call same-origin Next BFF routes and receive only non-secret session metadata; OIDC code exchange, PKCE verifier, bearer credential, and opaque session key remain server-side/HttpOnly. No Definition of Done item is marked complete yet; no end-to-end claim will be made before accessibility, trace correlation, all three product channels, and the deterministic demo gate pass.
+Checkpoints 1 through 9 are complete. Checkpoint 10 (deterministic seed/up/test/demo, curated assets, and final portfolio gate) is next. The core customer and call-center pages pass the focused WCAG 2.2 AA automated/manual review; the staff terminal supports transaction-code execution, roving tabs, and dialog close using only the keyboard. Safe W3C request/trace correlation now crosses the same-origin BFF into Spring journey, audit, and access-log evidence without copying browser credentials or request content. No Definition of Done item is marked complete yet; no end-to-end claim will be made before the deterministic demo and every final gate pass.
 
 ## Inspected baseline
 
@@ -46,7 +46,7 @@ Checkpoints 1 through 8 are complete. Checkpoint 9 (accessibility, keyboard oper
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | complete | call-center typecheck/build, workflow integration and browser route tests |
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | complete | staff-terminal typecheck/build, FDS PostgreSQL integration tests, Playwright |
 | 8 | OIDC code+PKCE with opaque BFF session; negative security tests | complete | three live BFF Compose smokes plus 10 Spring/PostgreSQL negative-control tests |
-| 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | pending | automated accessibility checks, keyboard Playwright, trace/audit tests |
+| 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | complete | 2/2 automated core-page audits, manual 320px review, keyboard Playwright, Spring trace/audit tests |
 | 10 | Deterministic seed/up/test/demo, portfolio link, screenshots/video script | pending | `npm run demo:test:channels` plus full goal gates |
 
 ## Planned command evidence
@@ -144,6 +144,15 @@ npm run portfolio:verify
 | 2026-08-10 | corrected live-route evidence test | pass | 2/2 passed with customer/staff opaque BFF routes, controls, and actual Compose pass stamps. |
 | 2026-08-10 | second full `npm test` in restricted sandbox | fail | 201/224 passed; all 23 failures were legacy Node oracle HTTP tests denied local `127.0.0.1` bind (`EPERM`). |
 | 2026-08-10 | identical full `npm test` with approved local bind | pass | 224/224 passed, 0 skipped. Generated current OpenAPI/journey evidence was retained; unrelated AML timestamp noise was restored. |
+| 2026-08-10 | checkpoint 9 package and three channel typechecks | fail/pass | Packages, customer, and call-center passed; staff initially failed on heterogeneous menu literal inference, then passed after explicit `MenuTarget` collection. |
+| 2026-08-10 | checkpoint 9 Kotlin main/integration compilation with JDK 21 | pass | Safe request correlation, trace fallback, audit enrichment, CORS, and updated integration tests compiled. The restricted first attempt could not access the Gradle wrapper lock; the approved identical rerun passed. |
+| 2026-08-10 | customer-transfer and observability PostgreSQL integration suites | pass | Fixed W3C trace/request values correlated across HELD journey and audit; unsafe bearer-like request ID was absent from logs. No ledger mutation was added. |
+| 2026-08-10 | checkpoint 9 BFF/document static tests | pass | 6/6 passed, including safe trace generation/response, no browser Authorization forwarding, and no BFF console logging. |
+| 2026-08-10 | first combined CP9 Playwright run | fail | 10 passed, three live opt-ins skipped, two accessibility cases failed because the new audit helper selected an empty optional ARIA reference before visible text. Product keyboard and softphone cases passed. |
+| 2026-08-10 | corrected focused accessibility Playwright rerun | pass | 2/2 core pages passed landmark, heading, labeling, ARIA reference, image alternative, contrast, focus-visible, and keyboard-reachability assertions. |
+| 2026-08-10 | manual Chromium desktop/320px review and localhost console check | pass | Customer and call-center pages had no horizontal overflow at 320px, retained logical hierarchy/control order, and produced zero localhost console errors/warnings. |
+| 2026-08-10 | corrected combined checkpoint 9 Playwright rerun | pass | 12 configured cases passed across core accessibility, staff keyboard navigation, and call-center softphone; three endpoint-dependent live cases were skipped and remain covered by checkpoint 8 Compose smokes. |
+| 2026-08-10 | customer, call-center, and staff Next production builds | pass | 26, 12, and 11 routes generated respectively after accessibility, keyboard, and BFF trace changes. |
 
 ## Domain and security invariants affected
 
@@ -158,6 +167,8 @@ npm run portfolio:verify
 - Domain events remain durable outbox writes; notification consumption remains idempotent and synthetic-only.
 - Product browser JavaScript must not read or store bearer tokens after the BFF checkpoint.
 - OIDC state, PKCE verifier, access token, and opaque session key must remain server-side/HttpOnly; BFF route capability lists cannot be widened by browser input.
+- W3C correlation input must be validated or replaced, then match the held-transfer journey/audit trace without copying credentials, request bodies, note content, or raw PII into logs.
+- Core customer/call-center controls must retain labels, contrast, focus visibility, and 320px reflow; staff transaction-code, tab, execute, and dialog-close behavior must remain keyboard operable.
 
 ## Existing implementation to reuse
 
@@ -169,7 +180,7 @@ npm run portfolio:verify
 
 ## Remaining risk
 
-The largest risk is transactionally correlating transfer, FDS, approval, ledger, call-center, and notification state without weakening existing isolation/idempotency behavior. The BFF conversion also changes browser-auth boundaries across existing evidence flows and must preserve an explicit lab-only simulator path.
+The largest remaining risk is deterministic whole-journey orchestration: one command must reset/seed/start the disposable stack, run distinct customer/call-agent/FDS-maker/checker actors through the same held-transfer journey, capture evidence, and clean up without masking a partial failure. The final full repository, Compose, portfolio, and security gates have not yet been rerun against the complete branch.
 
 ## Checkpoint 1 changed files
 
@@ -323,6 +334,25 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Deployment limit: the current server session map is a lab-only single-process implementation. Multi-instance deployment requires an expiring encrypted shared server-side store before production use.
 - Evidence: all three channel Compose smokes ran against disposable Spring/PostgreSQL state; call-center additionally used a real disposable Keycloak realm. Failed attempts and corrections remain recorded above.
 
+## Checkpoint 9 changed files
+
+- Shared channel UI focus-visible rules and customer result live-region behavior.
+- Call-center softphone states now cover IDLE, RINGING, CONNECTED, HOLD, and AFTER_CALL.
+- Staff terminal transaction-code submit, semantic roving workspace tabs, modal focus trap, Escape close, focus restore, and keyboard Playwright proof.
+- Shared BFF validation/generation for request ID, W3C `traceparent`, and bounded printable `tracestate`, with safe response correlation.
+- Spring request-correlation helper, safe access logging, journey request/trace persistence, automatic audit correlation, and trace CORS headers.
+- PostgreSQL integration assertions for one fixed HELD journey trace across journey/audit and negative unsafe-log input.
+- Focused automated accessibility audit and `docs/test-evidence/channel-accessibility-trace-evidence.md` manual/runtime evidence.
+
+## Checkpoint 9 invariant/control review
+
+- Ledger: no ledger command or projection code changed. The trace integration uses the existing high-risk HELD path and confirms correlation without introducing a posting.
+- Maker-checker: FDS maker/checker behavior is unchanged; keyboard navigation exposes `FDS201` but does not bypass server approval.
+- Audit: correlation fields are added before payload hashing and remain part of the append-only hash chain. No audit row is updated in place.
+- Privacy/logging: request IDs are syntax-bounded, W3C IDs contain no business data, browser credentials are not forwarded from request headers, and logs omit headers, bodies, query strings, note content, and raw PII.
+- Accessibility: two core product pages pass the focused automated audit and 320px manual review. Staff transaction-code execution, tab navigation, and modal exit pass with keyboard only.
+- Evidence: the accessibility-helper failure and corrected pass are both retained. A commercial screen-reader compatibility run remains outside this focused portfolio checkpoint.
+
 ## Next checkpoint
 
-Add automated and manual WCAG 2.2 AA evidence for customer/call-center product screens, keyboard-only staff terminal coverage, and W3C `traceparent` propagation through BFF, audit, journey, and logs without raw PII or credentials.
+Build checkpoint 10: deterministic reset/seed/up/test/cleanup orchestration, distinct actor journey, 90-second to two-minute demo script and curated screenshots, README settlement-first portfolio links, then execute every final goal gate before any Definition-of-Done completion claim.

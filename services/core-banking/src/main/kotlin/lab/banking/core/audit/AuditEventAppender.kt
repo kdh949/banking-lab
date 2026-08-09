@@ -3,8 +3,11 @@ package lab.banking.core.audit
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.tracing.Tracer
 import java.security.MessageDigest
 import java.util.UUID
+import lab.banking.core.observability.RequestCorrelation
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
 
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service
 class AuditEventAppender(
     private val jdbc: NamedParameterJdbcTemplate,
     private val objectMapper: ObjectMapper,
+    private val tracerProvider: ObjectProvider<Tracer>,
     registry: MeterRegistry
 ) {
     private val appendFailures = Counter
@@ -32,7 +36,13 @@ class AuditEventAppender(
         payload: Map<String, Any?>
     ): String {
         val auditEventId = "AUD-${UUID.randomUUID().toString().uppercase()}"
-        val payloadJson = objectMapper.writeValueAsString(payload)
+        val correlatedPayload = payload.toMutableMap()
+        RequestCorrelation.currentRequestId()?.let { correlatedPayload.putIfAbsent("requestId", it) }
+        val traceId = RequestCorrelation.currentTraceId()
+            ?: tracerProvider.ifAvailable?.currentSpan()?.context()?.traceId()
+                ?.takeIf { it.length == 32 && it.any { character -> character != '0' } }
+        traceId?.let { correlatedPayload.putIfAbsent("traceId", it) }
+        val payloadJson = objectMapper.writeValueAsString(correlatedPayload)
         val rows = try {
             jdbc.update(
                 """

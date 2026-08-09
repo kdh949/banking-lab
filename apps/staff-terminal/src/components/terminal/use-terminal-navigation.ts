@@ -1,5 +1,5 @@
 import { useMemo, useReducer } from "react";
-import { defaultModuleForScreen, defaultTargetForScreen, screenDefinitionFor, screenList } from "./registry";
+import { defaultModuleForScreen, defaultTargetForScreen, menuTree, screenDefinitionFor, screenList } from "./registry";
 import type { DialogState, MenuTarget, RightMode, ScreenKey, SideMode, TopModule, WorkspaceScreen } from "./types";
 
 type TerminalNavigationState = {
@@ -127,6 +127,27 @@ export function useTerminalNavigation() {
   const active = useMemo(() => activeWorkspaceScreen(state), [state]);
   const openTabs = useMemo(() => screenList.filter((screen) => screen.key !== "portal" || state.activeScreen === "portal"), [state.activeScreen]);
   const showRightRail = state.activeScreen !== "portal" || state.rightMode === "marketing";
+  const submitSearch = () => {
+    const query = state.searchText.trim();
+    if (!query) {
+      return;
+    }
+    const normalized = query.toLowerCase();
+    const items: MenuTarget[] = [];
+    for (const group of menuTree) {
+      for (const item of group.items) {
+        items.push(item);
+      }
+    }
+    const target = items.find((item) => item.code.toLowerCase() === normalized)
+      ?? items.find((item) => item.label.toLowerCase() === normalized)
+      ?? items.find((item) => `${item.code} ${item.label}`.toLowerCase().includes(normalized));
+    if (target) {
+      dispatch({ type: "navigate-menu", target });
+      return;
+    }
+    dispatch({ type: "show-unavailable", target: { code: query.toUpperCase(), label: "검색 결과 없음" } });
+  };
 
   return {
     active,
@@ -145,6 +166,7 @@ export function useTerminalNavigation() {
     navigateToMenu: (target: MenuTarget) => dispatch({ type: "navigate-menu", target }),
     selectModule: (module: TopModule) => dispatch({ type: "select-module", module }),
     selectScreen: (screen: ScreenKey) => dispatch({ type: "select-screen", screen }),
+    submitSearch,
     setRightMode: (mode: RightMode) => dispatch({ type: "set-right-mode", mode }),
     setSearchText: (value: string) => dispatch({ type: "set-search-text", value }),
     setSideMode: (mode: SideMode) => dispatch({ type: "set-side-mode", mode })

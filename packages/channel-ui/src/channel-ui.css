@@ -34,6 +34,11 @@ button:disabled {
   opacity: 0.55;
 }
 
+:is(button, input, select, textarea, a[href]):focus-visible {
+  outline: 3px solid #ffbf47;
+  outline-offset: 2px;
+}
+
 h1,
 h2,
 h3,
