@@ -296,6 +296,22 @@ paths:
       x-reason-required: true
       parameters: [{ name: reason, in: query, required: true, schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/staff/journeys/{journeyId}:
+    get:
+      operationId: staffJourney
+      x-synthetic-only: true
+      x-reason-required: true
+      x-audit-event: STAFF_JOURNEY_VIEWED
+      parameters:
+        - { name: journeyId, in: path, required: true, schema: { type: string } }
+        - { name: reason, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Audited cross-channel journey view for authorized staff
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffJourneyResponse' }
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/staff/call-center/customers/search:
     get:
       operationId: searchCallCenterCustomers
@@ -778,6 +794,21 @@ paths:
     get:
       operationId: customerTransfers
       responses: { '200': { $ref: '#/components/responses/AnyJsonResponse' }, default: { $ref: '#/components/responses/StructuredErrorResponse' } }
+  /api/customer/journeys/{journeyId}:
+    get:
+      operationId: customerJourney
+      x-synthetic-only: true
+      x-ownership-enforced: token.customerId
+      x-internal-risk-data-exposed: false
+      parameters:
+        - { name: journeyId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Customer-owned journey status with internal references and reasons removed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerJourneyDto' }
+        default: { $ref: '#/components/responses/StructuredErrorResponse' }
   /api/customer/transactions:
     get:
       operationId: customerTransactions
@@ -2400,6 +2431,9 @@ components:
       required: [caseId, transferReferenceId, customerId, status, riskScore, alerts, createdAt, updatedAt]
       properties:
         caseId: { type: string }
+        journeyId:
+          type: string
+          nullable: true
         transferReferenceId: { type: string }
         customerId: { type: string }
         status: { type: string }
@@ -2446,6 +2480,68 @@ components:
           nullable: true
           allOf:
             - $ref: '#/components/schemas/TemporalWorkflowReference'
+    JourneyReferenceDto:
+      type: object
+      required: [referenceType, referenceId, createdAt]
+      properties:
+        referenceType: { type: string }
+        referenceId: { type: string }
+        createdAt: { type: string, format: date-time }
+    JourneyEventDto:
+      type: object
+      required: [eventId, sequence, eventType, status, createdAt]
+      properties:
+        eventId: { type: string }
+        sequence: { type: integer, format: int64 }
+        eventType: { type: string }
+        status: { type: string }
+        sourceReferenceType: { type: string, nullable: true }
+        sourceReferenceId: { type: string, nullable: true }
+        actorRole: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
+        traceId: { type: string, nullable: true }
+        requestId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    BusinessJourneyDto:
+      type: object
+      required: [journeyId, journeyType, customerId, status, primaryReferenceType, primaryReferenceId, references, events, createdAt, updatedAt, syntheticOnly]
+      properties:
+        journeyId: { type: string }
+        journeyType: { type: string, enum: [HELD_TRANSFER] }
+        customerId: { type: string }
+        status: { type: string, enum: [HELD, INVESTIGATING, PENDING_APPROVAL, POSTED, BLOCKED, REJECTED] }
+        primaryReferenceType: { type: string }
+        primaryReferenceId: { type: string }
+        references:
+          type: array
+          items: { $ref: '#/components/schemas/JourneyReferenceDto' }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/JourneyEventDto' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        syntheticOnly: { const: true, default: true }
+    CustomerJourneyDto:
+      type: object
+      required: [journeyId, status, statusMessage, references, events, createdAt, updatedAt]
+      properties:
+        journeyId: { type: string }
+        status: { type: string }
+        statusMessage: { type: string }
+        references:
+          type: array
+          items: { $ref: '#/components/schemas/JourneyReferenceDto' }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/JourneyEventDto' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    StaffJourneyResponse:
+      type: object
+      required: [auditEventId, item]
+      properties:
+        auditEventId: { type: string }
+        item: { $ref: '#/components/schemas/BusinessJourneyDto' }
     FdsDecisionCommand:
       type: object
       properties:

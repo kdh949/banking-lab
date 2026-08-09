@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import java.util.Base64
 import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -300,12 +301,27 @@ class CustomerTransferApiParityIntegrationTest {
             .andExpect(jsonPath("$.replayed").value(false))
             .andExpect(jsonPath("$.item.status").value("HELD"))
             .andExpect(jsonPath("$.item.caseId").exists())
+            .andExpect(jsonPath("$.item.journeyId").exists())
             .andReturn()
 
-        val heldCaseId = objectMapper.readTree(held.response.contentAsString)
-            .path("item")
-            .path("caseId")
-            .asText()
+        val heldItem = objectMapper.readTree(held.response.contentAsString).path("item")
+        val heldCaseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
+
+        mockMvc.perform(
+            get("/api/customer/journeys/$journeyId")
+                .header("Authorization", bearer("customer02", listOf("CUSTOMER"), customerId = "SYN-CUS-002"))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AUTHORIZATION_POLICY_VIOLATION"))
+
+        mockMvc.perform(
+            get("/api/customer/journeys/$journeyId")
+                .header("Authorization", bearer("customer01", listOf("CUSTOMER"), customerId = "SYN-CUS-001"))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.journeyId").value(journeyId))
+            .andExpect(jsonPath("$.status").value("HELD"))
 
         mockMvc.perform(
             post("/api/customer/transfers")
@@ -343,6 +359,7 @@ class CustomerTransferApiParityIntegrationTest {
         val failedStatus = items.first { it.path("idempotencyKey").asText() == "CWB-TRANSFER-FAILED-001" }
         assertEquals("HELD", heldStatus.path("status").asText())
         assertEquals("HELD", heldStatus.path("transferStatus").asText())
+        assertTrue(heldStatus.path("riskScore").isMissingNode)
         assertEquals("FAILED", failedStatus.path("status").asText())
         assertEquals("REQUEST_VALIDATION_FAILED", failedStatus.path("failureCode").asText())
         assertEquals(beforeCount, countRows("ledger_transactions"))

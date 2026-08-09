@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
 import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -92,13 +94,34 @@ class FdsCaseApiParityIntegrationTest {
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.item.status").value("HELD"))
             .andExpect(jsonPath("$.item.caseId").exists())
+            .andExpect(jsonPath("$.item.journeyId").exists())
             .andReturn()
 
-        val caseId = objectMapper.readTree(heldResponse.response.contentAsString)
-            .path("item")
-            .path("caseId")
-            .asText()
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
         assertEquals(beforeCount, countRows("ledger_transactions"))
+        assertEquals(1, countRows("business_journeys WHERE journey_id = '$journeyId' AND status = 'HELD'"))
+
+        mockMvc.perform(get("/api/staff/journeys/$journeyId"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/staff/journeys/$journeyId")
+                .queryParam("reason", "Investigate held synthetic transfer")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("HELD"))
+            .andExpect(jsonPath("$.item.references.length()").value(3))
+
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("HELD"))
+            .andExpect(jsonPath("$.statusMessage").value("Security review in progress"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'FDS_CASE')]").isEmpty)
+            .andExpect(jsonPath("$.events[0].reason").doesNotExist())
+            .andExpect(jsonPath("$.events[0].sourceReferenceId").doesNotExist())
 
         val heldCase = mockMvc.perform(get("/api/staff/fds-cases/$caseId"))
             .andExpect(status().isOk)
@@ -185,6 +208,17 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(5_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(5_000_000L, balance("ACC-SYN-002-001"))
         assertEquals(1, countRows("outbox_events WHERE event_type = 'LedgerTransactionPosted'"))
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("POSTED"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'LEDGER_TRANSACTION'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_POSTED'"))
+        assertThrows(DataAccessException::class.java) {
+            jdbc.update(
+                "UPDATE business_journey_events SET event_type = 'MUTATED' WHERE journey_id = :journeyId",
+                mapOf("journeyId" to journeyId)
+            )
+        }
 
         mockMvc.perform(
             post("/api/staff/fds-cases/$caseId/release-requests")
@@ -231,12 +265,12 @@ class FdsCaseApiParityIntegrationTest {
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.item.status").value("HELD"))
             .andExpect(jsonPath("$.item.caseId").exists())
+            .andExpect(jsonPath("$.item.journeyId").exists())
             .andReturn()
 
-        val caseId = objectMapper.readTree(heldResponse.response.contentAsString)
-            .path("item")
-            .path("caseId")
-            .asText()
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
         assertEquals(beforeCount, countRows("ledger_transactions"))
 
         val heldCase = mockMvc.perform(get("/api/staff/fds-cases/$caseId"))
@@ -289,6 +323,11 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(0, countRows("ledger_transactions WHERE transaction_type = 'INTERNAL_TRANSFER'"))
         assertEquals(10_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(0L, balance("ACC-SYN-002-001"))
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("BLOCKED"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_BLOCKED'"))
     }
 
     private fun seedAccountsAndBalances() {

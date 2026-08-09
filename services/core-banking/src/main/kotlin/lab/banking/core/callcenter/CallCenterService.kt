@@ -13,6 +13,7 @@ import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
 import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
+import lab.banking.core.journey.BusinessJourneyService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
 import org.springframework.dao.EmptyResultDataAccessException
@@ -26,7 +27,8 @@ class CallCenterService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val objectMapper: ObjectMapper,
     private val auditEvents: AuditEventAppender,
-    private val approvals: PersistentApprovalService
+    private val approvals: PersistentApprovalService,
+    private val journeys: BusinessJourneyService
 ) {
     @Transactional(isolation = Isolation.SERIALIZABLE)
     fun searchCustomers(query: String, reason: String?): CallCenterCustomerSearchResponse {
@@ -84,6 +86,7 @@ class CallCenterService(
         val contactReasonCode = requireField(command.contactReasonCode, "contactReasonCode").uppercase()
         requireCustomer(customerId)
         command.accountId?.takeIf { it.isNotBlank() }?.let { requireCustomerAccount(customerId, it) }
+        command.journeyId?.takeIf { it.isNotBlank() }?.let { journeys.requireCustomer(it, customerId) }
         val interactionId = "CALL-${UUID.randomUUID().toString().uppercase()}"
         val auditEventId = appendAudit(
             eventType = "CALL_CENTER_INTERACTION_STARTED",
@@ -105,12 +108,12 @@ class CallCenterService(
             INSERT INTO call_center_interactions (
               interaction_id, customer_id, account_id, channel, contact_reason_code,
               status, created_by, created_by_role, assigned_to, reason,
-              metadata_json, audit_event_id
+              metadata_json, audit_event_id, journey_id
             )
             VALUES (
               :interactionId, :customerId, :accountId, :channel, :contactReasonCode,
               'OPEN', :createdBy, :createdByRole, :assignedTo, :reason,
-              CAST(:metadataJson AS jsonb), :auditEventId
+              CAST(:metadataJson AS jsonb), :auditEventId, :journeyId
             )
             """.trimIndent(),
             mapOf(
@@ -124,10 +127,23 @@ class CallCenterService(
                 "assignedTo" to command.assignedTo.trimToNull(),
                 "reason" to reason,
                 "metadataJson" to objectMapper.writeValueAsString(syntheticMetadata(command.metadata)),
-                "auditEventId" to auditEventId
+                "auditEventId" to auditEventId,
+                "journeyId" to command.journeyId.trimToNull()
             )
         )
         appendAccessAudit(auditEventId, interactionId, customerId, actor, "CALL-102", "INTERACTION_STARTED", reason)
+        command.journeyId?.trimToNull()?.let { journeyId ->
+            journeys.correlateKeepingStatus(
+                journeyId = journeyId,
+                referenceType = "CALL_CENTER_INTERACTION",
+                referenceId = interactionId,
+                eventType = "CALL_CENTER_INTERACTION_STARTED",
+                actorId = actor.id,
+                actorRole = actor.role,
+                reason = reason,
+                payload = mapOf("piiExposure" to "MASKED")
+            )
+        }
         return CallCenterInteractionResponse(findInteraction(interactionId))
     }
 
@@ -203,6 +219,22 @@ class CallCenterService(
             )
         )
         appendAccessAudit(auditEventId, interactionId, interaction.customerId, actor, "CALL-103", "NOTE_ADDED", reason)
+        interaction.journeyId?.let { journeyId ->
+            journeys.correlateKeepingStatus(
+                journeyId = journeyId,
+                referenceType = "CALL_CENTER_INTERACTION",
+                referenceId = interactionId,
+                eventType = "CALL_CENTER_NOTE_REDACTED",
+                actorId = actor.id,
+                actorRole = actor.role,
+                reason = reason,
+                payload = mapOf(
+                    "redactionApplied" to redaction.applied,
+                    "piiPatternCount" to redaction.patternCount,
+                    "rawNoteStoredInJourney" to false
+                )
+            )
+        }
         return CallCenterNoteResponse(item = findInteraction(interactionId), note = findNote(noteId))
     }
 
@@ -339,6 +371,21 @@ class CallCenterService(
             )
         )
         appendAccessAudit(auditEventId, interactionId, interaction.customerId, actor, "CALL-106", "ESCALATION_REQUESTED", reason)
+        if (escalationType == "FDS") {
+            interaction.journeyId?.let { journeyId ->
+                journeys.correlateKeepingStatus(
+                    journeyId = journeyId,
+                    referenceType = "CALL_CENTER_ESCALATION",
+                    referenceId = escalationId,
+                    eventType = "CALL_CENTER_FDS_HANDOFF_REQUESTED",
+                    actorId = actor.id,
+                    actorRole = actor.role,
+                    reason = reason,
+                    requestId = approval.approvalId,
+                    payload = mapOf("handoffType" to "FDS")
+                )
+            }
+        }
         return CallCenterEscalationResponse(item = findInteraction(interactionId), escalation = findEscalation(escalationId), approval = approval)
     }
 
@@ -490,7 +537,7 @@ class CallCenterService(
         val actor = resolveActor(null, null, READ_ROLES, "CALL_CENTER_AGENT", "callcenter01")
         val items = jdbc.query(
             """
-            SELECT i.interaction_id, i.customer_id, c.customer_name, i.channel,
+            SELECT i.interaction_id, i.journey_id, i.customer_id, c.customer_name, i.channel,
                    i.contact_reason_code, i.status, i.assigned_to, i.started_at, i.ended_at
             FROM call_center_interactions i
             JOIN customers c ON c.customer_id = i.customer_id
@@ -578,6 +625,7 @@ class CallCenterService(
         val interaction = findInteractionRecord(interactionId)
         return CallCenterInteractionDto(
             interactionId = interaction.interactionId,
+            journeyId = interaction.journeyId,
             customerId = interaction.customerId,
             accountId = interaction.accountId,
             channel = interaction.channel,
@@ -711,7 +759,7 @@ class CallCenterService(
         SELECT i.interaction_id, i.customer_id, i.account_id, i.channel,
                i.contact_reason_code, i.status, i.created_by, i.created_by_role,
                i.assigned_to, i.reason, i.started_at, i.ended_at,
-               i.metadata_json::text AS metadata_json, i.audit_event_id
+               i.metadata_json::text AS metadata_json, i.audit_event_id, i.journey_id
         FROM call_center_interactions i
         $suffix
         """.trimIndent()
@@ -719,6 +767,7 @@ class CallCenterService(
     private fun mapInteractionRecord(rs: ResultSet, rowNum: Int): CallCenterInteractionRecord =
         CallCenterInteractionRecord(
             interactionId = rs.getString("interaction_id"),
+            journeyId = rs.getString("journey_id"),
             customerId = rs.getString("customer_id"),
             accountId = rs.getString("account_id"),
             channel = rs.getString("channel"),
@@ -746,6 +795,7 @@ class CallCenterService(
     private fun mapInteractionSummary(rs: ResultSet, rowNum: Int): CallCenterInteractionSummaryDto =
         CallCenterInteractionSummaryDto(
             interactionId = rs.getString("interaction_id"),
+            journeyId = rs.getString("journey_id"),
             customerId = rs.getString("customer_id"),
             maskedCustomerName = maskName(rs.getString("customer_name")),
             channel = rs.getString("channel"),
@@ -1006,6 +1056,7 @@ class CallCenterService(
 
     private data class CallCenterInteractionRecord(
         val interactionId: String,
+        val journeyId: String?,
         val customerId: String,
         val accountId: String?,
         val channel: String,

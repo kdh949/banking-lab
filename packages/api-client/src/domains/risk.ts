@@ -9,6 +9,7 @@ export type {
   FdsCaseDto,
   FdsDecisionCommand,
   FdsDecisionRequestResponse,
+  StaffJourneyResponse,
   ParameterChangeRequestResponse,
   ParameterListResponse
 } from "../client";
@@ -18,6 +19,7 @@ const riskMethodNames = [
   "assignFdsCase",
   "requestFdsRelease",
   "requestFdsBlock",
+  "staffJourney",
   "fdsParameters",
   "fdsParameterHistory",
   "requestFdsParameterChange",

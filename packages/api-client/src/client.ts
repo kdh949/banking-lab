@@ -122,6 +122,7 @@ export interface MaskedCustomerDto {
 
 export interface StartCallCenterInteractionCommand {
   readonly customerId?: string | null;
+  readonly journeyId?: string | null;
   readonly accountId?: string | null;
   readonly channel?: string | null;
   readonly contactReasonCode?: string | null;
@@ -213,6 +214,7 @@ export interface CallCenterEscalationDto {
 
 export interface CallCenterInteractionDto {
   readonly interactionId: string;
+  readonly journeyId?: string | null;
   readonly customerId: string;
   readonly accountId?: string | null;
   readonly channel: string;
@@ -253,6 +255,7 @@ export interface CallCenterEscalationResponse {
 
 export interface CallCenterInteractionSummaryDto {
   readonly interactionId: string;
+  readonly journeyId?: string | null;
   readonly customerId: string;
   readonly maskedCustomerName: string;
   readonly channel: string;
@@ -538,6 +541,7 @@ export interface CustomerTransferCommand {
 
 export interface CustomerTransferDto {
   readonly resultId?: string | null;
+  readonly journeyId?: string | null;
   readonly transactionId?: string | null;
   readonly status: string;
   readonly fromAccountId: string;
@@ -697,6 +701,7 @@ export interface CustomerAccessHistoryDto {
 
 export interface CustomerTransferStatusDto {
   readonly resultId?: string | null;
+  readonly journeyId?: string | null;
   readonly transactionId?: string | null;
   readonly caseId?: string | null;
   readonly transferReferenceId?: string | null;
@@ -709,7 +714,6 @@ export interface CustomerTransferStatusDto {
   readonly amountMinor?: number | null;
   readonly currency?: string | null;
   readonly businessDate?: string | null;
-  readonly riskScore?: number | null;
   readonly idempotencyKey?: string | null;
   readonly failureCode?: string | null;
   readonly message?: string | null;
@@ -717,6 +721,55 @@ export interface CustomerTransferStatusDto {
 
 export interface CustomerTransferStatusResponse {
   readonly items: readonly CustomerTransferStatusDto[];
+}
+
+export interface JourneyReferenceDto {
+  readonly referenceType: string;
+  readonly referenceId: string;
+  readonly createdAt: string;
+}
+
+export interface JourneyEventDto {
+  readonly eventId: string;
+  readonly sequence: number;
+  readonly eventType: string;
+  readonly status: string;
+  readonly sourceReferenceType?: string | null;
+  readonly sourceReferenceId?: string | null;
+  readonly actorRole?: string | null;
+  readonly reason?: string | null;
+  readonly traceId?: string | null;
+  readonly requestId?: string | null;
+  readonly createdAt: string;
+}
+
+export interface BusinessJourneyDto {
+  readonly journeyId: string;
+  readonly journeyType: string;
+  readonly customerId: string;
+  readonly status: string;
+  readonly primaryReferenceType: string;
+  readonly primaryReferenceId: string;
+  readonly references: readonly JourneyReferenceDto[];
+  readonly events: readonly JourneyEventDto[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly syntheticOnly: boolean;
+}
+
+export interface CustomerJourneyDto {
+  readonly journeyId: string;
+  readonly status: string;
+  readonly statusMessage: string;
+  readonly references: readonly JourneyReferenceDto[];
+  readonly events: readonly JourneyEventDto[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface StaffJourneyResponse {
+  readonly auditEventId: string;
+  readonly item: BusinessJourneyDto;
 }
 
 export interface ComplaintCaseDto {
@@ -2784,6 +2837,7 @@ export interface AdminSystemStatusResponse {
 
 export interface FdsCaseDto {
   readonly caseId: string;
+  readonly journeyId?: string | null;
   readonly transferReferenceId: string;
   readonly customerId: string;
   readonly status: string;
@@ -3190,6 +3244,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         fetchImpl,
         baseUrl,
         `/api/staff/workflows/${encodeURIComponent(businessReferenceId)}/timeline`,
+        { reason },
+        options.bearerToken
+      );
+    },
+
+    staffJourney(journeyId: string, reason: string) {
+      return request<StaffJourneyResponse>(
+        fetchImpl,
+        baseUrl,
+        `/api/staff/journeys/${encodeURIComponent(journeyId)}`,
         { reason },
         options.bearerToken
       );
@@ -4330,6 +4394,16 @@ export function createBankingApiClient(options: BankingApiClientOptions) {
         baseUrl,
         "/api/customer/transfers",
         { customerId },
+        options.bearerToken
+      );
+    },
+
+    customerJourney(journeyId: string) {
+      return request<CustomerJourneyDto>(
+        fetchImpl,
+        baseUrl,
+        `/api/customer/journeys/${encodeURIComponent(journeyId)}`,
+        {},
         options.bearerToken
       );
     },

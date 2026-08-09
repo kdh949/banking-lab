@@ -13,6 +13,7 @@ export type {
   CallCenterInteractionListResponse,
   CallCenterNoteCommand,
   CallCenterNoteDto,
+  StaffJourneyResponse,
   CloseCallCenterInteractionCommand,
   StartCallCenterInteractionCommand
 } from "../client";
@@ -25,7 +26,8 @@ const callCenterMethodNames = [
   "createCallCenterAftercallTask",
   "escalateCallCenterInteraction",
   "closeCallCenterInteraction",
-  "callCenterCustomerHistory"
+  "callCenterCustomerHistory",
+  "staffJourney"
 ] as const;
 
 export function createCallCenterApiClient(options: BankingApiClientOptions) {

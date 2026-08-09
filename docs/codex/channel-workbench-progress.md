@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 3 are complete. Checkpoint 4 (durable cross-channel journey projection) is next. No Definition of Done item is marked complete yet because the target cross-channel runtime has not been implemented and verified end to end.
+Checkpoints 1 through 4 are complete. Checkpoint 5 (customer product journey UX) is next. The durable projection now correlates held customer transfers, FDS cases, approvals, call-center interactions/escalations, and released ledger transactions under one `journeyId`; notification correlation remains a later checkpoint. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
 
 ## Inspected baseline
 
@@ -25,8 +25,8 @@ Checkpoints 1 through 3 are complete. Checkpoint 4 (durable cross-channel journe
 1. No `journeyId`, journey table, reference mapping, or append-only journey event exists anywhere in the target stack.
 2. `docs/architecture/payment-settlement-state-model.md`, required by the goal input, is missing.
 3. The staff terminal has no `FDS201` registry screen even though the Spring FDS API and shared client methods already exist.
-4. Customer transfer DTOs do not expose a customer-safe journey inquiry number; the transfer status DTO currently exposes internal `riskScore`.
-5. Call-center interactions and FDS/approval/ledger references are not projected under one business journey.
+4. Customer product UI does not yet render the new customer-safe journey inquiry number and timeline.
+5. The durable journey projection is present, but notification delivery references are not yet correlated.
 6. FDS release/block does not emit a dedicated customer transfer status outbox event, and Notification Service has no matching template/routing entry.
 7. Product routes expose manifest tables and API exercisers; call-center has no `/workspace` product route.
 8. Customer-web and call-center browser JavaScript can receive and persist bearer tokens in session state. Product routes do not yet use an opaque server session/BFF boundary.
@@ -41,7 +41,7 @@ Checkpoints 1 through 3 are complete. Checkpoint 4 (durable cross-channel journe
 | 1 | Product/portfolio scope, state labels, journey/security/screen docs, portable examples | complete | documentation tests and repository scans |
 | 2 | Product routes separated from `/lab/evidence`, `/lab/manifests`, `/lab/api-simulator` | complete | static boundary tests, Next typecheck/build, updated Playwright route assertions |
 | 3 | Domain API-client modules, UI package boundaries, staff screen split | complete | 221 Node tests, package/script typecheck, contract check, three Next builds |
-| 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | pending | Flyway + JUnit/Testcontainers negative and correlation tests |
+| 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | complete | Flyway + JUnit/Testcontainers negative and correlation tests |
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | pending | customer-web typecheck/build and owned held-transfer browser tests |
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | pending | call-center typecheck/build and workflow integration/E2E |
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | pending | staff-terminal typecheck/build, JUnit and Playwright |
@@ -103,6 +103,16 @@ npm run portfolio:verify
 | 2026-08-10 | three channel `next build` commands after module split | pass | All product/lab routes generated successfully with the new UI entry points. |
 | 2026-08-10 | `node --experimental-strip-types scripts/check-live-route-api-evidence.ts` | pass | Static/live-evidence boundary accepted split staff API screens and lab routes; this is not a new live Compose run. |
 | 2026-08-10 | `npm test` | pass | 221/221 passed, 0 skipped. Generated AML timestamp-only noise was restored and is not part of the checkpoint. |
+| 2026-08-10 | `./gradlew :services:core-banking:compileKotlin` with shell JDK 26 | fail | Toolchain initialization rejected unsupported JDK `26.0.1`; no code/test claim. |
+| 2026-08-10 | same compile with repository-required JDK 21 | pass | Journey, customer transfer, call-center, and FDS Kotlin sources compiled. |
+| 2026-08-10 | `:services:core-banking:compileIntegrationTestKotlin` with JDK 21 | pass | Updated customer ownership and FDS journey integration tests compiled. |
+| 2026-08-10 | customer + FDS targeted integration suites, first run | fail | 6/7 passed; one new Jayway JSONPath filter assertion counted the unfiltered array. Runtime journey data was correct. |
+| 2026-08-10 | FDS targeted integration suite, second run | fail | 1/2 failed because another filtered JSONPath assertion used unsupported indexing; database evidence and response body showed the ledger reference. |
+| 2026-08-10 | FDS targeted integration suite after assertion correction | pass | 2/2 passed: held/block ledger-free, release balanced and exactly once, maker-checker enforced, customer projection redacted. |
+| 2026-08-10 | FDS targeted integration suite with append-only mutation check | pass | 2/2 passed; PostgreSQL rejected journey-event UPDATE and retained release/block invariants. |
+| 2026-08-10 | `api-client` typecheck plus contract lint/client check | pass | OpenAPI valid; 204 operationIds matched 167 client methods/exemptions. |
+| 2026-08-10 | checkpoint 4 documentation guard after progress update | fail | 2/3 passed; the guard requires the exact no-Definition-of-Done-claim wording. |
+| 2026-08-10 | checkpoint 4 documentation guard, corrected rerun | pass | 3/3 passed with checkpoint evidence wording retained. |
 
 ## Domain and security invariants affected
 
@@ -187,6 +197,26 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - UI: one token/primitive source is retained; customer/operator entry points avoid duplicate abstractions. Default product navigation no longer advertises manifest/evidence labels.
 - Evidence: the sandbox bind failure and approved identical rerun are both recorded. No live Compose claim was made.
 
+## Checkpoint 4 changed files
+
+- Flyway `V043` adds synthetic-only business journeys, globally correlated references, append-only events, and nullable journey mappings on customer transfer results, FDS cases, and call-center interactions.
+- Spring journey repository/service/controllers expose customer-owned redacted status and reason-required audited staff views.
+- Customer transfer creation now returns `journeyId` for HELD results and no longer returns internal `riskScore` in customer transfer status.
+- FDS assignment, decision request, release, and block append correlated journey events; release adds one ledger reference while block adds none.
+- Call-center interaction start, redacted notes, and FDS handoff requests correlate without copying raw note text into journey/audit payloads.
+- OpenAPI and least-capability customer, staff, call-center, and risk clients expose the corresponding journey reads.
+- Customer and FDS PostgreSQL integration tests cover ownership, missing staff reason, redaction, append-only events, maker-checker, release balance, and block non-posting.
+
+## Checkpoint 4 invariant/control review
+
+- Ledger: journey rows are correlation projections only. HELD and BLOCKED paths retain zero transfer ledger transactions; approved release creates one balanced double-entry transaction and one ledger reference.
+- Maker-checker: FDS approval remains independent; self-approval still returns `MAKER_CHECKER_SELF_APPROVAL_REJECTED` before any posting.
+- Privacy: customer status no longer includes `riskScore`; customer journey references omit FDS/approval/call-center identifiers and events omit staff role, reason, request ID, and internal source references.
+- Audit: customer-owned journey reads append `CUSTOMER_JOURNEY_VIEWED`; staff reads require a business reason and append `STAFF_JOURNEY_VIEWED`.
+- Call-center: raw note text is redacted before persistence and is never copied into journey payloads; only redaction metadata is correlated.
+- Durability: journey events are append-only at the PostgreSQL trigger boundary and are updated in the same serializable business transactions as their source transitions.
+- Evidence: two test-assertion failures and their corrected passing reruns remain recorded; no full-suite or UI claim is made here.
+
 ## Next checkpoint
 
-Add the Flyway journey projection, reference mappings, append-only events, ownership/reason-audit APIs, and correlations from transfer, FDS, call-center, approval, ledger, and notification references.
+Build the customer product journey UX: authenticated dashboard/account/transfer/support navigation, high-risk new-beneficiary submission, HELD receipt with `journeyId`, and customer-safe status timeline without internal risk or staff data.

@@ -20,6 +20,7 @@ data class CustomerTransferCommand(
 
 data class CustomerTransferDto(
     val resultId: String?,
+    val journeyId: String?,
     val transactionId: String?,
     val status: String,
     val fromAccountId: String,
@@ -57,6 +58,7 @@ data class CustomerTransactionHistoryResponse(
 
 data class CustomerTransferStatusDto(
     val resultId: String?,
+    val journeyId: String?,
     val transactionId: String?,
     val caseId: String?,
     val transferReferenceId: String?,
@@ -69,7 +71,6 @@ data class CustomerTransferStatusDto(
     val amountMinor: Long?,
     val currency: String?,
     val businessDate: LocalDate?,
-    val riskScore: Int?,
     val idempotencyKey: String?,
     val failureCode: String?,
     val message: String?

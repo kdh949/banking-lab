@@ -10,6 +10,7 @@ export type {
   StaffAccountDto,
   StaffApprovalExecutionResponse,
   StaffCustomerDetailDto,
+  StaffJourneyResponse,
   StaffTransactionDto,
   StaffWorkflowTimelineEntryDto
 } from "../client";
@@ -21,6 +22,7 @@ const staffMethodNames = [
   "staffTransactionSearch",
   "staffOperationalRetryQueue",
   "staffWorkflowTimeline",
+  "staffJourney",
   "staffApprovals",
   "staffApproval",
   "approveStaffApproval",

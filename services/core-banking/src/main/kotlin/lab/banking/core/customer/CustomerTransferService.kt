@@ -10,6 +10,8 @@ import lab.banking.core.audit.AuditEventAppender
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.journey.BusinessJourneyService
+import lab.banking.core.journey.HeldTransferJourneyCommand
 import lab.banking.core.parameters.ParameterAdminService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.workflow.WorkflowErrors
@@ -29,7 +31,8 @@ class CustomerTransferService(
     private val parameterAdminService: ParameterAdminService,
     private val transactionManager: PlatformTransactionManager,
     private val objectMapper: ObjectMapper,
-    private val auditEvents: AuditEventAppender
+    private val auditEvents: AuditEventAppender,
+    private val journeys: BusinessJourneyService
 ) {
     fun transfer(command: CustomerTransferCommand): CustomerTransferResponse =
         runSerializableCustomerCommand {
@@ -126,10 +129,10 @@ class CustomerTransferService(
               SELECT ctr.result_id, ctr.idempotency_key, ctr.customer_id,
                      ctr.from_account_id, ctr.to_account_id, ctr.amount_minor,
                      ctr.currency, ctr.status AS transfer_result_status,
-                     ctr.ledger_transaction_id, ctr.fds_case_id,
+                     ctr.ledger_transaction_id, ctr.fds_case_id, ctr.journey_id,
                      f.transfer_reference_id, f.status AS case_status,
                      COALESCE(f.transfer_status, ctr.status) AS transfer_status,
-                     f.risk_score, ctr.failure_code, ctr.message,
+                     ctr.failure_code, ctr.message,
                      ctr.business_date, ctr.created_at
               FROM customer_transfer_results ctr
               LEFT JOIN fds_cases f
@@ -139,9 +142,9 @@ class CustomerTransferService(
               SELECT NULL::text AS result_id, f.transfer_idempotency_key AS idempotency_key,
                      f.customer_id, f.from_account_id, f.to_account_id, f.amount_minor,
                      'KRW'::char(3) AS currency, f.transfer_status AS transfer_result_status,
-                     NULL::text AS ledger_transaction_id, f.fds_case_id,
+                     NULL::text AS ledger_transaction_id, f.fds_case_id, f.journey_id,
                      f.transfer_reference_id, f.status AS case_status,
-                     f.transfer_status, f.risk_score, NULL::text AS failure_code,
+                     f.transfer_status, NULL::text AS failure_code,
                      'Transfer held for FDS review' AS message,
                      f.business_date, f.created_at
               FROM fds_cases f
@@ -246,7 +249,7 @@ class CustomerTransferService(
             """
             SELECT result_id, idempotency_key, command_hash, customer_id, from_account_id,
                    to_account_id, amount_minor, currency, status, ledger_transaction_id,
-                   fds_case_id, failure_code, message, requested_by, requested_channel,
+                   fds_case_id, journey_id, failure_code, message, requested_by, requested_channel,
                    business_reference_id, business_date, created_at
             FROM customer_transfer_results
             WHERE idempotency_key = :idempotencyKey
@@ -317,7 +320,7 @@ class CustomerTransferService(
             )
         )
         appendFdsTimeline(caseId, "FDS_HELD", "REQUESTED", "HELD", "FDS_ENGINE", "Synthetic customer transfer held")
-        val held = insertTransferResult(
+        insertTransferResult(
             command = command,
             customerId = customerId,
             commandHash = commandHash,
@@ -328,6 +331,16 @@ class CustomerTransferService(
             failureCode = null,
             message = "Transfer held for FDS review"
         )
+        val journeyId = journeys.createHeldTransfer(
+            HeldTransferJourneyCommand(
+                customerId = customerId,
+                transferResultId = resultId,
+                transferReferenceId = transferReferenceId,
+                fdsCaseId = caseId,
+                actorId = command.requestedBy ?: customerId,
+                reason = command.reason
+            )
+        )
         appendCustomerTransferAudit(
             eventType = "COMMAND_REQUESTED",
             customerId = customerId,
@@ -337,11 +350,12 @@ class CustomerTransferService(
             payload = mapOf(
                 "idempotencyKey" to command.idempotencyKey,
                 "amountMinor" to command.amountMinor,
-                "caseId" to caseId,
+                "journeyId" to journeyId,
                 "syntheticOnly" to true
             )
         )
-        return held
+        return findTransferResultByIdempotencyKey(command.idempotencyKey)
+            ?: error("held customer transfer journey was not correlated")
     }
 
     private fun persistFailedTransfer(
@@ -498,6 +512,7 @@ class CustomerTransferService(
     private fun mapTransferStatus(rs: ResultSet, rowNum: Int): CustomerTransferStatusDto =
         CustomerTransferStatusDto(
             resultId = rs.getString("result_id"),
+            journeyId = rs.getString("journey_id"),
             transactionId = rs.getString("ledger_transaction_id"),
             caseId = rs.getString("fds_case_id"),
             transferReferenceId = rs.getString("transfer_reference_id"),
@@ -510,7 +525,6 @@ class CustomerTransferService(
             amountMinor = (rs.getObject("amount_minor") as Number?)?.toLong(),
             currency = rs.getString("currency"),
             businessDate = rs.getObject("business_date", LocalDate::class.java),
-            riskScore = nullableInt(rs, "risk_score"),
             idempotencyKey = rs.getString("idempotency_key"),
             failureCode = rs.getString("failure_code"),
             message = rs.getString("message")
@@ -529,6 +543,7 @@ class CustomerTransferService(
             status = rs.getString("status"),
             ledgerTransactionId = rs.getString("ledger_transaction_id"),
             fdsCaseId = rs.getString("fds_case_id"),
+            journeyId = rs.getString("journey_id"),
             failureCode = rs.getString("failure_code"),
             message = rs.getString("message"),
             requestedBy = rs.getString("requested_by"),
@@ -602,11 +617,6 @@ class CustomerTransferService(
     private fun nextId(prefix: String): String =
         "$prefix-${UUID.randomUUID().toString().uppercase()}"
 
-    private fun nullableInt(rs: ResultSet, column: String): Int? {
-        val value = rs.getInt(column)
-        return if (rs.wasNull()) null else value
-    }
-
     private companion object {
         const val SERIALIZABLE_CUSTOMER_COMMAND_MAX_ATTEMPTS = 5
     }
@@ -624,6 +634,7 @@ private data class CustomerTransferResultRecord(
     val status: String,
     val ledgerTransactionId: String?,
     val fdsCaseId: String?,
+    val journeyId: String?,
     val failureCode: String?,
     val message: String,
     val requestedBy: String,
@@ -635,6 +646,7 @@ private data class CustomerTransferResultRecord(
     fun toDto(): CustomerTransferDto =
         CustomerTransferDto(
             resultId = resultId,
+            journeyId = journeyId,
             transactionId = ledgerTransactionId,
             status = status,
             fromAccountId = fromAccountId,
