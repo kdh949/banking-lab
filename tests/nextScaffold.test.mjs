@@ -35,6 +35,7 @@ test("customer-web product route is journey-backed while lab routes preserve man
   const loginRoute = await readFile("apps/customer-web/src/app/login/page.tsx", "utf8");
   const accountsRoute = await readFile("apps/customer-web/src/app/accounts/page.tsx", "utf8");
   const transferRoute = await readFile("apps/customer-web/src/app/transfers/new/page.tsx", "utf8");
+  const supportRoute = await readFile("apps/customer-web/src/app/support/page.tsx", "utf8");
   const accountRoute = await readFile("apps/customer-web/src/app/accounts/[accountId]/page.tsx", "utf8");
   const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
@@ -63,6 +64,7 @@ test("customer-web product route is journey-backed while lab routes preserve man
   assert.match(loginRoute, /CustomerLoginForm/);
   assert.match(accountsRoute, /CustomerAccountsView/);
   assert.match(transferRoute, /CustomerTransferForm/);
+  assert.match(supportRoute, /CustomerSupportHome/);
   assert.match(accountRoute, /CustomerAccountDetailView/);
   assert.match(selfService, /signupCustomer/);
   assert.match(selfService, /loginCustomer/);
@@ -71,6 +73,9 @@ test("customer-web product route is journey-backed while lab routes preserve man
   assert.match(selfService, /customerAccounts/);
   assert.match(selfService, /internalRecipientLookup/);
   assert.match(selfService, /requestCustomerTransfer/);
+  assert.match(selfService, /customerJourney/);
+  assert.match(selfService, /firstTimeBeneficiary/);
+  assert.doesNotMatch(selfService, /riskScore/);
   assert.doesNotMatch(selfService, /SYN-CUS-001/);
   assert.doesNotMatch(selfService, /ACC-SYN-001-001/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);

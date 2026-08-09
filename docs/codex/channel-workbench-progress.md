@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 4 are complete. Checkpoint 5 (customer product journey UX) is next. The durable projection now correlates held customer transfers, FDS cases, approvals, call-center interactions/escalations, and released ledger transactions under one `journeyId`; notification correlation remains a later checkpoint. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
+Checkpoints 1 through 5 are complete. Checkpoint 6 (single call-center agent workspace) is next. Customer product routes now submit the high-risk new-beneficiary signal and render the customer-safe HELD journey timeline; notification correlation remains a later checkpoint. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
 
 ## Inspected baseline
 
@@ -42,7 +42,7 @@ Checkpoints 1 through 4 are complete. Checkpoint 5 (customer product journey UX)
 | 2 | Product routes separated from `/lab/evidence`, `/lab/manifests`, `/lab/api-simulator` | complete | static boundary tests, Next typecheck/build, updated Playwright route assertions |
 | 3 | Domain API-client modules, UI package boundaries, staff screen split | complete | 221 Node tests, package/script typecheck, contract check, three Next builds |
 | 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | complete | Flyway + JUnit/Testcontainers negative and correlation tests |
-| 5 | Customer login/dashboard/accounts/transfers/support product UX | pending | customer-web typecheck/build and owned held-transfer browser tests |
+| 5 | Customer login/dashboard/accounts/transfers/support product UX | complete | customer-web typecheck/build, structural and browser route tests |
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | pending | call-center typecheck/build and workflow integration/E2E |
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | pending | staff-terminal typecheck/build, JUnit and Playwright |
 | 8 | OIDC code+PKCE with opaque BFF session; negative security tests | pending | ownership/reason/masking/redaction/SoD/session tests |
@@ -113,6 +113,10 @@ npm run portfolio:verify
 | 2026-08-10 | `api-client` typecheck plus contract lint/client check | pass | OpenAPI valid; 204 operationIds matched 167 client methods/exemptions. |
 | 2026-08-10 | checkpoint 4 documentation guard after progress update | fail | 2/3 passed; the guard requires the exact no-Definition-of-Done-claim wording. |
 | 2026-08-10 | checkpoint 4 documentation guard, corrected rerun | pass | 3/3 passed with checkpoint evidence wording retained. |
+| 2026-08-10 | customer-web typecheck plus targeted structural tests | pass | TypeScript passed; 15/15 product/lab boundary and Next scaffold tests passed. |
+| 2026-08-10 | `npm run next:customer-web:build` | pass | 22 static-generation items; `/support` and held-transfer result routes compiled. |
+| 2026-08-10 | customer Playwright parity spec in restricted sandbox | fail | Next server could not bind `0.0.0.0:3001` (`EPERM`); no browser assertion ran. |
+| 2026-08-10 | same customer Playwright parity spec with approved local bind | pass | 4/4 configured product/lab/form browser tests passed; 11 live API/Keycloak/payment/notification cases skipped because their opt-in endpoints were not configured. |
 
 ## Domain and security invariants affected
 
@@ -217,6 +221,24 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Durability: journey events are append-only at the PostgreSQL trigger boundary and are updated in the same serializable business transactions as their source transitions.
 - Evidence: two test-assertion failures and their corrected passing reruns remain recorded; no full-suite or UI claim is made here.
 
+## Checkpoint 5 changed files
+
+- Customer transfer form defaults to the synthetic high-risk amount and a checked new-beneficiary FDS signal, while retaining explicit idempotency and internal-recipient lookup controls.
+- HELD responses display the public `journeyId`; the result route loads the token-owned customer journey and renders a customer-safe status timeline.
+- `/support` consolidates transfer-status, complaint, and notification navigation without surfacing staff/FDS internals.
+- Customer workflow metadata names the `customerJourney` API and customer-safe timeline control.
+- Playwright and Node structural coverage assert the new support route, FDS signal, journey client call, and absence of `riskScore` in customer product source.
+- The live customer self-service E2E scenario now includes a high-risk new-beneficiary HELD transfer and owned journey assertions when its opt-in API/staff tokens are configured.
+
+## Checkpoint 5 invariant/control review
+
+- Ledger: the UI distinguishes HELD from POSTED and labels the transaction as not posted; it never fabricates a ledger transaction ID.
+- Privacy: only the customer projection is called. The timeline component has no `riskScore`, reviewer identity, approval reason, or internal FDS/call-center reference field.
+- Ownership: product calls use the authenticated customer client; backend ownership denial was already exercised in checkpoint 4. The opt-in live browser case is coded but was skipped because no API/Keycloak endpoints were configured.
+- Idempotency: the customer-provided key remains visible/editable and preserved; a dedicated new-key action remains available.
+- Accessibility: transfer signals use labeled native checkboxes, the timeline uses a table and `<time>`, and the support cards use headings/links. Full keyboard/WCAG automation remains checkpoint 9.
+- Evidence: the initial local-bind failure and approved browser rerun are recorded separately; skipped live integrations are not claimed as passed.
+
 ## Next checkpoint
 
-Build the customer product journey UX: authenticated dashboard/account/transfer/support navigation, high-risk new-beneficiary submission, HELD receipt with `journeyId`, and customer-safe status timeline without internal risk or staff data.
+Turn `/workspace` into one call-center agent flow: softphone simulator, reason-required masked customer 360, journey-linked interaction, redacted note, and FDS handoff without exposing raw tokens or lab evidence controls.

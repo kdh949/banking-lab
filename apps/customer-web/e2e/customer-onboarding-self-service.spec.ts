@@ -37,7 +37,7 @@ test("customer signup login accounts transfer history smoke when synthetic API i
     suffix,
     customerId: login.customer.customerId,
     alias: "Synthetic E2E Source",
-    initialDepositAmountMinor: 50_000
+    initialDepositAmountMinor: 6_000_000
   });
   const destination = await openSyntheticAccount({
     suffix: `${suffix}-dst`,
@@ -95,6 +95,25 @@ test("customer signup login accounts transfer history smoke when synthetic API i
   const statuses = await customerClient.customerTransfers(login.customer.customerId);
   expect(statuses.items.some((item) => item.idempotencyKey === transfer.item.idempotencyKey && item.status === "POSTED")).toBe(true);
 
+  const heldTransfer = await customerClient.requestCustomerTransfer({
+    customerId: login.customer.customerId,
+    fromAccountId: sourceAccount.accountId,
+    toAccountId: recipient.item.accountId,
+    amountMinor: 5_000_000,
+    idempotencyKey: `CWB-E2E-HELD-${suffix}`,
+    requestedBy: username,
+    reason: "Synthetic customer-web high-risk new-beneficiary journey smoke",
+    firstTimeBeneficiary: true
+  });
+  expect(heldTransfer.item.status).toBe("HELD");
+  expect(heldTransfer.item.transactionId).toBeNull();
+  expect(heldTransfer.item.journeyId).toBeTruthy();
+
+  const heldJourney = await customerClient.customerJourney(heldTransfer.item.journeyId ?? "");
+  expect(heldJourney.status).toBe("HELD");
+  expect(heldJourney.statusMessage).toBe("Security review in progress");
+  expect(heldJourney.references.some((reference) => reference.referenceType === "FDS_CASE")).toBe(false);
+
   await seedBrowserSession(page, login);
   await page.goto(`${baseUrl}/accounts`);
   await expect(page.getByText(sourceAccount.maskedAccountNo).first()).toBeVisible({ timeout: 15_000 });
@@ -107,6 +126,12 @@ test("customer signup login accounts transfer history smoke when synthetic API i
   const resultId = transfer.item.resultId ?? transfer.item.transactionId ?? transfer.item.idempotencyKey;
   await page.goto(`${baseUrl}/transfers/${encodeURIComponent(resultId)}`);
   await expect(page.getByText("POSTED").first()).toBeVisible({ timeout: 15_000 });
+
+  const heldResultId = heldTransfer.item.resultId ?? heldTransfer.item.idempotencyKey;
+  await page.goto(`${baseUrl}/transfers/${encodeURIComponent(heldResultId)}`);
+  await expect(page.getByText("HELD").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(heldTransfer.item.journeyId ?? "").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("customer-journey-timeline")).toBeVisible({ timeout: 15_000 });
 });
 
 async function openSyntheticAccount(input: {

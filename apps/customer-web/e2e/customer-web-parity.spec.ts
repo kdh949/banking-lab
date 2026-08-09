@@ -75,6 +75,7 @@ test("customer web exposes form-backed self-service routes and shared workflow m
     "security",
     "signup",
     "statements",
+    "support",
     "transfers"
   ]);
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
@@ -112,6 +113,8 @@ test("customer web exposes form-backed self-service routes and shared workflow m
   expect(selfService).toContain("customerStatementArtifacts");
   expect(selfService).toContain("internalRecipientLookup");
   expect(selfService).toContain("requestCustomerTransfer");
+  expect(selfService).toContain("customerJourney");
+  expect(selfService).toContain("firstTimeBeneficiary");
   expect(pageSource).not.toContain("fetch(\"/api/customer/transfers\"");
   expect(pageSource).not.toContain("fetch('/api/customer/transfers'");
 });
@@ -153,7 +156,12 @@ test("customer web route pages render signup login transfer forms and complaint 
   await expect(page.getByLabel("Recipient account number or ID")).toBeVisible();
   await expect(page.getByRole("button", { name: "Lookup recipient" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Submit transfer" })).toBeVisible();
+  await expect(page.getByLabel("New beneficiary (FDS review signal)")).toBeChecked();
   await expect(page.getByText("Recipient Lookup").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/support`);
+  await expect(page.getByRole("heading", { name: "Support" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Transfer status" })).toBeVisible();
 
   await page.goto(`${baseUrl}/complaints/CMP-ROUTE-001`);
   await expect(page.getByRole("heading", { name: "Complaint Detail: CMP-ROUTE-001" }).first()).toBeVisible();

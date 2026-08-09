@@ -8,6 +8,7 @@ import {
   type CustomerAccountListItemDto,
   type Customer360Dto,
   type CustomerAuthResponse,
+  type CustomerJourneyDto,
   type CustomerProfileDto,
   type CustomerSelfServiceAccountOpeningRequestDto,
   type CustomerStatementArtifactDto,
@@ -770,7 +771,9 @@ export function CustomerTransferForm() {
   const [fromAccountId, setFromAccountId] = useState("");
   const [recipientQuery, setRecipientQuery] = useState("");
   const [recipient, setRecipient] = useState<LoadState<InternalRecipientAccountDto>>({ status: "idle" });
-  const [amountMinor, setAmountMinor] = useState("1000");
+  const [amountMinor, setAmountMinor] = useState("5000000");
+  const [firstTimeBeneficiary, setFirstTimeBeneficiary] = useState(true);
+  const [newDevice, setNewDevice] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => nextIdempotencyKey("CWB-TRF"));
   const [result, setResult] = useState<LoadState<CustomerTransferResponse>>({ status: "idle" });
 
@@ -826,7 +829,9 @@ export function CustomerTransferForm() {
         amountMinor: Number(amountMinor),
         idempotencyKey,
         requestedBy: session.username,
-        reason: "Synthetic customer-web internal transfer"
+        reason: "Synthetic customer-web high-risk new-beneficiary transfer",
+        firstTimeBeneficiary,
+        newDevice
       });
       rememberTransferResult(response);
       setResult({ status: "loaded", value: response });
@@ -865,6 +870,18 @@ export function CustomerTransferForm() {
             Idempotency key
             <input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} required />
           </label>
+          <label className="self-service-checkbox">
+            <input
+              type="checkbox"
+              checked={firstTimeBeneficiary}
+              onChange={(event) => setFirstTimeBeneficiary(event.target.checked)}
+            />
+            New beneficiary (FDS review signal)
+          </label>
+          <label className="self-service-checkbox">
+            <input type="checkbox" checked={newDevice} onChange={(event) => setNewDevice(event.target.checked)} />
+            New device (FDS review signal)
+          </label>
           <div className="self-service-actions">
             <button type="button" onClick={lookupRecipient} disabled={!recipientQuery || recipient.status === "loading"}>Lookup recipient</button>
             <button type="submit" disabled={result.status === "loading" || recipient.status !== "loaded"}>{result.status === "loading" ? "Submitting" : "Submit transfer"}</button>
@@ -881,6 +898,7 @@ export function CustomerTransferForm() {
 export function CustomerTransferResultView({ resultId }: { readonly resultId: string }) {
   const [session] = useStoredSession();
   const [state, setState] = useState<LoadState<CustomerTransferStatusDto | CustomerTransferResponse>>({ status: "idle" });
+  const [journeyState, setJourneyState] = useState<LoadState<CustomerJourneyDto>>({ status: "idle" });
 
   useEffect(() => {
     const remembered = readRememberedTransferResult(resultId);
@@ -921,6 +939,23 @@ export function CustomerTransferResultView({ resultId }: { readonly resultId: st
       });
   }, [resultId, session]);
 
+  const journeyId = state.status === "loaded" ? transferItem(state.value).journeyId : undefined;
+  useEffect(() => {
+    if (!journeyId) {
+      setJourneyState({ status: "idle" });
+      return;
+    }
+    if (!session) {
+      setJourneyState({ status: "failed", error: authRequiredError() });
+      return;
+    }
+    setJourneyState({ status: "loading" });
+    authedClient(session)
+      .customerJourney(journeyId)
+      .then((journey) => setJourneyState({ status: "loaded", value: journey }))
+      .catch((error: unknown) => setJourneyState({ status: "failed", error: parseError(error) }));
+  }, [journeyId, session]);
+
   return (
     <SelfServiceShell title={`Transfer Result ${resultId}`} status={session ? "Customer owned" : "Login required"}>
       <DemoFallbackBanner />
@@ -930,6 +965,29 @@ export function CustomerTransferResultView({ resultId }: { readonly resultId: st
           {(value) => <TransferStatusSummary value={value} />}
         </LoadBoundary>
       </ChannelPanel>
+      {journeyId ? <CustomerJourneyPanel state={journeyState} /> : null}
+    </SelfServiceShell>
+  );
+}
+
+export function CustomerSupportHome() {
+  return (
+    <SelfServiceShell title="Support" status="Customer-safe help and status">
+      <SelfServiceNav />
+      <ChannelCardGrid>
+        <ChannelCard screenId="CWB-202" title="Transfer status">
+          <p>Open a transfer result to follow its customer-safe review timeline and journey reference.</p>
+          <a href="/transfers/new">Start or review a transfer</a>
+        </ChannelCard>
+        <ChannelCard screenId="CWB-301" title="Complaints">
+          <p>Submit and follow a synthetic support case without exposing internal reviewer notes.</p>
+          <a href="/complaints">Open complaints</a>
+        </ChannelCard>
+        <ChannelCard screenId="CWB-801" title="Notifications">
+          <p>Review masked synthetic delivery history and preferences.</p>
+          <a href="/notifications">Open notifications</a>
+        </ChannelCard>
+      </ChannelCardGrid>
     </SelfServiceShell>
   );
 }
@@ -1224,6 +1282,7 @@ function SelfServiceNav() {
         <a href="/accounts">Accounts</a>
         <a href="/statements">Statements</a>
         <a href="/transfers/new">Transfer</a>
+        <a href="/support">Support</a>
       </nav>
     </ChannelPanel>
   );
@@ -1306,19 +1365,57 @@ function TransferResultPanel({ state }: { readonly state: LoadState<CustomerTran
 }
 
 function TransferStatusSummary({ value }: { readonly value: CustomerTransferResponse | CustomerTransferStatusDto }) {
-  const item = "item" in value ? value.item : value;
+  const item = transferItem(value);
   const replayed = "replayed" in value ? value.replayed : false;
   const status = item.status;
   return (
     <dl className="self-service-definition-list">
       <div><dt>Status</dt><dd><StatusBadge status={replayed ? "REPLAYED" : status} /></dd></div>
       <div><dt>Result</dt><dd>{item.resultId ?? item.idempotencyKey ?? "pending"}</dd></div>
+      <div><dt>Journey</dt><dd>{item.journeyId ?? "not required"}</dd></div>
       <div><dt>Transaction</dt><dd>{item.transactionId ?? "not posted"}</dd></div>
       <div><dt>Case</dt><dd>{"caseId" in item ? item.caseId ?? "none" : item.caseId ?? "none"}</dd></div>
       <div><dt>Amount</dt><dd>{item.amountMinor == null ? "unknown" : formatMinor(item.amountMinor, item.currency ?? "KRW")}</dd></div>
       <div><dt>Message</dt><dd>{item.message ?? item.failureCode ?? "Balanced ledger state available when posted."}</dd></div>
     </dl>
   );
+}
+
+function CustomerJourneyPanel({ state }: { readonly state: LoadState<CustomerJourneyDto> }) {
+  return (
+    <ChannelPanel title="Security review timeline" eyebrow="customer-safe journey">
+      <LoadBoundary state={state} idle="A journey timeline appears for held transfers.">
+        {(journey) => (
+          <div className="self-service-result-stack" data-testid="customer-journey-timeline">
+            <dl className="self-service-definition-list">
+              <div><dt>Journey</dt><dd>{journey.journeyId}</dd></div>
+              <div><dt>Status</dt><dd><StatusBadge status={journey.status} /></dd></div>
+              <div><dt>Update</dt><dd>{journey.statusMessage}</dd></div>
+              <div><dt>Last changed</dt><dd>{journey.updatedAt}</dd></div>
+            </dl>
+            <ChannelTable>
+              <thead>
+                <tr><th>Step</th><th>Status</th><th>Time</th></tr>
+              </thead>
+              <tbody>
+                {journey.events.map((event) => (
+                  <tr key={event.eventId}>
+                    <td>{event.eventType.replaceAll("_", " ")}</td>
+                    <td>{event.status}</td>
+                    <td><time dateTime={event.createdAt}>{event.createdAt}</time></td>
+                  </tr>
+                ))}
+              </tbody>
+            </ChannelTable>
+          </div>
+        )}
+      </LoadBoundary>
+    </ChannelPanel>
+  );
+}
+
+function transferItem(value: CustomerTransferResponse | CustomerTransferStatusDto) {
+  return "item" in value ? value.item : value;
 }
 
 function StatusBadge({ status }: { readonly status: string }) {
