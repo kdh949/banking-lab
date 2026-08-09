@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 5 are complete. Checkpoint 6 (single call-center agent workspace) is next. Customer product routes now submit the high-risk new-beneficiary signal and render the customer-safe HELD journey timeline; notification correlation remains a later checkpoint. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
+Checkpoints 1 through 6 are complete. Checkpoint 7 (`FDS201` plus journey-aware staff workbench and maker-checker execution) is next. The product call-center workspace now links a masked interaction, redacted note, and controlled FDS handoff to the held-transfer journey without posting. No Definition of Done item is marked complete yet; no end-to-end claim will be made before all three product channels and the deterministic demo gate pass.
 
 ## Inspected baseline
 
@@ -43,7 +43,7 @@ Checkpoints 1 through 5 are complete. Checkpoint 6 (single call-center agent wor
 | 3 | Domain API-client modules, UI package boundaries, staff screen split | complete | 221 Node tests, package/script typecheck, contract check, three Next builds |
 | 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | complete | Flyway + JUnit/Testcontainers negative and correlation tests |
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | complete | customer-web typecheck/build, structural and browser route tests |
-| 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | pending | call-center typecheck/build and workflow integration/E2E |
+| 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | complete | call-center typecheck/build, workflow integration and browser route tests |
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | pending | staff-terminal typecheck/build, JUnit and Playwright |
 | 8 | OIDC code+PKCE with opaque BFF session; negative security tests | pending | ownership/reason/masking/redaction/SoD/session tests |
 | 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | pending | automated accessibility checks, keyboard Playwright, trace/audit tests |
@@ -117,6 +117,10 @@ npm run portfolio:verify
 | 2026-08-10 | `npm run next:customer-web:build` | pass | 22 static-generation items; `/support` and held-transfer result routes compiled. |
 | 2026-08-10 | customer Playwright parity spec in restricted sandbox | fail | Next server could not bind `0.0.0.0:3001` (`EPERM`); no browser assertion ran. |
 | 2026-08-10 | same customer Playwright parity spec with approved local bind | pass | 4/4 configured product/lab/form browser tests passed; 11 live API/Keycloak/payment/notification cases skipped because their opt-in endpoints were not configured. |
+| 2026-08-10 | call-center typecheck and targeted Node controls | pass | TypeScript passed; 4/4 call-center/redaction and product/lab boundary checks passed. |
+| 2026-08-10 | `CallCenterWorkflowIntegrationTest` with JDK 21 and PostgreSQL | pass | 2/2 passed: reason/masking, redaction, maker-checker complaint path, journey-linked FDS handoff, and zero ledger posting. |
+| 2026-08-10 | `npm run next:call-center-console:build` | pass | Eight static-generation items; product `/workspace` and isolated `/lab/*` routes compiled. |
+| 2026-08-10 | call-center Playwright parity spec with approved local bind | pass | 3/3 configured product/lab/workspace browser tests passed; two live API/Keycloak cases skipped because opt-in endpoints were not configured. |
 
 ## Domain and security invariants affected
 
@@ -239,6 +243,23 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Accessibility: transfer signals use labeled native checkboxes, the timeline uses a table and `<time>`, and the support cards use headings/links. Full keyboard/WCAG automation remains checkpoint 9.
 - Evidence: the initial local-bind failure and approved browser rerun are recorded separately; skipped live integrations are not claimed as passed.
 
+## Checkpoint 6 changed files
+
+- `/workspace` is now one client-side agent flow with a softphone simulator, mandatory business reason, customer query, optional held-transfer `journeyId`, masked context, interaction start, note redaction, and FDS handoff.
+- Product code uses the least-capability call-center client and staff journey read; it has no bearer-token, storage, raw API evidence, or manifest controls.
+- Call-center CSS provides compact two-column operator layout with labeled native controls, visible disabled states, responsive collapse, and an `aria-live` outcome message.
+- Spring integration coverage seeds a held journey and proves interaction/escalation references, redacted-note metadata, absence of raw note text in journey payloads, required staff view reason, and zero ledger transactions.
+- Browser and structural tests assert the product/lab boundary, disabled actions before reason/context, softphone simulator, journey control, and absence of browser token storage in product source.
+
+## Checkpoint 6 invariant/control review
+
+- Ledger: call-center start, note, and FDS handoff append only journey/control rows; the integration test proves no ledger transaction is created.
+- Privacy: product search renders masked name/phone only; note bodies are redacted server-side and raw phone text is absent from journey payload JSON.
+- Reason/audit: search, interaction, note, handoff, and staff journey read all require a business reason; missing journey-read reason returns `POLICY_REASON_REQUIRED`.
+- Correlation: the same `journeyId` maps `CALL_CENTER_INTERACTION` and `CALL_CENTER_ESCALATION` references and ordered events without changing the HELD status.
+- Auth boundary: product source contains no bearer token or browser storage. Full opaque BFF/OIDC enforcement across all channel calls remains checkpoint 8.
+- Evidence: local browser product tests passed; the two opt-in live API/Keycloak browser cases were skipped and are not claimed as passed.
+
 ## Next checkpoint
 
-Turn `/workspace` into one call-center agent flow: softphone simulator, reason-required masked customer 360, journey-linked interaction, redacted note, and FDS handoff without exposing raw tokens or lab evidence controls.
+Add registry-driven `FDS201` and journey-aware `TX101`, `APR101`, and `WRK003` staff views; support release/block requests, independent checker approval/rejection, and explicit release/block ledger outcomes under one `journeyId`.

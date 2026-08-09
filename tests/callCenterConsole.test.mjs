@@ -14,6 +14,7 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   const liveComposeScript = await readFile("scripts/run-call-center-keycloak-e2e-compose-smoke.sh", "utf8");
   const evidence = JSON.parse(await readFile("docs/test-evidence/generated/call-center-console.json", "utf8"));
   const nextPanel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
+  const productWorkspace = await readFile("apps/call-center-console/src/components/CallCenterWorkspace.tsx", "utf8");
   const tokenRoute = await readFile("apps/call-center-console/src/app/api/auth/keycloak-token/route.ts", "utf8");
   const e2eSpec = await readFile("apps/call-center-console/e2e/call-center-console-parity.spec.ts", "utf8");
   const keycloakRealm = await readFile("infra/keycloak/realm-banking-lab.json", "utf8");
@@ -89,6 +90,14 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   assert.match(nextPanel, /Browser CALL-103 redacted synthetic note smoke/);
   assert.match(nextPanel, /approveStaffApproval/);
   assert.match(nextPanel, /maker-checker approval id/);
+  assert.match(productWorkspace, /createCallCenterApiClient/);
+  assert.match(productWorkspace, /staffJourney/);
+  assert.match(productWorkspace, /journeyId/);
+  assert.match(productWorkspace, /CALL_CENTER_AGENT/);
+  assert.match(productWorkspace, /Save redacted note/);
+  assert.match(productWorkspace, /Request FDS handoff/);
+  assert.match(productWorkspace, /no live telephony/i);
+  assert.doesNotMatch(productWorkspace, /bearerToken|sessionStorage|localStorage|ApiBackedCallCenterPanel/);
   assert.match(tokenRoute, /client_id: "call-center-console"/);
   assert.match(tokenRoute, /AUTHORIZATION_POLICY_VIOLATION/);
   assert.match(keycloakRealm, /"clientId": "call-center-console"/);

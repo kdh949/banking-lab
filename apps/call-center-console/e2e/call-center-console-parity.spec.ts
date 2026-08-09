@@ -34,9 +34,17 @@ test("call-center console product workspace excludes lab evidence controls", asy
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Agent Workspace" })).toBeVisible();
-  await expect(page.getByText("Reason-gated customer search")).toBeVisible();
+  await expect(page.getByText("Reason-gated masked customer 360")).toBeVisible();
   await expect(page.getByText("LAB_ONLY")).toHaveCount(0);
   await expect(page.getByTestId("api-backed-call-center-search")).toHaveCount(0);
+
+  await page.goto(`${baseUrl}/workspace`);
+  await expect(page.getByRole("button", { name: "Simulate inbound call" })).toBeVisible();
+  await expect(page.getByLabel("Business reason")).toBeVisible();
+  await expect(page.getByLabel("Journey ID")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search masked customer" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Request FDS handoff" })).toBeDisabled();
+  await expect(page.getByText("API configuration required")).toBeVisible();
 });
 
 test("call-center console lab catalog renders masked interaction manifests", async ({ page }) => {
