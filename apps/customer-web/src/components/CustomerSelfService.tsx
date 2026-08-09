@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   BankingApiError,
-  createBankingApiClient,
+  createCustomerApiClient,
   type CustomerAccountDetailDto,
   type CustomerAccountListItemDto,
   type Customer360Dto,
@@ -16,7 +16,7 @@ import {
   type CustomerTransferResponse,
   type CustomerTransferStatusDto,
   type InternalRecipientAccountDto
-} from "@banking-lab/api-client";
+} from "@banking-lab/api-client/customer";
 import {
   ChannelBadge,
   ChannelCard,
@@ -26,7 +26,7 @@ import {
   ChannelPanel,
   ChannelShell,
   ChannelTable
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/customer-ui";
 
 type StoredCustomerSession = {
   readonly customerId: string;
@@ -315,7 +315,7 @@ export function CustomerSignupForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createBankingApiClient({ baseUrl: apiBaseUrl }).signupCustomer({
+      const response = await createCustomerApiClient({ baseUrl: apiBaseUrl }).signupCustomer({
         idempotencyKey,
         username,
         password,
@@ -391,7 +391,7 @@ export function CustomerLoginForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createBankingApiClient({ baseUrl: apiBaseUrl }).loginCustomer({ username, password });
+      const response = await createCustomerApiClient({ baseUrl: apiBaseUrl }).loginCustomer({ username, password });
       saveSessionFromAuth(response);
       setSession(readStoredSession());
       setResult({ status: "loaded", value: response });
@@ -1428,7 +1428,7 @@ function clearStoredSession() {
 }
 
 function authedClient(session: StoredCustomerSession) {
-  return createBankingApiClient({
+  return createCustomerApiClient({
     baseUrl: apiBaseUrl,
     bearerToken: session.authorizationHeader
   });

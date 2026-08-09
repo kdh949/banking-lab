@@ -9,7 +9,7 @@ async function read(path) {
 test("Phase 1 synthetic customer onboarding contract and client are wired without staff-terminal manifests", async () => {
   const [contract, client] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts")
+    read("packages/api-client/src/client.ts")
   ]);
 
   for (const operationId of [
@@ -61,7 +61,7 @@ test("Phase 1 synthetic customer onboarding persistence and controller enforce c
 test("Phase 2 synthetic account opening contract and client are wired without staff-terminal manifests", async () => {
   const [contract, client] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts")
+    read("packages/api-client/src/client.ts")
   ]);
 
   for (const operationId of [
@@ -112,7 +112,7 @@ test("Phase 2 synthetic account opening persistence and service preserve ledger 
 test("Phase 3 synthetic customer signup and login contract and client are wired", async () => {
   const [contract, client] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts")
+    read("packages/api-client/src/client.ts")
   ]);
 
   for (const operationId of ["signupCustomer", "loginCustomer"]) {
@@ -178,7 +178,7 @@ test("Phase 3 synthetic customer auth implementation is guarded hashed and unaut
 test("Phase 4 customer account list recipient lookup and form routes are wired", async () => {
   const [contract, client, accountService, transferService, selfService, signupPage, loginPage, accountsPage, accountDetailPage, transferPage, resultPage] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts"),
+    read("packages/api-client/src/client.ts"),
     read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerAccountService.kt"),
     read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerTransferService.kt"),
     read("apps/customer-web/src/components/CustomerSelfService.tsx"),
@@ -311,7 +311,7 @@ test("Phase 6 customer self-service profile onboarding 360 and statements are wi
     matrix
   ] = await Promise.all([
     read("contracts/openapi/core-banking.yaml"),
-    read("packages/api-client/src/index.ts"),
+    read("packages/api-client/src/client.ts"),
     read("db/migrations/V042__customer_self_service_360.sql"),
     read("services/core-banking/src/main/kotlin/lab/banking/core/auth/CustomerAuthService.kt"),
     read("services/core-banking/src/main/kotlin/lab/banking/core/customer/CustomerSelfServiceController.kt"),

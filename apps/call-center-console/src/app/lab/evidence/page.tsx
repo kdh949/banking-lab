@@ -1,4 +1,4 @@
-import { ChannelShell } from "../../../../../../packages/channel-ui/src";
+import { ChannelShell } from "../../../../../../packages/channel-ui/src/operator-workbench";
 import { ApiBackedCallCenterPanel } from "../../../components/ApiBackedCallCenterPanel";
 
 export default function CallCenterEvidencePage() {

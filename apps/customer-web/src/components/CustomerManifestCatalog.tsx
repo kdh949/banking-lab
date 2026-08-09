@@ -8,7 +8,7 @@ import {
   ChannelSplit,
   ChannelTable,
   ChannelWorkflow
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/customer-ui";
 import { customerWorkflowRouteSummaries } from "./workflow-routes";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 

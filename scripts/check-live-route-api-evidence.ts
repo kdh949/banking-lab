@@ -114,6 +114,7 @@ const staffBoundaryScript = await read("scripts/check-integrated-terminal-bounda
 const staffPackage = await read("apps/staff-terminal/package.json");
 const staffApiEvidencePanel = await read("apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx");
 const staffTerminalScreens = await read("apps/staff-terminal/src/components/terminal/screens.tsx");
+const staffTerminalApiScreens = await read("apps/staff-terminal/src/components/terminal/api-screens.tsx");
 const staffTerminalRegistry = await read("apps/staff-terminal/src/components/terminal/registry.ts");
 const staffApiComposeSmoke = await read("scripts/run-staff-terminal-api-e2e-compose-smoke.sh");
 const customerApiComposeSmoke = await read("scripts/run-customer-web-self-service-api-e2e-compose-smoke.sh");
@@ -231,6 +232,9 @@ for (const route of requiredCustomerRoutes) {
 const expectedStaffAppFiles = [
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/staff-terminal/src/app/globals.css",
+  "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
+  "apps/staff-terminal/src/app/lab/evidence/page.tsx",
+  "apps/staff-terminal/src/app/lab/manifests/page.tsx",
   "apps/staff-terminal/src/app/layout.tsx",
   "apps/staff-terminal/src/app/page.tsx"
 ];
@@ -314,7 +318,7 @@ for (const marker of [
   "ApprovalActionPanel",
   "TimelinePanel"
 ]) {
-  requireIncludes(staffTerminalScreens, marker, `staff-terminal screens are missing API workflow marker: ${marker}`, errors);
+  requireIncludes(staffTerminalApiScreens, marker, `staff-terminal API screens are missing workflow marker: ${marker}`, errors);
 }
 
 for (const marker of [

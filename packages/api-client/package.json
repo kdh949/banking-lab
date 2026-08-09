@@ -10,6 +10,26 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./customer": {
+      "types": "./src/domains/customer.ts",
+      "default": "./src/domains/customer.ts"
+    },
+    "./call-center": {
+      "types": "./src/domains/call-center.ts",
+      "default": "./src/domains/call-center.ts"
+    },
+    "./staff": {
+      "types": "./src/domains/staff.ts",
+      "default": "./src/domains/staff.ts"
+    },
+    "./risk": {
+      "types": "./src/domains/risk.ts",
+      "default": "./src/domains/risk.ts"
+    },
+    "./operations": {
+      "types": "./src/domains/operations.ts",
+      "default": "./src/domains/operations.ts"
     }
   }
 }

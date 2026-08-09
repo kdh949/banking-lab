@@ -1,4 +1,4 @@
-import { ChannelShell } from "../../../../../../packages/channel-ui/src";
+import { ChannelShell } from "../../../../../../packages/channel-ui/src/customer-ui";
 import { ApiBackedCustomerPanel } from "../../../components/ApiBackedCustomerPanel";
 
 export default function CustomerEvidencePage() {

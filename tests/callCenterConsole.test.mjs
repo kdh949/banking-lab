@@ -9,7 +9,7 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   const controller = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/callcenter/CallCenterController.kt", "utf8");
   const openApi = await readFile("contracts/openapi/core-banking.yaml", "utf8");
   const manifest = await readFile("screen-manifests/call-center-console/CALL-106.escalation.json", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const liveComposeScript = await readFile("scripts/run-call-center-keycloak-e2e-compose-smoke.sh", "utf8");
   const evidence = JSON.parse(await readFile("docs/test-evidence/generated/call-center-console.json", "utf8"));

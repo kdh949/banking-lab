@@ -36,7 +36,7 @@ test("customer-web product route is journey-backed while lab routes preserve man
   const accountsRoute = await readFile("apps/customer-web/src/app/accounts/page.tsx", "utf8");
   const transferRoute = await readFile("apps/customer-web/src/app/transfers/new/page.tsx", "utf8");
   const accountRoute = await readFile("apps/customer-web/src/app/accounts/[accountId]/page.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
   const notificationDeliveryManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-802.notification-delivery-history.json", "utf8"));
 
@@ -117,7 +117,7 @@ test("admin-console Next workspace renders manifests and has a dedicated port", 
   const appPackage = JSON.parse(await readFile("apps/admin-console/package.json", "utf8"));
   const page = await readFile("apps/admin-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/admin-console/src/components/ApiBackedAdminPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const loader = await readFile("apps/admin-console/src/lib/manifestLoader.ts", "utf8");
   const securityManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-201.security-policy-parameters.json", "utf8"));
   const notificationTemplateManifest = JSON.parse(await readFile("screen-manifests/admin-console/ADM-401.notification-template-approval.json", "utf8"));
@@ -200,7 +200,7 @@ test("audit-console exposes notification delivery history through manifests and 
   const appPackage = JSON.parse(await readFile("apps/audit-console/package.json", "utf8"));
   const page = await readFile("apps/audit-console/src/app/page.tsx", "utf8");
   const panel = await readFile("apps/audit-console/src/components/ApiBackedAuditPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const loader = await readFile("apps/audit-console/src/lib/manifestLoader.ts", "utf8");
   const deliveryManifest = JSON.parse(await readFile("screen-manifests/audit-console/AUD-301.notification-delivery-history.json", "utf8"));
   const reportingManifest = JSON.parse(await readFile("screen-manifests/audit-console/AUD-401.reporting-artifact-history.json", "utf8"));
@@ -238,7 +238,7 @@ test("audit-console exposes notification delivery history through manifests and 
 
 test("complaint-portal exposes self-service complaint extensions through manifests and API client", async () => {
   const panel = await readFile("apps/complaint-portal/src/components/ApiBackedComplaintPanel.tsx", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const materialManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-103.additional-materials.json", "utf8"));
   const reopenManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-106.reopen-request.json", "utf8"));
   const typeGuideManifest = JSON.parse(await readFile("screen-manifests/complaint-portal/CMP-107.complaint-type-guide.json", "utf8"));
@@ -312,7 +312,7 @@ test("staff-terminal keeps the iWorks product route while isolating bounded evid
 });
 
 test("payment service contract exposes staff cancellation maker-checker APIs", async () => {
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const contract = await readFile("contracts/openapi/payment-service.yaml", "utf8");
 
   assert.match(contract, /requestPaymentCancellationApproval/);
@@ -333,7 +333,7 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   const driftManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-101.projection-drift-monitor.json", "utf8"));
   const rebuildManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-102.projection-rebuild-request.json", "utf8"));
   const evidenceManifest = JSON.parse(await readFile("screen-manifests/ops-console/OPS-LEDGER-103.projection-rebuild-evidence.json", "utf8"));
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
 
   assert.match(panel, /NEXT_PUBLIC_BANKING_PAYMENT_API_BASE_URL/);
   assert.match(panel, /mismatchType/);
@@ -375,7 +375,7 @@ test("call-center-console product workspace isolates manifests and API smoke und
   const panel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
   const tokenRoute = await readFile("apps/call-center-console/src/app/api/auth/keycloak-token/route.ts", "utf8");
   const loader = await readFile("apps/call-center-console/src/lib/manifestLoader.ts", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
   const keycloakRealm = await readFile("infra/keycloak/realm-banking-lab.json", "utf8");
   const noteManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-103.note-entry.json", "utf8"));
   const escalationManifest = JSON.parse(await readFile("screen-manifests/call-center-console/CALL-106.escalation.json", "utf8"));

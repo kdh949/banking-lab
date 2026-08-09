@@ -6,7 +6,7 @@ import {
   ChannelMetricGrid,
   ChannelPanel,
   ChannelShell
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/operator-workbench";
 
 export function CallCenterWorkspace() {
   return (

@@ -14,6 +14,7 @@ const requiredPaths = [
   "apps/staff-terminal/src/components/integrated-terminal.tsx",
   "apps/staff-terminal/src/components/integrated-terminal.css",
   "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx",
+  "apps/staff-terminal/src/components/terminal/api-screens.tsx",
   "apps/staff-terminal/src/components/terminal/StaffApiEvidencePanel.tsx",
   "apps/staff-terminal/e2e/integrated-terminal.spec.ts"
 ];

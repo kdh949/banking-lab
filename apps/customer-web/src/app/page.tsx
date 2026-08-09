@@ -1,4 +1,4 @@
-import { ChannelShell } from "../../../../packages/channel-ui/src";
+import { ChannelShell } from "../../../../packages/channel-ui/src/customer-ui";
 import { CustomerSelfServiceHomeSurface } from "../components/CustomerSelfService";
 
 export default function CustomerWebPage() {

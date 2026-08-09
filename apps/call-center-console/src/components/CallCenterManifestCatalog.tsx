@@ -5,7 +5,7 @@ import {
   ChannelDefinitionList,
   ChannelShell,
   ChannelWorkflow
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/operator-workbench";
 import { loadChannelManifests } from "../lib/manifestLoader";
 
 function list(value: readonly string[] | undefined | null): string {

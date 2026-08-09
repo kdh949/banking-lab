@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 and 2 are complete. Checkpoint 3 (domain package boundaries and staff component split) is next. No Definition of Done item is marked complete yet because the target cross-channel runtime has not been implemented and verified end to end.
+Checkpoints 1 through 3 are complete. Checkpoint 4 (durable cross-channel journey projection) is next. No Definition of Done item is marked complete yet because the target cross-channel runtime has not been implemented and verified end to end.
 
 ## Inspected baseline
 
@@ -18,7 +18,7 @@ Checkpoints 1 and 2 are complete. Checkpoint 3 (domain package boundaries and st
 - The staff terminal already exposes registry-driven `CUS101`, `ACC101`, `TX101`, `APR101`, `WRK002`, `WRK003`, and `CALL101`-`CALL106` screens through the shared API client.
 - The notification service already consumes durable synthetic outbox events, deduplicates them through its inbox, renders masked synthetic messages, and exposes customer-owned delivery history.
 - Customer and staff product paths still mix product UI with manifest catalogs, raw API evidence controls, simulator-token controls, and browser-readable bearer-token state.
-- `packages/api-client/src/index.ts` is a 4,668-line monolith; staff terminal `screens.tsx` is a 1,486-line mixed-domain component.
+- At baseline, `packages/api-client/src/index.ts` was a 4,668-line monolith and staff terminal `screens.tsx` was a 1,486-line mixed-domain component. Checkpoint 3 established compatibility-preserving seams for both.
 
 ## Verified gaps
 
@@ -40,7 +40,7 @@ Checkpoints 1 and 2 are complete. Checkpoint 3 (domain package boundaries and st
 | --- | --- | --- | --- |
 | 1 | Product/portfolio scope, state labels, journey/security/screen docs, portable examples | complete | documentation tests and repository scans |
 | 2 | Product routes separated from `/lab/evidence`, `/lab/manifests`, `/lab/api-simulator` | complete | static boundary tests, Next typecheck/build, updated Playwright route assertions |
-| 3 | Domain API-client modules, UI package boundaries, staff screen split | pending | package typecheck, public import compatibility tests |
+| 3 | Domain API-client modules, UI package boundaries, staff screen split | complete | 221 Node tests, package/script typecheck, contract check, three Next builds |
 | 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | pending | Flyway + JUnit/Testcontainers negative and correlation tests |
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | pending | customer-web typecheck/build and owned held-transfer browser tests |
 | 6 | Single call-center `/workspace` flow with softphone simulator and FDS handoff | pending | call-center typecheck/build and workflow integration/E2E |
@@ -94,6 +94,15 @@ npm run portfolio:verify
 | 2026-08-10 | `npm run integrated-terminal:boundary-check` | pass | Seven allowed staff app route files; product terminal excludes the API evidence widget. |
 | 2026-08-10 | `npm run packages:typecheck` | pass | Shared screen, form, API, and auth packages remain compatible. |
 | 2026-08-10 | three channel `next build` commands | pass | Customer (21 static-generation items), call-center (8), and staff (7) generated `/lab/*`; call-center generated `/workspace`. |
+| 2026-08-10 | first checkpoint 3 targeted test bundle | fail | 32/36 passed; four existing Node HTTP tests could not bind `127.0.0.1` in the restricted sandbox (`EPERM`). |
+| 2026-08-10 | `node --test tests/fdsAmlReconciliation.test.mjs` with approved local bind | pass | 5/5 passed; release/block, AML, and reconciliation behavior was unchanged. |
+| 2026-08-10 | `npm run packages:typecheck` and `npm run scripts:typecheck` | pass | Domain client subpaths, public barrel, channel imports, and scripts compiled. |
+| 2026-08-10 | `npm run contracts:check-client` | pass | 202 operationIds matched 165 client methods/exemptions using the new implementation path. |
+| 2026-08-10 | checkpoint 3 targeted structural suite | pass | 37/37 passed across module boundaries, route boundaries, onboarding, scaffold, and portfolio surface. |
+| 2026-08-10 | `npm run integrated-terminal:boundary-check` | pass | Seven app routes and 18 terminal source files matched the bounded layout. |
+| 2026-08-10 | three channel `next build` commands after module split | pass | All product/lab routes generated successfully with the new UI entry points. |
+| 2026-08-10 | `node --experimental-strip-types scripts/check-live-route-api-evidence.ts` | pass | Static/live-evidence boundary accepted split staff API screens and lab routes; this is not a new live Compose run. |
+| 2026-08-10 | `npm test` | pass | 221/221 passed, 0 skipped. Generated AML timestamp-only noise was restored and is not part of the checkpoint. |
 
 ## Domain and security invariants affected
 
@@ -159,6 +168,25 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Accessibility: new route pages use named landmarks/headings; focused browser accessibility and keyboard validation remains checkpoint 9.
 - Evidence: the initial legacy assertion failure and corrected pass are both recorded; live browser E2E was updated but not claimed as executed in this checkpoint.
 
+## Checkpoint 3 changed files
+
+- `packages/api-client/src/client.ts`, root compatibility barrel, and domain entry points for customer, call-center, staff, risk, and operations.
+- API-client package exports plus contract/evidence scripts and structural tests that resolve the new implementation path.
+- `packages/channel-ui/src/primitives.tsx`, `design-tokens.css`, `customer-ui.tsx`, and `operator-workbench.tsx` with backward-compatible root exports.
+- Customer product imports now use the customer UI and least-capability customer API entry point.
+- Staff static navigation remains in `screens.tsx`; Spring API workbench screens moved to `api-screens.tsx` and use staff/call-center clients separately.
+- `docs/adr/0009-channel-client-and-ui-boundaries.md` records the reuse decision and rejected duplicate-package option.
+
+## Checkpoint 3 invariant/control review
+
+- Ledger: no ledger command, posting, balance projection, or persistence logic changed; the elevated FDS suite reconfirmed release/block behavior.
+- Maker-checker: staff client still exposes separate approval commands and the existing self-approval protection remains covered by the full Node suite.
+- Manifests: no manifest schema or count changed.
+- Structured errors: the root `BankingApiError` export remains compatible; staff screens consume it through the constrained staff entry point.
+- Security: product customer and staff API callers now receive only declared domain methods at the TypeScript/runtime object boundary. Lab evidence retains the broad compatibility client intentionally.
+- UI: one token/primitive source is retained; customer/operator entry points avoid duplicate abstractions. Default product navigation no longer advertises manifest/evidence labels.
+- Evidence: the sandbox bind failure and approved identical rerun are both recorded. No live Compose claim was made.
+
 ## Next checkpoint
 
-Split the API client into domain entry points, split oversized channel components, and preserve backward-compatible public imports before adding the journey contract.
+Add the Flyway journey projection, reference mappings, append-only events, ownership/reason-audit APIs, and correlations from transfer, FDS, call-center, approval, ledger, and notification references.

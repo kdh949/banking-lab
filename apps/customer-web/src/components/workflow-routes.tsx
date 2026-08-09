@@ -9,7 +9,7 @@ import {
   ChannelPanel,
   ChannelShell,
   ChannelTable
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/customer-ui";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
 type WorkflowTone = "neutral" | "success" | "warning" | "critical";

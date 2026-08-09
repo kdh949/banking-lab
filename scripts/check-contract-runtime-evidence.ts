@@ -56,7 +56,7 @@ const generatedPath = "docs/test-evidence/generated/contract-runtime-evidence.js
 const packageJson = JSON.parse(await readUtf8("package.json")) as { readonly scripts?: Record<string, string> };
 const scripts = packageJson.scripts ?? {};
 const operations = await readAllOpenApiOperations();
-const clientSource = await readUtf8("packages/api-client/src/index.ts");
+const clientSource = await readUtf8("packages/api-client/src/client.ts");
 const clientMethods = new Set(
   Array.from(clientSource.matchAll(/^    ([A-Za-z][A-Za-z0-9_]*)\([^)]*\)\s*\{/gmu)).map((match) => match[1])
 );
