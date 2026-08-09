@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoint 1 complete. Checkpoint 2 (product and evidence route separation) is next. No Definition of Done item is marked complete yet because the target cross-channel runtime has not been implemented and verified.
+Checkpoints 1 and 2 are complete. Checkpoint 3 (domain package boundaries and staff component split) is next. No Definition of Done item is marked complete yet because the target cross-channel runtime has not been implemented and verified end to end.
 
 ## Inspected baseline
 
@@ -39,7 +39,7 @@ Checkpoint 1 complete. Checkpoint 2 (product and evidence route separation) is n
 | Checkpoint | Scope | Status | Primary proof |
 | --- | --- | --- | --- |
 | 1 | Product/portfolio scope, state labels, journey/security/screen docs, portable examples | complete | documentation tests and repository scans |
-| 2 | Product routes separated from `/lab/evidence`, `/lab/manifests`, `/lab/api-simulator` | pending | Next typecheck/build and Playwright route assertions |
+| 2 | Product routes separated from `/lab/evidence`, `/lab/manifests`, `/lab/api-simulator` | complete | static boundary tests, Next typecheck/build, updated Playwright route assertions |
 | 3 | Domain API-client modules, UI package boundaries, staff screen split | pending | package typecheck, public import compatibility tests |
 | 4 | Durable journey projection, mappings, events, customer ownership, staff reason/audit | pending | Flyway + JUnit/Testcontainers negative and correlation tests |
 | 5 | Customer login/dashboard/accounts/transfers/support product UX | pending | customer-web typecheck/build and owned held-transfer browser tests |
@@ -88,6 +88,12 @@ npm run portfolio:verify
 | 2026-08-10 | `npm run scripts:typecheck` | pass | Root script TypeScript project passed. |
 | 2026-08-10 | `npm test` | pass | 215/215 Node/oracle and structural tests passed; 0 skipped. |
 | 2026-08-10 | `node --test tests/channelWorkbenchDocumentation.test.mjs` | pass | 3/3 passed after final progress-log wording update. |
+| 2026-08-10 | `npm --workspace @banking-lab/{customer-web,call-center-console,staff-terminal} run typecheck` | pass | All three channel workspaces passed independently. |
+| 2026-08-10 | `node --test tests/channelProductLabBoundary.test.mjs tests/nextScaffold.test.mjs tests/callCenterConsole.test.mjs` | fail | 15/16 passed; one legacy static assertion still expected the previous call-center Playwright test name. |
+| 2026-08-10 | same targeted route-boundary command, corrected rerun | pass | 16/16 passed. Product roots reject lab panels; lab routes retain evidence/manifests. |
+| 2026-08-10 | `npm run integrated-terminal:boundary-check` | pass | Seven allowed staff app route files; product terminal excludes the API evidence widget. |
+| 2026-08-10 | `npm run packages:typecheck` | pass | Shared screen, form, API, and auth packages remain compatible. |
+| 2026-08-10 | three channel `next build` commands | pass | Customer (21 static-generation items), call-center (8), and staff (7) generated `/lab/*`; call-center generated `/workspace`. |
 
 ## Domain and security invariants affected
 
@@ -136,6 +142,23 @@ The largest risk is transactionally correlating transfer, FDS, approval, ledger,
 - Structured errors: the security contract maps missing reason, authorization, self-approval, workflow state, and not-found behavior to stable families.
 - Evidence: only commands run on this branch are recorded; the two failed test attempts remain visible.
 
+## Checkpoint 2 changed files
+
+- Customer product root and `CustomerSelfServiceHomeSurface`, plus `CustomerManifestCatalog` and `/lab/{evidence,manifests,api-simulator}`.
+- Call-center product root, `/workspace`, `CallCenterWorkspace`, `CallCenterManifestCatalog`, and `/lab/{evidence,manifests,api-simulator}`.
+- Staff terminal portal screen and `/lab/{evidence,manifests,api-simulator}`.
+- Next scaffold, channel route boundary, terminal boundary, and three channel Playwright specifications.
+
+## Checkpoint 2 invariant/control review
+
+- Ledger: no Spring, PostgreSQL, posting, or balance code changed.
+- Maker-checker: product text retains controlled FDS escalation; approval execution behavior is unchanged.
+- Manifests: customer/call-center catalogs remain available only under `/lab/manifests`; staff remains registry-driven.
+- Structured errors: no API or error response was changed.
+- Security: raw API smoke and simulator-token controls no longer render on product roots. This is route isolation, not yet the opaque BFF session conversion.
+- Accessibility: new route pages use named landmarks/headings; focused browser accessibility and keyboard validation remains checkpoint 9.
+- Evidence: the initial legacy assertion failure and corrected pass are both recorded; live browser E2E was updated but not claimed as executed in this checkpoint.
+
 ## Next checkpoint
 
-Move manifest catalogs, API evidence exercisers, and simulator controls out of customer/call-center product routes into explicit `/lab/*` routes while preserving existing evidence tests. Add the customer and call-center product shells needed for later journey behavior.
+Split the API client into domain entry points, split oversized channel components, and preserve backward-compatible public imports before adding the journey contract.

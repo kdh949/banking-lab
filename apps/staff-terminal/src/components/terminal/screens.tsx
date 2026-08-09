@@ -15,7 +15,6 @@ import {
 import { createSimulatorBearerToken } from "@banking-lab/auth-client";
 import { depositMenu, depositMenuTargets, detailColumns, feeColumns, fundGroups, inheritanceColumns, newScreenRows, notices } from "./registry";
 import { DataTable, Field, MaterialIcon, Panel, RadioGroup, SearchBox } from "./primitives";
-import { StaffApiEvidencePanel } from "./StaffApiEvidencePanel";
 import type { IconName, MenuTarget, ScreenControlMetadata, TableColumn, TableRow } from "./types";
 
 export function PortalScreen() {
@@ -60,7 +59,6 @@ export function PortalScreen() {
         <MiniWidget title="일정" icon="calendar_month">
           <MiniCalendar />
         </MiniWidget>
-        <StaffApiEvidencePanel />
         <MiniWidget title="금리정보" icon="monitoring">
           <Sparkline />
         </MiniWidget>

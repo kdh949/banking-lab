@@ -23,8 +23,10 @@ test("customer-web Next workspace keeps legacy static shell out of target app", 
   assert.equal(await exists("runtime/synthetic-reference/apps/customer-web/public/index.html"), false);
 });
 
-test("customer-web Next page is manifest-driven and customer journey routes are form-backed", async () => {
+test("customer-web product route is journey-backed while lab routes preserve manifest and API evidence", async () => {
   const page = await readFile("apps/customer-web/src/app/page.tsx", "utf8");
+  const manifestCatalog = await readFile("apps/customer-web/src/components/CustomerManifestCatalog.tsx", "utf8");
+  const evidenceRoute = await readFile("apps/customer-web/src/app/lab/evidence/page.tsx", "utf8");
   const loader = await readFile("apps/customer-web/src/lib/manifestLoader.ts", "utf8");
   const panel = await readFile("apps/customer-web/src/components/ApiBackedCustomerPanel.tsx", "utf8");
   const selfService = await readFile("apps/customer-web/src/components/CustomerSelfService.tsx", "utf8");
@@ -38,9 +40,14 @@ test("customer-web Next page is manifest-driven and customer journey routes are 
   const notificationPreferenceManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-801.notification-preferences.json", "utf8"));
   const notificationDeliveryManifest = JSON.parse(await readFile("screen-manifests/customer-web/CWB-802.notification-delivery-history.json", "utf8"));
 
-  assert.match(page, /loadCustomerWebManifests/);
-  assert.match(page, /customerWorkflowRouteSummaries/);
+  assert.doesNotMatch(page, /loadCustomerWebManifests|ApiBackedCustomerPanel|customerWorkflowRouteSummaries/);
+  assert.match(page, /Customer Dashboard/);
   assert.match(page, /CustomerSelfServiceHomeSurface/);
+  assert.match(manifestCatalog, /loadCustomerWebManifests/);
+  assert.match(manifestCatalog, /customerWorkflowRouteSummaries/);
+  assert.match(manifestCatalog, /LAB_ONLY/);
+  assert.match(evidenceRoute, /ApiBackedCustomerPanel/);
+  assert.match(evidenceRoute, /LAB_ONLY/);
   assert.match(loader, /screen-manifests/);
   assert.match(loader, /customer-web/);
   assert.match(loader, /manifest\.app === "customer-web"/);
@@ -258,7 +265,7 @@ test("complaint-portal exposes self-service complaint extensions through manifes
   assert.equal(typeGuideManifest.query.endpoint, "GET /api/customer/complaint-types");
 });
 
-test("staff-terminal is the iWorks integrated terminal with only official routes", async () => {
+test("staff-terminal keeps the iWorks product route while isolating bounded evidence under lab", async () => {
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const appPackage = JSON.parse(await readFile("apps/staff-terminal/package.json", "utf8"));
   const page = await readFile("apps/staff-terminal/src/app/page.tsx", "utf8");
@@ -267,6 +274,7 @@ test("staff-terminal is the iWorks integrated terminal with only official routes
   const shell = await readFile("apps/staff-terminal/src/components/terminal/shell.tsx", "utf8");
   const screens = await readFile("apps/staff-terminal/src/components/terminal/screens.tsx", "utf8");
   const statusRoute = await readFile("apps/staff-terminal/src/app/api/terminal-status/route.ts", "utf8");
+  const evidenceRoute = await readFile("apps/staff-terminal/src/app/lab/evidence/page.tsx", "utf8");
 
   assert.equal(appPackage.name, "@banking-lab/staff-terminal");
   assert.equal(rootPackage.scripts["next:staff-terminal:typecheck"], "npm --workspace @banking-lab/staff-terminal run typecheck");
@@ -284,6 +292,9 @@ test("staff-terminal is the iWorks integrated terminal with only official routes
   assert.match(screens, /replace\(\/\\D\/gu, ""\)/);
   assert.match(statusRoute, /serverTimeIso/);
   assert.match(statusRoute, /clientIp/);
+  assert.doesNotMatch(screens, /StaffApiEvidencePanel/);
+  assert.match(evidenceRoute, /StaffApiEvidencePanel/);
+  assert.match(evidenceRoute, /LAB_ONLY/);
 
   for (const removedPath of [
     "apps/staff-terminal/src/components/ApiBackedStaffPanel.tsx",
@@ -354,10 +365,13 @@ test("ops-console exposes OPS404 payment outbox dispatch through the payment ser
   assert.equal(evidenceManifest.workflow.name, "ledgerProjectionRebuildWorkflow");
 });
 
-test("call-center-console Next workspace renders manifests and API-backed workflow smoke", async () => {
+test("call-center-console product workspace isolates manifests and API smoke under lab routes", async () => {
   const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
   const appPackage = JSON.parse(await readFile("apps/call-center-console/package.json", "utf8"));
   const page = await readFile("apps/call-center-console/src/app/page.tsx", "utf8");
+  const workspace = await readFile("apps/call-center-console/src/components/CallCenterWorkspace.tsx", "utf8");
+  const manifestCatalog = await readFile("apps/call-center-console/src/components/CallCenterManifestCatalog.tsx", "utf8");
+  const evidenceRoute = await readFile("apps/call-center-console/src/app/lab/evidence/page.tsx", "utf8");
   const panel = await readFile("apps/call-center-console/src/components/ApiBackedCallCenterPanel.tsx", "utf8");
   const tokenRoute = await readFile("apps/call-center-console/src/app/api/auth/keycloak-token/route.ts", "utf8");
   const loader = await readFile("apps/call-center-console/src/lib/manifestLoader.ts", "utf8");
@@ -369,9 +383,14 @@ test("call-center-console Next workspace renders manifests and API-backed workfl
   assert.equal(appPackage.name, "@banking-lab/call-center-console");
   assert.match(appPackage.scripts.dev, /3008/);
   assert.equal(rootPackage.scripts["next:call-center-console:typecheck"], "npm --workspace @banking-lab/call-center-console run typecheck");
-  assert.match(page, /loadChannelManifests/);
-  assert.match(page, /ApiBackedCallCenterPanel/);
-  assert.match(page, /call-center-console/);
+  assert.match(page, /CallCenterWorkspace/);
+  assert.doesNotMatch(page, /loadChannelManifests|ApiBackedCallCenterPanel/);
+  assert.match(workspace, /call-center-console/);
+  assert.match(workspace, /Agent Workspace/);
+  assert.match(manifestCatalog, /loadChannelManifests/);
+  assert.match(manifestCatalog, /LAB_ONLY/);
+  assert.match(evidenceRoute, /ApiBackedCallCenterPanel/);
+  assert.match(evidenceRoute, /LAB_ONLY/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_API_BASE_URL/);
   assert.match(panel, /NEXT_PUBLIC_BANKING_KEYCLOAK_BASE_URL/);
   assert.match(panel, /data-testid="api-backed-call-center-search"/);

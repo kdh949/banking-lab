@@ -8,6 +8,9 @@ const requiredPaths = [
   "apps/staff-terminal/src/app/layout.tsx",
   "apps/staff-terminal/src/app/globals.css",
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
+  "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
+  "apps/staff-terminal/src/app/lab/evidence/page.tsx",
+  "apps/staff-terminal/src/app/lab/manifests/page.tsx",
   "apps/staff-terminal/src/components/integrated-terminal.tsx",
   "apps/staff-terminal/src/components/integrated-terminal.css",
   "apps/staff-terminal/src/components/terminal/IntegratedTerminalApp.tsx",
@@ -41,6 +44,9 @@ const removedPaths = [
 const allowedAppFiles = new Set([
   "apps/staff-terminal/src/app/api/terminal-status/route.ts",
   "apps/staff-terminal/src/app/globals.css",
+  "apps/staff-terminal/src/app/lab/api-simulator/page.tsx",
+  "apps/staff-terminal/src/app/lab/evidence/page.tsx",
+  "apps/staff-terminal/src/app/lab/manifests/page.tsx",
   "apps/staff-terminal/src/app/layout.tsx",
   "apps/staff-terminal/src/app/page.tsx"
 ]);

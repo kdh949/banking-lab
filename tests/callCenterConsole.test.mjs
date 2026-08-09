@@ -94,7 +94,7 @@ test("call-center workflow is API-backed and synthetic with redacted notes", asy
   assert.match(keycloakRealm, /"clientId": "call-center-console"/);
   assert.match(keycloakRealm, /"username": "call-agent01"/);
   assert.match(keycloakRealm, /"username": "call-manager01"/);
-  assert.match(e2eSpec, /call-center console renders masked interaction controls from manifests/);
+  assert.match(e2eSpec, /call-center console lab catalog renders masked interaction manifests/);
   assert.match(e2eSpec, /call-center console propagates live Keycloak agent and manager tokens when configured/);
   assert.match(e2eSpec, /BANKING_LAB_E2E_KEYCLOAK_BASE_URL/);
   assert.equal(packageJson.scripts["test:call-center-console:keycloak-e2e-compose"], "bash scripts/run-call-center-keycloak-e2e-compose-smoke.sh");

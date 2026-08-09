@@ -9,6 +9,20 @@
   letter-spacing: 0;
 }
 
+.staff-lab-root {
+  min-width: 0;
+  overflow: auto;
+}
+
+.staff-lab-page {
+  width: min(760px, calc(100% - 32px));
+  margin: 32px auto;
+  border: 1px solid #b8c2cc;
+  border-radius: 8px;
+  background: #fff;
+  padding: 24px;
+}
+
 .iworks-icon {
   display: inline-block;
   color: currentcolor;

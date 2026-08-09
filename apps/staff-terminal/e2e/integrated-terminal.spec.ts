@@ -114,14 +114,14 @@ test("iWorks integrated terminal supports operator inputs and lookup dialogs", a
   await expect(page.getByLabel("조회구분")).toContainText("3-전행고객번호");
 });
 
-test("iWorks integrated terminal source boundary keeps only official routes and components", async () => {
+test("iWorks integrated terminal source boundary keeps product and lab routes separated", async () => {
   const appDir = path.join(repoRoot, "apps", "staff-terminal", "src", "app");
   const componentDir = path.join(repoRoot, "apps", "staff-terminal", "src", "components");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const appFiles = readdirSync(appDir).sort();
   const componentFiles = readdirSync(componentDir).sort();
 
-  expect(appFiles).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
+  expect(appFiles).toEqual(["api", "globals.css", "lab", "layout.tsx", "page.tsx"]);
   expect(readdirSync(path.join(appDir, "api")).sort()).toEqual(["terminal-status"]);
   expect(componentFiles).toEqual(["integrated-terminal.css", "integrated-terminal.tsx", "terminal"]);
   expect(pageSource).toContain("IntegratedTerminalApp");

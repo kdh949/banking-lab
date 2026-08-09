@@ -29,17 +29,27 @@ function manifests() {
     .map((fileName) => JSON.parse(readFileSync(path.join(dir, fileName), "utf8")));
 }
 
-test("call-center console renders masked interaction controls from manifests", async ({ page }) => {
-  const screens = manifests();
+test("call-center console product workspace excludes lab evidence controls", async ({ page }) => {
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Customer interaction and escalation workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Agent Workspace" })).toBeVisible();
+  await expect(page.getByText("Reason-gated customer search")).toBeVisible();
+  await expect(page.getByText("LAB_ONLY")).toHaveCount(0);
+  await expect(page.getByTestId("api-backed-call-center-search")).toHaveCount(0);
+});
+
+test("call-center console lab catalog renders masked interaction manifests", async ({ page }) => {
+  const screens = manifests();
+  await page.goto(`${baseUrl}/lab/manifests`);
+
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Call-Center Screen Manifests" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
   }
 
-  await expect(page.getByText("Synthetic masked workflow only")).toBeVisible();
+  await expect(page.getByText(/LAB_ONLY/)).toBeVisible();
   await expect(page.getByText("reason required").first()).toBeVisible();
   await expect(page.getByText("CALL_CENTER_NOTE_REDACTION")).toBeVisible();
   await expect(page.getByText("CALL_CENTER_ESCALATION_REDACTION")).toBeVisible();
@@ -48,13 +58,15 @@ test("call-center console renders masked interaction controls from manifests", a
   await expect(page.getByText("ESCALATED", { exact: true }).first()).toBeVisible();
 });
 
-test("call-center console shell has no app-router one-off business screens", async () => {
+test("call-center console keeps product and lab route boundaries explicit", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
-  expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
-  expect(pageSource).toContain("loadChannelManifests");
+  expect(files).toEqual(["api", "globals.css", "lab", "layout.tsx", "page.tsx", "workspace"]);
+  expect(pageSource).toContain("CallCenterWorkspace");
+  expect(pageSource).not.toContain("loadChannelManifests");
+  expect(pageSource).not.toContain("ApiBackedCallCenterPanel");
   expect(pageSource).not.toContain("fetch(\"/api/staff/call-center");
   expect(pageSource).not.toContain("fetch('/api/staff/call-center");
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
@@ -63,7 +75,7 @@ test("call-center console shell has no app-router one-off business screens", asy
 test("call-center console executes Spring API-backed synthetic workflow when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed call-center smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   const searchPanel = page.getByTestId("api-backed-call-center-search");
   await expect(searchPanel).toContainText("customers loaded", { timeout: 15_000 });
@@ -81,7 +93,7 @@ test("call-center console executes Spring API-backed synthetic workflow when con
 test("call-center console propagates live Keycloak agent and manager tokens when configured", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live call-center Keycloak browser smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Sign in call-center agent with Keycloak" }).click();
   await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });

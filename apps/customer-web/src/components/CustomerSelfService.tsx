@@ -44,19 +44,6 @@ type UiError = {
   readonly route?: string;
 };
 
-type HomeRouteSummary = {
-  readonly href: string;
-  readonly title: string;
-  readonly screenIds: readonly string[];
-};
-
-type CustomerSelfServiceHomeSurfaceProps = {
-  readonly manifestCount: number;
-  readonly reasonRequiredCount: number;
-  readonly makerCheckerCount: number;
-  readonly routeSummaries: readonly HomeRouteSummary[];
-};
-
 type LoadState<T> =
   | { readonly status: "idle" }
   | { readonly status: "loading" }
@@ -67,12 +54,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
 const sessionStorageKey = "bankingLabCustomerSyntheticSession";
 const transferResultStorageKey = "bankingLabCustomerTransferResults";
 
-export function CustomerSelfServiceHomeSurface({
-  manifestCount,
-  reasonRequiredCount,
-  makerCheckerCount,
-  routeSummaries
-}: CustomerSelfServiceHomeSurfaceProps) {
+export function CustomerSelfServiceHomeSurface() {
   const [session, setSession] = useStoredSession();
   const [filter, setFilter] = useState<"priority" | "money" | "support" | "security">("priority");
   const [profileState, setProfileState] = useState<LoadState<CustomerProfileDto>>({ status: "idle" });
@@ -239,7 +221,7 @@ export function CustomerSelfServiceHomeSurface({
       </section>
 
       <ChannelMetricGrid>
-        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" detail={`${manifestCount} manifests`} />
+        <ChannelMetric label="Privacy" value="Masked by default" detail="Customer-owned data only" />
         <ChannelMetric
           label="Available balance"
           value={balanceValue}
@@ -259,7 +241,7 @@ export function CustomerSelfServiceHomeSurface({
       <ChannelPanel
         title="Service Hub"
         eyebrow="Profile · money · support · security"
-        meta={<ChannelBadge>{reasonRequiredCount} reason-gated</ChannelBadge>}
+        meta={<ChannelBadge>Customer-owned</ChannelBadge>}
       >
         <div className="self-service-segments" role="tablist" aria-label="Service categories">
           {(["priority", "money", "support", "security"] as const).map((item) => (
@@ -290,7 +272,7 @@ export function CustomerSelfServiceHomeSurface({
       <ChannelPanel
         title="Recent Activity"
         eyebrow="Ledger read model"
-        meta={<ChannelBadge tone={makerCheckerCount > 0 ? "critical" : "neutral"}>{makerCheckerCount} maker-checker</ChannelBadge>}
+        meta={<ChannelBadge>Read-only projection</ChannelBadge>}
       >
         {recentActivity.length > 0 ? (
           <RecentLedgerActivityTable items={recentActivity} />
@@ -311,19 +293,6 @@ export function CustomerSelfServiceHomeSurface({
         </ChannelCard>
       </ChannelCardGrid>
 
-      <ChannelPanel title="Manifest Route Map" eyebrow="customer-web">
-        <nav className="self-service-manifest-strip" aria-label="Customer manifest routes">
-          {routeSummaries.map((route) => (
-            <a
-              href={route.href.replace("[accountId]", "ACC-SELECTED").replace("[resultId]", "TRF-RESULT").replace("[caseId]", "CMP-CASE").replace("[cardId]", "CARD-SELECTED")}
-              key={route.href}
-            >
-              <strong>{route.title}</strong>
-              <span>{route.screenIds.join(", ")}</span>
-            </a>
-          ))}
-        </nav>
-      </ChannelPanel>
     </>
   );
 }
