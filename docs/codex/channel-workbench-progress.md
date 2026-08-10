@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-All 10 checkpoints and all 12 Definition-of-Done items are complete on the local branch. The deterministic cross-channel command, full repository/static matrix, three product builds, Core Banking and Notification Service integration suites, three channel Compose smokes, and settlement-first portfolio gate all pass on the final tree. The evidence remains synthetic/local unless a linked hosted workflow reports otherwise; push and draft-PR publication are the remaining Git handoff actions.
+All 10 checkpoints and all 12 Definition-of-Done items are complete on the branch and published in draft PR [#101](https://github.com/kdh949/banking-lab/pull/101). The deterministic cross-channel command, full repository/static matrix, three product builds, Core Banking and Notification Service integration suites, three channel Compose smokes, and settlement-first portfolio gate all pass on the final tree. The checked-in evidence remains synthetic/local unless the linked hosted workflow reports otherwise.
 
 ## Inspected baseline
 
@@ -184,6 +184,7 @@ npm run portfolio:verify
 | 2026-08-10 | final `npm run demo:test:channels` after pre-PR control review | pass | 1/1 passed in 16.5s; disposition stayed disabled before FDS handoff, the SQL required the stable release idempotency key, database invariants passed, and current six screenshots/machine evidence were regenerated. |
 | 2026-08-10 | `npm run portfolio:verify` | pass | 19/19 focused Node/platform tests, contracts/OpenAPI diff, Core/Payment backend suites, ops-console build, and 2/2 settlement Playwright cases passed. |
 | 2026-08-10 | focused pre-PR review and corrected rerun | pass | Prevented customer switching during an open call, duplicate handoff/disposition, post-close notes, and premature disposition. Journey-less legacy FDS decisions remain approvable without a journey notification; the new focused PostgreSQL regression passed with the three journey-backed FDS tests. Call-center typecheck/build, focused static tests, Core unit tests, and the unified demo also passed. |
+| 2026-08-10 | Git handoff | pass | Committed checkpoint 10, pushed `feat/cross-channel-held-transfer-workbench`, and opened draft PR [#101](https://github.com/kdh949/banking-lab/pull/101) to `main`. Hosted checks are not represented as green by the local evidence. |
 
 ## Domain and security invariants affected
 
@@ -408,4 +409,4 @@ The generated JSON says `localOnly=true` and `hostedCiGreenClaim=false`. Notific
 
 ## Next smallest safe task
 
-Commit checkpoint 10 and its actual evidence, push `feat/cross-channel-held-transfer-workbench`, open one draft PR to `main`, and treat hosted checks as the authoritative next evidence rather than rewriting the local pass records.
+Review the hosted checks on draft PR [#101](https://github.com/kdh949/banking-lab/pull/101) and address only evidence-backed failures; do not rewrite the passing local records as hosted evidence.
