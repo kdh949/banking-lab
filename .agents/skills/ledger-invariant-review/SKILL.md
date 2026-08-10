@@ -7,7 +7,7 @@ description: Review banking-lab ledger changes for double-entry integrity, proje
 
 ## Scope
 
-Use this skill for ledger-affecting work in `/Users/donghyunkim/Documents/banking-lab`.
+Use this skill for ledger-affecting work from the repository root (`${REPO_ROOT}`).
 
 Read first:
 

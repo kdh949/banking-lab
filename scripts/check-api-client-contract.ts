@@ -1,6 +1,6 @@
 import { readAllOpenApiOperations, readUtf8, failIfErrors } from "./contract-utils.ts";
 
-const clientSource = await readUtf8("packages/api-client/src/index.ts");
+const clientSource = await readUtf8("packages/api-client/src/client.ts");
 const clientMethods = new Set(
   Array.from(clientSource.matchAll(/^    ([A-Za-z][A-Za-z0-9_]*)\([^)]*\)\s*\{/gmu)).map((match) => match[1])
 );
@@ -17,17 +17,16 @@ for (const operation of await readAllOpenApiOperations()) {
 
   if (operation.clientRequired && !clientMethods.has(operation.operationId)) {
     errors.push(
-      `${operation.filePath} ${operation.method} ${operation.path}: operationId ${operation.operationId} is missing from packages/api-client/src/index.ts; add the client method or mark x-api-client-required: false.`
+      `${operation.filePath} ${operation.method} ${operation.path}: operationId ${operation.operationId} is missing from packages/api-client/src/client.ts; add the client method or mark x-api-client-required: false.`
     );
   }
 }
 
 for (const method of clientMethods) {
   if (!operationIds.has(method)) {
-    errors.push(`packages/api-client/src/index.ts: method ${method} has no OpenAPI operationId coverage.`);
+    errors.push(`packages/api-client/src/client.ts: method ${method} has no OpenAPI operationId coverage.`);
   }
 }
 
 failIfErrors("API client contract check", errors);
 console.log(`API client contract check passed: ${operationIds.size} operationIds match ${clientMethods.size} shared client methods/exemptions.`);
-

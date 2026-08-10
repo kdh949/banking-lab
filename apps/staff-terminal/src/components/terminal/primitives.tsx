@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { DialogState, IconName, PanelProps, ScreenControlMetadata, TableColumn, TableRow } from "./types";
 
 export function Panel({ title, icon, tabs, actions, className = "", children }: PanelProps) {
@@ -134,10 +134,11 @@ function selectOptionsForField(label: string, value?: string) {
 function LookupDialog({ label, onClose }: { readonly label: string; readonly onClose: () => void }) {
   const [keyword, setKeyword] = useState("");
   const rows = lookupRowsForField(label).filter((row) => `${row.code} ${row.name} ${row.detail}`.toLowerCase().includes(keyword.toLowerCase()));
+  const dialogRef = useModalKeyboard(onClose);
 
   return (
     <div className="dialog-backdrop" role="presentation">
-      <section className="terminal-dialog lookup-dialog" role="dialog" aria-modal="true" aria-labelledby="lookup-dialog-title">
+      <section ref={dialogRef} className="terminal-dialog lookup-dialog" role="dialog" aria-modal="true" aria-labelledby="lookup-dialog-title">
         <header>
           <strong id="lookup-dialog-title">{label} 추가 조회</strong>
           <button type="button" aria-label="조회창 닫기" onClick={onClose}>
@@ -249,10 +250,11 @@ export function DataTable({ columns, rows, minRows = 0 }: { readonly columns: re
 }
 
 export function AppDialog({ dialog, onClose }: { readonly dialog: DialogState; readonly onClose: () => void }) {
+  const dialogRef = useModalKeyboard(onClose);
   return (
     <div className="dialog-backdrop" role="presentation">
-      <section className="terminal-dialog unavailable-dialog" role="dialog" aria-modal="true" aria-labelledby="unavailable-dialog-title">
-        <button className="dialog-close" type="button" aria-label="닫기" onClick={onClose}>
+      <section ref={dialogRef} className="terminal-dialog unavailable-dialog" role="dialog" aria-modal="true" aria-labelledby="unavailable-dialog-title">
+        <button className="dialog-close" type="button" aria-label="닫기" data-initial-focus="true" onClick={onClose}>
           <MaterialIcon name="close" />
         </button>
         <div className="dialog-x-mark">
@@ -266,6 +268,55 @@ export function AppDialog({ dialog, onClose }: { readonly dialog: DialogState; r
       </section>
     </div>
   );
+}
+
+function useModalKeyboard(onClose: () => void) {
+  const dialogRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])";
+    const focusables = () => Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+    const initial = dialog.querySelector<HTMLElement>("[data-initial-focus='true'], [autofocus]") ?? focusables()[0];
+    initial?.focus();
+
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+      const items = focusables();
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
+  return dialogRef;
 }
 
 export function MaterialIcon({ name }: { readonly name: IconName }) {

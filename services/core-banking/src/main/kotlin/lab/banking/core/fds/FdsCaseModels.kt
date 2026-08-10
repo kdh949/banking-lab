@@ -8,6 +8,7 @@ import lab.banking.core.temporal.TemporalWorkflowReference
 
 data class FdsCaseDto(
     val caseId: String,
+    val journeyId: String?,
     val transferReferenceId: String,
     val customerId: String,
     val status: String,

@@ -29,17 +29,48 @@ function manifests() {
     .map((fileName) => JSON.parse(readFileSync(path.join(dir, fileName), "utf8")));
 }
 
-test("call-center console renders masked interaction controls from manifests", async ({ page }) => {
-  const screens = manifests();
+test("call-center console product workspace excludes lab evidence controls", async ({ page }) => {
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Customer interaction and escalation workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Agent Workspace" })).toBeVisible();
+  await expect(page.getByText("Reason-gated masked customer 360")).toBeVisible();
+  await expect(page.getByText("LAB_ONLY")).toHaveCount(0);
+  await expect(page.getByTestId("api-backed-call-center-search")).toHaveCount(0);
+
+  await page.goto(`${baseUrl}/workspace`);
+  await expect(page.getByRole("button", { name: "Simulate inbound call" })).toBeVisible();
+  await expect(page.getByLabel("Business reason")).toBeVisible();
+  await expect(page.getByLabel("Journey ID")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search masked customer" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Start linked interaction" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Request FDS handoff" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save after-call disposition" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Close interaction" })).toBeDisabled();
+  await expect(page.getByText("NOT_STARTED", { exact: true })).toBeVisible();
+  await expect(page.getByText("Authenticated BFF session required")).toBeVisible();
+});
+
+test("call-center softphone simulator exposes every required synthetic state", async ({ page }) => {
+  await page.goto(`${baseUrl}/workspace`);
+  const advance = page.getByRole("button", { name: /Simulate inbound call|Advance call state/u });
+  for (const state of ["RINGING", "CONNECTED", "HOLD", "AFTER_CALL", "IDLE"]) {
+    await advance.click();
+    await expect(page.getByText(state, { exact: true }).first()).toBeVisible();
+  }
+});
+
+test("call-center console lab catalog renders masked interaction manifests", async ({ page }) => {
+  const screens = manifests();
+  await page.goto(`${baseUrl}/lab/manifests`);
+
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Call-Center Screen Manifests" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true })).toBeVisible();
   }
 
-  await expect(page.getByText("Synthetic masked workflow only")).toBeVisible();
+  await expect(page.getByText(/LAB_ONLY/)).toBeVisible();
   await expect(page.getByText("reason required").first()).toBeVisible();
   await expect(page.getByText("CALL_CENTER_NOTE_REDACTION")).toBeVisible();
   await expect(page.getByText("CALL_CENTER_ESCALATION_REDACTION")).toBeVisible();
@@ -48,13 +79,15 @@ test("call-center console renders masked interaction controls from manifests", a
   await expect(page.getByText("ESCALATED", { exact: true }).first()).toBeVisible();
 });
 
-test("call-center console shell has no app-router one-off business screens", async () => {
+test("call-center console keeps product and lab route boundaries explicit", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
 
-  expect(files).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
-  expect(pageSource).toContain("loadChannelManifests");
+  expect(files).toEqual(["api", "globals.css", "lab", "layout.tsx", "page.tsx", "workspace"]);
+  expect(pageSource).toContain("CallCenterWorkspace");
+  expect(pageSource).not.toContain("loadChannelManifests");
+  expect(pageSource).not.toContain("ApiBackedCallCenterPanel");
   expect(pageSource).not.toContain("fetch(\"/api/staff/call-center");
   expect(pageSource).not.toContain("fetch('/api/staff/call-center");
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
@@ -63,7 +96,7 @@ test("call-center console shell has no app-router one-off business screens", asy
 test("call-center console executes Spring API-backed synthetic workflow when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed call-center smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   const searchPanel = page.getByTestId("api-backed-call-center-search");
   await expect(searchPanel).toContainText("customers loaded", { timeout: 15_000 });
@@ -78,31 +111,21 @@ test("call-center console executes Spring API-backed synthetic workflow when con
   await expect(workflowPanel).toContainText("COMPLAINT CMP-");
 });
 
-test("call-center console propagates live Keycloak agent and manager tokens when configured", async ({ page }) => {
+test("call-center console completes live Keycloak PKCE login through the opaque product BFF", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live call-center Keycloak browser smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/workspace`);
 
-  await page.getByRole("button", { name: "Sign in call-center agent with Keycloak" }).click();
+  await page.getByRole("link", { name: "Sign in with Keycloak" }).click();
   await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
   await signInWithKeycloak(page, "call-agent01", "call-agent01-pass");
 
-  const panel = page.getByTestId("api-backed-call-center-keycloak-login");
-  await expect(panel).toContainText("Keycloak call-center agent loaded", { timeout: 20_000 });
-  await expect(panel).toContainText("Bearer");
-  await expect(panel).toContainText("SYN-CUS");
-
-  await page.getByRole("button", { name: "Sign in call-center manager with Keycloak" }).click();
-  await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
-  await signInWithKeycloak(page, "call-manager01", "call-manager01-pass");
-
-  await expect(panel).toContainText("Keycloak call-center manager loaded", { timeout: 20_000 });
-  await expect(panel).toContainText("call-manager01");
-
-  await page.getByRole("button", { name: "Run Keycloak call-center workflow smoke" }).click();
-  await expect(panel).toContainText("Keycloak call-center workflow completed", { timeout: 20_000 });
-  await expect(panel).toContainText("CALL-");
-  await expect(panel).toContainText("CLOSED");
-  await expect(panel).toContainText("applied");
-  await expect(panel).toContainText("COMPLAINT CMP-");
+  await expect(page).toHaveURL(`${baseUrl}/workspace`, { timeout: 20_000 });
+  await expect(page.getByText(/call-agent01 · CALL_CENTER_AGENT · OIDC/u)).toBeVisible();
+  await page.getByRole("button", { name: "Simulate inbound call" }).click();
+  await page.getByLabel("Business reason").fill("Live Keycloak BFF masked lookup verification");
+  await page.getByLabel("Customer query").fill("SYN-CUS");
+  await page.getByRole("button", { name: "Search masked customer" }).click();
+  await expect(page.getByText("Masked customer context loaded and audited.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/010-\*\*\*\*/u).first()).toBeVisible();
 });

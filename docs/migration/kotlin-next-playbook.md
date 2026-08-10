@@ -17,11 +17,13 @@ The migration must preserve these controls:
 
 ## Source Plans
 
-- `/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-eng-review-plan-20260602-114300.md`
-- `/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-eng-review-test-plan-20260602-114300.md`
-- `/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/donghyunkim-feature-phase-1-foundation-devex-review-plan-20260602-115809.md`
-- `/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/tasks-eng-review-20260602-114300.jsonl`
-- `/Users/donghyunkim/.gstack/projects/kdh949-banking-lab/tasks-devex-review-20260602-115809.jsonl`
+The historical planning artifacts are identified by stable review IDs rather than contributor-machine paths. They are provenance only and are not required to build or test the repository.
+
+- `gstack-review:phase-1-foundation-eng-20260602-114300`
+- `gstack-review:phase-1-foundation-eng-test-20260602-114300`
+- `gstack-review:phase-1-foundation-devex-20260602-115809`
+- `gstack-tasks:phase-1-foundation-eng-20260602-114300`
+- `gstack-tasks:phase-1-foundation-devex-20260602-115809`
 
 ## Local Prerequisites
 

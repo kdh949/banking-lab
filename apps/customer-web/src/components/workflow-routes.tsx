@@ -9,7 +9,7 @@ import {
   ChannelPanel,
   ChannelShell,
   ChannelTable
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/customer-ui";
 import { loadCustomerWebManifests } from "../lib/manifestLoader";
 
 type WorkflowTone = "neutral" | "success" | "warning" | "critical";
@@ -219,8 +219,8 @@ export const customerWorkflowRoutes: Record<CustomerWorkflowRouteKey, CustomerWo
     title: "Transfer Result",
     eyebrow: "Result state",
     screenIds: ["CWB-202", "CWB-203"],
-    apiMethods: ["customerTransfers"],
-    controls: ["IdempotencyResultPanel", "FdsHoldStatusPanel", "StructuredErrorPanel"],
+    apiMethods: ["customerTransfers", "customerJourney"],
+    controls: ["IdempotencyResultPanel", "FdsHoldStatusPanel", "CustomerSafeJourneyTimeline", "StructuredErrorPanel"],
     states: commonTransferStates,
     demoSeed: ["route parameter supplies resultId"]
   },

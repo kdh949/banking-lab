@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.nio.file.Paths
 import lab.banking.core.testsupport.ParameterSeedSupport
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -46,6 +48,9 @@ class FdsCaseApiParityIntegrationTest {
         jdbc.jdbcTemplate.execute(
             """
             TRUNCATE TABLE
+              business_journey_events,
+              business_journey_references,
+              business_journeys,
               customer_transfer_results,
               fds_case_timeline,
               fds_cases,
@@ -92,13 +97,34 @@ class FdsCaseApiParityIntegrationTest {
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.item.status").value("HELD"))
             .andExpect(jsonPath("$.item.caseId").exists())
+            .andExpect(jsonPath("$.item.journeyId").exists())
             .andReturn()
 
-        val caseId = objectMapper.readTree(heldResponse.response.contentAsString)
-            .path("item")
-            .path("caseId")
-            .asText()
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
         assertEquals(beforeCount, countRows("ledger_transactions"))
+        assertEquals(1, countRows("business_journeys WHERE journey_id = '$journeyId' AND status = 'HELD'"))
+
+        mockMvc.perform(get("/api/staff/journeys/$journeyId"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/staff/journeys/$journeyId")
+                .queryParam("reason", "Investigate held synthetic transfer")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("HELD"))
+            .andExpect(jsonPath("$.item.references.length()").value(3))
+
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("HELD"))
+            .andExpect(jsonPath("$.statusMessage").value("Security review in progress"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'FDS_CASE')]").isEmpty)
+            .andExpect(jsonPath("$.events[0].reason").doesNotExist())
+            .andExpect(jsonPath("$.events[0].sourceReferenceId").doesNotExist())
 
         val heldCase = mockMvc.perform(get("/api/staff/fds-cases/$caseId"))
             .andExpect(status().isOk)
@@ -185,6 +211,27 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(5_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(5_000_000L, balance("ACC-SYN-002-001"))
         assertEquals(1, countRows("outbox_events WHERE event_type = 'LedgerTransactionPosted'"))
+        assertEquals(1, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(
+            "POSTED",
+            singleString(
+                "SELECT payload_json ->> 'status' FROM outbox_events WHERE aggregate_id = :caseId AND event_type = 'CustomerTransferStatusChanged'",
+                mapOf("caseId" to caseId)
+            )
+        )
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("POSTED"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'LEDGER_TRANSACTION'"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'NOTIFICATION_DELIVERY'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_POSTED'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CUSTOMER_NOTIFICATION_REQUESTED'"))
+        assertThrows(DataAccessException::class.java) {
+            jdbc.update(
+                "UPDATE business_journey_events SET event_type = 'MUTATED' WHERE journey_id = :journeyId",
+                mapOf("journeyId" to journeyId)
+            )
+        }
 
         mockMvc.perform(
             post("/api/staff/fds-cases/$caseId/release-requests")
@@ -231,12 +278,12 @@ class FdsCaseApiParityIntegrationTest {
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.item.status").value("HELD"))
             .andExpect(jsonPath("$.item.caseId").exists())
+            .andExpect(jsonPath("$.item.journeyId").exists())
             .andReturn()
 
-        val caseId = objectMapper.readTree(heldResponse.response.contentAsString)
-            .path("item")
-            .path("caseId")
-            .asText()
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
         assertEquals(beforeCount, countRows("ledger_transactions"))
 
         val heldCase = mockMvc.perform(get("/api/staff/fds-cases/$caseId"))
@@ -289,6 +336,164 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(0, countRows("ledger_transactions WHERE transaction_type = 'INTERNAL_TRANSFER'"))
         assertEquals(10_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(0L, balance("ACC-SYN-002-001"))
+        assertEquals(1, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(
+            "BLOCKED",
+            singleString(
+                "SELECT payload_json ->> 'status' FROM outbox_events WHERE aggregate_id = :caseId AND event_type = 'CustomerTransferStatusChanged'",
+                mapOf("caseId" to caseId)
+            )
+        )
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("BLOCKED"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_BLOCKED'"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'NOTIFICATION_DELIVERY'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CUSTOMER_NOTIFICATION_REQUESTED'"))
+    }
+
+    @Test
+    fun `legacy FDS release without a journey remains approvable without a journey notification`() {
+        val caseId = "FDS-LEGACY-NO-JOURNEY-001"
+        seedFdsCase(caseId, status = "INVESTIGATING", transferStatus = "HELD", amountMinor = 1_000_000)
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "actorId": "fds01",
+                      "requestedByRole": "FDS_REVIEWER",
+                      "reason": "Synthetic legacy FDS release compatibility"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("RELEASE_REQUESTED"))
+            .andReturn()
+
+        val approvalId = objectMapper.readTree(requestResponse.response.contentAsString)
+            .path("approval")
+            .path("approvalId")
+            .asText()
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"FDS-201"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.fdsCase.status").value("RELEASED"))
+
+        assertEquals(1, countRows("ledger_transactions WHERE business_reference_id = '$caseId'"))
+        assertEquals(0, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(0, countRows("business_journey_events WHERE source_reference_id = '$caseId'"))
+    }
+
+    @Test
+    fun `FDS checker rejection returns case to investigation without ledger posting`() {
+        val beforeCount = countRows("ledger_transactions")
+        val heldResponse = mockMvc.perform(
+            post("/api/customer/transfers")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-001",
+                      "fromAccountId": "ACC-SYN-001-001",
+                      "toAccountId": "ACC-SYN-002-001",
+                      "amountMinor": 5500000,
+                      "idempotencyKey": "FDS-REJECT-FLOW-001",
+                      "requestedBy": "SYN-CUS-001",
+                      "reason": "Synthetic high-risk transfer rejection parity",
+                      "firstTimeBeneficiary": true
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.item.status").value("HELD"))
+            .andReturn()
+
+        val heldItem = objectMapper.readTree(heldResponse.response.contentAsString).path("item")
+        val caseId = heldItem.path("caseId").asText()
+        val journeyId = heldItem.path("journeyId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/assign")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"actorId":"fds01","owner":"fds01","reason":"Synthetic FDS rejection assignment"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("INVESTIGATING"))
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "actorId": "fds01",
+                      "requestedByRole": "FDS_REVIEWER",
+                      "reason": "Synthetic release request for checker rejection"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("RELEASE_REQUESTED"))
+            .andReturn()
+
+        val approvalId = objectMapper.readTree(requestResponse.response.contentAsString)
+            .path("approval")
+            .path("approvalId")
+            .asText()
+
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/reject")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "rejectedBy": "manager01",
+                      "rejectedByRole": "BRANCH_MANAGER",
+                      "rejectReason": "Additional synthetic evidence required",
+                      "screenId": "APR101"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rejected").value(true))
+            .andExpect(jsonPath("$.item.status").value("REJECTED"))
+            .andExpect(jsonPath("$.fdsCase.status").value("INVESTIGATING"))
+            .andExpect(jsonPath("$.fdsCase.transferStatus").value("HELD"))
+            .andExpect(jsonPath("$.fdsCase.approvalId").doesNotExist())
+
+        assertEquals(beforeCount, countRows("ledger_transactions"))
+        assertEquals(0, countRows("ledger_transactions WHERE transaction_type = 'INTERNAL_TRANSFER'"))
+        assertEquals(10_000_000L, balance("ACC-SYN-001-001"))
+        assertEquals(0L, balance("ACC-SYN-002-001"))
+        assertEquals("INVESTIGATING", fdsStatus(caseId))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'FDS_DECISION_REJECTED'"))
+
+        mockMvc.perform(get("/api/customer/journeys/$journeyId"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("INVESTIGATING"))
+            .andExpect(jsonPath("$.statusMessage").value("Security review in progress"))
+            .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
+
+        mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/block-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"actorId":"fds01","reason":"Synthetic re-review requests block"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("BLOCK_REQUESTED"))
+            .andExpect(jsonPath("$.approval.status").value("PENDING"))
+        assertEquals(beforeCount, countRows("ledger_transactions"))
     }
 
     private fun seedAccountsAndBalances() {
@@ -384,6 +589,9 @@ class FdsCaseApiParityIntegrationTest {
             emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
+
+    private fun singleString(sql: String, params: Map<String, Any?>): String =
+        jdbc.queryForObject(sql, params, String::class.java) ?: ""
 
     private fun fdsStatus(caseId: String): String? =
         jdbc.queryForObject(

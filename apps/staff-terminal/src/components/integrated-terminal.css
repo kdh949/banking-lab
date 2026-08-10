@@ -9,6 +9,60 @@
   letter-spacing: 0;
 }
 
+.staff-bff-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1600px, calc(100vw - 24px));
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  border: 1px solid #9bb0c8;
+  background: #eef5fb;
+  color: #17324f;
+}
+
+.staff-bff-session > div:first-child,
+.staff-bff-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.staff-bff-session small {
+  color: #4b6279;
+}
+
+.staff-bff-session-actions a,
+.staff-bff-session-actions button {
+  min-height: 30px;
+  border: 1px solid #6b86a4;
+  background: #fff;
+  color: #17324f;
+  padding: 4px 8px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.staff-bff-session-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.staff-lab-root {
+  min-width: 0;
+  overflow: auto;
+}
+
+.staff-lab-page {
+  width: min(760px, calc(100% - 32px));
+  margin: 32px auto;
+  border: 1px solid #b8c2cc;
+  border-radius: 8px;
+  background: #fff;
+  padding: 24px;
+}
+
 .iworks-icon {
   display: inline-block;
   color: currentcolor;
@@ -168,6 +222,25 @@
   background: transparent;
   color: #283645;
   outline: none;
+}
+
+.iworks-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.iworks-root :is(button, input, select, textarea, a[href], [tabindex]):focus-visible {
+  outline: 3px solid #ffbf47;
+  outline-offset: 2px;
+}
+
+.iworks-search:focus-within {
+  box-shadow: 0 0 0 3px #ffbf47;
 }
 
 .iworks-module-nav {

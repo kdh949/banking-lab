@@ -18,6 +18,7 @@ data class CallCenterCustomerSummaryDto(
 
 data class StartCallCenterInteractionCommand(
     val customerId: String? = null,
+    val journeyId: String? = null,
     val accountId: String? = null,
     val channel: String? = null,
     val contactReasonCode: String? = null,
@@ -72,6 +73,7 @@ data class CallCenterInteractionListResponse(
 
 data class CallCenterInteractionSummaryDto(
     val interactionId: String,
+    val journeyId: String?,
     val customerId: String,
     val maskedCustomerName: String,
     val channel: String,
@@ -84,6 +86,7 @@ data class CallCenterInteractionSummaryDto(
 
 data class CallCenterInteractionDto(
     val interactionId: String,
+    val journeyId: String?,
     val customerId: String,
     val accountId: String?,
     val channel: String,

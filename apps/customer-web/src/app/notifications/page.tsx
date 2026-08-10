@@ -1,5 +1,5 @@
-import { CustomerWorkflowRoutePage } from "../../components/workflow-routes";
+import { CustomerNotificationsView } from "../../components/CustomerSelfService";
 
-export default async function NotificationsPage() {
-  return CustomerWorkflowRoutePage({ routeKey: "notifications" });
+export default function NotificationsPage() {
+  return <CustomerNotificationsView />;
 }

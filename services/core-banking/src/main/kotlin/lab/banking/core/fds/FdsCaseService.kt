@@ -9,10 +9,14 @@ import lab.banking.core.approval.ApprovalBusinessTypes
 import lab.banking.core.approval.ApprovalStatus
 import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
+import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
+import lab.banking.core.eventing.CreateOutboxEventCommand
+import lab.banking.core.eventing.DurableOutboxService
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.domain.LedgerCommandResult
+import lab.banking.core.journey.BusinessJourneyService
 import lab.banking.core.security.BankingLabAuthContext
 import lab.banking.core.temporal.TemporalWorkflowReference
 import lab.banking.core.workflow.WorkflowErrors
@@ -32,7 +36,9 @@ class FdsCaseService(
     private val objectMapper: ObjectMapper,
     private val approvals: PersistentApprovalService,
     private val ledgerCommandService: LedgerCommandService,
-    private val transactionManager: PlatformTransactionManager
+    private val transactionManager: PlatformTransactionManager,
+    private val journeys: BusinessJourneyService,
+    private val outbox: DurableOutboxService
 ) {
     @Transactional(readOnly = true)
     fun list(): List<FdsCaseDto> =
@@ -75,6 +81,18 @@ class FdsCaseService(
             actorId = actorId,
             note = command.reason ?: "FDS investigation assigned"
         )
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "FDS_CASE",
+                referenceId = caseId,
+                eventType = "FDS_INVESTIGATION_STARTED",
+                status = "INVESTIGATING",
+                actorId = actorId,
+                actorRole = actorRole,
+                reason = command.reason
+            )
+        }
         return findForRead(caseId)
     }
 
@@ -110,6 +128,61 @@ class FdsCaseService(
             ApprovalBusinessTypes.FDS_BLOCK -> applyApprovedBlock(approval)
             else -> throw WorkflowErrors.stateViolation("approval is not an FDS decision approval")
         }
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    fun applyRejectedDecision(approval: OperatorApproval, command: RejectApprovalCommand): FdsCaseDto {
+        if (approval.status != ApprovalStatus.REJECTED) {
+            throw WorkflowErrors.stateViolation("approval is not rejected: ${approval.status}")
+        }
+        val expectedStatus = when (approval.businessType) {
+            ApprovalBusinessTypes.FDS_RELEASE -> "RELEASE_REQUESTED"
+            ApprovalBusinessTypes.FDS_BLOCK -> "BLOCK_REQUESTED"
+            else -> throw WorkflowErrors.stateViolation("approval is not an FDS decision approval")
+        }
+        val fdsCase = findForUpdate(approval.businessReferenceId)
+        if (fdsCase.status != expectedStatus) {
+            throw WorkflowErrors.stateViolation("FDS case is not decision requested: ${fdsCase.status}")
+        }
+        if (fdsCase.approvalId != approval.approvalId) {
+            throw WorkflowErrors.stateViolation("approval does not match FDS case")
+        }
+        jdbc.update(
+            """
+            UPDATE fds_cases
+            SET status = 'INVESTIGATING',
+                approval_id = NULL,
+                updated_at = now()
+            WHERE fds_case_id = :caseId
+            """.trimIndent(),
+            mapOf("caseId" to fdsCase.caseId)
+        )
+        appendTimeline(
+            caseId = fdsCase.caseId,
+            eventType = "DECISION_REJECTED",
+            fromStatus = fdsCase.status,
+            toStatus = "INVESTIGATING",
+            actorId = command.rejectedBy,
+            note = command.rejectReason
+        )
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "APPROVAL",
+                referenceId = approval.approvalId,
+                eventType = "FDS_DECISION_REJECTED",
+                status = "INVESTIGATING",
+                actorId = command.rejectedBy,
+                actorRole = command.rejectedByRole,
+                reason = command.rejectReason,
+                payload = mapOf(
+                    "decision" to if (approval.businessType == ApprovalBusinessTypes.FDS_RELEASE) "RELEASE" else "BLOCK",
+                    "approvalDecision" to "REJECTED",
+                    "ledgerTransactionCount" to 0
+                )
+            )
+        }
+        return findForRead(fdsCase.caseId)
     }
 
     private fun requestDecision(
@@ -154,6 +227,19 @@ class FdsCaseService(
             mapOf("caseId" to caseId, "status" to decisionStatus, "approvalId" to approval.approvalId)
         )
         appendTimeline(caseId, decisionStatus, fdsCase.status, decisionStatus, actorId, command.reason)
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "APPROVAL",
+                referenceId = approval.approvalId,
+                eventType = if (decision == "RELEASE") "FDS_RELEASE_REQUESTED" else "FDS_BLOCK_REQUESTED",
+                status = "PENDING_APPROVAL",
+                actorId = actorId,
+                actorRole = command.requestedByRole ?: "FDS_REVIEWER",
+                reason = command.reason,
+                payload = mapOf("decision" to decision)
+            )
+        }
         return FdsDecisionRequestResponse(item = findForRead(caseId), approval = approval)
     }
 
@@ -231,6 +317,24 @@ class FdsCaseService(
             message = "FDS reviewer released transfer to ledger"
         )
         appendTimeline(fdsCase.caseId, "RELEASED", fdsCase.status, "RELEASED", approval.approvedBy, "release posted")
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "LEDGER_TRANSACTION",
+                referenceId = ledgerResult.value.id,
+                eventType = "TRANSFER_POSTED",
+                status = "POSTED",
+                actorId = approval.approvedBy,
+                actorRole = "FDS_APPROVER",
+                reason = approval.requestReason,
+                payload = mapOf(
+                    "ledgerTransactionCount" to 1,
+                    "balancedDoubleEntry" to true,
+                    "replayed" to ledgerResult.replayed
+                )
+            )
+        }
+        enqueueCustomerStatusNotification(fdsCase, "POSTED", ledgerResult.value.id, approval)
         return FdsDecisionExecutionResponse(item = findForRead(fdsCase.caseId), ledgerTransaction = ledgerResult)
     }
 
@@ -257,7 +361,73 @@ class FdsCaseService(
             message = "FDS reviewer blocked transfer"
         )
         appendTimeline(fdsCase.caseId, "BLOCKED", fdsCase.status, "BLOCKED", approval.approvedBy, "transfer blocked")
+        fdsCase.journeyId?.let { journeyId ->
+            journeys.correlate(
+                journeyId = journeyId,
+                referenceType = "FDS_CASE",
+                referenceId = fdsCase.caseId,
+                eventType = "TRANSFER_BLOCKED",
+                status = "BLOCKED",
+                actorId = approval.approvedBy,
+                actorRole = "FDS_APPROVER",
+                reason = approval.requestReason,
+                payload = mapOf("ledgerTransactionCount" to 0)
+            )
+        }
+        enqueueCustomerStatusNotification(fdsCase, "BLOCKED", null, approval)
         return FdsDecisionExecutionResponse(item = findForRead(fdsCase.caseId), ledgerTransaction = null)
+    }
+
+    private fun enqueueCustomerStatusNotification(
+        fdsCase: FdsCaseDto,
+        status: String,
+        ledgerTransactionId: String?,
+        approval: OperatorApproval
+    ) {
+        val journeyId = fdsCase.journeyId?.takeIf { it.isNotBlank() } ?: return
+        val customerId = requireField(fdsCase.customerId, "customerId")
+        val deliveryRequestId = notificationDeliveryRequestId(fdsCase.caseId, status)
+        outbox.enqueue(
+            CreateOutboxEventCommand(
+                aggregateType = "FdsCase",
+                aggregateId = fdsCase.caseId,
+                eventType = CUSTOMER_TRANSFER_STATUS_CHANGED,
+                idempotencyKey = "FDS-NOTIFICATION-${fdsCase.caseId}-$status",
+                payload = buildMap {
+                    put("contractVersion", CUSTOMER_TRANSFER_STATUS_EVENT_VERSION)
+                    put("customerId", customerId)
+                    put("recipientId", customerId)
+                    put("journeyId", journeyId)
+                    put("fdsCaseId", fdsCase.caseId)
+                    put("status", status)
+                    ledgerTransactionId?.let { put("ledgerTransactionId", it) }
+                    put("deliveryRequestId", deliveryRequestId)
+                    put("notificationChannel", "SMS")
+                    put("syntheticOnly", true)
+                    put("realProviderUsed", false)
+                },
+                headers = mapOf(
+                    "syntheticOnly" to true,
+                    "recipientId" to customerId,
+                    "notificationChannel" to "SMS"
+                )
+            )
+        )
+        journeys.correlateKeepingStatus(
+            journeyId = journeyId,
+            referenceType = "NOTIFICATION_DELIVERY",
+            referenceId = deliveryRequestId,
+            eventType = "CUSTOMER_NOTIFICATION_REQUESTED",
+            actorId = approval.approvedBy,
+            actorRole = "FDS_APPROVER",
+            reason = approval.requestReason,
+            payload = mapOf(
+                "eventType" to CUSTOMER_TRANSFER_STATUS_CHANGED,
+                "deliveryStatus" to "PENDING",
+                "transferStatus" to status,
+                "syntheticOnly" to true
+            )
+        )
     }
 
     private fun updateCustomerTransferResult(
@@ -331,7 +501,7 @@ class FdsCaseService(
 
     private fun fdsSql(suffix: String): String =
         """
-        SELECT fds_case_id, transfer_reference_id, customer_id, status, risk_score,
+        SELECT fds_case_id, journey_id, transfer_reference_id, customer_id, status, risk_score,
                alerts_json::text AS alerts_json, owner_id, approval_id, from_account_id,
                to_account_id, amount_minor, transfer_idempotency_key, requested_by,
                business_date, transfer_status, temporal_workflow_id, temporal_run_id,
@@ -343,6 +513,7 @@ class FdsCaseService(
     private fun mapCase(rs: ResultSet, rowNum: Int): FdsCaseDto =
         FdsCaseDto(
             caseId = rs.getString("fds_case_id"),
+            journeyId = rs.getString("journey_id"),
             transferReferenceId = rs.getString("transfer_reference_id"),
             customerId = rs.getString("customer_id"),
             status = rs.getString("status"),
@@ -379,6 +550,9 @@ class FdsCaseService(
     private fun releaseIdempotencyKey(caseId: String): String =
         "FDS-RELEASE-$caseId"
 
+    private fun notificationDeliveryRequestId(caseId: String, status: String): String =
+        "NDL-FDS-$caseId-$status"
+
     private fun temporalReference(rs: ResultSet): TemporalWorkflowReference? {
         val workflowId = rs.getString("temporal_workflow_id") ?: return null
         return TemporalWorkflowReference(
@@ -389,5 +563,7 @@ class FdsCaseService(
 
     private companion object {
         const val SERIALIZABLE_FDS_DECISION_MAX_ATTEMPTS = 5
+        const val CUSTOMER_TRANSFER_STATUS_CHANGED = "CustomerTransferStatusChanged"
+        const val CUSTOMER_TRANSFER_STATUS_EVENT_VERSION = "2026-08-10"
     }
 }

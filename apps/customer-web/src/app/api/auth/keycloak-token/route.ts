@@ -13,6 +13,18 @@ interface KeycloakTokenResponse {
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.BANKING_LAB_LAB_BROWSER_TOKEN_EXCHANGE_ENABLED !== "true") {
+    return Response.json(
+      {
+        error: {
+          code: "AUTHORIZATION_POLICY_VIOLATION",
+          message: "Browser token exchange is restricted to explicitly opted-in lab evidence",
+          syntheticOnly: true
+        }
+      },
+      { status: 403 }
+    );
+  }
   const body = (await request.json()) as TokenRequest;
   if (!body.code || !body.codeVerifier || !body.redirectUri) {
     return Response.json(

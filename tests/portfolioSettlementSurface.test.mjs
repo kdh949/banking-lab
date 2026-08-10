@@ -66,7 +66,7 @@ test("generic Helm fallback resolves values and quote filters without a local He
 
 test("typed settlement client is exported and used by the operations workbench", async () => {
   const module = await read("packages/api-client/src/payment-settlement.ts");
-  const index = await read("packages/api-client/src/index.ts");
+  const index = await read("packages/api-client/src/client.ts");
   const workbench = await read("apps/ops-console/src/components/PaymentSettlementWorkbench.tsx");
   const page = await read("apps/ops-console/src/app/page.tsx");
   const e2e = await read("apps/ops-console/e2e/settlement-operations.spec.ts");

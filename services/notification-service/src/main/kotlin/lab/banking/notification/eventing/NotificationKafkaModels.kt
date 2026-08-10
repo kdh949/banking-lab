@@ -24,7 +24,8 @@ data class NotificationKafkaConsumerConfig(
     val supportedEventTypes: Set<String> = setOf(
         "LedgerTransactionPosted",
         "PaymentLedgerPostingRequested",
-        "ComplaintAnswered"
+        "ComplaintAnswered",
+        "CustomerTransferStatusChanged"
     )
 )
 

@@ -1,1 +1,103 @@
 @import "../../../../packages/channel-ui/src/channel-ui.css";
+
+.call-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.call-form-grid,
+.call-definition-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.call-form-grid label,
+.call-note-label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.call-form-grid input,
+.call-note-label textarea,
+.call-note-label select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  padding: 7px 9px;
+  font: inherit;
+}
+
+.call-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.call-workspace-grid button,
+.call-panel button {
+  min-height: 34px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  padding: 0 11px;
+  font-weight: 900;
+}
+
+.call-workspace-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.call-definition-list {
+  margin: 12px 0 0;
+}
+
+.call-definition-list div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-bright);
+  padding: 8px;
+}
+
+.call-definition-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.call-definition-list dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 900;
+}
+
+.call-workspace-message {
+  border-left: 4px solid var(--primary);
+  background: var(--primary-soft);
+  padding: 10px 12px;
+  font-weight: 800;
+}
+
+.call-workspace-message.is-failed {
+  border-color: var(--danger);
+  background: #fff7f7;
+  color: var(--danger);
+}
+
+@media (max-width: 820px) {
+  .call-workspace-grid,
+  .call-form-grid,
+  .call-definition-list {
+    grid-template-columns: 1fr;
+  }
+}

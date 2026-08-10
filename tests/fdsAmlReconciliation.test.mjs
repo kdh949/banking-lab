@@ -230,7 +230,7 @@ test("target reconciliation schema and API expose synthetic mismatch taxonomy", 
   const migration = await readFile("db/migrations/V033__reconciliation_mismatch_taxonomy.sql", "utf8");
   const service = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsService.kt", "utf8");
   const models = await readFile("services/core-banking/src/main/kotlin/lab/banking/core/reconciliation/ReconciliationOpsModels.kt", "utf8");
-  const client = await readFile("packages/api-client/src/index.ts", "utf8");
+  const client = await readFile("packages/api-client/src/client.ts", "utf8");
 
   assert.match(migration, /mismatch_type TEXT NOT NULL/);
   assert.match(migration, /DUPLICATE_EXTERNAL/);

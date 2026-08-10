@@ -11,13 +11,13 @@ export BANKING_LAB_CORE_BANKING_PORT="${BANKING_LAB_CORE_BANKING_PORT:-18182}"
 export BANKING_LAB_SECURITY_ENABLED=true
 export BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED=true
 export BANKING_LAB_DEV_SIMULATOR_TOKEN=true
+export BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED=true
 export BANKING_LAB_SECURITY_ISSUER="${BANKING_LAB_SECURITY_ISSUER:-http://keycloak.local/realms/banking-lab}"
 export BANKING_LAB_SECURITY_AUDIENCE="${BANKING_LAB_SECURITY_AUDIENCE:-core-banking-api}"
 export BANKING_LAB_SYNTHETIC_SEED_ENABLED=true
 export BANKING_LAB_TRACING_ENABLED=false
 export BANKING_LAB_OTLP_TRACING_EXPORT_ENABLED=false
 export BANKING_LAB_E2E_API_BASE_URL="http://127.0.0.1:${BANKING_LAB_CORE_BANKING_PORT}"
-export NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=true
 
 cleanup() {
   if [[ "${BANKING_LAB_STAFF_TERMINAL_API_E2E_KEEP_COMPOSE:-false}" == "true" ]]; then
@@ -71,16 +71,18 @@ record_smoke_pass() {
       hostedCiGreenClaim: false,
       app: "staff-terminal",
       command: "npm run test:staff-terminal:api-e2e-compose",
-      scenario: "iWorks integrated terminal shell -> bounded Spring API evidence panel",
+      scenario: "iWorks integrated terminal shell -> explicit dev branch-staff BFF session -> CUS101 masked Spring inquiry",
       controls: [
         "iWorks shell rendering",
         "terminal status route",
-        "bounded Spring API evidence panel",
+        "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
+        "explicit three-flag simulated identity opt-in",
         "reason-required staff customer detail",
         "approval inbox read"
       ],
       notes: [
         "Executed against disposable PostgreSQL and Spring Boot core-banking Compose services.",
+        "CUS101 reached Spring only through the same-origin BFF and rendered the masked, reason-audited result.",
         "Simulator tokens are enabled only by explicit dev/test environment variables in this wrapper.",
         "This evidence does not restore retired staff route pages or use real customer money, real PII, real KYC/AML providers, real card networks, real payment networks, or external financial institution APIs."
       ]

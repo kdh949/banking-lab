@@ -10,6 +10,17 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    },
+    "./next-bff": {
+      "types": "./src/next-bff.ts",
+      "default": "./src/next-bff.ts"
     }
+  },
+  "peerDependencies": {
+    "next": "^16.2.6"
   }
 }

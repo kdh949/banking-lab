@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,17 @@ const specDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.BANKING_LAB_ROOT || path.resolve(specDir, "../../..");
 const baseUrl = "http://localhost:3002";
 const apiBaseUrl = process.env.BANKING_LAB_E2E_API_BASE_URL ?? "";
-const simulatorTokensEnabled = process.env.NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED === "true";
+const simulatorLoginEnabled = process.env.BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED === "true";
+
+async function keyboardFocus(page: Page, predicate: () => Promise<boolean>, reverse = false) {
+  for (let index = 0; index < 80; index += 1) {
+    await page.keyboard.press(reverse ? "Shift+Tab" : "Tab");
+    if (await predicate()) {
+      return;
+    }
+  }
+  throw new Error("Keyboard focus did not reach the expected control");
+}
 
 test("iWorks integrated terminal renders the shell and terminal-status data", async ({ page, request }) => {
   const terminalStatus = await request.get(`${baseUrl}/api/terminal-status`);
@@ -31,25 +41,27 @@ test("iWorks integrated terminal renders the shell and terminal-status data", as
   await expect(page.locator(".iworks-statusbar time")).not.toHaveText("2019-08-01 13:37:45");
 
   await page.getByRole("button", { name: "여신", exact: true }).click();
-  await expect(page.getByTestId("staff-terminal-api-evidence")).toBeVisible();
-  await expect(page.getByText("Spring API").first()).toBeVisible();
+  await expect(page.locator(".screen-title")).toContainText("[SY-Starts.scn] 통합 포털");
+  await expect(page.getByTestId("staff-terminal-api-evidence")).toHaveCount(0);
 });
 
 test("iWorks integrated terminal executes Spring staff API evidence when configured", async ({ page }) => {
   test.skip(
-    !apiBaseUrl || !simulatorTokensEnabled,
-    "Set BANKING_LAB_E2E_API_BASE_URL and NEXT_PUBLIC_BANKING_SIMULATOR_TOKENS_ENABLED=true to run the staff-terminal Spring API evidence smoke."
+    !apiBaseUrl || !simulatorLoginEnabled,
+    "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_BFF_SIMULATOR_LOGIN_ENABLED=true to run the staff-terminal Spring API smoke through the opaque BFF."
   );
 
   await page.goto(baseUrl);
-  await page.getByRole("button", { name: "여신", exact: true }).click();
-  const evidence = page.getByTestId("staff-terminal-api-evidence");
-  await evidence.getByRole("button", { name: "조회" }).click();
+  await page.getByRole("button", { name: "DEV 직원" }).click();
+  await expect(page.getByTestId("staff-bff-session")).toContainText("BRANCH_STAFF · SIMULATED");
+  await page.getByRole("button", { name: "업무메뉴" }).click();
+  await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
+  const workbench = page.locator(".api-workbench");
+  await page.locator(".api-form-panel").getByRole("button", { name: "조회" }).click();
 
-  await expect(evidence).toContainText("API-backed", { timeout: 15_000 });
-  await expect(evidence).toContainText("SYN-CUS-001");
-  await expect(evidence).toContainText(/010-\*\*\*\*/u);
-  await expect(evidence).toContainText(/건/u);
+  await expect(workbench).toContainText("SYN-CUS-001", { timeout: 15_000 });
+  await expect(workbench).toContainText(/010-\*\*\*\*/u);
+  await expect(workbench).toContainText("MASKED");
 });
 
 test("iWorks integrated terminal handles implemented navigation and unavailable module dialogs", async ({ page }) => {
@@ -76,7 +88,12 @@ test("iWorks integrated terminal exposes API-backed transaction codes inside the
 
   await page.getByRole("button", { name: /\[CUS101\].*고객 상세 조회/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[CUS101] 고객 상세 조회");
-  await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Spring API");
+  await expect(page.getByTestId("terminal-api-client-provider")).toContainText("Same-origin BFF");
+
+  await page.getByRole("button", { name: /\[FDS201\].*FDS 보류 이체 심사/u }).click();
+  await expect(page.locator(".screen-title")).toContainText("[FDS201] FDS 보류 이체 심사");
+  await expect(page.getByText("release 승인요청").first()).toBeVisible();
+  await expect(page.getByText("maker/checker").first()).toBeVisible();
 
   await page.getByRole("button", { name: /\[APR101\].*승인함 목록\/상세/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[APR101] 승인함 목록/상세");
@@ -85,6 +102,7 @@ test("iWorks integrated terminal exposes API-backed transaction codes inside the
   await page.getByRole("button", { name: /\[WRK003\].*workflow timeline/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[WRK003] workflow timeline");
   await expect(page.getByText("businessReferenceId").first()).toBeVisible();
+  await expect(page.getByText("journeyId").first()).toBeVisible();
 
   await page.getByRole("button", { name: /\[CALL101\].*상담 고객 검색/u }).click();
   await expect(page.locator(".screen-title")).toContainText("[CALL101] 상담 고객 검색");
@@ -114,15 +132,41 @@ test("iWorks integrated terminal supports operator inputs and lookup dialogs", a
   await expect(page.getByLabel("조회구분")).toContainText("3-전행고객번호");
 });
 
-test("iWorks integrated terminal source boundary keeps only official routes and components", async () => {
+test("iWorks integrated terminal supports transaction code, roving tabs, execute, and dialog close by keyboard only", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") === "통합검색"));
+  await page.keyboard.type("FDS201");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".screen-title")).toContainText("[FDS201] FDS 보류 이체 심사");
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("role") === "tab"));
+  const firstTabName = await page.evaluate(() => document.activeElement?.textContent?.trim());
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-selected"))).toBe("true");
+  const secondTabName = await page.evaluate(() => document.activeElement?.textContent?.trim());
+  expect(secondTabName).not.toBe(firstTabName);
+
+  await keyboardFocus(page, () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") === "통합검색"), true);
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("UNKNOWN999");
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("검색 결과 없음");
+  await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("닫기");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("iWorks integrated terminal source boundary keeps product and lab routes separated", async () => {
   const appDir = path.join(repoRoot, "apps", "staff-terminal", "src", "app");
   const componentDir = path.join(repoRoot, "apps", "staff-terminal", "src", "components");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
   const appFiles = readdirSync(appDir).sort();
   const componentFiles = readdirSync(componentDir).sort();
 
-  expect(appFiles).toEqual(["api", "globals.css", "layout.tsx", "page.tsx"]);
-  expect(readdirSync(path.join(appDir, "api")).sort()).toEqual(["terminal-status"]);
+  expect(appFiles).toEqual(["api", "globals.css", "lab", "layout.tsx", "page.tsx"]);
+  expect(readdirSync(path.join(appDir, "api")).sort()).toEqual(["[...path]", "session", "terminal-status"]);
   expect(componentFiles).toEqual(["integrated-terminal.css", "integrated-terminal.tsx", "terminal"]);
   expect(pageSource).toContain("IntegratedTerminalApp");
 

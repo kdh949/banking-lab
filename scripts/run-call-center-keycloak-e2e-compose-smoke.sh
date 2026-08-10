@@ -85,6 +85,6 @@ curl -fsS "${BANKING_LAB_E2E_API_BASE_URL}/api/staff/call-center/customers/searc
   -H "Authorization: Bearer ${MANAGER_ACCESS_TOKEN}" >/dev/null
 
 npx playwright test apps/call-center-console/e2e/call-center-console-parity.spec.ts \
-  --grep "call-center console propagates live Keycloak" \
+  --grep "call-center console completes live Keycloak PKCE login through the opaque product BFF" \
   --project=chromium \
   --workers=1

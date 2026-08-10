@@ -343,6 +343,100 @@ class CallCenterWorkflowIntegrationTest {
         assertTrue(countRows("call_center_access_audit WHERE interaction_id = '$interactionId'") >= 5)
     }
 
+    @Test
+    fun `held transfer journey links masked interaction redacted note and FDS handoff without ledger posting`() {
+        val journeyId = "JRN-CALL-HELD-001"
+        jdbc.update(
+            """
+            INSERT INTO business_journeys (
+              journey_id, journey_type, customer_id, status,
+              primary_reference_type, primary_reference_id
+            ) VALUES (
+              :journeyId, 'HELD_TRANSFER', 'SYN-CUS-CALL-001', 'HELD',
+              'CUSTOMER_TRANSFER_RESULT', 'TRR-CALL-HELD-001'
+            )
+            """.trimIndent(),
+            mapOf("journeyId" to journeyId)
+        )
+
+        val startedPayload = mockMvc.perform(
+            post("/api/staff/call-center/interactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "customerId": "SYN-CUS-CALL-001",
+                      "journeyId": "$journeyId",
+                      "channel": "PHONE",
+                      "contactReasonCode": "HELD_TRANSFER_STATUS",
+                      "requestedBy": "call-agent01",
+                      "requestedByRole": "CALL_CENTER_AGENT",
+                      "reason": "Customer asked about synthetic held transfer"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.item.journeyId").value(journeyId))
+            .andExpect(jsonPath("$.item.status").value("OPEN"))
+            .andReturn()
+            .response
+            .contentAsString
+        val interactionId = objectMapper.readTree(startedPayload).at("/item/interactionId").asText()
+
+        mockMvc.perform(
+            post("/api/staff/call-center/interactions/$interactionId/notes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "call-agent01",
+                      "requestedByRole": "CALL_CENTER_AGENT",
+                      "reason": "Record synthetic held transfer call",
+                      "noteBody": "Synthetic caller shared 010-5555-6666 during the held-transfer inquiry."
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.note.redactionApplied").value(true))
+
+        mockMvc.perform(
+            post("/api/staff/call-center/interactions/$interactionId/escalations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "requestedBy": "call-agent01",
+                      "requestedByRole": "CALL_CENTER_AGENT",
+                      "reason": "Handoff the linked held transfer to FDS",
+                      "escalationType": "FDS"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.escalation.status").value("PENDING_APPROVAL"))
+
+        mockMvc.perform(get("/api/staff/journeys/$journeyId"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("POLICY_REASON_REQUIRED"))
+
+        mockMvc.perform(
+            get("/api/staff/journeys/$journeyId")
+                .queryParam("reason", "Review correlated call-center handoff")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("HELD"))
+
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'CALL_CENTER_INTERACTION'"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'CALL_CENTER_ESCALATION'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CALL_CENTER_NOTE_REDACTED'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CALL_CENTER_FDS_HANDOFF_REQUESTED'"))
+        assertEquals(0, countRows("business_journey_events WHERE journey_id = '$journeyId' AND payload_json::text LIKE '%010-5555-6666%'"))
+        assertEquals(0, countRows("ledger_transactions"))
+    }
+
     private fun countRows(suffix: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM $suffix", emptyMap<String, Any?>(), Int::class.java) ?: 0
 

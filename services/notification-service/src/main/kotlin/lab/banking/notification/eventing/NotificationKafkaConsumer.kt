@@ -75,6 +75,7 @@ class NotificationKafkaConsumer(
                 sourceEventId = envelope.outboxEventId,
                 eventType = envelope.eventType,
                 recipientId = recipientId(envelope),
+                deliveryRequestId = firstString(envelope.payload["deliveryRequestId"]),
                 channel = channel(envelope, config.defaultChannel),
                 payload = normalizedPayload(envelope),
                 requestedBy = config.requestedBy

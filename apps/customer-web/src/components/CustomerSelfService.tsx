@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import {
   BankingApiError,
-  createBankingApiClient,
+  createCustomerApiClient,
   type CustomerAccountDetailDto,
   type CustomerAccountListItemDto,
   type Customer360Dto,
-  type CustomerAuthResponse,
+  type CustomerJourneyDto,
   type CustomerProfileDto,
   type CustomerSelfServiceAccountOpeningRequestDto,
   type CustomerStatementArtifactDto,
@@ -15,8 +15,9 @@ import {
   type CustomerTransactionDto,
   type CustomerTransferResponse,
   type CustomerTransferStatusDto,
-  type InternalRecipientAccountDto
-} from "@banking-lab/api-client";
+  type InternalRecipientAccountDto,
+  type NotificationDeliveryDto
+} from "@banking-lab/api-client/customer";
 import {
   ChannelBadge,
   ChannelCard,
@@ -26,14 +27,34 @@ import {
   ChannelPanel,
   ChannelShell,
   ChannelTable
-} from "../../../../packages/channel-ui/src";
+} from "../../../../packages/channel-ui/src/customer-ui";
 
 type StoredCustomerSession = {
   readonly customerId: string;
   readonly username: string;
-  readonly authorizationHeader: string;
   readonly expiresAt: string;
-  readonly sessionId: string;
+  readonly roles: readonly string[];
+  readonly mode: string;
+};
+
+type CustomerBffAuthResponse = {
+  readonly customer: {
+    readonly customerId: string;
+    readonly username: string;
+    readonly kycStatus: string;
+  };
+  readonly session: {
+    readonly customerId: string;
+  };
+  readonly expiresAt: string;
+  readonly replayed: boolean;
+  readonly bffSession: {
+    readonly customerId: string;
+    readonly displayName: string;
+    readonly roles: readonly string[];
+    readonly expiresAt: string;
+    readonly mode: string;
+  };
 };
 
 type UiError = {
@@ -44,35 +65,16 @@ type UiError = {
   readonly route?: string;
 };
 
-type HomeRouteSummary = {
-  readonly href: string;
-  readonly title: string;
-  readonly screenIds: readonly string[];
-};
-
-type CustomerSelfServiceHomeSurfaceProps = {
-  readonly manifestCount: number;
-  readonly reasonRequiredCount: number;
-  readonly makerCheckerCount: number;
-  readonly routeSummaries: readonly HomeRouteSummary[];
-};
-
 type LoadState<T> =
   | { readonly status: "idle" }
   | { readonly status: "loading" }
   | { readonly status: "loaded"; readonly value: T }
   | { readonly status: "failed"; readonly error: UiError };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_BANKING_API_BASE_URL ?? "";
-const sessionStorageKey = "bankingLabCustomerSyntheticSession";
+const apiBaseUrl = "same-origin opaque BFF";
 const transferResultStorageKey = "bankingLabCustomerTransferResults";
 
-export function CustomerSelfServiceHomeSurface({
-  manifestCount,
-  reasonRequiredCount,
-  makerCheckerCount,
-  routeSummaries
-}: CustomerSelfServiceHomeSurfaceProps) {
+export function CustomerSelfServiceHomeSurface() {
   const [session, setSession] = useStoredSession();
   const [filter, setFilter] = useState<"priority" | "money" | "support" | "security">("priority");
   const [profileState, setProfileState] = useState<LoadState<CustomerProfileDto>>({ status: "idle" });
@@ -212,7 +214,7 @@ export function CustomerSelfServiceHomeSurface({
 
   const visibleCards = cards.filter((card) => card.group === filter);
   const clearSession = () => {
-    clearStoredSession();
+    void clearStoredSession();
     setSession(null);
   };
 
@@ -239,7 +241,7 @@ export function CustomerSelfServiceHomeSurface({
       </section>
 
       <ChannelMetricGrid>
-        <ChannelMetric label="Default PII masking" value="CUSTOMER_SELF" detail={`${manifestCount} manifests`} />
+        <ChannelMetric label="Privacy" value="Masked by default" detail="Customer-owned data only" />
         <ChannelMetric
           label="Available balance"
           value={balanceValue}
@@ -259,7 +261,7 @@ export function CustomerSelfServiceHomeSurface({
       <ChannelPanel
         title="Service Hub"
         eyebrow="Profile · money · support · security"
-        meta={<ChannelBadge>{reasonRequiredCount} reason-gated</ChannelBadge>}
+        meta={<ChannelBadge>Customer-owned</ChannelBadge>}
       >
         <div className="self-service-segments" role="tablist" aria-label="Service categories">
           {(["priority", "money", "support", "security"] as const).map((item) => (
@@ -290,7 +292,7 @@ export function CustomerSelfServiceHomeSurface({
       <ChannelPanel
         title="Recent Activity"
         eyebrow="Ledger read model"
-        meta={<ChannelBadge tone={makerCheckerCount > 0 ? "critical" : "neutral"}>{makerCheckerCount} maker-checker</ChannelBadge>}
+        meta={<ChannelBadge>Read-only projection</ChannelBadge>}
       >
         {recentActivity.length > 0 ? (
           <RecentLedgerActivityTable items={recentActivity} />
@@ -311,19 +313,6 @@ export function CustomerSelfServiceHomeSurface({
         </ChannelCard>
       </ChannelCardGrid>
 
-      <ChannelPanel title="Manifest Route Map" eyebrow="customer-web">
-        <nav className="self-service-manifest-strip" aria-label="Customer manifest routes">
-          {routeSummaries.map((route) => (
-            <a
-              href={route.href.replace("[accountId]", "ACC-SELECTED").replace("[resultId]", "TRF-RESULT").replace("[caseId]", "CMP-CASE").replace("[cardId]", "CARD-SELECTED")}
-              key={route.href}
-            >
-              <strong>{route.title}</strong>
-              <span>{route.screenIds.join(", ")}</span>
-            </a>
-          ))}
-        </nav>
-      </ChannelPanel>
     </>
   );
 }
@@ -336,7 +325,7 @@ export function CustomerSignupForm() {
   const [syntheticPhone, setSyntheticPhone] = useState("010-0000-0000");
   const [syntheticAddress, setSyntheticAddress] = useState("Synthetic self-service address");
   const [idempotencyKey, setIdempotencyKey] = useState(() => nextIdempotencyKey("CWB-SIGNUP"));
-  const [result, setResult] = useState<LoadState<CustomerAuthResponse>>({ status: "idle" });
+  const [result, setResult] = useState<LoadState<CustomerBffAuthResponse>>({ status: "idle" });
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -346,7 +335,7 @@ export function CustomerSignupForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createBankingApiClient({ baseUrl: apiBaseUrl }).signupCustomer({
+      const response = await customerBffAuth("signup", {
         idempotencyKey,
         username,
         password,
@@ -354,8 +343,7 @@ export function CustomerSignupForm() {
         syntheticPhone,
         syntheticAddress
       });
-      saveSessionFromAuth(response);
-      setSession(readStoredSession());
+      setSession(storedSessionFromBff(response));
       setResult({ status: "loaded", value: response });
     } catch (error: unknown) {
       setResult({ status: "failed", error: parseError(error) });
@@ -412,7 +400,7 @@ export function CustomerLoginForm() {
   const [session, setSession] = useStoredSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [result, setResult] = useState<LoadState<CustomerAuthResponse>>({ status: "idle" });
+  const [result, setResult] = useState<LoadState<CustomerBffAuthResponse>>({ status: "idle" });
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -422,9 +410,8 @@ export function CustomerLoginForm() {
     }
     setResult({ status: "loading" });
     try {
-      const response = await createBankingApiClient({ baseUrl: apiBaseUrl }).loginCustomer({ username, password });
-      saveSessionFromAuth(response);
-      setSession(readStoredSession());
+      const response = await customerBffAuth("login", { username, password });
+      setSession(storedSessionFromBff(response));
       setResult({ status: "loaded", value: response });
     } catch (error: unknown) {
       setResult({ status: "failed", error: parseError(error) });
@@ -432,12 +419,12 @@ export function CustomerLoginForm() {
   };
 
   const signOut = () => {
-    clearStoredSession();
+    void clearStoredSession();
     setSession(null);
   };
 
   return (
-    <SelfServiceShell title="Customer Login" status={session ? `Signed in · ${session.username}` : "No local session"}>
+    <SelfServiceShell title="Customer Login" status={session ? `Signed in · ${session.username}` : "No BFF session"}>
       <DemoFallbackBanner />
       <SelfServiceNav />
       <ChannelPanel title="Login" eyebrow="CWB-002">
@@ -453,6 +440,7 @@ export function CustomerLoginForm() {
           <div className="self-service-actions">
             <button type="submit" disabled={result.status === "loading"}>{result.status === "loading" ? "Signing in" : "Sign in"}</button>
             <button type="button" onClick={signOut} disabled={!session}>Clear session</button>
+            <a href="/api/session/login?returnTo=/">Sign in with Keycloak</a>
           </div>
         </form>
       </ChannelPanel>
@@ -801,7 +789,9 @@ export function CustomerTransferForm() {
   const [fromAccountId, setFromAccountId] = useState("");
   const [recipientQuery, setRecipientQuery] = useState("");
   const [recipient, setRecipient] = useState<LoadState<InternalRecipientAccountDto>>({ status: "idle" });
-  const [amountMinor, setAmountMinor] = useState("1000");
+  const [amountMinor, setAmountMinor] = useState("5000000");
+  const [firstTimeBeneficiary, setFirstTimeBeneficiary] = useState(true);
+  const [newDevice, setNewDevice] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => nextIdempotencyKey("CWB-TRF"));
   const [result, setResult] = useState<LoadState<CustomerTransferResponse>>({ status: "idle" });
 
@@ -857,7 +847,9 @@ export function CustomerTransferForm() {
         amountMinor: Number(amountMinor),
         idempotencyKey,
         requestedBy: session.username,
-        reason: "Synthetic customer-web internal transfer"
+        reason: "Synthetic customer-web high-risk new-beneficiary transfer",
+        firstTimeBeneficiary,
+        newDevice
       });
       rememberTransferResult(response);
       setResult({ status: "loaded", value: response });
@@ -896,6 +888,18 @@ export function CustomerTransferForm() {
             Idempotency key
             <input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} required />
           </label>
+          <label className="self-service-checkbox">
+            <input
+              type="checkbox"
+              checked={firstTimeBeneficiary}
+              onChange={(event) => setFirstTimeBeneficiary(event.target.checked)}
+            />
+            New beneficiary (FDS review signal)
+          </label>
+          <label className="self-service-checkbox">
+            <input type="checkbox" checked={newDevice} onChange={(event) => setNewDevice(event.target.checked)} />
+            New device (FDS review signal)
+          </label>
           <div className="self-service-actions">
             <button type="button" onClick={lookupRecipient} disabled={!recipientQuery || recipient.status === "loading"}>Lookup recipient</button>
             <button type="submit" disabled={result.status === "loading" || recipient.status !== "loaded"}>{result.status === "loading" ? "Submitting" : "Submit transfer"}</button>
@@ -912,6 +916,7 @@ export function CustomerTransferForm() {
 export function CustomerTransferResultView({ resultId }: { readonly resultId: string }) {
   const [session] = useStoredSession();
   const [state, setState] = useState<LoadState<CustomerTransferStatusDto | CustomerTransferResponse>>({ status: "idle" });
+  const [journeyState, setJourneyState] = useState<LoadState<CustomerJourneyDto>>({ status: "idle" });
 
   useEffect(() => {
     const remembered = readRememberedTransferResult(resultId);
@@ -952,6 +957,23 @@ export function CustomerTransferResultView({ resultId }: { readonly resultId: st
       });
   }, [resultId, session]);
 
+  const journeyId = state.status === "loaded" ? transferItem(state.value).journeyId : undefined;
+  useEffect(() => {
+    if (!journeyId) {
+      setJourneyState({ status: "idle" });
+      return;
+    }
+    if (!session) {
+      setJourneyState({ status: "failed", error: authRequiredError() });
+      return;
+    }
+    setJourneyState({ status: "loading" });
+    authedClient(session)
+      .customerJourney(journeyId)
+      .then((journey) => setJourneyState({ status: "loaded", value: journey }))
+      .catch((error: unknown) => setJourneyState({ status: "failed", error: parseError(error) }));
+  }, [journeyId, session]);
+
   return (
     <SelfServiceShell title={`Transfer Result ${resultId}`} status={session ? "Customer owned" : "Login required"}>
       <DemoFallbackBanner />
@@ -959,6 +981,86 @@ export function CustomerTransferResultView({ resultId }: { readonly resultId: st
       <ChannelPanel title="Result" eyebrow="CWB-202 · CWB-203">
         <LoadBoundary state={state}>
           {(value) => <TransferStatusSummary value={value} />}
+        </LoadBoundary>
+      </ChannelPanel>
+      {journeyId ? <CustomerJourneyPanel state={journeyState} /> : null}
+    </SelfServiceShell>
+  );
+}
+
+export function CustomerSupportHome() {
+  return (
+    <SelfServiceShell title="Support" status="Customer-safe help and status">
+      <SelfServiceNav />
+      <ChannelCardGrid>
+        <ChannelCard screenId="CWB-202" title="Transfer status">
+          <p>Open a transfer result to follow its customer-safe review timeline and journey reference.</p>
+          <a href="/transfers/new">Start or review a transfer</a>
+        </ChannelCard>
+        <ChannelCard screenId="CWB-301" title="Complaints">
+          <p>Submit and follow a synthetic support case without exposing internal reviewer notes.</p>
+          <a href="/complaints">Open complaints</a>
+        </ChannelCard>
+        <ChannelCard screenId="CWB-801" title="Notifications">
+          <p>Review masked synthetic delivery history and preferences.</p>
+          <a href="/notifications">Open notifications</a>
+        </ChannelCard>
+      </ChannelCardGrid>
+    </SelfServiceShell>
+  );
+}
+
+export function CustomerNotificationsView() {
+  const [session] = useStoredSession();
+  const [state, setState] = useState<LoadState<readonly NotificationDeliveryDto[]>>({ status: "idle" });
+
+  const loadDeliveries = () => {
+    if (!session) {
+      setState({ status: "failed", error: authRequiredError() });
+      return;
+    }
+    setState({ status: "loading" });
+    authedClient(session)
+      .listCustomerNotificationDeliveries(session.customerId, {
+        eventType: "CustomerTransferStatusChanged",
+        limit: 25
+      })
+      .then((deliveries) => setState({ status: "loaded", value: deliveries }))
+      .catch((error: unknown) => setState({ status: "failed", error: parseError(error) }));
+  };
+
+  useEffect(() => {
+    if (session) {
+      loadDeliveries();
+    }
+  }, [session]);
+
+  return (
+    <SelfServiceShell title="Notifications" status={session ? "Customer owned" : "Login required"}>
+      <DemoFallbackBanner />
+      <SelfServiceNav />
+      <ChannelPanel title="Transfer review notifications" eyebrow="CWB-801 · masked delivery history">
+        <div className="self-service-actions">
+          <button type="button" onClick={loadDeliveries} disabled={!session || state.status === "loading"}>Refresh notifications</button>
+        </div>
+        <LoadBoundary state={state} idle="Sign in to load customer-owned synthetic notifications.">
+          {(deliveries) => deliveries.length > 0 ? (
+            <div data-testid="customer-notification-history">
+              <ChannelTable>
+                <thead><tr><th>Status</th><th>Channel</th><th>Message</th><th>Created</th></tr></thead>
+                <tbody>
+                  {deliveries.map((delivery) => (
+                    <tr key={delivery.deliveryRequestId}>
+                      <td><StatusBadge status={delivery.status} /></td>
+                      <td>{delivery.channel}</td>
+                      <td>{delivery.maskedMessage}</td>
+                      <td><time dateTime={delivery.createdAt}>{delivery.createdAt}</time></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ChannelTable>
+            </div>
+          ) : <p data-testid="customer-notification-history">No transfer review notifications yet.</p>}
         </LoadBoundary>
       </ChannelPanel>
     </SelfServiceShell>
@@ -1255,6 +1357,7 @@ function SelfServiceNav() {
         <a href="/accounts">Accounts</a>
         <a href="/statements">Statements</a>
         <a href="/transfers/new">Transfer</a>
+        <a href="/support">Support</a>
       </nav>
     </ChannelPanel>
   );
@@ -1267,7 +1370,7 @@ function DemoFallbackBanner() {
   return (
     <ChannelPanel title="Demo Fallback" eyebrow="configuration">
       <p className="self-service-muted">
-        Live customer self-service calls are disabled because NEXT_PUBLIC_BANKING_API_BASE_URL is not configured. No hard-coded customer or account IDs are used on this route.
+        Live customer self-service calls are disabled because the same-origin BFF is unavailable. No hard-coded customer or account IDs are used on this route.
       </p>
     </ChannelPanel>
   );
@@ -1275,18 +1378,19 @@ function DemoFallbackBanner() {
 
 function SessionPanel({ session }: { readonly session: StoredCustomerSession }) {
   return (
-    <ChannelPanel title="Session" eyebrow="local synthetic token">
+    <ChannelPanel title="Session" eyebrow="opaque HttpOnly BFF session">
       <dl className="self-service-definition-list">
         <div><dt>Customer</dt><dd>{session.customerId}</dd></div>
         <div><dt>Username</dt><dd>{session.username}</dd></div>
-        <div><dt>Session</dt><dd>{session.sessionId}</dd></div>
+        <div><dt>Credential</dt><dd>HttpOnly cookie · not readable by browser JavaScript</dd></div>
         <div><dt>Expires</dt><dd>{session.expiresAt}</dd></div>
+        <div><dt>Mode</dt><dd>{session.mode}</dd></div>
       </dl>
     </ChannelPanel>
   );
 }
 
-function AuthResultPanel({ state }: { readonly state: LoadState<CustomerAuthResponse> }) {
+function AuthResultPanel({ state }: { readonly state: LoadState<CustomerBffAuthResponse> }) {
   return (
     <ChannelPanel title="Auth Result" eyebrow="structured state">
       <LoadBoundary state={state} idle="Submit credentials to create a session.">
@@ -1337,19 +1441,57 @@ function TransferResultPanel({ state }: { readonly state: LoadState<CustomerTran
 }
 
 function TransferStatusSummary({ value }: { readonly value: CustomerTransferResponse | CustomerTransferStatusDto }) {
-  const item = "item" in value ? value.item : value;
+  const item = transferItem(value);
   const replayed = "replayed" in value ? value.replayed : false;
   const status = item.status;
   return (
     <dl className="self-service-definition-list">
       <div><dt>Status</dt><dd><StatusBadge status={replayed ? "REPLAYED" : status} /></dd></div>
       <div><dt>Result</dt><dd>{item.resultId ?? item.idempotencyKey ?? "pending"}</dd></div>
+      <div><dt>Journey</dt><dd>{item.journeyId ?? "not required"}</dd></div>
       <div><dt>Transaction</dt><dd>{item.transactionId ?? "not posted"}</dd></div>
       <div><dt>Case</dt><dd>{"caseId" in item ? item.caseId ?? "none" : item.caseId ?? "none"}</dd></div>
       <div><dt>Amount</dt><dd>{item.amountMinor == null ? "unknown" : formatMinor(item.amountMinor, item.currency ?? "KRW")}</dd></div>
       <div><dt>Message</dt><dd>{item.message ?? item.failureCode ?? "Balanced ledger state available when posted."}</dd></div>
     </dl>
   );
+}
+
+function CustomerJourneyPanel({ state }: { readonly state: LoadState<CustomerJourneyDto> }) {
+  return (
+    <ChannelPanel title="Security review timeline" eyebrow="customer-safe journey">
+      <LoadBoundary state={state} idle="A journey timeline appears for held transfers.">
+        {(journey) => (
+          <div className="self-service-result-stack" data-testid="customer-journey-timeline">
+            <dl className="self-service-definition-list">
+              <div><dt>Journey</dt><dd>{journey.journeyId}</dd></div>
+              <div><dt>Status</dt><dd><StatusBadge status={journey.status} /></dd></div>
+              <div><dt>Update</dt><dd>{journey.statusMessage}</dd></div>
+              <div><dt>Last changed</dt><dd>{journey.updatedAt}</dd></div>
+            </dl>
+            <ChannelTable>
+              <thead>
+                <tr><th>Step</th><th>Status</th><th>Time</th></tr>
+              </thead>
+              <tbody>
+                {journey.events.map((event) => (
+                  <tr key={event.eventId}>
+                    <td>{event.eventType.replaceAll("_", " ")}</td>
+                    <td>{event.status}</td>
+                    <td><time dateTime={event.createdAt}>{event.createdAt}</time></td>
+                  </tr>
+                ))}
+              </tbody>
+            </ChannelTable>
+          </div>
+        )}
+      </LoadBoundary>
+    </ChannelPanel>
+  );
+}
+
+function transferItem(value: CustomerTransferResponse | CustomerTransferStatusDto) {
+  return "item" in value ? value.item : value;
 }
 
 function StatusBadge({ status }: { readonly status: string }) {
@@ -1400,12 +1542,12 @@ function LoadBoundary<T>({
     return <p className="self-service-muted">{idle}</p>;
   }
   if (state.status === "loading") {
-    return <p className="self-service-muted">Loading</p>;
+    return <p className="self-service-muted" role="status" aria-live="polite">Loading</p>;
   }
   if (state.status === "failed") {
     return <StructuredErrorPanel error={state.error} />;
   }
-  return <>{children(state.value)}</>;
+  return <div className="self-service-load-result" role="status" aria-live="polite">{children(state.value)}</div>;
 }
 
 function StructuredErrorPanel({ error }: { readonly error: UiError }) {
@@ -1421,48 +1563,60 @@ function StructuredErrorPanel({ error }: { readonly error: UiError }) {
 function useStoredSession(): readonly [StoredCustomerSession | null, (session: StoredCustomerSession | null) => void] {
   const [session, setSession] = useState<StoredCustomerSession | null>(null);
   useEffect(() => {
-    setSession(readStoredSession());
+    fetch("/api/session", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => response.json() as Promise<{ readonly authenticated?: boolean; readonly customerId?: string; readonly displayName?: string; readonly roles?: readonly string[]; readonly expiresAt?: string; readonly mode?: string }>)
+      .then((value) => {
+        setSession(value.authenticated && value.customerId && value.expiresAt
+          ? {
+              customerId: value.customerId,
+              username: value.displayName ?? value.customerId,
+              roles: value.roles ?? ["CUSTOMER"],
+              expiresAt: value.expiresAt,
+              mode: value.mode ?? "OIDC"
+            }
+          : null);
+      })
+      .catch(() => setSession(null));
   }, []);
   return [session, setSession] as const;
 }
 
-function readStoredSession(): StoredCustomerSession | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const raw = window.localStorage.getItem(sessionStorageKey);
-  if (!raw) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as StoredCustomerSession;
-  } catch {
-    return null;
-  }
-}
-
-function saveSessionFromAuth(response: CustomerAuthResponse) {
-  const session: StoredCustomerSession = {
-    customerId: response.session.customerId,
-    username: response.customer.username,
-    authorizationHeader: `${response.tokenType} ${response.bearerToken}`,
-    expiresAt: response.expiresAt,
-    sessionId: response.session.sessionId
+function storedSessionFromBff(response: CustomerBffAuthResponse): StoredCustomerSession {
+  return {
+    customerId: response.bffSession.customerId,
+    username: response.bffSession.displayName,
+    roles: response.bffSession.roles,
+    expiresAt: response.bffSession.expiresAt,
+    mode: response.bffSession.mode
   };
-  window.localStorage.setItem(sessionStorageKey, JSON.stringify(session));
 }
 
-function clearStoredSession() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(sessionStorageKey);
-  }
+async function clearStoredSession() {
+  await fetch("/api/session", { method: "DELETE", credentials: "same-origin" });
 }
 
-function authedClient(session: StoredCustomerSession) {
-  return createBankingApiClient({
-    baseUrl: apiBaseUrl,
-    bearerToken: session.authorizationHeader
+function authedClient(_session: StoredCustomerSession) {
+  return createCustomerApiClient({
+    baseUrl: browserBffBaseUrl()
   });
+}
+
+async function customerBffAuth(action: "login" | "signup", command: Record<string, unknown>): Promise<CustomerBffAuthResponse> {
+  const response = await fetch("/api/session/customer-auth", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ action, command })
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new BankingApiError(response.status, body);
+  }
+  return JSON.parse(body) as CustomerBffAuthResponse;
+}
+
+function browserBffBaseUrl() {
+  return window.location.origin;
 }
 
 function rememberTransferResult(response: CustomerTransferResponse) {
@@ -1517,7 +1671,7 @@ function parseError(error: unknown): UiError {
 function demoFallbackError(): UiError {
   return {
     code: "DEMO_FALLBACK_API_NOT_CONFIGURED",
-    message: "NEXT_PUBLIC_BANKING_API_BASE_URL is not configured for this browser route."
+    message: "The same-origin customer BFF is not available for this browser route."
   };
 }
 

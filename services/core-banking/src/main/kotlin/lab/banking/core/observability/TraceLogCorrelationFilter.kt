@@ -24,6 +24,8 @@ class TraceLogCorrelationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
+        val requestId = RequestCorrelation.installRequestId(request)
+        response.setHeader("x-request-id", requestId)
         val tracer = tracerProvider.ifAvailable
         if (tracer == null) {
             filterChain.doFilter(request, response)
@@ -65,7 +67,7 @@ class TraceLogCorrelationFilter(
             request.method,
             request.requestURI,
             response.status,
-            request.getHeader("x-request-id") ?: "generated",
+            RequestCorrelation.currentRequestId() ?: "generated",
             context?.traceId() ?: "unavailable",
             context?.spanId() ?: "unavailable"
         )

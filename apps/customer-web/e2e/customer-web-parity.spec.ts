@@ -20,20 +20,29 @@ function manifests() {
     .map((fileName) => JSON.parse(readFileSync(path.join(dir, fileName), "utf8")));
 }
 
-test("customer web renders account, transfer, and complaint controls from manifests", async ({ page }) => {
-  const screens = manifests();
+test("customer web keeps product dashboard free of lab evidence controls", async ({ page }) => {
   await page.goto(baseUrl);
 
   await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Self-Service Workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Customer Dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Self-service starts here" })).toBeVisible();
   await expect(page.getByText("Service Hub")).toBeVisible();
+  await expect(page.getByText("Privacy")).toBeVisible();
+  await expect(page.getByText("Masked by default")).toBeVisible();
+  await expect(page.getByText("LAB_ONLY")).toHaveCount(0);
+  await expect(page.getByTestId("api-backed-customer-account")).toHaveCount(0);
+});
+
+test("customer web lab catalog renders account, transfer, and complaint manifests", async ({ page }) => {
+  const screens = manifests();
+  await page.goto(`${baseUrl}/lab/manifests`);
+
+  await expect(page.locator(`[data-channel-shell="${app}"]`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Customer Screen Manifests" })).toBeVisible();
   for (const screen of screens) {
     await expect(page.getByText(screen.screenId, { exact: true }).first()).toBeVisible();
   }
 
-  await expect(page.getByText("Default PII masking")).toBeVisible();
-  await expect(page.getByText("CUSTOMER_SELF").first()).toBeVisible();
   await expect(page.getByText("Complaint Entry", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("workflow timeline", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("WAITING_APPROVAL").first()).toBeVisible();
@@ -42,6 +51,7 @@ test("customer web renders account, transfer, and complaint controls from manife
 test("customer web exposes form-backed self-service routes and shared workflow metadata", async () => {
   const appDir = path.join(repoRoot, "apps", app, "src", "app");
   const pageSource = readFileSync(path.join(appDir, "page.tsx"), "utf8");
+  const manifestCatalog = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "CustomerManifestCatalog.tsx"), "utf8");
   const routeComponent = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "workflow-routes.tsx"), "utf8");
   const selfService = readFileSync(path.join(repoRoot, "apps", app, "src", "components", "CustomerSelfService.tsx"), "utf8");
   const files = readdirSync(appDir).sort();
@@ -53,6 +63,7 @@ test("customer web exposes form-backed self-service routes and shared workflow m
     "cards",
     "complaints",
     "globals.css",
+    "lab",
     "layout.tsx",
     "loans",
     "login",
@@ -64,15 +75,18 @@ test("customer web exposes form-backed self-service routes and shared workflow m
     "security",
     "signup",
     "statements",
+    "support",
     "transfers"
   ]);
   expect(readdirSync(path.join(appDir, "api", "auth", "keycloak-token")).sort()).toEqual(["route.ts"]);
-  expect(pageSource).toContain("loadCustomerWebManifests");
-  expect(pageSource).toContain("customerWorkflowRouteSummaries");
+  expect(pageSource).not.toContain("loadCustomerWebManifests");
+  expect(pageSource).not.toContain("ApiBackedCustomerPanel");
+  expect(manifestCatalog).toContain("loadCustomerWebManifests");
+  expect(manifestCatalog).toContain("customerWorkflowRouteSummaries");
   expect(routeComponent).toContain("CustomerWorkflowRoutePage");
   expect(selfService).toContain("CustomerSelfServiceHomeSurface");
   expect(selfService).toContain("Service Hub");
-  expect(selfService).toContain("Default PII masking");
+  expect(selfService).toContain("Masked by default");
   expect(routeComponent).toContain("CWB-001");
   expect(routeComponent).toContain("CWB-002");
   expect(routeComponent).toContain("CWB-003");
@@ -99,6 +113,8 @@ test("customer web exposes form-backed self-service routes and shared workflow m
   expect(selfService).toContain("customerStatementArtifacts");
   expect(selfService).toContain("internalRecipientLookup");
   expect(selfService).toContain("requestCustomerTransfer");
+  expect(selfService).toContain("customerJourney");
+  expect(selfService).toContain("firstTimeBeneficiary");
   expect(pageSource).not.toContain("fetch(\"/api/customer/transfers\"");
   expect(pageSource).not.toContain("fetch('/api/customer/transfers'");
 });
@@ -140,7 +156,12 @@ test("customer web route pages render signup login transfer forms and complaint 
   await expect(page.getByLabel("Recipient account number or ID")).toBeVisible();
   await expect(page.getByRole("button", { name: "Lookup recipient" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Submit transfer" })).toBeVisible();
+  await expect(page.getByLabel("New beneficiary (FDS review signal)")).toBeChecked();
   await expect(page.getByText("Recipient Lookup").first()).toBeVisible();
+
+  await page.goto(`${baseUrl}/support`);
+  await expect(page.getByRole("heading", { name: "Support" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Transfer status" })).toBeVisible();
 
   await page.goto(`${baseUrl}/complaints/CMP-ROUTE-001`);
   await expect(page.getByRole("heading", { name: "Complaint Detail: CMP-ROUTE-001" }).first()).toBeVisible();
@@ -152,7 +173,7 @@ test("customer web route pages render signup login transfer forms and complaint 
 test("customer web loads owned masked account detail from the Spring API when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed channel smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   const panel = page.getByTestId("api-backed-customer-account");
   await expect(panel).toContainText("masked account loaded", { timeout: 15_000 });
@@ -164,7 +185,7 @@ test("customer web loads owned masked account detail from the Spring API when co
 test("customer web propagates interactive Keycloak login token to the Spring API when configured", async ({ page }) => {
   test.skip(!apiBaseUrl || !keycloakBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL and BANKING_LAB_E2E_KEYCLOAK_BASE_URL to run live Keycloak browser login smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Sign in with Keycloak" }).click();
   await expect(page).toHaveURL(/\/realms\/banking-lab\/protocol\/openid-connect\/auth/u, { timeout: 15_000 });
@@ -226,7 +247,7 @@ test("customer web propagates interactive Keycloak login token to the Spring API
 test("customer web executes Spring API-backed idempotent transfer retry when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed transfer retry smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run transfer retry smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-transfer-retry");
@@ -240,7 +261,7 @@ test("customer web executes Spring API-backed idempotent transfer retry when con
 test("customer web shows Spring API-backed transfer insufficient-balance failure when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed transfer failure smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run transfer failure smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-transfer-failure");
@@ -254,7 +275,7 @@ test("customer web shows Spring API-backed transfer insufficient-balance failure
 test("customer web shows Spring API-backed transfer history and held FDS status when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed history/status smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run history status smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-history-status");
@@ -272,7 +293,7 @@ test("customer web shows Spring API-backed transfer history and held FDS status 
 test("customer web shows Spring API-backed held and failed transfer statuses when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed held/failed status smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run held failed status smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-held-failed-status");
@@ -288,7 +309,7 @@ test("customer web shows Spring API-backed held and failed transfer statuses whe
 test("customer web submits Spring API-backed complaint entry when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed complaint entry smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run complaint entry smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-complaint-entry");
@@ -302,7 +323,7 @@ test("customer web submits Spring API-backed complaint entry when configured", a
 test("customer web confirms Spring API-backed answered complaint when configured", async ({ page }) => {
   test.skip(!apiBaseUrl, "Set BANKING_LAB_E2E_API_BASE_URL to run API-backed complaint confirmation smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run complaint confirm smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-complaint-confirm");
@@ -315,7 +336,7 @@ test("customer web confirms Spring API-backed answered complaint when configured
 test("customer web executes Payment Service bill payment and autopay smoke when configured", async ({ page }) => {
   test.skip(!paymentApiBaseUrl, "Set BANKING_LAB_E2E_PAYMENT_API_BASE_URL to run API-backed payment-service smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run payment domain smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-payment-domain");
@@ -331,7 +352,7 @@ test("customer web executes Payment Service bill payment and autopay smoke when 
 test("customer web manages owned Notification Service preferences when configured", async ({ page }) => {
   test.skip(!notificationApiBaseUrl, "Set BANKING_LAB_E2E_NOTIFICATION_API_BASE_URL to run API-backed notification-service preference smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run notification preference smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-notification-preferences");
@@ -347,7 +368,7 @@ test("customer web manages owned Notification Service preferences when configure
 test("customer web reads owned Notification Service delivery history when configured", async ({ page }) => {
   test.skip(!notificationApiBaseUrl, "Set BANKING_LAB_E2E_NOTIFICATION_API_BASE_URL to run API-backed notification-service history smoke.");
 
-  await page.goto(baseUrl);
+  await page.goto(`${baseUrl}/lab/evidence`);
 
   await page.getByRole("button", { name: "Run notification history smoke" }).click();
   const panel = page.getByTestId("api-backed-customer-notification-delivery-history");

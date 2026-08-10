@@ -71,10 +71,11 @@ record_smoke_pass() {
       hostedCiGreenClaim: false,
       app: "customer-web",
       command: "npm run test:customer-web:self-service-api-e2e-compose",
-      scenario: "signup -> login -> staff maker-checker account opening -> accounts -> transfer -> history/status routes",
+      scenario: "signup -> opaque BFF login -> staff maker-checker account opening -> owned accounts -> transfer -> HELD journey/status routes",
       controls: [
         "synthetic signup and login",
         "explicit dev/test synthetic customer auth issuer opt-in",
+        "same-origin BFF with HttpOnly opaque session and no browser bearer storage",
         "staff maker-checker account opening",
         "masked owned-account route rendering",
         "internal recipient lookup",
@@ -83,6 +84,7 @@ record_smoke_pass() {
       ],
       notes: [
         "Executed against disposable PostgreSQL and Spring Boot core-banking Compose services.",
+        "Customer product reads and navigation used the same-origin Next BFF; the bearer credential remained server-side.",
         "Simulator tokens are enabled only by explicit dev/test environment variables in this wrapper.",
         "This evidence does not use real customer money, real PII, real KYC/AML providers, real card networks, real payment networks, or external financial institution APIs."
       ]

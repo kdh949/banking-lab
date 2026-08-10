@@ -67,6 +67,24 @@ class NotificationDeliveryIntegrationTest {
     }
 
     @Test
+    fun `event consumption preserves a valid preallocated delivery reference`() {
+        val deliveryRequestId = "NDL-FDS-FDS-SYN-001-POSTED"
+        val response = notificationDeliveryService.consumeEvent(
+            sampleEvent("OBX-NOTIF-PREALLOCATED-001").copy(deliveryRequestId = deliveryRequestId)
+        )
+
+        assertEquals(deliveryRequestId, response.items.single().deliveryRequestId)
+        assertEquals(1, countRows("notification_delivery_requests WHERE delivery_request_id = '$deliveryRequestId'"))
+
+        val rejected = assertThrows(NotificationDomainException::class.java) {
+            notificationDeliveryService.consumeEvent(
+                sampleEvent("OBX-NOTIF-PREALLOCATED-002").copy(deliveryRequestId = "NDL-fds-unsafe")
+            )
+        }
+        assertEquals("NOTIFICATION_DELIVERY_REQUEST_ID_INVALID", rejected.code)
+    }
+
+    @Test
     fun `delivery failures retry then move to dead letter through durable state`() {
         val delivery = notificationDeliveryService.consumeEvent(sampleEvent("OBX-NOTIF-002")).items.single()
 

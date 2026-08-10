@@ -8,12 +8,14 @@ export function TerminalHeader({
   activeModuleLabel,
   searchText,
   onSearchText,
+  onSearchSubmit,
   onModuleChange
 }: {
   readonly activeScreen: ScreenKey;
   readonly activeModuleLabel: string;
   readonly searchText: string;
   readonly onSearchText: (value: string) => void;
+  readonly onSearchSubmit: () => void;
   readonly onModuleChange: (module: TopModule) => void;
 }) {
   return (
@@ -24,8 +26,21 @@ export function TerminalHeader({
       </div>
       <label className="iworks-search">
         <MaterialIcon name="description" />
-        <input value={searchText} onChange={(event) => onSearchText(event.target.value)} placeholder="통합검색" aria-label="통합검색" />
+        <input
+          value={searchText}
+          onChange={(event) => onSearchText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onSearchSubmit();
+            }
+          }}
+          placeholder="통합검색"
+          aria-label="통합검색"
+          aria-describedby="iworks-search-help"
+        />
         <MaterialIcon name="search" />
+        <span className="iworks-sr-only" id="iworks-search-help">거래코드를 입력하고 Enter 키로 실행합니다.</span>
       </label>
       <nav className="iworks-module-nav" aria-label="업무 모듈">
         {topModules.map((module) => (

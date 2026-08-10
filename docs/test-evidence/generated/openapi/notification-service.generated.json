@@ -206,6 +206,14 @@
           "itemsRef": null
         },
         {
+          "name": "deliveryRequestId",
+          "kotlinType": "String?",
+          "required": false,
+          "nullable": true,
+          "ref": null,
+          "itemsRef": null
+        },
+        {
           "name": "channel",
           "kotlinType": "String",
           "required": false,

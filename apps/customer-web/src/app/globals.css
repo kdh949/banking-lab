@@ -254,6 +254,20 @@
   padding: 6px 8px;
 }
 
+.self-service-form .self-service-checkbox {
+  display: flex;
+  min-height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.self-service-form .self-service-checkbox input {
+  width: 18px;
+  min-height: 18px;
+}
+
 .self-service-actions {
   display: flex;
   grid-column: 1 / -1;
