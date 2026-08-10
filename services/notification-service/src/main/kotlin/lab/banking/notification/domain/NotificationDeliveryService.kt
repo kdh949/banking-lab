@@ -80,7 +80,7 @@ class NotificationDeliveryService(
         }
 
         val maskedMessage = render(template.bodyTemplate, maskedPayload)
-        val deliveryRequestId = deliveryRequestId()
+        val deliveryRequestId = request.deliveryRequestId?.trim() ?: deliveryRequestId()
         repository.insertDeliveryRequest(
             deliveryRequestId = deliveryRequestId,
             sourceEventId = request.sourceEventId,
@@ -282,6 +282,18 @@ class NotificationDeliveryService(
         requireNonBlank(request.recipientId, "recipientId")
         requireNonBlank(request.channel, "channel")
         requireNonBlank(request.requestedBy, "requestedBy")
+        request.deliveryRequestId?.let { value ->
+            if (!DELIVERY_REQUEST_ID_PATTERN.matches(value.trim())) {
+                throw notificationError(
+                    code = "NOTIFICATION_DELIVERY_REQUEST_ID_INVALID",
+                    status = HttpStatus.BAD_REQUEST,
+                    message = "notification delivery request id is invalid",
+                    cause = "A preallocated delivery id must use the bounded synthetic NDL identifier format.",
+                    fix = "Use an NDL- prefixed identifier containing only uppercase letters, digits, and hyphens.",
+                    details = mapOf("deliveryRequestId" to value)
+                )
+            }
+        }
         if (request.payload.isEmpty()) {
             throw notificationError(
                 code = "NOTIFICATION_PAYLOAD_REQUIRED",
@@ -455,5 +467,9 @@ class NotificationDeliveryService(
     private fun sha256(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
         return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
+    private companion object {
+        val DELIVERY_REQUEST_ID_PATTERN = Regex("^NDL-[A-Z0-9-]{1,180}$")
     }
 }

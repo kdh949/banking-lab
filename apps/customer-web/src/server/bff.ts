@@ -14,5 +14,11 @@ export const customerBff = createNextBffHandlers({
     "/api/loans",
     "/api/payments",
     "/api/notifications"
+  ],
+  proxyUpstreams: [
+    {
+      prefix: "/api/notifications",
+      environmentVariable: "BANKING_LAB_NOTIFICATION_API_BASE_URL"
+    }
   ]
 });

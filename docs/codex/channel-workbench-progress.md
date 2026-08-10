@@ -8,7 +8,7 @@ This log tracks the synthetic customer-web, call-center workspace, and staff-ter
 
 ## Current checkpoint
 
-Checkpoints 1 through 9 are complete. Checkpoint 10 (deterministic seed/up/test/demo, curated assets, and final portfolio gate) is next. The core customer and call-center pages pass the focused WCAG 2.2 AA automated/manual review; the staff terminal supports transaction-code execution, roving tabs, and dialog close using only the keyboard. Safe W3C request/trace correlation now crosses the same-origin BFF into Spring journey, audit, and access-log evidence without copying browser credentials or request content. No Definition of Done item is marked complete yet; no end-to-end claim will be made before the deterministic demo and every final gate pass.
+All 10 checkpoints and all 12 Definition-of-Done items are complete on the local branch. The deterministic cross-channel command, full repository/static matrix, three product builds, Core Banking and Notification Service integration suites, three channel Compose smokes, and settlement-first portfolio gate all pass on the final tree. The evidence remains synthetic/local unless a linked hosted workflow reports otherwise; push and draft-PR publication are the remaining Git handoff actions.
 
 ## Inspected baseline
 
@@ -47,7 +47,24 @@ Checkpoints 1 through 9 are complete. Checkpoint 10 (deterministic seed/up/test/
 | 7 | `FDS201`, journey-aware `TX101`/`APR101`/`WRK003`, SoD in UI and API | complete | staff-terminal typecheck/build, FDS PostgreSQL integration tests, Playwright |
 | 8 | OIDC code+PKCE with opaque BFF session; negative security tests | complete | three live BFF Compose smokes plus 10 Spring/PostgreSQL negative-control tests |
 | 9 | WCAG/keyboard checks plus W3C trace correlation without sensitive logging | complete | 2/2 automated core-page audits, manual 320px review, keyboard Playwright, Spring trace/audit tests |
-| 10 | Deterministic seed/up/test/demo, portfolio link, screenshots/video script | pending | `npm run demo:test:channels` plus full goal gates |
+| 10 | Deterministic seed/up/test/demo, portfolio link, screenshots/video script | complete | final `npm run demo:test:channels` and every full goal gate passed |
+
+## Definition of Done
+
+| # | Status | Final proof |
+| --- | --- | --- |
+| 1. Same `journeyId` across three channels | complete | Unified Playwright asserts the customer result, call-center journey panel, FDS201, and APR101 against one release journey; screenshots retain the customer/call/staff projections. |
+| 2. HELD has zero ledger transactions | complete | The browser sees `not posted`; final PostgreSQL verification rejects any release-case transfer transaction before approval. |
+| 3. Other customer denied journey, transfer, account | complete | Unified Playwright expects HTTP 403 for all three token-owned reads; full Core Banking integration remains green. |
+| 4. Call lookup requires reason and masks PII | complete | Call-center integration negative test plus unified masked 360 assertion (`010-****`) and audited business reason. |
+| 5. Note redacted before persistence | complete | Unified workflow saves a phone-bearing note, observes redaction proof, and PostgreSQL verifies only redacted persistence/journey metadata. |
+| 6. FDS maker differs from checker | complete | FDS201 uses `risk01`; APR101 uses `manager01`; SQL enforces inequality and the full integration suite retains self-approval denial. |
+| 7. Release retry creates exactly one balanced transaction | complete | Duplicate decision request is rejected; SQL proves one transaction, two KRW postings, debit equals credit, and one stable FDS idempotency key. |
+| 8. Block creates no ledger transaction | complete | Independent block maker/checker branch reaches `BLOCKED`; API and SQL prove no ledger transaction. |
+| 9. Customer final state and notification update | complete | Release reaches `POSTED`, block reaches `BLOCKED`, and each creates exactly one durable `CustomerTransferStatusChanged` delivery with the same journey. |
+| 10. Sensitive actions retain actor/reason/journey/trace/request | complete | SQL verifies the exercised journey/audit rows have actor, reason, journey, request ID, and trace ID; Spring correlation integration is green. |
+| 11. Core customer/call screens are keyboard accessible | complete | Checkpoint 9 automated/manual WCAG evidence passed, including labels, names, focus, contrast, 320px reflow, keyboard reachability, and staff keyboard workflow. |
+| 12. One deterministic command reproduces the whole flow | complete | Final `npm run demo:test:channels` passed 1/1 browser scenario, database verification, evidence recording, and cleanup. |
 
 ## Planned command evidence
 
@@ -153,6 +170,20 @@ npm run portfolio:verify
 | 2026-08-10 | manual Chromium desktop/320px review and localhost console check | pass | Customer and call-center pages had no horizontal overflow at 320px, retained logical hierarchy/control order, and produced zero localhost console errors/warnings. |
 | 2026-08-10 | corrected combined checkpoint 9 Playwright rerun | pass | 12 configured cases passed across core accessibility, staff keyboard navigation, and call-center softphone; three endpoint-dependent live cases were skipped and remain covered by checkpoint 8 Compose smokes. |
 | 2026-08-10 | customer, call-center, and staff Next production builds | pass | 26, 12, and 11 routes generated respectively after accessibility, keyboard, and BFF trace changes. |
+| 2026-08-10 | first checkpoint 10 unified demo attempt | fail | Notification Service was healthy at `/actuator/health`, but the wrapper waited on the unsupported `/health`; no browser scenario ran. |
+| 2026-08-10 | unified demo in restricted sandbox after health fix | fail | Gradle lock-contention socket creation was denied (`EPERM`); no runtime claim. |
+| 2026-08-10 | successive approved unified demo diagnostics | fail | Real controls exposed, in order, a checker-token/body actor mismatch, a `127.0.0.1`/`localhost` Next hydration boundary, an ambiguous APR101 button locator, missing checker step-up claims, and an imprecise ledger-field locator. Each run stopped at the failing assertion and cleaned disposable state. |
+| 2026-08-10 | `npm run packages:typecheck`, staff typecheck, and demo shell syntax after step-up fix | pass | Auth-client optional simulated step-up claims, the staff BFF configuration, and the wrapper compiled/parsed. |
+| 2026-08-10 | `npm run demo:test:channels` with approved local/Docker access | pass | 1/1 separated-actor Chromium journey passed in 17.6s; PostgreSQL printed `cross-channel held-transfer database invariants passed`; actual evidence JSON and six screenshots were recorded. |
+| 2026-08-10 | first final `npm test` | fail | 224/225 passed; the new event schema raised the runtime envelope catalog from 18 to 19 while one structural assertion retained the old fixed count. |
+| 2026-08-10 | corrected full static/type/contract matrix | pass | `npm test` 225/225, 79 manifests, package/script typechecks, API-client contract check, and all three channel typechecks passed. |
+| 2026-08-10 | three channel production builds | pass | Customer generated 27 items including `/dashboard` and `/notifications`; call-center generated 12 including `/workspace`; staff generated 11 including bounded BFF/lab routes. |
+| 2026-08-10 | Core Banking unit and full PostgreSQL integration suites | pass | JDK 21 unit build passed in 7s; full integration build passed in 2m 2s with ledger, ownership, audit, maker-checker, isolation, and workflow coverage. |
+| 2026-08-10 | Notification Service full integration suite | pass | JDK 21/Testcontainers build passed in 34s, including direct and Redpanda `CustomerTransferStatusChanged` consumption and idempotency. |
+| 2026-08-10 | staff, call-center Keycloak, and customer Compose smokes | pass | Each live Chromium scenario passed 1/1 against disposable target services; call-center used real local Keycloak Authorization Code + PKCE. |
+| 2026-08-10 | final `npm run demo:test:channels` after pre-PR control review | pass | 1/1 passed in 16.5s; disposition stayed disabled before FDS handoff, the SQL required the stable release idempotency key, database invariants passed, and current six screenshots/machine evidence were regenerated. |
+| 2026-08-10 | `npm run portfolio:verify` | pass | 19/19 focused Node/platform tests, contracts/OpenAPI diff, Core/Payment backend suites, ops-console build, and 2/2 settlement Playwright cases passed. |
+| 2026-08-10 | focused pre-PR review and corrected rerun | pass | Prevented customer switching during an open call, duplicate handoff/disposition, post-close notes, and premature disposition. Journey-less legacy FDS decisions remain approvable without a journey notification; the new focused PostgreSQL regression passed with the three journey-backed FDS tests. Call-center typecheck/build, focused static tests, Core unit tests, and the unified demo also passed. |
 
 ## Domain and security invariants affected
 
@@ -180,7 +211,7 @@ npm run portfolio:verify
 
 ## Remaining risk
 
-The largest remaining risk is deterministic whole-journey orchestration: one command must reset/seed/start the disposable stack, run distinct customer/call-agent/FDS-maker/checker actors through the same held-transfer journey, capture evidence, and clean up without masking a partial failure. The final full repository, Compose, portfolio, and security gates have not yet been rerun against the complete branch.
+Local completion does not establish hosted CI status, production certification, real notification delivery, external payment movement, or settlement finality. The opaque BFF session store remains intentionally process-local for this single-instance lab; multi-instance use still requires an encrypted expiring shared store. Simulated checker step-up is explicitly dev/test-only, and real WebAuthn assurance remains a separate Keycloak deployment concern.
 
 ## Checkpoint 1 changed files
 
@@ -353,6 +384,28 @@ The largest remaining risk is deterministic whole-journey orchestration: one com
 - Accessibility: two core product pages pass the focused automated audit and 320px manual review. Staff transaction-code execution, tab navigation, and modal exit pass with keyboard only.
 - Evidence: the accessibility-helper failure and corrected pass are both retained. A commercial screen-reader compatibility run remains outside this focused portfolio checkpoint.
 
-## Next checkpoint
+## Checkpoint 10 changed files
 
-Build checkpoint 10: deterministic reset/seed/up/test/cleanup orchestration, distinct actor journey, 90-second to two-minute demo script and curated screenshots, README settlement-first portfolio links, then execute every final goal gate before any Definition-of-Done completion claim.
+- A single reset/start/seed/test/verify/record/cleanup shell wrapper for disposable Core Banking, PostgreSQL, Redpanda, Notification Service, customer web, call-center, and staff terminal execution.
+- One Playwright scenario with separate customer, other-customer, call-agent, FDS-maker, and checker contexts plus release and block branches.
+- PostgreSQL verification for balanced exactly-once release, zero-ledger hold/block, maker-checker separation, call-center controls, durable notifications, and journey/audit request/trace correlation.
+- A durable `CustomerTransferStatusChanged` outbox contract and Notification Service template/consumer path with preallocated journey-linked delivery identity.
+- Customer-owned notification product history, completed call-center identity/disposition/close actions, and explicit simulated step-up claims for the dev/test checker only.
+- Six visually reviewed screenshots, machine-readable local evidence, a 90–120 second script, screen-map promotion, and a short settlement-first README link.
+
+## Checkpoint 10 invariant/control review
+
+- Ledger: the database verifier proves the release case has one transaction, two balanced KRW postings, and a stable idempotency key; HELD and BLOCKED cases have zero transfer transactions.
+- Maker-checker and step-up: `risk01` requests release/block and `manager01` approves; APR101 uses an explicit fresh simulated WebAuthn step-up claim and no browser bearer exposure.
+- Ownership/privacy: another customer is denied journey, transfer, and account reads. The customer sees only safe journey/status data; call-center output is masked and the raw phone-bearing note is redacted before persistence.
+- Eventing/notification: the FDS decision and customer notification request are written through the durable outbox. The consumer is inbox-idempotent and preserves the preallocated `NDL-` journey reference.
+- Correlation/audit: the unified database verification rejects missing actor/reason/journey/request/trace evidence across the exercised sensitive workflow.
+- Evidence boundary: the generated JSON says `localOnly=true` and `hostedCiGreenClaim=false`; Notification delivery remains synthetic and does not claim real SMS delivery.
+
+## Checkpoint 10 residual boundary
+
+The generated JSON says `localOnly=true` and `hostedCiGreenClaim=false`. Notification delivery is a durable synthetic record, not proof that a real SMS provider delivered a message. The demo step-up credential is an explicit local simulator claim and does not replace the repository's real Keycloak WebAuthn evidence boundary.
+
+## Next smallest safe task
+
+Commit checkpoint 10 and its actual evidence, push `feat/cross-channel-held-transfer-workbench`, open one draft PR to `main`, and treat hosted checks as the authoritative next evidence rather than rewriting the local pass records.

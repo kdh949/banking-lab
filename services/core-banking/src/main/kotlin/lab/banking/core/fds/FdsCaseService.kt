@@ -11,6 +11,8 @@ import lab.banking.core.approval.OperatorApproval
 import lab.banking.core.approval.PersistentApprovalService
 import lab.banking.core.approval.RejectApprovalCommand
 import lab.banking.core.approval.SubmitApprovalCommand
+import lab.banking.core.eventing.CreateOutboxEventCommand
+import lab.banking.core.eventing.DurableOutboxService
 import lab.banking.core.ledger.application.InternalTransferCommand
 import lab.banking.core.ledger.application.LedgerCommandService
 import lab.banking.core.ledger.domain.LedgerCommandResult
@@ -35,7 +37,8 @@ class FdsCaseService(
     private val approvals: PersistentApprovalService,
     private val ledgerCommandService: LedgerCommandService,
     private val transactionManager: PlatformTransactionManager,
-    private val journeys: BusinessJourneyService
+    private val journeys: BusinessJourneyService,
+    private val outbox: DurableOutboxService
 ) {
     @Transactional(readOnly = true)
     fun list(): List<FdsCaseDto> =
@@ -331,6 +334,7 @@ class FdsCaseService(
                 )
             )
         }
+        enqueueCustomerStatusNotification(fdsCase, "POSTED", ledgerResult.value.id, approval)
         return FdsDecisionExecutionResponse(item = findForRead(fdsCase.caseId), ledgerTransaction = ledgerResult)
     }
 
@@ -370,7 +374,60 @@ class FdsCaseService(
                 payload = mapOf("ledgerTransactionCount" to 0)
             )
         }
+        enqueueCustomerStatusNotification(fdsCase, "BLOCKED", null, approval)
         return FdsDecisionExecutionResponse(item = findForRead(fdsCase.caseId), ledgerTransaction = null)
+    }
+
+    private fun enqueueCustomerStatusNotification(
+        fdsCase: FdsCaseDto,
+        status: String,
+        ledgerTransactionId: String?,
+        approval: OperatorApproval
+    ) {
+        val journeyId = fdsCase.journeyId?.takeIf { it.isNotBlank() } ?: return
+        val customerId = requireField(fdsCase.customerId, "customerId")
+        val deliveryRequestId = notificationDeliveryRequestId(fdsCase.caseId, status)
+        outbox.enqueue(
+            CreateOutboxEventCommand(
+                aggregateType = "FdsCase",
+                aggregateId = fdsCase.caseId,
+                eventType = CUSTOMER_TRANSFER_STATUS_CHANGED,
+                idempotencyKey = "FDS-NOTIFICATION-${fdsCase.caseId}-$status",
+                payload = buildMap {
+                    put("contractVersion", CUSTOMER_TRANSFER_STATUS_EVENT_VERSION)
+                    put("customerId", customerId)
+                    put("recipientId", customerId)
+                    put("journeyId", journeyId)
+                    put("fdsCaseId", fdsCase.caseId)
+                    put("status", status)
+                    ledgerTransactionId?.let { put("ledgerTransactionId", it) }
+                    put("deliveryRequestId", deliveryRequestId)
+                    put("notificationChannel", "SMS")
+                    put("syntheticOnly", true)
+                    put("realProviderUsed", false)
+                },
+                headers = mapOf(
+                    "syntheticOnly" to true,
+                    "recipientId" to customerId,
+                    "notificationChannel" to "SMS"
+                )
+            )
+        )
+        journeys.correlateKeepingStatus(
+            journeyId = journeyId,
+            referenceType = "NOTIFICATION_DELIVERY",
+            referenceId = deliveryRequestId,
+            eventType = "CUSTOMER_NOTIFICATION_REQUESTED",
+            actorId = approval.approvedBy,
+            actorRole = "FDS_APPROVER",
+            reason = approval.requestReason,
+            payload = mapOf(
+                "eventType" to CUSTOMER_TRANSFER_STATUS_CHANGED,
+                "deliveryStatus" to "PENDING",
+                "transferStatus" to status,
+                "syntheticOnly" to true
+            )
+        )
     }
 
     private fun updateCustomerTransferResult(
@@ -493,6 +550,9 @@ class FdsCaseService(
     private fun releaseIdempotencyKey(caseId: String): String =
         "FDS-RELEASE-$caseId"
 
+    private fun notificationDeliveryRequestId(caseId: String, status: String): String =
+        "NDL-FDS-$caseId-$status"
+
     private fun temporalReference(rs: ResultSet): TemporalWorkflowReference? {
         val workflowId = rs.getString("temporal_workflow_id") ?: return null
         return TemporalWorkflowReference(
@@ -503,5 +563,7 @@ class FdsCaseService(
 
     private companion object {
         const val SERIALIZABLE_FDS_DECISION_MAX_ATTEMPTS = 5
+        const val CUSTOMER_TRANSFER_STATUS_CHANGED = "CustomerTransferStatusChanged"
+        const val CUSTOMER_TRANSFER_STATUS_EVENT_VERSION = "2026-08-10"
     }
 }

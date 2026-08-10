@@ -211,11 +211,21 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(5_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(5_000_000L, balance("ACC-SYN-002-001"))
         assertEquals(1, countRows("outbox_events WHERE event_type = 'LedgerTransactionPosted'"))
+        assertEquals(1, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(
+            "POSTED",
+            singleString(
+                "SELECT payload_json ->> 'status' FROM outbox_events WHERE aggregate_id = :caseId AND event_type = 'CustomerTransferStatusChanged'",
+                mapOf("caseId" to caseId)
+            )
+        )
         mockMvc.perform(get("/api/customer/journeys/$journeyId"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("POSTED"))
         assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'LEDGER_TRANSACTION'"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'NOTIFICATION_DELIVERY'"))
         assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_POSTED'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CUSTOMER_NOTIFICATION_REQUESTED'"))
         assertThrows(DataAccessException::class.java) {
             jdbc.update(
                 "UPDATE business_journey_events SET event_type = 'MUTATED' WHERE journey_id = :journeyId",
@@ -326,11 +336,60 @@ class FdsCaseApiParityIntegrationTest {
         assertEquals(0, countRows("ledger_transactions WHERE transaction_type = 'INTERNAL_TRANSFER'"))
         assertEquals(10_000_000L, balance("ACC-SYN-001-001"))
         assertEquals(0L, balance("ACC-SYN-002-001"))
+        assertEquals(1, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(
+            "BLOCKED",
+            singleString(
+                "SELECT payload_json ->> 'status' FROM outbox_events WHERE aggregate_id = :caseId AND event_type = 'CustomerTransferStatusChanged'",
+                mapOf("caseId" to caseId)
+            )
+        )
         mockMvc.perform(get("/api/customer/journeys/$journeyId"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("BLOCKED"))
             .andExpect(jsonPath("$.references[?(@.referenceType == 'LEDGER_TRANSACTION')]").isEmpty)
         assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'TRANSFER_BLOCKED'"))
+        assertEquals(1, countRows("business_journey_references WHERE journey_id = '$journeyId' AND reference_type = 'NOTIFICATION_DELIVERY'"))
+        assertEquals(1, countRows("business_journey_events WHERE journey_id = '$journeyId' AND event_type = 'CUSTOMER_NOTIFICATION_REQUESTED'"))
+    }
+
+    @Test
+    fun `legacy FDS release without a journey remains approvable without a journey notification`() {
+        val caseId = "FDS-LEGACY-NO-JOURNEY-001"
+        seedFdsCase(caseId, status = "INVESTIGATING", transferStatus = "HELD", amountMinor = 1_000_000)
+
+        val requestResponse = mockMvc.perform(
+            post("/api/staff/fds-cases/$caseId/release-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "actorId": "fds01",
+                      "requestedByRole": "FDS_REVIEWER",
+                      "reason": "Synthetic legacy FDS release compatibility"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.item.status").value("RELEASE_REQUESTED"))
+            .andReturn()
+
+        val approvalId = objectMapper.readTree(requestResponse.response.contentAsString)
+            .path("approval")
+            .path("approvalId")
+            .asText()
+        mockMvc.perform(
+            post("/api/staff/approvals/$approvalId/approve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"approvedBy":"manager01","approvedByRole":"BRANCH_MANAGER","screenId":"FDS-201"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.fdsCase.status").value("RELEASED"))
+
+        assertEquals(1, countRows("ledger_transactions WHERE business_reference_id = '$caseId'"))
+        assertEquals(0, countRows("outbox_events WHERE aggregate_id = '$caseId' AND event_type = 'CustomerTransferStatusChanged'"))
+        assertEquals(0, countRows("business_journey_events WHERE source_reference_id = '$caseId'"))
     }
 
     @Test
@@ -530,6 +589,9 @@ class FdsCaseApiParityIntegrationTest {
             emptyMap<String, Any?>(),
             Int::class.java
         ) ?: 0
+
+    private fun singleString(sql: String, params: Map<String, Any?>): String =
+        jdbc.queryForObject(sql, params, String::class.java) ?: ""
 
     private fun fdsStatus(caseId: String): String? =
         jdbc.queryForObject(

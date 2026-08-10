@@ -96,6 +96,43 @@ class NotificationKafkaConsumerIntegrationTest {
     }
 
     @Test
+    fun `FDS final status event creates customer owned delivery with the journey reference`() {
+        val topic = uniqueTopic("banking-lab-fds-notification")
+        val sourceEventId = "OBX-FDS-NOTIF-001"
+        val deliveryRequestId = "NDL-FDS-FDS-SYN-001-POSTED"
+        createTopic(topic)
+        produce(topic, customerTransferStatusEnvelope(sourceEventId, deliveryRequestId))
+
+        val result = notificationKafkaConsumer.consumeAvailable(
+            consumerConfig(topic, uniqueGroup("notification-service-fds")),
+            maxRecords = 1
+        )
+
+        assertEquals(1, result.processed)
+        assertEquals(1, result.createdDeliveries)
+        assertEquals(
+            deliveryRequestId,
+            singleString(
+                "SELECT delivery_request_id FROM notification_delivery_requests WHERE source_event_id = :sourceEventId",
+                mapOf("sourceEventId" to sourceEventId)
+            )
+        )
+        assertEquals(
+            "CUS-FDS-SYN-001",
+            singleString(
+                "SELECT recipient_id FROM notification_delivery_requests WHERE source_event_id = :sourceEventId",
+                mapOf("sourceEventId" to sourceEventId)
+            )
+        )
+        val message = singleString(
+            "SELECT masked_message FROM notification_delivery_requests WHERE source_event_id = :sourceEventId",
+            mapOf("sourceEventId" to sourceEventId)
+        )
+        assertTrue(message.contains("JRN-FDS-SYN-001"))
+        assertTrue(message.contains("POSTED"))
+    }
+
+    @Test
     fun `unsupported synthetic Redpanda events are skipped without delivery side effects`() {
         val topic = uniqueTopic("banking-lab-notification-skip")
         createTopic(topic)
@@ -194,6 +231,38 @@ class NotificationKafkaConsumerIntegrationTest {
                 "eventType" to "PaymentLedgerPostingRequested",
                 "aggregateId" to "PAY-NOTIF-KAFKA-001",
                 "occurredAt" to "2026-06-06T00:00:00Z"
+            )
+        )
+
+    private fun customerTransferStatusEnvelope(
+        outboxEventId: String,
+        deliveryRequestId: String
+    ): NotificationOutboxKafkaEnvelope =
+        NotificationOutboxKafkaEnvelope(
+            outboxEventId = outboxEventId,
+            aggregateType = "FdsCase",
+            aggregateId = "FDS-SYN-001",
+            eventType = "CustomerTransferStatusChanged",
+            occurredAt = "2026-08-10T00:00:00Z",
+            idempotencyKey = "FDS-NOTIFICATION-FDS-SYN-001-POSTED",
+            payload = mapOf(
+                "contractVersion" to "2026-08-10",
+                "customerId" to "CUS-FDS-SYN-001",
+                "recipientId" to "CUS-FDS-SYN-001",
+                "journeyId" to "JRN-FDS-SYN-001",
+                "fdsCaseId" to "FDS-SYN-001",
+                "status" to "POSTED",
+                "deliveryRequestId" to deliveryRequestId,
+                "notificationChannel" to "SMS",
+                "syntheticOnly" to true,
+                "realProviderUsed" to false
+            ),
+            headers = mapOf(
+                "syntheticOnly" to true,
+                "sourceService" to "core-banking-service",
+                "eventType" to "CustomerTransferStatusChanged",
+                "aggregateId" to "FDS-SYN-001",
+                "occurredAt" to "2026-08-10T00:00:00Z"
             )
         )
 

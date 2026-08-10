@@ -2091,6 +2091,7 @@ export interface ConsumeNotificationEventRequest {
   readonly sourceEventId: string;
   readonly eventType: string;
   readonly recipientId: string;
+  readonly deliveryRequestId?: string | null;
   readonly channel?: NotificationChannel;
   readonly payload: Record<string, unknown>;
   readonly requestedBy?: string;

@@ -19,6 +19,8 @@ export type {
   CustomerTransferResponse,
   CustomerTransferStatusDto,
   InternalRecipientAccountDto,
+  NotificationDeliveryDto,
+  NotificationPreferenceDto,
   TransactionConfirmationDto
 } from "../client";
 export { BankingApiError } from "../client";
@@ -49,7 +51,10 @@ const customerMethodNames = [
   "confirmCustomerComplaint",
   "submitCustomerComplaintMaterial",
   "reopenCustomerComplaint",
-  "complaintTypeGuide"
+  "complaintTypeGuide",
+  "listCustomerNotificationDeliveries",
+  "listCustomerNotificationPreferences",
+  "upsertCustomerNotificationPreference"
 ] as const;
 
 export function createCustomerApiClient(options: BankingApiClientOptions) {

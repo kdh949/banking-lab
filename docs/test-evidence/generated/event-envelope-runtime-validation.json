@@ -3,8 +3,8 @@
   "syntheticOnly": true,
   "status": "pass",
   "asyncApiContract": "contracts/asyncapi/banking-lab-events.yaml",
-  "eventSchemaCount": 18,
-  "validatedEnvelopeCount": 18,
+  "eventSchemaCount": 19,
+  "validatedEnvelopeCount": 19,
   "envelopeFields": [
     "eventId",
     "eventType",
@@ -17,6 +17,7 @@
     "payload"
   ],
   "eventTypes": [
+    "CustomerTransferStatusChanged",
     "LedgerTransactionPosted",
     "NotificationDeliveryAttempted",
     "NotificationDeliveryDeadLettered",

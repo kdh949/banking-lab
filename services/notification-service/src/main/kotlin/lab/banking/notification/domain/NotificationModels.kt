@@ -26,6 +26,7 @@ data class ConsumeNotificationEventRequest(
     val sourceEventId: String,
     val eventType: String,
     val recipientId: String,
+    val deliveryRequestId: String? = null,
     val channel: String = "SMS",
     val payload: Map<String, Any?>,
     val requestedBy: String = "notification-event-consumer"

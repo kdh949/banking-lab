@@ -96,3 +96,15 @@ test("legacy browser token exchange is disabled unless lab evidence explicitly o
     assert.match(route, /\{ status: 403 \}/);
   }
 });
+
+test("customer notification routes use an explicit server-side notification upstream", async () => {
+  const [customerConfig, handlers] = await Promise.all([
+    read("apps/customer-web/src/server/bff.ts"),
+    read("packages/auth-client/src/next-bff.ts")
+  ]);
+
+  assert.match(customerConfig, /prefix: "\/api\/notifications"/u);
+  assert.match(customerConfig, /environmentVariable: "BANKING_LAB_NOTIFICATION_API_BASE_URL"/u);
+  assert.match(handlers, /process\.env\[override\.environmentVariable\]/u);
+  assert.doesNotMatch(customerConfig, /NEXT_PUBLIC_BANKING_NOTIFICATION_API_BASE_URL/u);
+});

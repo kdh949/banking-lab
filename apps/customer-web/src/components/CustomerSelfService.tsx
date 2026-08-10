@@ -15,7 +15,8 @@ import {
   type CustomerTransactionDto,
   type CustomerTransferResponse,
   type CustomerTransferStatusDto,
-  type InternalRecipientAccountDto
+  type InternalRecipientAccountDto,
+  type NotificationDeliveryDto
 } from "@banking-lab/api-client/customer";
 import {
   ChannelBadge,
@@ -1005,6 +1006,63 @@ export function CustomerSupportHome() {
           <a href="/notifications">Open notifications</a>
         </ChannelCard>
       </ChannelCardGrid>
+    </SelfServiceShell>
+  );
+}
+
+export function CustomerNotificationsView() {
+  const [session] = useStoredSession();
+  const [state, setState] = useState<LoadState<readonly NotificationDeliveryDto[]>>({ status: "idle" });
+
+  const loadDeliveries = () => {
+    if (!session) {
+      setState({ status: "failed", error: authRequiredError() });
+      return;
+    }
+    setState({ status: "loading" });
+    authedClient(session)
+      .listCustomerNotificationDeliveries(session.customerId, {
+        eventType: "CustomerTransferStatusChanged",
+        limit: 25
+      })
+      .then((deliveries) => setState({ status: "loaded", value: deliveries }))
+      .catch((error: unknown) => setState({ status: "failed", error: parseError(error) }));
+  };
+
+  useEffect(() => {
+    if (session) {
+      loadDeliveries();
+    }
+  }, [session]);
+
+  return (
+    <SelfServiceShell title="Notifications" status={session ? "Customer owned" : "Login required"}>
+      <DemoFallbackBanner />
+      <SelfServiceNav />
+      <ChannelPanel title="Transfer review notifications" eyebrow="CWB-801 · masked delivery history">
+        <div className="self-service-actions">
+          <button type="button" onClick={loadDeliveries} disabled={!session || state.status === "loading"}>Refresh notifications</button>
+        </div>
+        <LoadBoundary state={state} idle="Sign in to load customer-owned synthetic notifications.">
+          {(deliveries) => deliveries.length > 0 ? (
+            <div data-testid="customer-notification-history">
+              <ChannelTable>
+                <thead><tr><th>Status</th><th>Channel</th><th>Message</th><th>Created</th></tr></thead>
+                <tbody>
+                  {deliveries.map((delivery) => (
+                    <tr key={delivery.deliveryRequestId}>
+                      <td><StatusBadge status={delivery.status} /></td>
+                      <td>{delivery.channel}</td>
+                      <td>{delivery.maskedMessage}</td>
+                      <td><time dateTime={delivery.createdAt}>{delivery.createdAt}</time></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ChannelTable>
+            </div>
+          ) : <p data-testid="customer-notification-history">No transfer review notifications yet.</p>}
+        </LoadBoundary>
+      </ChannelPanel>
     </SelfServiceShell>
   );
 }

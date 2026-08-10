@@ -1,0 +1,52 @@
+{
+  "reviewDate": "2026-08-10",
+  "executedAt": "2026-08-10T01:01:44.236Z",
+  "status": "pass",
+  "syntheticOnly": true,
+  "localOnly": true,
+  "hostedCiGreenClaim": false,
+  "command": "npm run demo:test:channels",
+  "scenario": "customer HELD -> call-center masked handoff -> FDS201 maker -> APR101 checker -> POSTED notification, plus BLOCKED zero-ledger branch",
+  "databaseVerification": "scripts/verify-cross-channel-held-transfer-demo.sql",
+  "screenshots": [
+    "docs/assets/channel-workbench/customer-held-transfer.png",
+    "docs/assets/channel-workbench/call-center-fds-handoff.png",
+    "docs/assets/channel-workbench/staff-fds201-release-request.png",
+    "docs/assets/channel-workbench/staff-apr101-checker-release.png",
+    "docs/assets/channel-workbench/customer-posted-transfer.png",
+    "docs/assets/channel-workbench/customer-transfer-notification.png"
+  ],
+  "state": {
+    "syntheticOnly": true,
+    "customerId": "SYN-CUS-SIGNUP-000001",
+    "otherCustomerId": "SYN-CUS-SIGNUP-000002",
+    "sourceAccountId": "ACC-SYN-NEW-100001",
+    "destinationAccountId": "ACC-SYN-NEW-100002",
+    "release": {
+      "caseId": "FDS-5BB17AAD-EBBE-4E60-B316-B02D0C3A828A",
+      "journeyId": "JRN-8DC97DAA-6490-4AA7-96FC-3823B1CAE4F4",
+      "approvalId": "APR-BB4C8604-7954-49F1-8821-5610873FE219",
+      "ledgerTransactionId": "TX-TRF-9F5D0E08-7ADE-4D5F-9B54-9ACDD7AB336C",
+      "status": "POSTED"
+    },
+    "block": {
+      "caseId": "FDS-B12E9980-7190-4175-BE03-69E01F2C1884",
+      "journeyId": "JRN-69EA1324-E357-41EF-987F-812E6F8371CF",
+      "approvalId": "APR-96CA5BD9-7E93-4054-91CE-82ADD4C6025B",
+      "status": "BLOCKED"
+    },
+    "browserErrors": [],
+    "durationSeconds": 12
+  },
+  "controls": [
+    "HELD creates zero ledger transactions",
+    "other-customer journey, transfer, and account reads are denied",
+    "call-center lookup requires reason and returns masked context",
+    "call-center note is redacted before persistence",
+    "risk01 maker is separated from manager01 checker",
+    "release retry leaves exactly one balanced double-entry transaction",
+    "block leaves zero ledger transactions",
+    "POSTED and BLOCKED each create one durable customer notification",
+    "journey audit events retain actor, reason, requestId, and traceId"
+  ]
+}

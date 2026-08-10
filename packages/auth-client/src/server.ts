@@ -8,6 +8,7 @@ export type BffActor = {
   readonly roles: readonly string[];
   readonly customerId?: string;
   readonly displayName: string;
+  readonly simulatedStepUp?: boolean;
 };
 
 export type BffSessionView = {

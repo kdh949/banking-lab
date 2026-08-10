@@ -437,6 +437,9 @@ components:
           type: string
         recipientId:
           type: string
+        deliveryRequestId:
+          type: string
+          pattern: '^NDL-[A-Z0-9-]+$'
         channel:
           $ref: '#/components/schemas/NotificationChannel'
         payload:

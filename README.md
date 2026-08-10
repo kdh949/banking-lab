@@ -77,6 +77,20 @@ GET  /api/payments/reconciliation/exceptions
 
 The reusable TypeScript contract is in [`packages/api-client/src/payment-settlement.ts`](packages/api-client/src/payment-settlement.ts).
 
+## Supporting Channel Playground
+
+The settlement and ledger slice above remains the primary portfolio story. A supporting synthetic [cross-channel held-transfer workbench](docs/product/channel-workbench.md) follows one high-value, first-beneficiary transfer through customer `HELD` status, a reason-gated and masked call-center handoff, FDS201 maker review, APR101 independent approval, exactly-once balanced posting or a zero-ledger block, and customer notification—all under one `journeyId`.
+
+![Customer-safe held-transfer result](docs/assets/channel-workbench/customer-held-transfer.png)
+
+Run its disposable Spring/PostgreSQL/Redpanda/Next.js proof with:
+
+```bash
+npm run demo:test:channels
+```
+
+The command resets local synthetic state, starts the bounded services, runs the separated customer/agent/FDS-maker/checker browser and API journey, verifies ledger and audit invariants in PostgreSQL, records evidence, and cleans up. See the [90–120 second walkthrough](docs/demo-scenarios/cross-channel-held-transfer-demo.md) and [latest local evidence](docs/test-evidence/generated/cross-channel-held-transfer-demo.json). It does not claim external payment or settlement finality.
+
 ## Reproduce the portfolio gate
 
 Prerequisites:

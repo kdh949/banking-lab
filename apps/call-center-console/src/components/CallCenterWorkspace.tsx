@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   createCallCenterApiClient,
+  type CallCenterAftercallTaskDto,
   type CallCenterCustomerSummaryDto,
   type CallCenterEscalationDto,
   type CallCenterInteractionDto,
@@ -19,6 +20,7 @@ import {
 } from "../../../../packages/channel-ui/src/operator-workbench";
 
 type SoftphoneState = "IDLE" | "RINGING" | "CONNECTED" | "HOLD" | "AFTER_CALL";
+type IdentityVerificationState = "NOT_STARTED" | "PASSED_SIMULATED" | "FAILED_SIMULATED";
 type ActionState = "IDLE" | "RUNNING" | "DONE" | "FAILED";
 
 type BffSession = {
@@ -33,6 +35,7 @@ type BffSession = {
 export function CallCenterWorkspace() {
   const [session, setSession] = useState<BffSession | null>(null);
   const [softphone, setSoftphone] = useState<SoftphoneState>("IDLE");
+  const [identityVerification, setIdentityVerification] = useState<IdentityVerificationState>("NOT_STARTED");
   const [query, setQuery] = useState("");
   const [reason, setReason] = useState("");
   const [journeyId, setJourneyId] = useState("");
@@ -42,6 +45,8 @@ export function CallCenterWorkspace() {
   const [noteBody, setNoteBody] = useState("");
   const [note, setNote] = useState<CallCenterNoteDto | null>(null);
   const [escalation, setEscalation] = useState<CallCenterEscalationDto | null>(null);
+  const [disposition, setDisposition] = useState("FDS_HANDOFF_COMPLETED");
+  const [aftercallTask, setAftercallTask] = useState<CallCenterAftercallTaskDto | null>(null);
   const [state, setState] = useState<ActionState>("IDLE");
   const [message, setMessage] = useState("Enter a business reason before customer lookup.");
 
@@ -52,6 +57,7 @@ export function CallCenterWorkspace() {
   const client = () => createCallCenterApiClient({ baseUrl: window.location.origin });
   const ready = Boolean(session?.roles.includes("CALL_CENTER_AGENT") || session?.roles.includes("CALL_CENTER_MANAGER"));
   const validReason = reason.trim().length >= 3;
+  const hasOpenInteraction = Boolean(interaction && interaction.status !== "CLOSED");
 
   const refreshSession = async () => {
     try {
@@ -97,9 +103,20 @@ export function CallCenterWorkspace() {
   };
 
   const search = () => run(async () => {
+    if (hasOpenInteraction) {
+      throw new Error("Close the active interaction before selecting another customer.");
+    }
     const response = await client().searchCallCenterCustomers(query, reason);
     const selected = response.items[0];
     setCustomer(selected ?? null);
+    setIdentityVerification("NOT_STARTED");
+    setInteraction(null);
+    setJourney(null);
+    setNote(null);
+    setNoteBody("");
+    setEscalation(null);
+    setAftercallTask(null);
+    setSoftphone("IDLE");
     setMessage(selected ? "Masked customer context loaded and audited." : "No synthetic customer matched the query.");
   });
 
@@ -115,6 +132,12 @@ export function CallCenterWorkspace() {
     if (!customer) {
       throw new Error("Search and select a customer first.");
     }
+    if (identityVerification !== "PASSED_SIMULATED") {
+      throw new Error("Pass the explicit simulated identity check before starting an interaction.");
+    }
+    if (hasOpenInteraction) {
+      throw new Error("Close the active interaction before starting another one.");
+    }
     const started = await client().startCallCenterInteraction({
       customerId: customer.customerId,
       journeyId: journeyId || null,
@@ -124,9 +147,17 @@ export function CallCenterWorkspace() {
       requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
       assignedTo: session?.subject,
       reason,
-      metadata: { syntheticOnly: true, softphone: "SIMULATED" }
+      metadata: {
+        syntheticOnly: true,
+        softphone: "SIMULATED",
+        identityVerification
+      }
     });
     setInteraction(started.item);
+    setNote(null);
+    setNoteBody("");
+    setEscalation(null);
+    setAftercallTask(null);
     setSoftphone("CONNECTED");
     if (journeyId) {
       await loadJourney();
@@ -137,6 +168,9 @@ export function CallCenterWorkspace() {
   const saveNote = () => run(async () => {
     if (!interaction) {
       throw new Error("Start an interaction before adding a note.");
+    }
+    if (interaction.status === "CLOSED") {
+      throw new Error("Closed interactions cannot accept new notes.");
     }
     const response = await client().addCallCenterNote(interaction.interactionId, {
       requestedBy: session?.subject,
@@ -157,6 +191,9 @@ export function CallCenterWorkspace() {
     if (!interaction) {
       throw new Error("Start an interaction before FDS handoff.");
     }
+    if (escalation) {
+      throw new Error("This interaction already has an FDS handoff.");
+    }
     const response = await client().escalateCallCenterInteraction(interaction.interactionId, {
       requestedBy: session?.subject,
       requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
@@ -170,6 +207,56 @@ export function CallCenterWorkspace() {
       await loadJourney();
     }
     setMessage("FDS handoff requested; the held transfer remains ledger-free.");
+  });
+
+  const saveDisposition = () => run(async () => {
+    if (!interaction) {
+      throw new Error("Start an interaction before after-call disposition.");
+    }
+    if (!escalation) {
+      throw new Error("Complete the FDS handoff before saving the after-call disposition.");
+    }
+    if (aftercallTask) {
+      throw new Error("The after-call disposition is already saved.");
+    }
+    const response = await client().createCallCenterAftercallTask(interaction.interactionId, {
+      requestedBy: session?.subject,
+      requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
+      reason,
+      taskType: disposition,
+      assignedTo: session?.subject,
+      metadata: {
+        disposition,
+        identityVerification,
+        journeyId: journeyId || null,
+        syntheticOnly: true
+      }
+    });
+    setInteraction(response.item);
+    setAftercallTask(response.task);
+    setSoftphone("AFTER_CALL");
+    setMessage("After-call disposition persisted with an audited synthetic task.");
+  });
+
+  const closeInteraction = () => run(async () => {
+    if (!interaction) {
+      throw new Error("Start an interaction before closing it.");
+    }
+    if (!aftercallTask) {
+      throw new Error("Save an after-call disposition before closing the interaction.");
+    }
+    const response = await client().closeCallCenterInteraction(interaction.interactionId, {
+      requestedBy: session?.subject,
+      requestedByRole: session?.roles.includes("CALL_CENTER_AGENT") ? "CALL_CENTER_AGENT" : "CALL_CENTER_MANAGER",
+      reason
+    });
+    setInteraction(response.item);
+    setSoftphone("IDLE");
+    setIdentityVerification("NOT_STARTED");
+    if (journeyId) {
+      await loadJourney();
+    }
+    setMessage("Interaction closed after the audited after-call disposition.");
   });
 
   const advanceSoftphone = () => {
@@ -187,6 +274,7 @@ export function CallCenterWorkspace() {
     <ChannelShell appId="call-center-console" eyebrow="Call-Center Console" title="Agent Workspace" status="Synthetic masked workflow only">
       <ChannelMetricGrid>
         <ChannelMetric label="Softphone" value={softphone} detail="Simulator · no live telephony" />
+        <ChannelMetric label="Identity" value={identityVerification} detail="Explicit simulator · no real identity proofing" />
         <ChannelMetric label="Customer lookup" value="Reason required" detail="Masked by default" />
         <ChannelMetric label="Case notes" value={note?.redactionApplied ? "Redacted" : "Ready"} detail="Raw note persistence forbidden" />
         <ChannelMetric label="FDS handoff" value={escalation?.status ?? "Ready"} detail="Held transfer remains unposted" />
@@ -220,8 +308,10 @@ export function CallCenterWorkspace() {
             <label>Journey ID<input value={journeyId} onChange={(event) => setJourneyId(event.target.value)} placeholder="JRN-…" /></label>
           </div>
           <div className="call-actions">
-            <button type="button" onClick={search} disabled={!ready || !validReason || !query || state === "RUNNING"}>Search masked customer</button>
-            <button type="button" onClick={startInteraction} disabled={!customer || !validReason || state === "RUNNING"}>Start linked interaction</button>
+            <button type="button" onClick={search} disabled={!ready || !validReason || !query || hasOpenInteraction || state === "RUNNING"}>Search masked customer</button>
+            <button type="button" onClick={() => setIdentityVerification("PASSED_SIMULATED")} disabled={!customer || hasOpenInteraction || state === "RUNNING"}>Pass simulated identity check</button>
+            <button type="button" onClick={() => setIdentityVerification("FAILED_SIMULATED")} disabled={!customer || hasOpenInteraction || state === "RUNNING"}>Fail simulated identity check</button>
+            <button type="button" onClick={startInteraction} disabled={!customer || identityVerification !== "PASSED_SIMULATED" || !validReason || hasOpenInteraction || state === "RUNNING"}>Start linked interaction</button>
           </div>
           {customer ? (
             <dl className="call-definition-list" data-testid="masked-customer-context">
@@ -235,14 +325,31 @@ export function CallCenterWorkspace() {
 
         <ChannelPanel title="Redacted interaction note" eyebrow="CALL-103">
           <label className="call-note-label">Agent note<textarea value={noteBody} onChange={(event) => setNoteBody(event.target.value)} rows={5} /></label>
-          <button type="button" onClick={saveNote} disabled={!interaction || !noteBody || !validReason || state === "RUNNING"}>Save redacted note</button>
+          <button type="button" onClick={saveNote} disabled={!interaction || interaction.status === "CLOSED" || !noteBody || !validReason || state === "RUNNING"}>Save redacted note</button>
           {note ? <p data-testid="redacted-note-proof">Redaction {note.redactionApplied ? "applied" : "not needed"} · {note.piiPatternCount} pattern(s)</p> : null}
         </ChannelPanel>
 
         <ChannelPanel title="FDS handoff" eyebrow="CALL-106">
           <p>Send the interaction and journey reference to the controlled FDS queue. This action does not post a ledger transaction.</p>
-          <button type="button" onClick={handoffToFds} disabled={!interaction || !journeyId || !validReason || state === "RUNNING"}>Request FDS handoff</button>
+          <button type="button" onClick={handoffToFds} disabled={!interaction || interaction.status === "CLOSED" || !journeyId || !validReason || Boolean(escalation) || state === "RUNNING"}>Request FDS handoff</button>
           {escalation ? <p data-testid="fds-handoff-proof">{escalation.escalationId} · {escalation.status}</p> : null}
+        </ChannelPanel>
+
+        <ChannelPanel title="After-call disposition" eyebrow="CALL-104 · CALL-102">
+          <label className="call-note-label">
+            Disposition
+            <select value={disposition} onChange={(event) => setDisposition(event.target.value)}>
+              <option value="FDS_HANDOFF_COMPLETED">FDS handoff completed</option>
+              <option value="CUSTOMER_ADVISED">Customer advised</option>
+              <option value="FOLLOW_UP_REQUIRED">Follow-up required</option>
+            </select>
+          </label>
+          <div className="call-actions">
+            <button type="button" onClick={saveDisposition} disabled={!interaction || interaction.status === "CLOSED" || !escalation || Boolean(aftercallTask) || !validReason || state === "RUNNING"}>Save after-call disposition</button>
+            <button type="button" onClick={closeInteraction} disabled={!interaction || !aftercallTask || interaction.status === "CLOSED" || !validReason || state === "RUNNING"}>Close interaction</button>
+          </div>
+          {aftercallTask ? <p data-testid="aftercall-disposition-proof">{aftercallTask.taskType} · {aftercallTask.status}</p> : null}
+          {interaction?.status === "CLOSED" ? <p data-testid="interaction-closed-proof">{interaction.interactionId} · CLOSED</p> : null}
         </ChannelPanel>
       </section>
 

@@ -23,7 +23,8 @@
 }
 
 .call-form-grid input,
-.call-note-label textarea {
+.call-note-label textarea,
+.call-note-label select {
   width: 100%;
   min-height: 34px;
   border: 1px solid var(--border);

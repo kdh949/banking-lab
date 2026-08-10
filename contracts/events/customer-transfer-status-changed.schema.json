@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banking-lab.synthetic/contracts/events/customer-transfer-status-changed.schema.json",
+  "title": "CustomerTransferStatusChanged",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "customerId",
+    "recipientId",
+    "journeyId",
+    "fdsCaseId",
+    "status",
+    "deliveryRequestId",
+    "notificationChannel",
+    "syntheticOnly",
+    "realProviderUsed"
+  ],
+  "properties": {
+    "contractVersion": { "const": "2026-08-10" },
+    "customerId": { "type": "string" },
+    "recipientId": { "type": "string" },
+    "journeyId": { "type": "string", "pattern": "^JRN-" },
+    "fdsCaseId": { "type": "string", "pattern": "^FDS-" },
+    "status": { "enum": ["POSTED", "BLOCKED"] },
+    "ledgerTransactionId": { "type": "string", "pattern": "^TX-" },
+    "deliveryRequestId": { "type": "string", "pattern": "^NDL-FDS-" },
+    "notificationChannel": { "const": "SMS" },
+    "syntheticOnly": { "const": true },
+    "realProviderUsed": { "const": false }
+  }
+}

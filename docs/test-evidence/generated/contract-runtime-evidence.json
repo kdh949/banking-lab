@@ -25,7 +25,7 @@
   },
   "asyncApi": {
     "contractFile": "contracts/asyncapi/banking-lab-events.yaml",
-    "eventSchemaCount": 18,
+    "eventSchemaCount": 19,
     "envelopeFields": [
       "syntheticOnly",
       "sourceService",

@@ -29,7 +29,8 @@ test("channel workbench documents keep settlement primary and define evidence la
   assert.match(journey, /POSTED[\s\S]*exactly one balanced transaction/);
   assert.match(screenMap, /`FDS201`/);
   assert.match(stateModel, /Neither state means an external institution moved money or final settlement occurred/);
-  assert.match(progress, /No Definition of Done item is marked complete yet/);
+  assert.match(progress, /all 12 Definition-of-Done items are complete/);
+  assert.match(progress, /12\. One deterministic command reproduces the whole flow \| complete/);
 });
 
 test("channel security document forbids product bearer-token storage and internal customer disclosure", async () => {

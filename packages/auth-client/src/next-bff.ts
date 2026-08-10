@@ -17,6 +17,10 @@ export type NextBffConfig = {
   readonly oidcClientId: string;
   readonly defaultReturnTo: string;
   readonly proxyAllowedPrefixes: readonly string[];
+  readonly proxyUpstreams?: readonly {
+    readonly prefix: string;
+    readonly environmentVariable: string;
+  }[];
   readonly simulatedActors?: readonly BffActor[];
   readonly customerAuth?: boolean;
 };
@@ -146,7 +150,11 @@ export function createNextBffHandlers(config: NextBffConfig) {
             subject: actor.subject,
             roles: actor.roles,
             customerId: actor.customerId,
-            audience: "core-banking-api"
+            audience: "core-banking-api",
+            authTimeEpochSeconds: actor.simulatedStepUp ? Math.floor(Date.now() / 1000) : undefined,
+            issuedAtEpochSeconds: actor.simulatedStepUp ? Math.floor(Date.now() / 1000) : undefined,
+            authenticationMethods: actor.simulatedStepUp ? ["pwd", "webauthn"] : undefined,
+            assuranceLevel: actor.simulatedStepUp ? "banking-lab-step-up" : undefined
           }),
           subject: actor.subject,
           roles: actor.roles,
@@ -250,7 +258,7 @@ export function createNextBffHandlers(config: NextBffConfig) {
     })) {
       return structuredError(403, "AUTHORIZATION_POLICY_VIOLATION", "BFF route is outside this channel capability boundary");
     }
-    const upstream = configuredApiBaseUrl();
+    const upstream = configuredApiBaseUrl(targetPath, config.proxyUpstreams);
     if (!upstream) {
       return structuredError(503, "DEPENDENCY_UNAVAILABLE", "Core banking API is not configured for the BFF");
     }
@@ -314,8 +322,16 @@ export function createNextBffHandlers(config: NextBffConfig) {
   }
 }
 
-function configuredApiBaseUrl(): string {
-  return normalizeBaseUrl(process.env.BANKING_LAB_API_BASE_URL ?? "");
+function configuredApiBaseUrl(
+  targetPath?: string,
+  proxyUpstreams: NextBffConfig["proxyUpstreams"] = []
+): string {
+  const override = targetPath
+    ? [...proxyUpstreams]
+        .sort((left, right) => right.prefix.length - left.prefix.length)
+        .find(({ prefix }) => targetPath === prefix || targetPath.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`))
+    : undefined;
+  return normalizeBaseUrl((override ? process.env[override.environmentVariable] : undefined) ?? process.env.BANKING_LAB_API_BASE_URL ?? "");
 }
 
 function configuredKeycloakBaseUrl(): string {

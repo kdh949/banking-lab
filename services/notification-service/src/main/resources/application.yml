@@ -19,7 +19,7 @@ banking-lab:
       routing:
         default-channel: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_DEFAULT_CHANNEL:SMS}
         requested-by: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_REQUESTED_BY:notification-kafka-consumer}
-        supported-event-types: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_SUPPORTED_EVENT_TYPES:LedgerTransactionPosted,PaymentLedgerPostingRequested,ComplaintAnswered}
+        supported-event-types: ${BANKING_LAB_NOTIFICATION_EVENT_CONSUMER_SUPPORTED_EVENT_TYPES:LedgerTransactionPosted,PaymentLedgerPostingRequested,ComplaintAnswered,CustomerTransferStatusChanged}
   security:
     enabled: ${BANKING_LAB_SECURITY_ENABLED:true}
     simulator-tokens-enabled: ${BANKING_LAB_SECURITY_SIMULATOR_TOKENS_ENABLED:false}

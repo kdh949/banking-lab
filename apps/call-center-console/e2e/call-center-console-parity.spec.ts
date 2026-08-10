@@ -43,7 +43,11 @@ test("call-center console product workspace excludes lab evidence controls", asy
   await expect(page.getByLabel("Business reason")).toBeVisible();
   await expect(page.getByLabel("Journey ID")).toBeVisible();
   await expect(page.getByRole("button", { name: "Search masked customer" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Start linked interaction" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Request FDS handoff" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save after-call disposition" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Close interaction" })).toBeDisabled();
+  await expect(page.getByText("NOT_STARTED", { exact: true })).toBeVisible();
   await expect(page.getByText("Authenticated BFF session required")).toBeVisible();
 });
 

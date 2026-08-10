@@ -22,7 +22,8 @@ export const staffBff = createNextBffHandlers({
       actorKey: "branch-manager",
       subject: "manager01",
       roles: ["BRANCH_MANAGER"],
-      displayName: "Synthetic branch manager"
+      displayName: "Synthetic branch manager",
+      simulatedStepUp: true
     }
   ]
 });

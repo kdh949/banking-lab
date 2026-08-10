@@ -28,6 +28,12 @@ channels:
       LedgerTransactionPosted:
         payload:
           $ref: ../events/ledger-transaction-posted.schema.json
+  customer.transfer.status-changed:
+    address: customer.transfer.status-changed
+    messages:
+      CustomerTransferStatusChanged:
+        payload:
+          $ref: ../events/customer-transfer-status-changed.schema.json
   payment.ledger.posting.requested:
     address: payment.ledger.posting.requested
     messages:
@@ -135,6 +141,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/ledger.transaction.posted'
+  publishCustomerTransferStatusChanged:
+    action: send
+    channel:
+      $ref: '#/channels/customer.transfer.status-changed'
   publishPaymentLedgerPostingRequested:
     action: send
     channel:
